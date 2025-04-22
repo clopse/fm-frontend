@@ -1,0 +1,16 @@
+/* frontend/src/app/globals.css */
+body {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  color: #000000;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+a:hover {
+  text-decoration: none; /* no underline on hover either */
+  color: inherit;
+}

@@ -1,0 +1,34 @@
+.sidebar {
+  width: 100px;
+  background-color: #0c1e2c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 2rem;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.05);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #e0e0e0;
+  text-decoration: none;
+  font-size: 0.75rem;
+  transition: all 0.2s ease;
+  padding: 0.3rem;
+}
+
+.navItem:hover {
+  color: white;
+}
+
+.navItem svg {
+  margin-bottom: 0.25rem;
+}

@@ -1,0 +1,57 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 1.5rem;
+  background: rgba(255, 255, 255, 0.9); /* soft glassy effect */
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
+
+.left {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* Modern hotel selector pill */
+.selector {
+  background-color: #75D0DF;
+  color: rgb(0, 46, 99);
+  font-weight: 600;
+  border: none;
+  padding: 10px 20px;
+  margin-bottom: 9px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.selector:hover {
+  background-color: #00acc1;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+}
+
+.arrow {
+  margin-left: 6px;
+  font-size: 0.85rem;
+}

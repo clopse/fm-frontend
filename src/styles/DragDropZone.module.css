@@ -1,0 +1,62 @@
+.container {
+  padding: 2rem;
+}
+
+.header {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.uploadContainer {
+  margin-top: 1rem;
+}
+
+.dropzone {
+  border: 2px dashed #999;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+}
+
+.dropzoneActive {
+  background-color: #f0f8ff;
+}
+
+.filesList {
+  margin-top: 2rem;
+}
+
+.fileItem {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.fileIcon {
+  width: 30px;
+  height: 30px;
+  margin-right: 10px;
+}
+
+.fileName {
+  font-size: 1rem;
+}
+
+.dropText {
+  color: #666;
+  font-size: 1.2rem;
+}
+
+.uploadBtn {
+  background-color: #0070f3;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.uploadBtn:hover {
+  background-color: #005bb5;
+}
