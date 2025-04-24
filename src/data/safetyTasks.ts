@@ -1,8 +1,16 @@
 // NOTE: Task rules (frequency, scoring, uploads_required) are managed in:
 // backend/app/data/taskRules.json
-// 👉 Make sure to update both when adding/removing tasks
+// 👉 Make sure to update both files when adding/removing tasks
 
-export const safetyGroups = {
+export interface Task {
+  id: string;
+  label: string;
+  frequency: string;
+}
+
+export type SafetyGroups = Record<string, Task[]>;
+
+export const safetyGroups: SafetyGroups = {
   "Fire Safety": [
     { id: "fire_extinguisher", label: "Fire extinguisher report", frequency: "annual" },
     { id: "sprinkler_check", label: "Sprinkler system report", frequency: "annual" },
