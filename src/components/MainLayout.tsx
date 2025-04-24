@@ -7,21 +7,20 @@ import HotelSelectorModal from './HotelSelectorModal';
 import MainSidebar from './MainSidebar';
 import UserPanel from '@/components/UserPanel';
 import { hotels } from '@/lib/hotels';
-import { User2, ArrowLeft, Menu } from 'lucide-react';
+import { User2, Menu, ArrowLeft } from 'lucide-react';
 import styles from '@/styles/MainSidebar.module.css';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const [isModalOpen, setModalOpen] = useState(false);
   const [isUserPanelOpen, setUserPanelOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setSidebarOpen] = useState(true);
 
   const pathname = usePathname();
   const router = useRouter();
 
   const isLoginPage = pathname === '/login';
   const isDashboardHome = /^\/hotels\/[^/]+$/.test(pathname);
-
   const hideSidebarPages = ['/login'];
   const shouldShowSidebar = !hideSidebarPages.includes(pathname);
 
@@ -29,8 +28,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      setIsSidebarOpen(!mobile); // default closed on mobile
+      setSidebarOpen(!mobile);
     };
+
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -41,14 +41,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     if (!isAuth && !isLoginPage) {
       router.push('/login');
     }
-  }, [pathname, isLoginPage, router]);
+  }, [pathname]);
 
   if (isLoginPage) return <>{children}</>;
 
   const hotelId = pathname.split('/')[2];
   const currentHotelName = hotels.find((h) => h.id === hotelId)?.name || 'Select Hotel';
-
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -58,31 +57,47 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           currentHotelName={currentHotelName}
         />
       )}
+
       <HotelSelectorModal isOpen={isModalOpen} setIsOpen={setModalOpen} />
 
-      {/* Burger/arrow toggle */}
+      {/* Burger / Arrow Toggle Button */}
       {shouldShowSidebar && (
-        <div
-          className={styles.toggleSidebarButton}
-          onClick={toggleSidebar}
-        >
+        <div className={styles.toggleSidebarButton} onClick={toggleSidebar}>
           {isSidebarOpen ? <ArrowLeft size={20} /> : <Menu size={20} />}
         </div>
       )}
 
       <div style={{ display: 'flex', flex: 1 }}>
+        {/* Sidebar */}
         {shouldShowSidebar && (
-          <div className={`${styles.sidebarWrapper} ${isSidebarOpen ? styles.open : ''}`}>
-            <MainSidebar isMobile={isMobile} onItemClick={() => isMobile && setIsSidebarOpen(false)} />
+          <div
+            className={`${styles.sidebarWrapper} ${
+              isSidebarOpen && isMobile ? 'open' : ''
+            }`}
+            style={{
+              transform: isMobile && !isSidebarOpen ? 'translateX(-100%)' : 'translateX(0)',
+              position: isMobile ? 'fixed' : 'relative',
+            }}
+          >
+            <MainSidebar isMobile={isMobile} onItemClick={() => isMobile && setSidebarOpen(false)} />
           </div>
         )}
 
-        <main style={{ flex: 1, overflow: 'auto', padding: isDashboardHome ? 0 : '1rem' }}>
+        {/* Main content */}
+        <main
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            padding: isDashboardHome ? 0 : '1rem',
+            marginLeft: !isMobile && isSidebarOpen ? '250px' : 0,
+            transition: 'margin 0.3s ease',
+          }}
+        >
           {children}
         </main>
       </div>
 
-      {/* User icon in top right */}
+      {/* User icon top right */}
       <div style={{ position: 'fixed', top: 10, right: 20, zIndex: 1100 }}>
         <button
           onClick={() => setUserPanelOpen(true)}
