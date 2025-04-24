@@ -1,4 +1,3 @@
-/* SafetyScoreLeaderboard.module.css */
 .container {
   background-color: #fff;
   padding: 1.5rem;
@@ -7,34 +6,38 @@
   margin-bottom: 2rem;
 }
 
-ul {
-  list-style-type: none;
+.header {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.leaderboardList {
+  list-style: none;
   padding: 0;
   margin: 0;
 }
 
-li {
-  padding: 1rem;
-  border-bottom: 1px solid #eee;
+.leaderboardItem {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eee;
 }
 
-strong {
-  font-size: 1.1rem;
-  color: #333;
+.hotelName {
+  font-weight: 600;
 }
 
 .score {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: bold;
-  color: #4caf50;
+  color: #007bff;
 }
 
 .tooltip {
-  display: block;
-  font-size: 0.9rem;
-  color: #666;
-  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #888;
 }
