@@ -5,29 +5,26 @@
   background-color: #0c1e2c;
   transition: transform 0.3s ease;
   height: 100vh;
+  z-index: 1000;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform: translateX(-100%);
   display: flex;
   flex-direction: column;
-  z-index: 1000;
 }
 
-@media (max-width: 767px) {
-  .sidebarWrapper {
-    position: fixed;
-    top: 0;
-    left: 0;
-    transform: translateX(-100%);
-  }
-
-  .sidebarWrapper.open {
-    transform: translateX(0);
-  }
+/* Sidebar shown when toggled */
+.sidebarWrapper.open {
+  transform: translateX(0);
 }
 
 .sidebarNav {
   display: flex;
   flex-direction: column;
   padding: 1rem 0;
+  margin-top: 60px; /* pushes items down to avoid header overlap */
 }
 
 .navItem {
@@ -50,6 +47,7 @@
 
 .toggleSidebarButton {
   position: fixed;
+  top: 15px;
   left: 15px;
   z-index: 1101;
   background: white;
@@ -61,4 +59,14 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Animate main content to shift with sidebar */
+.mainContent {
+  transition: margin-left 0.3s ease;
+  margin-left: 0;
+}
+
+.mainContent.shifted {
+  margin-left: 250px;
 }
