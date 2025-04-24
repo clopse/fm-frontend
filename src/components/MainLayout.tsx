@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -16,6 +15,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [isUserPanelOpen, setUserPanelOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   const pathname = usePathname();
   const router = useRouter();
 
@@ -29,7 +29,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      setIsSidebarOpen(!mobile);
+      setIsSidebarOpen(!mobile); // default closed on mobile
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -43,9 +43,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
   }, [pathname, isLoginPage, router]);
 
-  if (isLoginPage) {
-    return <>{children}</>;
-  }
+  if (isLoginPage) return <>{children}</>;
 
   const hotelId = pathname.split('/')[2];
   const currentHotelName = hotels.find((h) => h.id === hotelId)?.name || 'Select Hotel';
@@ -62,17 +60,19 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       )}
       <HotelSelectorModal isOpen={isModalOpen} setIsOpen={setModalOpen} />
 
-      <div
-        className={styles.toggleSidebarButton}
-        onClick={toggleSidebar}
-        style={{ display: shouldShowSidebar ? 'flex' : 'none' }}
-      >
-        {isSidebarOpen ? <ArrowLeft size={20} /> : <Menu size={20} />}
-      </div>
+      {/* Burger/arrow toggle */}
+      {shouldShowSidebar && (
+        <div
+          className={styles.toggleSidebarButton}
+          onClick={toggleSidebar}
+        >
+          {isSidebarOpen ? <ArrowLeft size={20} /> : <Menu size={20} />}
+        </div>
+      )}
 
       <div style={{ display: 'flex', flex: 1 }}>
         {shouldShowSidebar && (
-          <div className={`${styles.sidebarWrapper} ${isSidebarOpen ? 'open' : ''}`}>
+          <div className={`${styles.sidebarWrapper} ${isSidebarOpen ? styles.open : ''}`}>
             <MainSidebar isMobile={isMobile} onItemClick={() => isMobile && setIsSidebarOpen(false)} />
           </div>
         )}
@@ -82,6 +82,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </main>
       </div>
 
+      {/* User icon in top right */}
       <div style={{ position: 'fixed', top: 10, right: 20, zIndex: 1100 }}>
         <button
           onClick={() => setUserPanelOpen(true)}
