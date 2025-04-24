@@ -1,6 +1,6 @@
 'use client';
 
-import styles from '@/styles/UtilitiesGraphs.module.css';
+import '@/styles/UtilitiesGraphs.module.css';
 
 export function UtilitiesGraphs() {
   return (
