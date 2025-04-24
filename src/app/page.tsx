@@ -6,9 +6,20 @@ import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
 import { RecentUploads } from '@/components/RecentUploads';
 import styles from '@/styles/AdminDashboard.module.css';
 
+type Upload = {
+  hotel: string;
+  report: string;
+  date: string;
+};
+
+type HotelScore = {
+  hotel: string;
+  score: number;
+};
+
 export default function AdminDashboard() {
-  const [recentUploads, setRecentUploads] = useState([]);
-  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<HotelScore[]>([]);
 
   useEffect(() => {
     setLeaderboardData([
@@ -25,19 +36,16 @@ export default function AdminDashboard() {
 
   return (
     <div className={styles.container}>
-      {/* Top Section - Leaderboard */}
       <div className={`${styles.section} ${styles.topSection}`}>
         <h2 className={styles.header}>Safety Score Leaderboard</h2>
         <SafetyScoreLeaderboard data={leaderboardData} />
       </div>
 
-      {/* Middle Section - Utilities Graphs */}
       <div className={`${styles.section} ${styles.middleSection}`}>
         <h2 className={styles.header}>Hotel Utilities Comparison</h2>
         <UtilitiesGraphs />
       </div>
 
-      {/* Bottom Section - Recent Uploads */}
       <div className={`${styles.section} ${styles.recentUploadsSection}`}>
         <h2 className={styles.header}>Recent Uploads</h2>
         <RecentUploads uploads={recentUploads} />
