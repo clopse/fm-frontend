@@ -2,6 +2,7 @@
 import './globals.css';
 import MainLayout from '@/components/MainLayout';
 import type { Metadata } from 'next';
+import { usePathname } from 'next/navigation';
 
 export const metadata: Metadata = {
   title: 'JMK Facilities Management',
@@ -9,6 +10,11 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+
+  const noLayoutPaths = ['/', '/login'];
+  const showLayout = !noLayoutPaths.includes(pathname);
+
   return (
     <html lang="en">
       <head>
@@ -18,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        <MainLayout>{children}</MainLayout>
+        {showLayout ? <MainLayout>{children}</MainLayout> : children}
       </body>
     </html>
   );
