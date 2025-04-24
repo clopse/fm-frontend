@@ -68,23 +68,40 @@ export default function TaskUploadBox({
     formData.append('report_date', reportDate);
     formData.append('file', file);
 
-    const res = await fetch('/api/uploads/safety-score', {
-      method: 'POST',
-      body: formData,
-    });
+    try {
+      const res = await fetch('/uploads/safety-score', {
+        method: 'POST',
+        body: formData,
+      });
 
-    const result = await res.json();
-    setUploading(false);
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Upload failed:", errorText);
+        alert("Upload failed:\n" + errorText);
+        setUploading(false);
+        return;
+      }
 
-    if (res.ok) {
+      let json;
+      try {
+        json = await res.json();
+        console.log("Upload successful:", json.message);
+      } catch (parseError) {
+        console.warn("Upload succeeded, but response wasn't JSON.");
+      }
+
       onUpload({
         file,
         uploadedAt: new Date(),
         reportDate: new Date(reportDate),
         score: task.points || 10,
       });
-    } else {
-      alert(result.detail || 'Upload failed.');
+
+    } catch (networkError) {
+      console.error("Network error:", networkError);
+      alert("Network error: " + networkError.message);
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -129,10 +146,7 @@ export default function TaskUploadBox({
           {file && fileUrl && (
             <div className={styles.previewCard}>
               {file.type === 'application/pdf' ? (
-                <Document
-                  file={fileUrl}
-                  onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-                >
+                <Document file={fileUrl} onLoadSuccess={({ numPages }) => setNumPages(numPages)}>
                   {Array.from(new Array(numPages), (_, i) => (
                     <Page
                       key={`page_${i + 1}`}
