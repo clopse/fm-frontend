@@ -1,14 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
 import styles from '@/styles/HotelDashboard.module.css';
 import { ClipboardList, Building2, PlugZap, FileText } from 'lucide-react';
+import { useEffect } from 'react';
 
 export default function HotelDashboard() {
   const { hotelId } = useParams<{ hotelId: string }>();
-  const hotelName = hotelNames[hotelId as keyof typeof hotelNames] || 'Unknown Hotel';
+  const router = useRouter();
+
+  // Validate the hotelId
+  const hotelName = hotelNames[hotelId as keyof typeof hotelNames];
+
+  // Redirect or show 404 if hotelId is invalid
+  useEffect(() => {
+    if (!hotelId || !hotelName) {
+      router.push('/404'); // Redirect to a 404 page
+    }
+  }, [hotelId, hotelName, router]);
+
+  if (!hotelName) {
+    return null; // Show nothing until the redirect happens
+  }
 
   return (
     <div
@@ -37,7 +52,7 @@ export default function HotelDashboard() {
           <Link href={`/hotels/${hotelId}/building`} className={styles.card}>
             <Building2 size={32} />
             <h3>Building</h3>
-            <p>3D models, drawings and technical files.</p>
+            <p>3D models, drawings, and technical files.</p>
           </Link>
 
           <div className={styles.gridBottom}>
