@@ -1,6 +1,6 @@
 'use client';
 
-import styles from './SafetyScoreLeaderboard.module.css';
+import styles from '@/styles/SafetyScoreLeaderboard.module.css';
 
 export function SafetyScoreLeaderboard({ data }: { data: { hotel: string; score: number }[] }) {
   return (
