@@ -1,6 +1,6 @@
 'use client';
 
-import '@/styles/recentcomponents.css'; // ✅ Use your shared global styles
+import '@/styles/recentuploads.module.css'; // ✅ Use your shared global styles
 
 export function RecentUploads({ uploads }: { uploads: { hotel: string; report: string; date: string }[] }) {
   const handleAuditClick = (upload: { hotel: string; report: string; date: string }) => {
