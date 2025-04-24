@@ -69,7 +69,7 @@ export default function TaskUploadBox({
     formData.append('file', file);
 
     try {
-      const res = await fetch('/uploads/safety-score', {
+      const res = await fetch('https://fm-backend-sv3s.onrender.com/uploads/safety-score', {
         method: 'POST',
         body: formData,
       });
