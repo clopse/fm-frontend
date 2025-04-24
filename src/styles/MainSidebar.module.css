@@ -1,3 +1,5 @@
+/* MainSidebar.module.css */
+
 .sidebarWrapper {
   background-color: #f8f9fa;
   height: 100vh;
@@ -5,6 +7,7 @@
   width: 250px;
   z-index: 1000;
   position: relative;
+  flex-shrink: 0;
 }
 
 .sidebarNav {
@@ -47,4 +50,21 @@
   .sidebarWrapper.open {
     transform: translateX(0);
   }
+}
+
+/* Toggle button */
+.toggleSidebarButton {
+  position: fixed;
+  top: 15px;
+  left: 15px;
+  z-index: 1100;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
