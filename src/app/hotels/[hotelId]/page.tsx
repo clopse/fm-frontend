@@ -1,3 +1,4 @@
+// src/app/hotels/[hotelId]/page.tsx
 'use client';
 
 import Link from 'next/link';
@@ -12,13 +13,13 @@ export default function HotelDashboard() {
 
   return (
     <div
-      className={styles.backgroundWrapper}
+      className={styles.fullBackground}
       style={{ backgroundImage: `url('/${hotelId}.jpg')` }}
     >
-      {/* Overlay */}
+      {/* Optional overlay */}
       <div className={styles.overlay} />
 
-      {/* Page Content */}
+      {/* Main content */}
       <div className={styles.content}>
         <h1 className={styles.heading}>{hotelName}</h1>
 
