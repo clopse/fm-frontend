@@ -94,12 +94,16 @@ export default function TaskUploadBox({
         file,
         uploadedAt: new Date(),
         reportDate: new Date(reportDate),
-        score: task.points || 10,
+        score: task.points ?? 10,
       });
 
     } catch (networkError) {
       console.error("Network error:", networkError);
-      alert("Network error: " + networkError.message);
+      if (networkError instanceof Error) {
+        alert("Network error: " + networkError.message);
+      } else {
+        alert("Unknown network error occurred.");
+      }
     } finally {
       setUploading(false);
     }
