@@ -1,5 +1,6 @@
 // MainLayout.tsx
 'use client';
+
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import HeaderBar from './HeaderBar';
@@ -7,7 +8,7 @@ import HotelSelectorModal from './HotelSelectorModal';
 import MainSidebar from './MainSidebar';
 import UserPanel from '@/components/UserPanel';
 import { hotels } from '@/lib/hotels';
-import { User2, Menu, X } from 'lucide-react';
+import { User2, ArrowLeft, Menu } from 'lucide-react';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const [isModalOpen, setModalOpen] = useState(false);
@@ -16,58 +17,41 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
-  
-  // Page conditions
+
   const isLoginPage = pathname === '/login';
-  const isDashboardHome = /^\/hotels\/[^/]+$/.test(pathname); // Matches only /hotels/hotelId
-  
-  // Define pages where sidebar should be hidden
-  const hideSidebarPages = [
-    '/login',
-    // Add other paths where sidebar should be hidden completely
-  ];
-  
-  const shouldShowSidebar = !hideSidebarPages.includes(pathname) && 
-                           !hideSidebarPages.some(path => pathname.startsWith(path));
-  
-  // Check for mobile screens
+  const isDashboardHome = /^\/hotels\/[^/]+$/.test(pathname);
+
+  const hideSidebarPages = ['/login'];
+  const shouldShowSidebar = !hideSidebarPages.some((path) => pathname.startsWith(path));
+
+  // Resize listener to toggle mobile mode and default sidebar state
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      setIsSidebarOpen(!mobile); // Close sidebar on mobile by default
+      setIsSidebarOpen(!mobile); // Close on mobile by default
     };
-    
-    // Initial check
+
     handleResize();
-    
-    // Add event listener
     window.addEventListener('resize', handleResize);
-    
-    // Clean up
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
-  // ✅ Redirect unauthenticated users
+
+  // Redirect unauthenticated users
   useEffect(() => {
     const isAuth = localStorage.getItem('auth');
     if (!isAuth && !isLoginPage) {
       router.push('/login');
     }
   }, [pathname, isLoginPage, router]);
-  
-  // ✅ Allow login page through
+
   if (isLoginPage) {
     return <>{children}</>;
   }
-  
+
   const hotelId = pathname.split('/')[2];
   const currentHotelName = hotels.find((h) => h.id === hotelId)?.name || 'Select Hotel';
-  
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-  
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', position: 'relative' }}>
       {!isDashboardHome && (
@@ -77,8 +61,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         />
       )}
       <HotelSelectorModal isOpen={isModalOpen} setIsOpen={setModalOpen} />
-      
-      {/* ✅ Floating user icon that opens the panel */}
+
+      {/* User icon */}
       <div style={{ position: 'fixed', top: 10, right: 20, zIndex: 1000 }}>
         <button
           onClick={() => setUserPanelOpen(true)}
@@ -96,35 +80,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </button>
       </div>
       <UserPanel isOpen={isUserPanelOpen} onClose={() => setUserPanelOpen(false)} />
-      
-      {/* Hamburger menu button */}
-      {shouldShowSidebar && (
-        <button 
-          onClick={toggleSidebar} 
-          style={{
-            position: 'fixed',
-            top: '15px',
-            left: '15px',
-            zIndex: 1010,
-            background: 'white',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            padding: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-          }}
-          aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
+
+      {/* Sidebar toggle */}
+      {shouldShowSidebar && isMobile && (
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="sidebarToggleArrow"
+          aria-label="Toggle sidebar"
         >
-          {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+          {isSidebarOpen ? <ArrowLeft size={24} /> : <Menu size={24} />}
         </button>
       )}
-      
+
       <div style={{ display: 'flex', flex: 1 }}>
         {shouldShowSidebar && (
-          <div 
+          <div
             style={{
               width: '250px',
               backgroundColor: '#f8f9fa',
@@ -133,18 +103,21 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               position: isMobile ? 'fixed' : 'relative',
               transform: isSidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
               zIndex: 1000,
-              boxShadow: isMobile ? '0 0 10px rgba(0,0,0,0.1)' : 'none'
+              boxShadow: isMobile ? '0 0 10px rgba(0,0,0,0.1)' : 'none',
             }}
           >
             <MainSidebar isMobile={isMobile} onItemClick={() => isMobile && setIsSidebarOpen(false)} />
           </div>
         )}
-        <main style={{ 
-          flex: 1, 
-          overflow: 'auto', 
-          padding: isDashboardHome ? '0' : '1rem',
-          width: '100%'
-        }}>
+
+        <main
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            padding: isDashboardHome ? '0' : '1rem',
+            width: '100%',
+          }}
+        >
           {children}
         </main>
       </div>
