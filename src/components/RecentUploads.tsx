@@ -1,6 +1,6 @@
 'use client';
 
-import styles from '@/styles/RecentUploads.module.css';
+import '@/styles/recentcomponents.css'; // ✅ Use your shared global styles
 
 export function RecentUploads({ uploads }: { uploads: { hotel: string; report: string; date: string }[] }) {
   const handleAuditClick = (upload: { hotel: string; report: string; date: string }) => {
@@ -9,15 +9,17 @@ export function RecentUploads({ uploads }: { uploads: { hotel: string; report: s
   };
 
   return (
-    <div className={styles.container}>
-      <h2>Recent Uploads</h2>
-      <ul>
+    <div className="recent-uploads-container">
+      <h2 className="recent-uploads-header">Recent Uploads</h2>
+      <ul className="recent-uploads-list">
         {uploads.map((upload, index) => (
-          <li key={index}>
-            <div>
+          <li key={index} className="recent-uploads-item">
+            <div className="recent-uploads-text">
               <strong>{upload.hotel}</strong>: {upload.report} <span>{upload.date}</span>
             </div>
-            <button onClick={() => handleAuditClick(upload)}>Audit</button>
+            <button className="audit-button" onClick={() => handleAuditClick(upload)}>
+              Audit
+            </button>
           </li>
         ))}
       </ul>
