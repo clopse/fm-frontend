@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import HeaderBar from './HeaderBar';
@@ -14,10 +13,20 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [isUserPanelOpen, setUserPanelOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-
+  
+  // Page conditions
   const isLoginPage = pathname === '/login';
   const isDashboardHome = /^\/hotels\/[^/]+$/.test(pathname); // Matches only /hotels/hotelId
-
+  
+  // Define pages where sidebar should be hidden
+  const hideSidebarPages = [
+    '/login',
+    // Add other paths where sidebar should be hidden completely
+  ];
+  
+  const shouldShowSidebar = !hideSidebarPages.includes(pathname) && 
+                           !hideSidebarPages.some(path => pathname.startsWith(path));
+  
   // ✅ Redirect unauthenticated users
   useEffect(() => {
     const isAuth = localStorage.getItem('auth');
@@ -25,15 +34,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       router.push('/login');
     }
   }, [pathname, isLoginPage, router]);
-
+  
   // ✅ Allow login page through
   if (isLoginPage) {
     return <>{children}</>;
   }
-
+  
   const hotelId = pathname.split('/')[2];
   const currentHotelName = hotels.find((h) => h.id === hotelId)?.name || 'Select Hotel';
-
+  
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', position: 'relative' }}>
       {!isDashboardHome && (
@@ -42,9 +51,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           currentHotelName={currentHotelName}
         />
       )}
-
       <HotelSelectorModal isOpen={isModalOpen} setIsOpen={setModalOpen} />
-
+      
       {/* ✅ Floating user icon that opens the panel */}
       <div style={{ position: 'fixed', top: 10, right: 20, zIndex: 1000 }}>
         <button
@@ -62,12 +70,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           <User2 size={20} />
         </button>
       </div>
-
       <UserPanel isOpen={isUserPanelOpen} onClose={() => setUserPanelOpen(false)} />
-
+      
       <div style={{ display: 'flex', flex: 1 }}>
-        <MainSidebar />
-        <main style={{ flex: 1, overflow: 'auto', padding: isDashboardHome ? '0' : '1rem' }}>
+        {shouldShowSidebar && <MainSidebar isMobile={window.innerWidth < 768} />}
+        <main style={{ 
+          flex: 1, 
+          overflow: 'auto', 
+          padding: isDashboardHome ? '0' : '1rem',
+          width: shouldShowSidebar ? 'auto' : '100%'
+        }}>
           {children}
         </main>
       </div>
