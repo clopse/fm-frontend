@@ -1,11 +1,17 @@
+/* MainSidebar.module.css */
+
 .sidebarWrapper {
   width: 250px;
-  background-color: #f8f9fa;
-  transition: transform 0.3s ease, margin 0.3s ease;
+  background-color: #0c1e2c;
   height: 100vh;
   z-index: 1000;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease;
+}
+
+.sidebarWrapper.open {
+  transform: translateX(0);
 }
 
 @media (max-width: 767px) {
@@ -14,8 +20,7 @@
     top: 0;
     left: 0;
     transform: translateX(-100%);
-    height: 100vh;
-    z-index: 1050;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
   }
 
   .sidebarWrapper.open {
@@ -23,7 +28,7 @@
   }
 }
 
-.nav {
+.sidebarNav {
   display: flex;
   flex-direction: column;
   padding: 1rem 0;
@@ -32,14 +37,15 @@
 .navItem {
   display: flex;
   align-items: center;
-  padding: 0.75rem 1.5rem;
-  color: #333;
+  padding: 0.75rem 1.25rem;
+  color: white;
   text-decoration: none;
   transition: background-color 0.2s;
+  font-size: 0.9rem;
 }
 
 .navItem:hover {
-  background-color: #e9ecef;
+  background-color: #163246;
 }
 
 .navItem span {
@@ -60,8 +66,4 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.open {
-  transform: translateX(0);
 }
