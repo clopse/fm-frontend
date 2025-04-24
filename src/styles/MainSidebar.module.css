@@ -46,6 +46,7 @@
   display: flex;
   flex-direction: column;
   padding: 1rem 0;
+  height: 100%; /* Make nav fill the sidebar height */
 }
 
 .navItem {
@@ -63,4 +64,29 @@
 
 .navItem span {
   margin-left: 0.75rem;
+}
+
+/* Active navigation item styling */
+.navItem.active {
+  background-color: #e2e8f0;
+  font-weight: 500;
+  border-left: 3px solid #4a5568;
+}
+
+/* Add overlay for mobile when sidebar is open */
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+@media (max-width: 767px) {
+  .overlay.visible {
+    display: block;
+  }
 }
