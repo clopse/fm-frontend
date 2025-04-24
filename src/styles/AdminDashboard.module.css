@@ -1,4 +1,6 @@
 /* AdminDashboard.module.css */
+
+/* Container for the entire dashboard */
 .container {
   padding: 2rem;
   display: flex;
@@ -6,13 +8,16 @@
   gap: 2rem;
 }
 
-.topSection, .middleSection, .recentUploadsSection {
+/* Shared styles for all sections (top, middle, recent uploads) */
+section {
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   padding: 2rem;
+  margin-bottom: 2rem;
 }
 
+/* Header styles */
 h2 {
   font-size: 1.5rem;
   font-weight: 600;
@@ -20,22 +25,18 @@ h2 {
   color: #333;
 }
 
-section {
-  margin-bottom: 2rem;
-}
-
+/* Top section for leaderboard */
 .topSection {
-  /* Styling for leaderboard section */
   background-color: #f9f9f9;
 }
 
+/* Middle section for utilities graph */
 .middleSection {
-  /* Styling for utilities graph section */
   background-color: #e7f4f9;
 }
 
+/* Recent uploads section */
 .recentUploadsSection {
-  /* Styling for recent uploads section */
   background-color: #fff;
 }
 
@@ -52,6 +53,7 @@ section {
   align-items: center;
 }
 
+/* Button styling for interaction (e.g., 'Mark as Read') */
 button {
   background-color: #28a745;
   color: white;
@@ -67,30 +69,36 @@ button:hover {
 
 /* Mobile responsiveness */
 @media (max-width: 768px) {
+  /* Container adjustments for mobile */
   .container {
     padding: 1rem;
   }
 
+  /* Section padding adjustments for mobile */
   .topSection, .middleSection, .recentUploadsSection {
     padding: 1rem;
   }
 
+  /* Smaller heading size on mobile */
   h2 {
     font-size: 1.25rem;
   }
 
+  /* Grid layout for mobile for the cards */
   .grid {
     display: grid;
     grid-template-columns: 1fr;
     gap: 1rem;
   }
 
+  /* Grid layout for mobile for bottom section (recent uploads) */
   .gridBottom {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1rem;
   }
 
+  /* Adjust card styles for mobile */
   .card {
     display: flex;
     flex-direction: column;
@@ -100,12 +108,13 @@ button:hover {
     padding: 1rem;
   }
 
+  /* Full-width safety score box on mobile */
   .safetyScoreBox {
     width: 100%;
     padding: 1rem;
   }
 
-  /* Adjust recent uploads list on mobile */
+  /* Adjust recent uploads list layout on mobile */
   .recentUploadsSection li {
     flex-direction: column;
     align-items: flex-start;
