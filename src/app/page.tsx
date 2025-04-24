@@ -1,19 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { hotels } from '@/lib/hotels'; // You may need to define this data somewhere
-import { SafetyScoreLeaderboard } from '@/components/SafetyScoreLeaderboard'; // New component for leaderboard
-import { UtilitiesGraphs } from '@/components/UtilitiesGraphs'; // New component for utilities graphs
-import { RecentUploads } from '@/components/RecentUploads'; // New component for recent uploads
-import styles from '@/styles/AdminDashboard.module.css';
+import { SafetyScoreLeaderboard } from '@/components/SafetyScoreLeaderboard'; // Leaderboard component
+import { UtilitiesGraphs } from '@/components/UtilitiesGraphs'; // Utilities graphs component
+import { RecentUploads } from '@/components/RecentUploads'; // Recent uploads component
+import styles from '@/styles/AdminDashboard.module.css'; // Import styles
 
 export default function AdminDashboard() {
   const [recentUploads, setRecentUploads] = useState([]);
   const [leaderboardData, setLeaderboardData] = useState([]);
-  
+
   useEffect(() => {
-    // Fetch leaderboard data and recent uploads
-    // This is a mock data fetch
+    // Fetch leaderboard data and recent uploads (mock data for now)
     setLeaderboardData([
       { hotel: 'Holiday Inn Express', score: 85 },
       { hotel: 'Moxy Cork', score: 92 },
