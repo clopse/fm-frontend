@@ -1,32 +1,29 @@
-// drawingData.ts
-export const drawingData = {
+// src/data/drawingData.ts
+
+export interface DrawingFile {
+    name: string;
+  }
+  
+  export interface HotelDrawingData {
+    folders: Record<string, DrawingFile[]>;
+  }
+  
+  export const drawingData: Record<string, HotelDrawingData> = {
     hiex: {
       folders: {
-        floorplans: [
-          { name: 'GroundFloorPlan.pdf' },
-          { name: 'FirstFloorPlan.pdf' }
-        ],
         fire: [
           { name: 'FireEvac_Level01.pdf' },
-          { name: 'FireExit_RoofPlan.pdf' }
+          { name: 'FireExit_RoofPlan.pdf' },
         ],
-        electrical: [
-          { name: 'PanelSchedule_Level02.pdf' }
-        ],
-        plumbing: [
-          { name: 'Drainage_Roof.pdf' }
-        ]
-      }
+        electrical: [{ name: 'Panel_Lv01.pdf' }],
+        plumbing: [],
+      },
     },
     moxy: {
       folders: {
-        floorplans: [
-          { name: 'LobbyLayout.pdf' }
-        ],
-        fire: [],
-        electrical: [],
-        plumbing: []
-      }
-    }
+        fire: [{ name: 'Fire_Escape_01.pdf' }],
+        hvac: [{ name: 'DuctPlan_Level02.pdf' }],
+      },
+    },
   };
   

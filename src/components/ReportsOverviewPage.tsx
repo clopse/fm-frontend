@@ -4,81 +4,66 @@ import { useEffect, useState } from 'react';
 import styles from '@/styles/ReportsOverview.module.css';
 
 interface ReportFile {
-  filename: string;
-  uploaded_at: string;
+  name: string;
   url: string;
 }
 
-interface ReportYearGroup {
-  [year: string]: ReportFile[];
+interface ReportYear {
+  year: string;
+  files: ReportFile[];
 }
 
 interface ReportCategory {
   category: string;
-  years: ReportYearGroup;
+  years: ReportYear[];
 }
 
 export default function ReportsOverviewPage() {
-  const [reports, setReports] = useState<ReportCategory[]>([]);
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const [expandedYear, setExpandedYear] = useState<string | null>(null);
-
-  const hotelId = typeof window !== 'undefined'
-    ? window.location.pathname.split('/')[2]
-    : 'unknown';
+  const [data, setData] = useState<ReportCategory[]>([]);
+  const hotelId =
+    typeof window !== 'undefined'
+      ? window.location.pathname.split('/')[2]
+      : 'unknown';
 
   useEffect(() => {
-    const fetchReports = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch(`/api/reports/list/${hotelId}`);
-        const data = await res.json();
-        setReports(data);
+        const res = await fetch(`/api/reports/overview/${hotelId}`);
+        const result = await res.json();
+        setData(result);
       } catch (err) {
-        console.error('Failed to fetch reports:', err);
+        console.error('Failed to load report overview', err);
       }
     };
 
-    if (hotelId) fetchReports();
+    fetchData();
   }, [hotelId]);
 
   return (
     <div className={styles.page}>
       <h1>Service Reports Overview</h1>
-      {reports.map((group) => (
-        <div key={group.category} className={styles.categoryBox}>
-          <button
-            className={styles.categoryHeader}
-            onClick={() => setExpandedCategory(prev => prev === group.category ? null : group.category)}
-          >
-            {group.category}
-          </button>
-
-          {expandedCategory === group.category && (
-            <div className={styles.yearList}>
-              {Object.entries(group.years).map(([year, files]) => (
-                <div key={year}>
-                  <button
-                    className={styles.yearHeader}
-                    onClick={() => setExpandedYear(prev => prev === year ? null : year)}
+      {data.map((category) => (
+        <div key={category.category} className={styles.categoryBlock}>
+          <h2>{category.category}</h2>
+          {category.years.map((yearGroup) => (
+            <div key={yearGroup.year} className={styles.yearGroup}>
+              <h3>{yearGroup.year}</h3>
+              <div className={styles.fileList}>
+                {yearGroup.files.map((file) => (
+                  <a
+                    key={file.name}
+                    href={file.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.fileItem}
                   >
-                    {year} ({files.length} file{files.length !== 1 ? 's' : ''})
-                  </button>
-
-                  {expandedYear === year && (
-                    <ul className={styles.fileList}>
-                      {files.map((f) => (
-                        <li key={f.filename}>
-                          <a href={f.url} target="_blank" rel="noopener noreferrer">
-                            {f.filename} <span className={styles.date}>({f.uploaded_at})</span>
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
+                    <img src="/icons/pdf-icon.png" alt="PDF" />
+                    <span>{file.name}</span>
+                  </a>
+                ))}
+              </div>
             </div>
-          )}
+          ))}
         </div>
       ))}
     </div>

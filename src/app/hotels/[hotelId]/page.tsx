@@ -18,7 +18,6 @@ export default function HotelDashboard() {
       {/* Overlay */}
       <div className={styles.overlay} />
 
-  
 
       {/* Page content */}
       <div className={styles.content}>

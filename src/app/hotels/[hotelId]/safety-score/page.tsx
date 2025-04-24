@@ -129,6 +129,7 @@ export default function SafetyScorePage() {
       {activeTaskId && activeTask && (
         <TaskUploadBox
           visible={!!activeTask}
+          hotelId={hotelId}
           task={activeTask}
           fileInfo={uploads[activeTaskId] || null}
           onUpload={(fileInfo) => handleUpload(activeTaskId, fileInfo)}

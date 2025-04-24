@@ -1,3 +1,5 @@
+"use client"
+
 import styles from '@/styles/StatusBadge.module.css';
 
 export default function StatusBadge({ status }: { status: string }) {
