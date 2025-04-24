@@ -13,12 +13,12 @@ export default function HotelDashboard() {
   return (
     <div
       className={styles.backgroundWrapper}
-      style={{ backgroundImage: `url('/${hotelId}.jpg')` }}  {/* Correct string interpolation */}
+      style={{ backgroundImage: `url('/${hotelId}.jpg')` }}
     >
       {/* Overlay */}
       <div className={styles.overlay} />
 
-      {/* Page content */}
+      {/* Page Content */}
       <div className={styles.content}>
         <h1 className={styles.heading}>{hotelName}</h1>
 
