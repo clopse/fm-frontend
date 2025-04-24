@@ -25,6 +25,7 @@ export default function HotelImage({
         fill
         sizes="(max-width: 768px) 100vw, 200px"
         className={styles.image}
+        unoptimized // ✅ disables optimization, pulls directly from public/
         onError={() => setFallbackStep((prev) => prev + 1)}
       />
     </div>
