@@ -1,8 +1,9 @@
+/* MainSidebar.module.css */
 .sidebar {
   background-color: #f8f9fa;
   height: 100%;
-  transition: transform 0.3s ease;
   width: 250px;
+  transition: transform 0.3s ease;
   z-index: 100;
 }
 
@@ -16,37 +17,15 @@
   border-radius: 4px;
   padding: 8px;
   cursor: pointer;
-  display: none; /* Hidden by default on desktop */
-}
-
-/* Mobile styles */
-@media (max-width: 767px) {
-  .toggleButton {
-    display: flex; /* Show on mobile */
-  }
-  
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-  }
-  
-  .closed {
-    transform: translateX(-100%); /* Move off-screen when closed */
-  }
-  
-  .open {
-    transform: translateX(0); /* Visible when open */
-  }
+  display: none;
+  align-items: center;
+  justify-content: center;
 }
 
 .nav {
   display: flex;
   flex-direction: column;
   padding: 1rem 0;
-  height: 100%; /* Make nav fill the sidebar height */
 }
 
 .navItem {
@@ -66,27 +45,27 @@
   margin-left: 0.75rem;
 }
 
-/* Active navigation item styling */
-.navItem.active {
-  background-color: #e2e8f0;
-  font-weight: 500;
-  border-left: 3px solid #4a5568;
-}
-
-/* Add overlay for mobile when sidebar is open */
-.overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 99;
-}
-
+/* Mobile styles */
 @media (max-width: 767px) {
-  .overlay.visible {
-    display: block;
+  .toggleButton {
+    display: flex;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background: #f8f9fa;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.1);
+    transform: translateX(-100%);
+  }
+
+  .open {
+    transform: translateX(0%);
+  }
+
+  .closed {
+    transform: translateX(-100%);
   }
 }
