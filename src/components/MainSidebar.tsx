@@ -9,7 +9,6 @@ import {
   FileText,
   Building2
 } from 'lucide-react';
-
 import styles from '@/styles/MainSidebar.module.css';
 
 interface MainSidebarProps {
@@ -26,7 +25,7 @@ export default function MainSidebar({ isMobile = false, onItemClick }: MainSideb
 
   return (
     <aside className={styles.sidebarWrapper}>
-      <nav className={styles.nav}>
+      <nav className={styles.sidebarNav}>
         <Link href={`/hotels/${hotelId}/building`} className={styles.navItem} onClick={handleClick}>
           <Building2 size={22} />
           <span>Building</span>
