@@ -1,5 +1,9 @@
+'use client';
+
 import './globals.css';
 import MainLayout from '@/components/MainLayout';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export const metadata = {
   title: 'JMK Facilities Management',
@@ -7,6 +11,17 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    const isAuth = localStorage.getItem('auth');
+    const isLoginPage = window.location.pathname === '/login';
+
+    if (!isAuth && !isLoginPage) {
+      router.push('/login');
+    }
+  }, []);
+
   return (
     <html lang="en">
       <head>
