@@ -1,19 +1,17 @@
-/* Background image container */
-.backgroundWrapper {
+/* Background image full-page container */
+.fullBackground {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
   position: relative;
   min-height: 100vh;
+  width: 100%;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 0px;
-  box-sizing: border-box;
+  flex-direction: column;
 }
 
-/* Overlay layer if you use one */
+/* Overlay layer for blur/dim */
 .overlay {
   position: absolute;
   inset: 0;
@@ -22,25 +20,25 @@
   backdrop-filter: blur(4px);
 }
 
-/* Main content container */
+/* Page content on top of overlay */
 .content {
   position: relative;
   z-index: 2;
   width: 100%;
-  padding: 0 0px 0px;
-  margin-top: 0px;
+  padding: 0 20px;
+  margin-top: 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-/* Heading */
+/* Heading styling */
 .heading {
   font-size: 2.5rem;
   font-weight: 700;
   color: #111;
-  margin-bottom: 0.5rem;
+  margin: 2rem 0 1rem;
 }
 
 .subtitle {
@@ -60,6 +58,7 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   text-align: center;
   transition: transform 0.2s ease;
+  cursor: pointer;
 }
 
 .safetyScoreBox:hover {
@@ -75,7 +74,6 @@
   margin-top: 10px;
 }
 
-/* Tooltip-enhanced percentage */
 .safetyScorePercent {
   font-size: 2rem;
   font-weight: bold;
@@ -107,16 +105,15 @@
   opacity: 1;
 }
 
-/* Grid layout for section cards */
+/* Grid layout for navigation cards */
 .grid {
   display: flex;
   gap: 20px;
   justify-content: center;
   flex-wrap: wrap;
-  margin-top: 20px;
+  margin-bottom: 40px;
 }
 
-/* Section cards */
 .card {
   background-color: white;
   color: #111;
@@ -132,7 +129,7 @@
 
 .card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 14px rgba(228, 45, 45, 0.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
 }
 
 .card h3 {
