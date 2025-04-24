@@ -1,7 +1,7 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import HeaderBar from './HeaderBar';
 import HotelSelectorModal from './HotelSelectorModal';
 import MainSidebar from './MainSidebar';
@@ -13,10 +13,20 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [isModalOpen, setModalOpen] = useState(false);
   const [isUserPanelOpen, setUserPanelOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   const isLoginPage = pathname === '/login';
   const isDashboardHome = /^\/hotels\/[^/]+$/.test(pathname); // Matches only /hotels/hotelId
 
+  // ✅ Redirect unauthenticated users
+  useEffect(() => {
+    const isAuth = localStorage.getItem('auth');
+    if (!isAuth && !isLoginPage) {
+      router.push('/login');
+    }
+  }, [pathname, isLoginPage, router]);
+
+  // ✅ Allow login page through
   if (isLoginPage) {
     return <>{children}</>;
   }
@@ -51,6 +61,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           <User2 size={20} />
         </button>
       </div>
+
       <UserPanel isOpen={isUserPanelOpen} onClose={() => setUserPanelOpen(false)} />
 
       <div style={{ display: 'flex', flex: 1 }}>
