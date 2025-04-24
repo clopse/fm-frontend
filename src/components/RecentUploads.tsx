@@ -1,3 +1,7 @@
+'use client';
+
+import styles from './RecentUploads.module.css';
+
 export function RecentUploads({ uploads }: { uploads: { hotel: string; report: string; date: string }[] }) {
   const handleAuditClick = (upload: { hotel: string; report: string; date: string }) => {
     console.log(`Auditing ${upload.report} from ${upload.hotel} uploaded on ${upload.date}`);
@@ -5,7 +9,8 @@ export function RecentUploads({ uploads }: { uploads: { hotel: string; report: s
   };
 
   return (
-    <div>
+    <div className={styles.container}>
+      <h2>Recent Uploads</h2>
       <ul>
         {uploads.map((upload, index) => (
           <li key={index}>
