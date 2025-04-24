@@ -34,11 +34,11 @@ export default function SafetyScorePage() {
 
     const fetchData = async () => {
       try {
-        const res = await fetch(`/api/safety/score-history/${hotelId}`);
+        const res = await fetch(`https://fm-backend-sv3s.onrender.com/api/safety/score-history/${hotelId}`);
         const history = await res.json();
         setScoreHistory(history);
 
-        const res2 = await fetch(`/api/safety/score/${hotelId}`);
+        const res2 = await fetch(`https://fm-backend-sv3s.onrender.com/api/safety/score/${hotelId}`);
         const score = await res2.json();
         setScorePercent(score.score_percent);
         setTotalPoints(score.total_points);
@@ -92,9 +92,7 @@ export default function SafetyScorePage() {
         {allCategories.map((group) => (
           <button
             key={group}
-            className={`${styles.filterButton} ${
-              activeFilter === group ? styles.activeFilter : ''
-            }`}
+            className={`${styles.filterButton} ${activeFilter === group ? styles.activeFilter : ''}`}
             onClick={() => setActiveFilter(group)}
           >
             {group}
