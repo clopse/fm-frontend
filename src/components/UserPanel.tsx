@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { X } from 'lucide-react';
 import styles from '@/styles/UserPanel.module.css';
 
@@ -10,6 +11,14 @@ export default function UserPanel({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    localStorage.removeItem('auth');
+    router.push('/login');
+    onClose();
+  };
+
   return (
     <>
       {/* Background overlay */}
@@ -40,7 +49,9 @@ export default function UserPanel({
 
           <hr className={styles.divider} />
 
-          <button className={styles.logout}>Log out</button>
+          <button className={styles.logout} onClick={handleLogout}>
+            Log out
+          </button>
         </div>
       </div>
     </>
