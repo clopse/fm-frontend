@@ -1,8 +1,9 @@
 // src/app/layout.tsx
 import './globals.css';
 import MainLayout from '@/components/MainLayout';
+import type { Metadata } from 'next';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'JMK Facilities Management',
   description: 'Manage PPM, Utilities, and more.',
 };
