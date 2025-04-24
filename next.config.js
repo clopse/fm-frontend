@@ -14,9 +14,6 @@ const nextConfig = {
       },
     ];
   },
-  experimental: {
-    appDir: true, // If you're using the new App Directory structure, keep this enabled
-  },
 };
 
 module.exports = nextConfig;
