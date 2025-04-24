@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true, // Enables React Strict Mode, which helps in detecting potential problems in your app
-  swcMinify: true, // Enables SWC-based minification for better performance
+  reactStrictMode: true,  // Still helpful for dev
+  swcMinify: true,        // Also good to keep
   images: {
-    domains: ['example.com'], // Add any domains that host images used in your app (e.g., external image sources)
+    unoptimized: true,    // ✅ Disable Next.js image optimization
   },
   async redirects() {
     return [
