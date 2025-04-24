@@ -1,23 +1,23 @@
 'use client';
 
-import '@/styles/RecentUploads.module.css'; // ✅ Use your shared global styles
+import styles from '@/styles/RecentUploads.module.css';
 
 export function RecentUploads({ uploads }: { uploads: { hotel: string; report: string; date: string }[] }) {
   const handleAuditClick = (upload: { hotel: string; report: string; date: string }) => {
     console.log(`Auditing ${upload.report} from ${upload.hotel} uploaded on ${upload.date}`);
-    // Implement your audit logic here
   };
 
   return (
-    <div className="recent-uploads-container">
-      <h2 className="recent-uploads-header">Recent Uploads</h2>
-      <ul className="recent-uploads-list">
+    <div className={styles.container}>
+      <h2 className={styles.header}>Recent Uploads</h2>
+      <ul className={styles.uploadList}>
         {uploads.map((upload, index) => (
-          <li key={index} className="recent-uploads-item">
-            <div className="recent-uploads-text">
-              <strong>{upload.hotel}</strong>: {upload.report} <span>{upload.date}</span>
+          <li key={index} className={styles.uploadItem}>
+            <div className={styles.uploadText}>
+              <strong className={styles.hotelName}>{upload.hotel}</strong>: {upload.report}{' '}
+              <span>{upload.date}</span>
             </div>
-            <button className="audit-button" onClick={() => handleAuditClick(upload)}>
+            <button className={styles.auditButton} onClick={() => handleAuditClick(upload)}>
               Audit
             </button>
           </li>
