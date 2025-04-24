@@ -1,3 +1,4 @@
+/* AdminDashboard.module.css */
 .container {
   padding: 2rem;
   display: flex;
@@ -5,30 +6,54 @@
   gap: 2rem;
 }
 
-.topSection,
-.middleSection,
-.recentUploadsSection {
-  background: #f9f9f9;
-  padding: 1.5rem;
+.topSection, .middleSection, .recentUploadsSection {
+  background-color: #fff;
   border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
 }
 
 h2 {
-  margin-bottom: 1rem;
   font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #333;
 }
 
-ul {
-  list-style-type: none;
+section {
+  margin-bottom: 2rem;
+}
+
+.topSection {
+  /* Styling for leaderboard section */
+  background-color: #f9f9f9;
+}
+
+.middleSection {
+  /* Styling for utilities graph section */
+  background-color: #e7f4f9;
+}
+
+.recentUploadsSection {
+  /* Styling for recent uploads section */
+  background-color: #fff;
+}
+
+.recentUploadsSection ul {
+  list-style: none;
   padding: 0;
 }
 
-li {
-  margin-bottom: 1rem;
+.recentUploadsSection li {
+  padding: 1rem;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 button {
-  background-color: #007bff;
+  background-color: #28a745;
   color: white;
   padding: 0.5rem 1rem;
   border: none;
@@ -37,5 +62,52 @@ button {
 }
 
 button:hover {
-  background-color: #0056b3;
+  background-color: #218838;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .topSection, .middleSection, .recentUploadsSection {
+    padding: 1rem;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .gridBottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .safetyScoreBox {
+    width: 100%;
+    padding: 1rem;
+  }
+
+  /* Adjust recent uploads list on mobile */
+  .recentUploadsSection li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
