@@ -3,13 +3,20 @@
 import React from 'react';
 import styles from '@/styles/TaskCard.module.css';
 
+interface Task {
+  id: string;
+  label: string;
+  points?: number;
+}
+
+interface FileInfo {
+  score: number;
+  [key: string]: any;
+}
+
 interface TaskCardProps {
-  task: {
-    id: string;
-    label: string;
-    points?: number;
-  };
-  fileInfo: any;
+  task: Task;
+  fileInfo: FileInfo | null;
   onClick: () => void;
 }
 
