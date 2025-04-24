@@ -11,7 +11,6 @@ import { User2 } from 'lucide-react';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const [isModalOpen, setModalOpen] = useState(false);
-  const [isUserPanelOpen, setUserPanelOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -45,10 +44,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       <HotelSelectorModal isOpen={isModalOpen} setIsOpen={setModalOpen} />
 
-      {/* Floating user button for hotel pages */}
+      {/* ✅ Floating logout button */}
       <div style={{ position: 'fixed', top: 10, right: 20, zIndex: 1000 }}>
         <button
-          onClick={() => setUserPanelOpen(true)}
+          onClick={() => {
+            localStorage.removeItem('auth');
+            router.push('/login');
+          }}
           style={{
             background: 'white',
             borderRadius: '50%',
@@ -57,12 +59,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
             cursor: 'pointer',
           }}
+          title="Logout"
         >
           <User2 size={20} />
         </button>
       </div>
-
-      <UserPanel isOpen={isUserPanelOpen} onClose={() => setUserPanelOpen(false)} />
 
       <div style={{ display: 'flex', flex: 1 }}>
         <MainSidebar />
