@@ -1,8 +1,11 @@
 // src/app/hotels/[hotelId]/layout.tsx
-export default function HotelLayout({ children }: { children: React.ReactNode }) {
+import MainLayout from '@/components/MainLayout';
+import type { ReactNode } from 'react';
+
+export default function HotelLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
+    <MainLayout>
+      {children}
+    </MainLayout>
   );
 }
