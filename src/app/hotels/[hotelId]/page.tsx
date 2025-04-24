@@ -1,34 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
 import styles from '@/styles/HotelDashboard.module.css';
 import { ClipboardList, Building2, PlugZap, FileText } from 'lucide-react';
-import { useEffect } from 'react';
 
 export default function HotelDashboard() {
   const { hotelId } = useParams<{ hotelId: string }>();
-  const router = useRouter();
-
-  // Validate the hotelId
-  const hotelName = hotelNames[hotelId as keyof typeof hotelNames];
-
-  // Redirect or show 404 if hotelId is invalid
-  useEffect(() => {
-    if (!hotelId || !hotelName) {
-      router.push('/404'); // Redirect to a 404 page
-    }
-  }, [hotelId, hotelName, router]);
-
-  if (!hotelName) {
-    return null; // Show nothing until the redirect happens
-  }
+  const hotelName = hotelNames[hotelId as keyof typeof hotelNames] || 'Unknown Hotel';
 
   return (
     <div
       className={styles.backgroundWrapper}
-      style={{ backgroundImage: `url('/${hotelId}.jpg')` }}
+      style={{ backgroundImage: `url('/${hotelId}.jpg')` }}  {/* Correct string interpolation */}
     >
       {/* Overlay */}
       <div className={styles.overlay} />
@@ -48,33 +33,29 @@ export default function HotelDashboard() {
         </Link>
 
         <div className={styles.grid}>
-          {/* Move Building to the Top Section */}
+          <Link href={`/hotels/${hotelId}/service-reports`} className={styles.card}>
+            <ClipboardList size={32} />
+            <h3>Service Reports</h3>
+            <p>Track and view scheduled maintenance reports.</p>
+          </Link>
+
           <Link href={`/hotels/${hotelId}/building`} className={styles.card}>
             <Building2 size={32} />
             <h3>Building</h3>
             <p>3D models, drawings, and technical files.</p>
           </Link>
 
-          <div className={styles.gridBottom}>
-            {/* Move Service Reports to the Bottom Section */}
-            <Link href={`/hotels/${hotelId}/service-reports`} className={styles.card}>
-              <ClipboardList size={32} />
-              <h3>Service Reports</h3>
-              <p>Track and view scheduled maintenance reports.</p>
-            </Link>
+          <Link href={`/hotels/${hotelId}/utilities`} className={styles.card}>
+            <PlugZap size={32} />
+            <h3>Utilities</h3>
+            <p>Energy, water, and waste usage tracking.</p>
+          </Link>
 
-            <Link href={`/hotels/${hotelId}/utilities`} className={styles.card}>
-              <PlugZap size={32} />
-              <h3>Utilities</h3>
-              <p>Energy, water, and waste usage tracking.</p>
-            </Link>
-
-            <Link href={`/hotels/${hotelId}/tenders`} className={styles.card}>
-              <FileText size={32} />
-              <h3>Tenders</h3>
-              <p>View and manage supplier bids and contract files.</p>
-            </Link>
-          </div>
+          <Link href={`/hotels/${hotelId}/tenders`} className={styles.card}>
+            <FileText size={32} />
+            <h3>Tenders</h3>
+            <p>View and manage supplier bids and contract files.</p>
+          </Link>
         </div>
       </div>
     </div>
