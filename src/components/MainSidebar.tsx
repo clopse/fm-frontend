@@ -1,8 +1,9 @@
+// MainSidebar.tsx
 'use client';
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Building2, Activity, PlugZap, FileText, ClipboardList } from 'lucide-react';
+import { ClipboardList, Activity, PlugZap, FileText, Building2 } from 'lucide-react';
 import styles from '@/styles/MainSidebar.module.css';
 
 interface MainSidebarProps {
@@ -18,25 +19,25 @@ export default function MainSidebar({ isMobile = false, onItemClick }: MainSideb
   };
 
   return (
-    <nav className={styles.nav}>
+    <nav className={styles.sidebarNav}>
       <Link href={`/hotels/${hotelId}/building`} className={styles.navItem} onClick={handleClick}>
-        <Building2 size={20} />
+        <Building2 size={22} />
         <span>Building</span>
       </Link>
       <Link href={`/hotels/${hotelId}/safety-score`} className={styles.navItem} onClick={handleClick}>
-        <Activity size={20} />
+        <Activity size={22} />
         <span>Safety Score</span>
       </Link>
       <Link href={`/hotels/${hotelId}/utilities`} className={styles.navItem} onClick={handleClick}>
-        <PlugZap size={20} />
+        <PlugZap size={22} />
         <span>Utilities</span>
       </Link>
       <Link href={`/hotels/${hotelId}/tenders`} className={styles.navItem} onClick={handleClick}>
-        <FileText size={20} />
+        <FileText size={22} />
         <span>Tenders</span>
       </Link>
       <Link href={`/hotels/${hotelId}/service-reports`} className={styles.navItem} onClick={handleClick}>
-        <ClipboardList size={20} />
+        <ClipboardList size={22} />
         <span>Service Reports</span>
       </Link>
     </nav>
