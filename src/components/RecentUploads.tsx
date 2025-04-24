@@ -1,6 +1,6 @@
 'use client';
 
-import styles from './RecentUploads.module.css';
+import styles from '@/styles/RecentUploads.module.css';
 
 export function RecentUploads({ uploads }: { uploads: { hotel: string; report: string; date: string }[] }) {
   const handleAuditClick = (upload: { hotel: string; report: string; date: string }) => {
