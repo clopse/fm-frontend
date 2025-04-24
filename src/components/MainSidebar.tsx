@@ -1,9 +1,15 @@
-// MainSidebar.tsx
 'use client';
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ClipboardList, Activity, PlugZap, FileText, Building2 } from 'lucide-react';
+import {
+  ClipboardList,
+  Activity,
+  PlugZap,
+  FileText,
+  Building2
+} from 'lucide-react';
+
 import styles from '@/styles/MainSidebar.module.css';
 
 interface MainSidebarProps {
@@ -20,7 +26,7 @@ export default function MainSidebar({ isMobile = false, onItemClick }: MainSideb
 
   return (
     <aside className={styles.sidebarWrapper}>
-      <nav className={styles.sidebarNav}>
+      <nav className={styles.nav}>
         <Link href={`/hotels/${hotelId}/building`} className={styles.navItem} onClick={handleClick}>
           <Building2 size={22} />
           <span>Building</span>
