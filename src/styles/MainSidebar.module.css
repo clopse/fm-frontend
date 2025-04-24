@@ -6,12 +6,9 @@
   transition: transform 0.3s ease;
   height: 100vh;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  position: relative;
+  display: flex;
+  flex-direction: column;
   z-index: 1000;
-}
-
-.sidebarWrapper.open {
-  transform: translateX(0);
 }
 
 @media (max-width: 767px) {
@@ -20,7 +17,10 @@
     top: 0;
     left: 0;
     transform: translateX(-100%);
-    z-index: 1050;
+  }
+
+  .sidebarWrapper.open {
+    transform: translateX(0);
   }
 }
 
@@ -50,7 +50,6 @@
 
 .toggleSidebarButton {
   position: fixed;
-  top: 15px;
   left: 15px;
   z-index: 1101;
   background: white;
