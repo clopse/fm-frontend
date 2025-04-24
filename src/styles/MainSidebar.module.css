@@ -1,5 +1,3 @@
-/* MainSidebar.module.css */
-
 .sidebarWrapper {
   width: 250px;
   background-color: #f8f9fa;
@@ -10,7 +8,6 @@
   position: relative;
 }
 
-/* Sidebar hidden on mobile */
 @media (max-width: 767px) {
   .sidebarWrapper {
     position: fixed;
@@ -63,4 +60,8 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.open {
+  transform: translateX(0);
 }
