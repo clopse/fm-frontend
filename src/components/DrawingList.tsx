@@ -4,11 +4,16 @@ import { useState } from 'react';
 import { drawingData } from '../data/drawingData';
 import styles from '../styles/DrawingList.module.css';
 
-export default function DrawingList({ hotelId }: { hotelId: string }) {
+export default function DrawingList({
+  hotelId,
+  onSelect,
+}: {
+  hotelId: string;
+  onSelect: (filePath: string) => void;
+}) {
   const hotelDrawings = drawingData[hotelId];
   const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
 
-  // Fully guard against missing data
   if (!hotelDrawings || typeof hotelDrawings !== 'object' || !hotelDrawings.folders) {
     return <p className={styles.notice}>No drawings configured for this hotel.</p>;
   }
@@ -21,7 +26,6 @@ export default function DrawingList({ hotelId }: { hotelId: string }) {
 
   return (
     <div className={styles.container}>
-      
       {Object.entries(folders).map(([folderName, files]) => {
         const safeFiles = Array.isArray(files) ? files : [];
 
@@ -42,7 +46,10 @@ export default function DrawingList({ hotelId }: { hotelId: string }) {
                     <li key={i} className={styles.fileItem}>
                       <a
                         href="#"
-                        onClick={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onSelect(file.path);
+                        }}
                         className={styles.fileLink}
                       >
                         📄 {file.name}
