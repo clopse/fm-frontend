@@ -1,67 +1,77 @@
 'use client';
 
-import { useState } from 'react';
-import { drawingData } from '../data/drawingData';
+import { useEffect, useState } from 'react';
 import styles from '../styles/DrawingList.module.css';
 
-export default function DrawingList({
-  hotelId,
-  onSelect,
-}: {
+type Props = {
   hotelId: string;
   onSelect: (filePath: string) => void;
-}) {
-  const hotelDrawings = drawingData[hotelId];
-  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
+};
 
-  if (!hotelDrawings || typeof hotelDrawings !== 'object' || !hotelDrawings.folders) {
-    return <p className={styles.notice}>No drawings configured for this hotel.</p>;
-  }
+export default function DrawingList({ hotelId, onSelect }: Props) {
+  const [folders, setFolders] = useState<Record<string, string[]>>({});
+  const [openFolders, setOpenFolders] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDrawings = async () => {
+      try {
+        const res = await fetch(`/drawings/${hotelId}`);
+        if (!res.ok) throw new Error('Failed to fetch drawing data');
+        const data = await res.json();
+        setFolders(data);
+      } catch (err: any) {
+        setError(err.message || 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDrawings();
+  }, [hotelId]);
 
   const toggleFolder = (folder: string) => {
-    setOpenFolders((prev) => ({ ...prev, [folder]: !prev[folder] }));
+    setOpenFolders(prev => ({ ...prev, [folder]: !prev[folder] }));
   };
 
-  const folders = hotelDrawings.folders || {};
+  if (loading) return <p className={styles.notice}>Loading drawings...</p>;
+  if (error) return <p className={styles.notice}>Error: {error}</p>;
 
   return (
     <div className={styles.container}>
-      {Object.entries(folders).map(([folderName, files]) => {
-        const safeFiles = Array.isArray(files) ? files : [];
-
-        return (
-          <div key={folderName} className={styles.folder}>
-            <button className={styles.folderHeader} onClick={() => toggleFolder(folderName)}>
-              <span className={styles.arrow}>{openFolders[folderName] ? '▾' : '▸'}</span>
-              <span className={styles.folderName}>
-                {folderName.charAt(0).toUpperCase() + folderName.slice(1)}
-              </span>
-            </button>
-            {openFolders[folderName] && (
-              <ul className={styles.fileList}>
-                {safeFiles.length === 0 ? (
-                  <li className={styles.empty}>No files in this category.</li>
-                ) : (
-                  safeFiles.map((file, i) => (
-                    <li key={i} className={styles.fileItem}>
-                      <a
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          onSelect(file.path);
-                        }}
-                        className={styles.fileLink}
-                      >
-                        📄 {file.name}
-                      </a>
-                    </li>
-                  ))
-                )}
-              </ul>
-            )}
-          </div>
-        );
-      })}
+      {Object.entries(folders).map(([folderName, files]) => (
+        <div key={folderName} className={styles.folder}>
+          <button className={styles.folderHeader} onClick={() => toggleFolder(folderName)}>
+            <span className={styles.arrow}>{openFolders[folderName] ? '▾' : '▸'}</span>
+            <span className={styles.folderName}>
+              {folderName.charAt(0).toUpperCase() + folderName.slice(1)}
+            </span>
+          </button>
+          {openFolders[folderName] && (
+            <ul className={styles.fileList}>
+              {files.length === 0 ? (
+                <li className={styles.empty}>No files in this category.</li>
+              ) : (
+                files.map((file, i) => (
+                  <li key={i} className={styles.fileItem}>
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onSelect(`/drawings/${hotelId}/${folderName}/${file}`);
+                      }}
+                      className={styles.fileLink}
+                    >
+                      📄 {file}
+                    </a>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
