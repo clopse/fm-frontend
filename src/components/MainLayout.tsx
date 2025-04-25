@@ -1,4 +1,3 @@
-// components/MainLayout.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -26,7 +25,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      setIsSidebarOpen(!mobile); // close on mobile, open on desktop
+      setIsSidebarOpen(!mobile);
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -44,7 +43,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const hotelId = pathname.split('/')[2];
   const currentHotelName = hotels.find((h) => h.id === hotelId)?.name || 'Select Hotel';
-  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -57,32 +56,27 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       <HotelSelectorModal isOpen={isModalOpen} setIsOpen={setModalOpen} />
 
-      {/* Toggle Sidebar Button — moved below header */}
-      <div
-        className={styles.toggleSidebarButton}
-        onClick={toggleSidebar}
-        style={{
-          display: 'flex',
-          top: !isDashboardHome ? 70 : 15, // Push below logo/header
-        }}
-      >
+      {/* Floating toggle button */}
+      <div className={styles.toggleSidebarButton} onClick={toggleSidebar}>
         {isSidebarOpen ? <ArrowLeft size={20} /> : <Menu size={20} />}
       </div>
 
       <div style={{ display: 'flex', flex: 1 }}>
-        <div className={`${styles.sidebarWrapper} ${isSidebarOpen ? styles.open : ''}`}>
+        <div className={`${styles.sidebarWrapper} ${isSidebarOpen ? 'open' : ''}`}>
           <MainSidebar
             isMobile={isMobile}
             onItemClick={() => isMobile && setIsSidebarOpen(false)}
-        />
-      </div>
+          />
+        </div>
 
-        <main style={{ flex: 1, overflow: 'auto', padding: isDashboardHome ? 0 : '1rem' }}>
+        <main
+          className={`${styles.mainContent} ${isSidebarOpen && !isMobile ? styles.shifted : ''}`}
+        >
           {children}
         </main>
       </div>
 
-      {/* User icon in top right */}
+      {/* User button top right */}
       <div style={{ position: 'fixed', top: 10, right: 20, zIndex: 1100 }}>
         <button
           onClick={() => setUserPanelOpen(true)}
