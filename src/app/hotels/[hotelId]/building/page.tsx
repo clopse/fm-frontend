@@ -7,6 +7,7 @@ import { hotelNames } from '@/data/hotelMetadata';
 import SpeckleEmbed from '@/components/SpeckleEmbed';
 import HotelImage from '@/components/HotelImage';
 import DrawingList from '@/components/DrawingList';
+import PDFModalViewer from '@/components/PDFModalViewer';
 import styles from '@/styles/BuildingDrawingsPage.module.css';
 
 export default function BuildingPage() {
@@ -20,29 +21,30 @@ export default function BuildingPage() {
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.leftPanel}>
-        <h2>📁 Drawings</h2>
-        <DrawingList hotelId={hotelId} onSelect={handleSelectDrawing} />
+    <>
+      <div className={styles.container}>
+        <div className={styles.leftPanel}>
+          <h2>📁 Drawings</h2>
+          <DrawingList hotelId={hotelId} onSelect={handleSelectDrawing} />
+        </div>
+
+        <div className={styles.rightPanel}>
+          {!selectedDrawing && (
+            hasModel ? (
+              <SpeckleEmbed height="100%" />
+            ) : (
+              <HotelImage hotelId={hotelId} alt={`${hotelName} Image`} />
+            )
+          )}
+        </div>
       </div>
 
-      <div className={styles.rightPanel}>
-        {selectedDrawing ? (
-          <>
-            <iframe src={selectedDrawing} className={styles.viewer} />
-            <button
-              onClick={() => setSelectedDrawing(null)}
-              className={styles.backButton}
-            >
-              🔁 Back to 3D View
-            </button>
-          </>
-        ) : hasModel ? (
-          <SpeckleEmbed height="100%" />
-        ) : (
-          <HotelImage hotelId={hotelId} alt={`${hotelName} Image`} />
-        )}
-      </div>
-    </div>
+      {selectedDrawing && (
+        <PDFModalViewer
+          fileUrl={selectedDrawing}
+          onClose={() => setSelectedDrawing(null)}
+        />
+      )}
+    </>
   );
 }
