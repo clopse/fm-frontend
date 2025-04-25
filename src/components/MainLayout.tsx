@@ -61,12 +61,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       <div style={{ display: 'flex', width: '100%' }}>
-        <div className={`${styles.sidebarWrapper} ${isSidebarOpen ? styles.open : ''}`}>
+        <aside className={`${styles.sidebarWrapper} ${isSidebarOpen ? styles.open : ''}`}>
           <MainSidebar
             isMobile={isMobile}
             onItemClick={() => isMobile && setIsSidebarOpen(false)}
           />
-        </div>
+        </aside>
 
         <main className={`${styles.mainContent} ${isSidebarOpen ? styles.shifted : ''}`}>
           {children}
