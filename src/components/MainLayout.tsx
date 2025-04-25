@@ -25,7 +25,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      setIsSidebarOpen(!mobile);
+      setIsSidebarOpen(!mobile); // default: closed on mobile, open on desktop
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -43,7 +43,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const hotelId = pathname.split('/')[2];
   const currentHotelName = hotels.find((h) => h.id === hotelId)?.name || 'Select Hotel';
-  const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -56,12 +56,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       <HotelSelectorModal isOpen={isModalOpen} setIsOpen={setModalOpen} />
 
-      {/* Floating toggle button */}
+      {/* Always in top-left corner */}
       <div className={styles.toggleSidebarButton} onClick={toggleSidebar}>
         {isSidebarOpen ? <ArrowLeft size={20} /> : <Menu size={20} />}
       </div>
 
       <div style={{ display: 'flex', flex: 1 }}>
+        {/* Sidebar */}
         <div className={`${styles.sidebarWrapper} ${isSidebarOpen ? 'open' : ''}`}>
           <MainSidebar
             isMobile={isMobile}
@@ -69,14 +70,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           />
         </div>
 
-        <main
-          className={`${styles.mainContent} ${isSidebarOpen && !isMobile ? styles.shifted : ''}`}
-        >
+        {/* Main content slides if sidebar is open */}
+        <main className={`${styles.mainContent} ${isSidebarOpen ? styles.shifted : ''}`}>
           {children}
         </main>
       </div>
 
-      {/* User button top right */}
+      {/* Top-right user icon */}
       <div style={{ position: 'fixed', top: 10, right: 20, zIndex: 1100 }}>
         <button
           onClick={() => setUserPanelOpen(true)}
