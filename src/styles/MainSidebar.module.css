@@ -21,8 +21,7 @@
   transform: translateX(0);
 }
 
-/* Optional logo (re-enable if needed) */
-/*
+/* Re-enabled logo container */
 .logoContainer {
   width: 100%;
   padding: 1rem;
@@ -37,7 +36,6 @@
   max-width: 120px;
   height: auto;
 }
-*/
 
 .sidebarNav {
   display: flex;
@@ -81,7 +79,7 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Shift main content when sidebar is open */
+/* Animate main content to shift with sidebar */
 .mainContent {
   transition: margin-left 0.3s ease;
   margin-left: 0;
