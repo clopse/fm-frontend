@@ -1,4 +1,3 @@
-// components/MainSidebar.tsx
 'use client';
 
 import Link from 'next/link';
@@ -12,6 +11,8 @@ import {
   FileText,
   ClipboardList
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import clsx from 'clsx';
 
 interface MainSidebarProps {
   isMobile?: boolean;
@@ -20,13 +21,18 @@ interface MainSidebarProps {
 
 export default function MainSidebar({ isMobile = false, onItemClick }: MainSidebarProps) {
   const { hotelId } = useParams();
+  const [isOpen, setIsOpen] = useState(true); // Sidebar is shown by default
 
   const handleClick = () => {
     if (onItemClick) onItemClick();
   };
 
+  useEffect(() => {
+    if (isMobile) setIsOpen(false); // Auto-collapse on mobile
+  }, [isMobile]);
+
   return (
-    <aside className={styles.sidebarWrapper}>
+    <aside className={clsx(styles.sidebarWrapper, isOpen && styles.open)}>
       <div className={styles.logoContainer}>
         <Image src="/jmk-logo.png" alt="JMK Logo" width={120} height={40} />
       </div>
