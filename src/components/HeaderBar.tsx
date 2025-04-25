@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import styles from '@/styles/HeaderBar.module.css';
 
 export default function HeaderBar({
@@ -12,9 +11,7 @@ export default function HeaderBar({
 }) {
   return (
     <header className={styles.header}>
-      <div className={styles.left}>
-        <Image src="/jmk-logo.png" alt="JMK Logo" width={180} height={55} />
-      </div>
+      <div className={styles.left} /> {/* Empty left column now */}
 
       <div className={styles.center}>
         <button className={styles.selector} onClick={onHotelSelectClick}>
@@ -23,7 +20,7 @@ export default function HeaderBar({
         </button>
       </div>
 
-      <div className={styles.right} />
+      <div className={styles.right} /> {/* Right section for user button remains */}
     </header>
   );
 }
