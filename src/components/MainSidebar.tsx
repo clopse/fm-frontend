@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ClipboardList, Activity, PlugZap, FileText, Building2 } from 'lucide-react';
 import Image from 'next/image';
+import { ClipboardList, Activity, PlugZap, FileText, Building2 } from 'lucide-react';
 import styles from '@/styles/MainSidebar.module.css';
 
 interface MainSidebarProps {
@@ -21,7 +21,7 @@ export default function MainSidebar({ isMobile = false, onItemClick }: MainSideb
   return (
     <aside className={styles.sidebarWrapper}>
       <div className={styles.logoContainer}>
-        <Image src="/jmk-logo.png" alt="JMK Logo" width={120} height={40} />
+        <Image src="/jmk-logo.png" alt="JMK Logo" width={120} height={50} />
       </div>
 
       <nav className={styles.sidebarNav}>
