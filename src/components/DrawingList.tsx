@@ -17,7 +17,7 @@ export default function DrawingList({ hotelId, onSelect }: Props) {
   useEffect(() => {
     const fetchDrawings = async () => {
       try {
-        const res = await fetch(`/drawings/${hotelId}`);
+        const res = await fetch(`https://api.jmkfacilities.ie/drawings/${hotelId}`);
         if (!res.ok) throw new Error('Failed to fetch drawing data');
         const data = await res.json();
         setFolders(data);
@@ -59,7 +59,7 @@ export default function DrawingList({ hotelId, onSelect }: Props) {
                       href="#"
                       onClick={(e) => {
                         e.preventDefault();
-                        onSelect(`/drawings/${hotelId}/${folderName}/${file}`);
+                        onSelect(`https://api.jmkfacilities.ie/drawings/${hotelId}/${folderName}/${file}`);
                       }}
                       className={styles.fileLink}
                     >
