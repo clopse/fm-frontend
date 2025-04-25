@@ -21,6 +21,7 @@
   transform: translateX(0);
 }
 
+/* Logo temporarily removed
 .logoContainer {
   width: 100%;
   padding: 1rem;
@@ -34,7 +35,7 @@
 .logoContainer img {
   max-width: 120px;
   height: auto;
-}
+}*/
 
 .sidebarNav {
   display: flex;
