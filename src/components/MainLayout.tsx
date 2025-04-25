@@ -25,7 +25,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      setIsSidebarOpen(!mobile); // Closed on mobile, open on desktop
+      setIsSidebarOpen(!mobile);
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -56,13 +56,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
       <HotelSelectorModal isOpen={isModalOpen} setIsOpen={setModalOpen} />
 
-      {/* Toggle Sidebar Button - absolute top-left */}
       <div className={styles.toggleSidebarButton} onClick={toggleSidebar}>
         {isSidebarOpen ? <ArrowLeft size={20} /> : <Menu size={20} />}
       </div>
 
       <div style={{ display: 'flex', width: '100%' }}>
-        {/* Sidebar (with scoped class for open) */}
         <div className={`${styles.sidebarWrapper} ${isSidebarOpen ? styles.open : ''}`}>
           <MainSidebar
             isMobile={isMobile}
@@ -70,13 +68,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           />
         </div>
 
-        {/* Main Content (shift if sidebar open) */}
         <main className={`${styles.mainContent} ${isSidebarOpen ? styles.shifted : ''}`}>
           {children}
         </main>
       </div>
 
-      {/* User icon - top-right */}
       <div style={{ position: 'fixed', top: 10, right: 20, zIndex: 1100 }}>
         <button
           onClick={() => setUserPanelOpen(true)}
