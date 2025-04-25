@@ -1,17 +1,19 @@
+/* MainSidebar.module.css */
+
 .sidebarWrapper {
   width: 250px;
   background-color: #0c1e2c;
   transition: transform 0.3s ease;
   height: 100vh;
-  z-index: 2000;
+  z-index: 1000;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   position: fixed;
   top: 0;
   left: 0;
   transform: translateX(-100%);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  align-items: stretch;
 }
 
 /* Sidebar shown when toggled */
@@ -26,6 +28,7 @@
   justify-content: center;
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: #0c1e2c;
 }
 
 .logoContainer img {
@@ -41,7 +44,6 @@
 }
 
 .navItem {
-  width: 100%;
   display: flex;
   align-items: center;
   padding: 0.75rem 1.25rem;
@@ -49,7 +51,6 @@
   text-decoration: none;
   transition: background-color 0.2s;
   font-size: 0.9rem;
-  cursor: pointer;
 }
 
 .navItem:hover {
@@ -64,7 +65,7 @@
   position: fixed;
   top: 15px;
   left: 15px;
-  z-index: 2100;
+  z-index: 1101;
   background: white;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -76,9 +77,12 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Animate main content to shift with sidebar */
 .mainContent {
   transition: margin-left 0.3s ease;
   margin-left: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .mainContent.shifted {
