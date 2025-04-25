@@ -1,92 +1,57 @@
-/* MainSidebar.module.css */
+// components/MainSidebar.tsx
+'use client';
 
-.sidebarWrapper {
-  width: 250px;
-  background-color: #0c1e2c;
-  transition: transform 0.3s ease;
-  height: 100vh;
-  z-index: 1000;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-  position: fixed;
-  top: 0;
-  left: 0;
-  transform: translateX(-100%);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import Image from 'next/image';
+import styles from '@/styles/MainSidebar.module.css';
+import {
+  Building2,
+  Activity,
+  PlugZap,
+  FileText,
+  ClipboardList
+} from 'lucide-react';
+
+interface MainSidebarProps {
+  isMobile?: boolean;
+  onItemClick?: () => void;
 }
 
-/* Sidebar shown when toggled */
-.sidebarWrapper.open {
-  transform: translateX(0);
-}
+export default function MainSidebar({ isMobile = false, onItemClick }: MainSidebarProps) {
+  const { hotelId } = useParams();
 
-/* Re-enabled logo container */
-.logoContainer {
-  width: 100%;
-  padding: 1rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: #0c1e2c;
-}
+  const handleClick = () => {
+    if (onItemClick) onItemClick();
+  };
 
-.logoContainer img {
-  max-width: 120px;
-  height: auto;
-}
-
-.sidebarNav {
-  display: flex;
-  flex-direction: column;
-  padding: 1rem 0;
-  width: 100%;
-}
-
-.navItem {
-  display: flex;
-  align-items: center;
-  padding: 0.75rem 1.25rem;
-  color: white;
-  text-decoration: none;
-  transition: background-color 0.2s;
-  font-size: 0.95rem;
-  font-weight: 500;
-}
-
-.navItem:hover {
-  background-color: #163246;
-}
-
-.navItem span {
-  margin-left: 0.75rem;
-}
-
-.toggleSidebarButton {
-  position: fixed;
-  top: 15px;
-  left: 15px;
-  z-index: 1101;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Animate main content to shift with sidebar */
-.mainContent {
-  transition: margin-left 0.3s ease;
-  margin-left: 0;
-  flex: 1;
-  min-width: 0;
-}
-
-.mainContent.shifted {
-  margin-left: 250px;
+  return (
+    <aside className={styles.sidebarWrapper}>
+      <div className={styles.logoContainer}>
+        <Image src="/jmk-logo.png" alt="JMK Logo" width={120} height={40} />
+      </div>
+      <nav className={styles.sidebarNav}>
+        <Link href={`/hotels/${hotelId}/building`} className={styles.navItem} onClick={handleClick}>
+          <Building2 size={22} />
+          <span>Building</span>
+        </Link>
+        <Link href={`/hotels/${hotelId}/safety-score`} className={styles.navItem} onClick={handleClick}>
+          <Activity size={22} />
+          <span>Safety Score</span>
+        </Link>
+        <Link href={`/hotels/${hotelId}/utilities`} className={styles.navItem} onClick={handleClick}>
+          <PlugZap size={22} />
+          <span>Utilities</span>
+        </Link>
+        <Link href={`/hotels/${hotelId}/tenders`} className={styles.navItem} onClick={handleClick}>
+          <FileText size={22} />
+          <span>Tenders</span>
+        </Link>
+        <Link href={`/hotels/${hotelId}/service-reports`} className={styles.navItem} onClick={handleClick}>
+          <ClipboardList size={22} />
+          <span>Service Reports</span>
+        </Link>
+      </nav>
+    </aside>
+  );
 }
