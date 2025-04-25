@@ -25,7 +25,7 @@ export default function MainSidebar({ isMobile = false, onItemClick }: MainSideb
   };
 
   return (
-    <aside className={styles.sidebarWrapper}>
+    <>
       <div className={styles.logoContainer}>
         <Image src="/jmk-logo.png" alt="JMK Logo" width={120} height={40} />
       </div>
@@ -51,6 +51,6 @@ export default function MainSidebar({ isMobile = false, onItemClick }: MainSideb
           <span>Service Reports</span>
         </Link>
       </nav>
-    </aside>
+    </>
   );
 }
