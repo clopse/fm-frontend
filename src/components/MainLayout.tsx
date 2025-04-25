@@ -61,7 +61,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         {isSidebarOpen ? <ArrowLeft size={20} /> : <Menu size={20} />}
       </div>
 
-      <div style={{ display: 'flex', flex: 1 }}>
+      <div style={{ display: 'flex', width: '100%' }}>
         {/* Sidebar (with scoped class for open) */}
         <div className={`${styles.sidebarWrapper} ${isSidebarOpen ? styles.open : ''}`}>
           <MainSidebar
