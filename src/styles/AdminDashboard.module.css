@@ -1,0 +1,114 @@
+/* Container for the entire dashboard */
+.container {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Shared styles for all sections (top, middle, recent uploads) */
+.section {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+/* Header styles */
+.header {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+/* Top section for leaderboard */
+.topSection {
+  background-color: #f9f9f9;
+}
+
+/* Middle section for utilities graph */
+.middleSection {
+  background-color: #e7f4f9;
+}
+
+/* Recent uploads section */
+.recentUploadsSection {
+  background-color: #fff;
+}
+
+.recentUploadsList {
+  list-style: none;
+  padding: 0;
+}
+
+.recentUploadsItem {
+  padding: 1rem;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Button styling for interaction */
+.button {
+  background-color: #28a745;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: #218838;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .topSection,
+  .middleSection,
+  .recentUploadsSection {
+    padding: 1rem;
+  }
+
+  .header {
+    font-size: 1.25rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .gridBottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .safetyScoreBox {
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .recentUploadsItem {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

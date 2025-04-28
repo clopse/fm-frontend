@@ -1,0 +1,31 @@
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  
+  .submitted {
+    background-color: orange;
+  }
+  
+  .awaitingreply {
+    background-color: gold;
+  }
+  
+  .awaitingapproval {
+    background-color: dodgerblue;
+  }
+  
+  .approved {
+    background-color: green;
+  }
+  
+  .completed {
+    background-color: grey;
+  }
+  
+  .default {
+    background-color: lightgray;
+  }
+  

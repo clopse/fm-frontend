@@ -1,0 +1,59 @@
+.wrapper {
+    height: 100vh;
+    background: url('/background-login.jpg') no-repeat center center/cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .loginBox {
+    background: rgba(255, 255, 255, 0.95);
+    padding: 1rem 1rem;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    text-align: center;
+    min-width: 300px;
+  }
+  
+  .logo {
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: .1rem;
+    color: #003366;
+  }
+  
+  .form input {
+    width: 80%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    font-size: 1rem;
+  }
+  
+  .form button {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #0055a5;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  
+  .form button:hover {
+    background-color: #004080;
+  }
+
+  .subtitle {
+    margin-top: 0;            /* Removes top margin */
+    margin-bottom: 1rem;      /* Optional spacing below */
+    font-size: 1.25rem;       /* Adjust as needed */
+    font-weight: 500;         /* 400 = normal, 500 = medium, 700 = bold */
+    font-family: 'Inter', sans-serif;  /* Or any other font you're using */
+    text-align: center;
+    color: #003366;           /* Optional: JMK-style dark blue */
+  }
+  

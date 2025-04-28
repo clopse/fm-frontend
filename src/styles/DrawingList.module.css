@@ -1,0 +1,77 @@
+.container {
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+  font-family: sans-serif;
+}
+
+.folder {
+  margin-bottom: 1rem;
+}
+
+.folderHeader {
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.5rem;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s ease;
+  border-radius: 8px;
+}
+
+.folderHeader:hover {
+  background-color: #e0f2ff;
+}
+
+.arrow {
+  font-size: 1.2rem;
+  margin-right: 0.5rem;
+  width: 20px;
+  text-align: center;
+}
+
+.folderName {
+  font-size: 1rem;
+}
+
+.fileList {
+  margin-top: 0.5rem;
+  padding-left: 1.5rem;
+}
+
+.fileItem {
+  margin: 0.3rem 0;
+}
+
+.fileLink {
+  display: block;
+  text-decoration: none;
+  color: #333;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s, font-weight 0.2s;
+}
+
+.fileLink:hover {
+  background-color: #f0f0f0;
+}
+
+.activeFile {
+  background-color: #e6f0ff;
+  font-weight: 600;
+  color: #000;
+  border-left: 4px solid #0070f3;
+  padding-left: 12px; /* to account for blue bar */
+}
+
+.notice {
+  padding: 1rem;
+  text-align: center;
+  color: #555;
+}

@@ -1,0 +1,20 @@
+.dropZone {
+  border: 2px dashed #bbb;
+  border-radius: 10px;
+  padding: 2rem;
+  text-align: center;
+  color: #777;
+  transition: background-color 0.2s;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+.dropZone:hover {
+  background-color: #f9f9f9;
+}
+
+.active {
+  background-color: #e6f7ff;
+  border-color: #3399ff;
+  color: #333;
+}

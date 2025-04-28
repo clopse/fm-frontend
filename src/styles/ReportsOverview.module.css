@@ -1,0 +1,71 @@
+.page {
+    padding: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  
+  .categoryBox {
+    margin-bottom: 2rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .categoryHeader {
+    width: 100%;
+    text-align: left;
+    padding: 1rem;
+    background-color: #2563eb;
+    color: white;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    border-radius: 8px 8px 0 0;
+  }
+  
+  .yearList {
+    padding: 0.5rem 1rem 1rem;
+    background-color: #ffffff;
+  }
+  
+  .yearHeader {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem;
+    font-weight: 600;
+    background-color: #e5e7eb;
+    border: none;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    border-radius: 4px;
+  }
+  
+  .fileList {
+    list-style: none;
+    padding-left: 1rem;
+    margin-top: 0.5rem;
+  }
+  
+  .fileList li {
+    margin-bottom: 0.25rem;
+  }
+  
+  .fileList a {
+    text-decoration: none;
+    color: #1f2937;
+    font-weight: 500;
+  }
+  
+  .fileList a:hover {
+    text-decoration: underline;
+    color: #2563eb;
+  }
+  
+  .date {
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
+  }
+  
