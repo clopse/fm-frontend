@@ -23,16 +23,19 @@ export default function UtilitiesUploadBox() {
     formData.append('utility_type', utilityType);
 
     try {
-      const res = await fetch('/uploads/utilities', {
+      const res: Response = await fetch('/uploads/utilities', {
         method: 'POST',
         body: formData,
-      ');
+      });
 
       const result = await res.json();
       if (res.ok) {
         setMessages((prev) => [...prev, `✅ ${file.name} uploaded.`]);
       } else {
-        setMessages((prev) => [...prev, `❌ ${file.name}: ${result.detail || 'Error'}`]);
+        setMessages((prev) => [
+          ...prev,
+          `❌ ${file.name}: ${result.detail || 'Error'}`,
+        ]);
       }
     } catch (err) {
       setMessages((prev) => [...prev, `❌ ${file.name}: ${(err as Error).message}`]);
