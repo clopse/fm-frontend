@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { User2 } from 'lucide-react';
 import { SafetyScoreLeaderboard } from '@/components/SafetyScoreLeaderboard';
 import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
 import { RecentUploads } from '@/components/RecentUploads';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
+import UserPanel from '@/components/UserPanel';
 import styles from '@/styles/AdminDashboard.module.css';
-import headerStyles from '@/styles/HeaderBar.module.css'; // (I'll explain this below)
+import headerStyles from '@/styles/HeaderBar.module.css';
 
 type Upload = { hotel: string; report: string; date: string };
 type LeaderboardEntry = { hotel: string; score: number };
@@ -15,6 +17,7 @@ export default function HotelsPage() {
   const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
   const [currentHotel, setCurrentHotel] = useState('Select Hotel');
 
   useEffect(() => {
@@ -36,42 +39,25 @@ export default function HotelsPage() {
 
   return (
     <div className={styles.container}>
-      {/* HEADER */}
-      <header className={headerStyles.header}>
-        <div className={headerStyles.left}>
-          🏨 JMK Hotels
-        </div>
-        <div className={headerStyles.center}>
-          <button className={headerStyles.selector} onClick={() => setIsModalOpen(true)}>
-            {currentHotel} <span className={headerStyles.arrow}>⌄</span>
-          </button>
-        </div>
-        <div className={headerStyles.right}>
-          {/* (Optional: user profile/settings etc.) */}
-        </div>
-      </header>
-
-      {/* MODAL */}
-      <HotelSelectorModal
-        isOpen={isModalOpen}
-        setIsOpen={setIsModalOpen}
-      />
-
-      {/* DASHBOARD */}
-      <div className={`${styles.section} ${styles.topSection}`}>
-        <h2 className={styles.header}>Safety Score Leaderboard</h2>
-        <SafetyScoreLeaderboard data={leaderboardData} />
+      {/* Floating Account Button */}
+      <div style={{ position: 'fixed', top: 10, right: 20, zIndex: 1100 }}>
+        <button
+          onClick={() => setIsUserPanelOpen(true)}
+          style={{
+            background: 'white',
+            borderRadius: '50%',
+            border: '1px solid #ccc',
+            padding: '10px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            cursor: 'pointer',
+          }}
+          title="Account"
+        >
+          <User2 size={20} />
+        </button>
       </div>
 
-      <div className={`${styles.section} ${styles.middleSection}`}>
-        <h2 className={styles.header}>Hotel Utilities Comparison</h2>
-        <UtilitiesGraphs />
-      </div>
+      {/* User Panel */}
+      <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
 
-      <div className={`${styles.section} ${styles.recentUploadsSection}`}>
-        <h2 className={styles.header}>Recent Uploads</h2>
-        <RecentUploads uploads={recentUploads} />
-      </div>
-    </div>
-  );
-}
+      {/* HEADER */
