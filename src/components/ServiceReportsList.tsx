@@ -31,7 +31,11 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
     async function fetchData() {
       if (!hotelId) return;
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        console.error('NEXT_PUBLIC_API_URL is not set.');
+        return;
+      }
 
       try {
         const response = await fetch(`${apiUrl}/files/${hotelId}`);
