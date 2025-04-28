@@ -15,7 +15,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [isUserPanelOpen, setUserPanelOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const pathname = usePathname();
+
+  const rawPathname = usePathname();
+  const pathname = rawPathname.endsWith('/') && rawPathname !== '/' 
+    ? rawPathname.slice(0, -1) 
+    : rawPathname;
+
   const router = useRouter();
 
   const isLoginPage = pathname === '/login';
@@ -28,6 +33,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       setIsMobile(mobile);
       setIsSidebarOpen(!mobile);
     };
+
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -40,7 +46,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     }
   }, [pathname, isLoginPage, router]);
 
-  if (isLoginPage || isHotelsPage) return <>{children}</>;
+  // 🔥 KEY: If on login page or hotels page, no sidebar or layout wrapping
+  if (isLoginPage || isHotelsPage) {
+    return <>{children}</>;
+  }
 
   const hotelId = pathname.split('/')[2];
   const currentHotelName = hotels.find((h) => h.id === hotelId)?.name || 'Select Hotel';
