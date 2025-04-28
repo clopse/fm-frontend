@@ -29,8 +29,15 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
 
   useEffect(() => {
     async function fetchData() {
+      if (!hotelId) return;
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
       try {
-        const response = await fetch(`http://127.0.0.1:8000/files/${hotelId}`);
+        const response = await fetch(`${apiUrl}/files/${hotelId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch service reports');
+        }
         const result = await response.json();
         setData(result);
       } catch (error) {
@@ -38,9 +45,7 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
       }
     }
 
-    if (hotelId) {
-      fetchData();
-    }
+    fetchData();
   }, [hotelId]);
 
   const toggleSection = (section: string) => {
