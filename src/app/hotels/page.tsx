@@ -1,10 +1,10 @@
-// src/app/hotels/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { SafetyScoreLeaderboard } from '@/components/SafetyScoreLeaderboard';
 import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
 import { RecentUploads } from '@/components/RecentUploads';
+import HotelSelectorModal from '@/components/HotelSelectorModal'; // <-- import
 import styles from '@/styles/AdminDashboard.module.css';
 
 type Upload = { hotel: string; report: string; date: string };
@@ -13,6 +13,7 @@ type LeaderboardEntry = { hotel: string; score: number };
 export default function HotelsPage() {
   const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false); // <-- modal open/close
 
   useEffect(() => {
     setLeaderboardData([
@@ -28,17 +29,29 @@ export default function HotelsPage() {
 
   return (
     <div className={styles.container}>
-      <div className={`${styles.section} ${styles.topSection}`}>
+      {/* HEADER */}
+      <header className={styles.headerBar}>
+        <div className={styles.logo}>🏨 JMK Hotels</div>
+        <button className={styles.hotelButton} onClick={() => setIsModalOpen(true)}>
+          Select Hotel ⌄
+        </button>
+      </header>
+
+      {/* HOTEL SELECTOR MODAL */}
+      <HotelSelectorModal isOpen={isModalOpen} setIsOpen={setIsModalOpen} />
+
+      {/* MAIN DASHBOARD CONTENT */}
+      <div className={styles.section}>
         <h2 className={styles.header}>Safety Score Leaderboard</h2>
         <SafetyScoreLeaderboard data={leaderboardData} />
       </div>
 
-      <div className={`${styles.section} ${styles.middleSection}`}>
+      <div className={styles.section}>
         <h2 className={styles.header}>Hotel Utilities Comparison</h2>
         <UtilitiesGraphs />
       </div>
 
-      <div className={`${styles.section} ${styles.recentUploadsSection}`}>
+      <div className={styles.section}>
         <h2 className={styles.header}>Recent Uploads</h2>
         <RecentUploads uploads={recentUploads} />
       </div>
