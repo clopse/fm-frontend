@@ -1,3 +1,4 @@
+// src/components/HotelSelectorModal.tsx
 'use client';
 
 import Link from 'next/link';
@@ -19,9 +20,11 @@ const hotels = [
 export default function HotelSelectorModal({
   isOpen,
   setIsOpen,
+  onSelectHotel,
 }: {
   isOpen: boolean;
   setIsOpen: (val: boolean) => void;
+  onSelectHotel?: (hotelName: string) => void; // <-- added optional
 }) {
   if (!isOpen) return null;
 
@@ -37,7 +40,7 @@ export default function HotelSelectorModal({
         </div>
         <div className={styles.grid}>
           {hotels.map((hotel) => (
-            <Link key={hotel.id} href={`/hotels/${hotel.id}`}>
+            <Link key={hotel.id} href={`/hotels/${hotel.id}`} onClick={() => onSelectHotel?.(hotel.name)}>
               <div className={styles.card} onClick={closeModal}>
                 <HotelImage hotelId={hotel.id} alt={hotel.name} />
                 <span className={styles.name}>{hotel.name}</span>
