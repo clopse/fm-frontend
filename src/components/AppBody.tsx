@@ -7,7 +7,7 @@ import MainLayout from '@/components/MainLayout';
 export default function AppBody({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  const isHotelsPage = pathname.startsWith('/hotels');
+  const isHotelsPage = pathname === '/hotels' || pathname.startsWith('/hotels/');
 
   return (
     <>
