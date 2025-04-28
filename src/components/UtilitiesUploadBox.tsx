@@ -26,7 +26,7 @@ export default function UtilitiesUploadBox() {
     formData.append('utility_type', utilityType);
 
     try {
-      const res = await fetch('/uploads/utilities', {
+      const res: Response = await fetch('/uploads/utilities', {
         method: 'POST',
         body: formData,
       });
