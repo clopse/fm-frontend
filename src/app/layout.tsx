@@ -1,8 +1,6 @@
-// src/app/layout.tsx
 import './globals.css';
-import MainLayout from '@/components/MainLayout';
 import type { Metadata } from 'next';
-import AppBody from '@/components/AppBody'; // New client-side logic here
+import MainLayout from '@/components/MainLayout';
 
 export const metadata: Metadata = {
   title: 'JMK Facilities Management',
@@ -13,7 +11,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <AppBody>{children}</AppBody>
+        <MainLayout>{children}</MainLayout>
       </body>
     </html>
   );
