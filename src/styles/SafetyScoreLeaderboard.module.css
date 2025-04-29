@@ -60,11 +60,14 @@
   gap: 1rem;
 }
 
-.label {
-  flex: 0 0 100px;
+.logoCell {
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden; /* ensures bars don't shift */
 }
 
 .barWrapper {
