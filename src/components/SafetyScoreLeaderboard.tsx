@@ -12,8 +12,11 @@ type ScoreEntry = {
 
 export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
   const [sortedData, setSortedData] = useState<ScoreEntry[]>([]);
+  const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
+    // Sort data (score DESC, tie-break by name)
     const sorted = [...data].sort((a, b) => {
       if (b.score === a.score) return a.hotel.localeCompare(b.hotel);
       return b.score - a.score;
@@ -21,14 +24,63 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
     setSortedData(sorted);
   }, [data]);
 
-  const getHotelId = (name: string): string => {
-    return hotels.find((h) => h.name === name)?.id || 'unknown';
+  useEffect(() => {
+    const saved = localStorage.getItem('selectedHotels');
+    if (saved) {
+      setSelectedHotels(JSON.parse(saved));
+    } else {
+      // default = all hotels
+      setSelectedHotels(hotels.map(h => h.id));
+    }
+  }, []);
+
+  const toggleHotel = (id: string) => {
+    const updated = selectedHotels.includes(id)
+      ? selectedHotels.filter(h => h !== id)
+      : [...selectedHotels, id];
+
+    setSelectedHotels(updated);
+    localStorage.setItem('selectedHotels', JSON.stringify(updated));
   };
+
+  const getHotelId = (name: string): string => {
+    return hotels.find(h => h.name === name)?.id || 'unknown';
+  };
+
+  const filteredData = sortedData.filter((entry) => {
+    const id = getHotelId(entry.hotel);
+    return selectedHotels.includes(id);
+  });
 
   return (
     <div className={styles.container}>
+      <div className={styles.boxHeader}>
+        <h2 className={styles.header}>Safety Score Leaderboard</h2>
+
+        {/* Dropdown Trigger */}
+        <div className={styles.dropdownWrapper}>
+          <button onClick={() => setDropdownOpen(!dropdownOpen)} className={styles.dropdownButton}>
+            ▼
+          </button>
+          {dropdownOpen && (
+            <div className={styles.dropdownMenu}>
+              {hotels.map((hotel) => (
+                <label key={hotel.id} className={styles.dropdownItem}>
+                  <input
+                    type="checkbox"
+                    checked={selectedHotels.includes(hotel.id)}
+                    onChange={() => toggleHotel(hotel.id)}
+                  />
+                  {hotel.name}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className={styles.leaderboard}>
-        {sortedData.map((entry) => {
+        {filteredData.map((entry) => {
           const hotelId = getHotelId(entry.hotel);
           return (
             <div key={entry.hotel} className={styles.row}>
