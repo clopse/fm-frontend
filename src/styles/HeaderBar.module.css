@@ -26,6 +26,18 @@
   justify-content: center;
 }
 
+.userButton {
+  background: white;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  padding: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .right {
   flex: 1;
   display: flex;
