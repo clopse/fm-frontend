@@ -18,10 +18,6 @@ export default function ServiceReportsPage() {
     }
   }, []);
 
-  if (!hotelId) {
-    return <div className={styles.notice}>Loading...</div>;
-  }
-
   const isPDF = selectedFile?.endsWith('.pdf');
   const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif)$/i);
 
@@ -30,7 +26,13 @@ export default function ServiceReportsPage() {
       <div className={styles.leftPanel}>
         <ServiceReportsList
           hotelId={hotelId}
-          onSelect={setSelectedFile}
+          onSelect={(url) => {
+            if (isMobile().any) {
+              window.open(url, '_blank');
+            } else {
+              setSelectedFile(url);
+            }
+          }}
           selectedFile={selectedFile}
         />
       </div>
@@ -38,20 +40,12 @@ export default function ServiceReportsPage() {
       <div className={styles.rightPanel}>
         {!selectedFile ? (
           <div className={styles.viewerPlaceholder}>Select a file to preview</div>
-        ) : isMobile().any ? (
-          <a
-            href={selectedFile}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.viewerPlaceholder}
-          >
-            Tap to download this file
-          </a>
         ) : isPDF ? (
           <iframe
             src={selectedFile}
             className={styles.viewer}
             title="PDF Viewer"
+            style={{ width: '100%', height: '100%', border: 'none' }}
           />
         ) : isImage ? (
           <img
@@ -60,14 +54,9 @@ export default function ServiceReportsPage() {
             className={styles.viewer}
           />
         ) : (
-          <a
-            href={selectedFile}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.viewerPlaceholder}
-          >
-            View this file
-          </a>
+          <div className={styles.viewerPlaceholder}>
+            Cannot preview this file type.
+          </div>
         )}
       </div>
     </div>
