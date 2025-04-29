@@ -22,7 +22,7 @@ export default function HeaderBar({
             alt="JMK Logo"
             width={186}
             height={60}
-            style={{ objectFit: 'contain', cursor: 'pointer' }}
+            className={styles.logo}
           />
         </Link>
       </div>
