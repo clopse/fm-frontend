@@ -25,10 +25,11 @@ export default function HotelsPage() {
   const [currentHotel, setCurrentHotel] = useState('Select Hotel');
 
   useEffect(() => {
+    // Simulated data for now
     setLeaderboardData(
       hotels.map((hotel) => ({
         hotel: hotel.name,
-        score: Math.floor(Math.random() * 21) + 80, // simulate 80–100% score
+        score: Math.floor(Math.random() * 21) + 80, // 80–100%
       }))
     );
 
@@ -43,7 +44,6 @@ export default function HotelsPage() {
         report: 'Electrical Inspection',
         date: '2025-03-25',
       },
-      // Add more uploads if needed
     ]);
   }, []);
 
@@ -54,32 +54,21 @@ export default function HotelsPage() {
 
   return (
     <div className={styles.container}>
-      {/* Floating Account Button */}
-      <div style={{ position: 'fixed', top: 10, right: 20, zIndex: 1100 }}>
-        <button
-          onClick={() => setIsUserPanelOpen(true)}
-          style={{
-            background: 'white',
-            borderRadius: '50%',
-            border: '1px solid #ccc',
-            padding: '10px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-            cursor: 'pointer',
-          }}
-          title="Account"
-        >
-          <User2 size={20} />
-        </button>
-      </div>
-
       {/* Slide-in User Panel */}
       <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
 
-      {/* Sticky Header with Logo and Selector */}
+      {/* Header */}
       <header className={headerStyles.header}>
         <div className={headerStyles.left}>
-        <Image src="/jmk-logo.png" alt="JMK Hotels" width={150} height={100} />
-      </div>
+          <Image
+            src="/jmk-logo.png"
+            alt="JMK Hotels"
+            width={228}
+            height={80}
+            style={{ objectFit: 'contain' }}
+          />
+        </div>
+
         <div className={headerStyles.center}>
           <button
             className={headerStyles.selector}
@@ -88,7 +77,23 @@ export default function HotelsPage() {
             {currentHotel} <span className={headerStyles.arrow}>⌄</span>
           </button>
         </div>
-        <div className={headerStyles.right}></div>
+
+        <div className={headerStyles.right}>
+          <button
+            onClick={() => setIsUserPanelOpen(true)}
+            style={{
+              background: 'white',
+              borderRadius: '50%',
+              border: '1px solid #ccc',
+              padding: '10px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              cursor: 'pointer',
+            }}
+            title="Account"
+          >
+            <User2 size={20} />
+          </button>
+        </div>
       </header>
 
       {/* Hotel Selector Modal */}
@@ -100,7 +105,6 @@ export default function HotelsPage() {
 
       {/* Dashboard Sections */}
       <div className={`${styles.section} ${styles.topSection}`}>
-        <h2 className={styles.header}>Safety Score Leaderboard</h2>
         <SafetyScoreLeaderboard data={leaderboardData} />
       </div>
 
