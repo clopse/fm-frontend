@@ -33,6 +33,12 @@
   align-items: center;
 }
 
+.logo {
+  padding-left: 45px;
+  object-fit: contain;
+  cursor: pointer;
+}
+
 .selector {
   background-color: #75D0DF;
   color: rgb(0, 46, 99);
