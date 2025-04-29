@@ -3,17 +3,10 @@
 import { useState, useEffect } from 'react';
 import styles from '@/styles/ServiceReportsList.module.css';
 
-interface FileItem {
-  filename: string;
-  url: string;
-}
-
-interface FolderData {
-  [companyName: string]: FileItem[];
-}
-
-interface ServiceReportsData {
-  [section: string]: FolderData;
+interface FileNode {
+  name: string;
+  url?: string;
+  children?: FileNode[];
 }
 
 interface Props {
@@ -23,9 +16,8 @@ interface Props {
 }
 
 export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: Props) {
-  const [data, setData] = useState<ServiceReportsData | null>(null);
-  const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({});
-  const [expandedFolders, setExpandedFolders] = useState<{ [key: string]: boolean }>({});
+  const [tree, setTree] = useState<FileNode[] | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,103 +31,64 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
       }
 
       try {
-        const response = await fetch(`${apiUrl}/files/${hotelId}`);
+        const response = await fetch(`${apiUrl}/files/tree/${hotelId}`);
         if (!response.ok) {
-          throw new Error('Failed to fetch service reports');
+          throw new Error('Failed to fetch folder structure');
         }
-
-        const result: ServiceReportsData = await response.json();
-        setData(result);
-        setError(null);
+        const result: FileNode[] = await response.json();
+        setTree(result);
       } catch (err: any) {
-        console.error('Service report load error:', err);
+        console.error('Folder load error:', err);
         setError(err.message || 'Unknown error');
       }
     }
-
     fetchData();
   }, [hotelId]);
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
+  const toggle = (path: string) => {
+    const newSet = new Set(expanded);
+    newSet.has(path) ? newSet.delete(path) : newSet.add(path);
+    setExpanded(newSet);
   };
 
-  const toggleFolder = (folderName: string) => {
-    setExpandedFolders(prev => ({
-      ...prev,
-      [folderName]: !prev[folderName],
-    }));
+  const renderTree = (nodes: FileNode[], parentPath = ''): JSX.Element[] => {
+    return nodes.map((node) => {
+      const path = `${parentPath}/${node.name}`;
+      const isExpanded = expanded.has(path);
+
+      return (
+        <div key={path} className={styles.folder}>
+          <div className={styles.folderHeader} onClick={() => node.children ? toggle(path) : undefined}>
+            {node.children ? (
+              <span className={styles.arrow}>{isExpanded ? '▼' : '▶'}</span>
+            ) : (
+              <span className={styles.arrow} />
+            )}
+            <span
+              className={node.url ? styles.fileLink : styles.folderName}
+              onClick={() => node.url && onSelect(node.url)}
+              style={{ cursor: node.url ? 'pointer' : 'default', fontWeight: selectedFile === node.url ? 'bold' : 'normal' }}
+            >
+              {node.url ? `📄 ${node.name}` : `📂 ${node.name}`}
+            </span>
+          </div>
+          {isExpanded && node.children && (
+            <div style={{ marginLeft: '1rem' }}>
+              {renderTree(node.children, path)}
+            </div>
+          )}
+        </div>
+      );
+    });
   };
 
   if (error) {
     return <div className={styles.notice}>⚠️ {error}</div>;
   }
 
-  if (!data) {
+  if (!tree) {
     return <div className={styles.notice}>Loading service reports...</div>;
   }
 
-  return (
-    <div className={styles.container}>
-      {Object.entries(data).map(([section, folders]) => (
-        <div key={section} className={styles.folder}>
-          <div
-            className={styles.folderHeader}
-            onClick={() => toggleSection(section)}
-          >
-            <span className={styles.arrow}>
-              {expandedSections[section] ? '▼' : '▶'}
-            </span>
-            <span className={styles.folderName}>📂 {section}</span>
-          </div>
-
-          {expandedSections[section] &&
-            Object.entries(folders).map(([folderName, files]) => (
-              <div key={folderName} className={styles.folder}>
-                <div
-                  className={styles.folderHeader}
-                  onClick={() => toggleFolder(folderName)}
-                >
-                  <span className={styles.arrow}>
-                    {expandedFolders[folderName] ? '▼' : '▶'}
-                  </span>
-                  <span className={styles.folderName}>{folderName}</span>
-                </div>
-
-                {expandedFolders[folderName] && (
-                  <ul className={styles.fileList}>
-                    {files.map((file, index) => {
-                      const fileUrl = file.url;
-                      const isSelected = selectedFile === fileUrl;
-
-                      return (
-                        <li key={index} className={styles.fileItem}>
-                          <a
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              if (fileUrl && fileUrl.startsWith('https://')) {
-                                onSelect(fileUrl);
-                              } else {
-                                console.warn('Invalid file URL:', file);
-                              }
-                            }}
-                            className={`${styles.fileLink} ${isSelected ? styles.activeFile : ''}`}
-                          >
-                            📄 {file.filename.replace(/^.*[\\/]/, '')}
-                          </a>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            ))}
-        </div>
-      ))}
-    </div>
-  );
+  return <div className={styles.container}>{renderTree(tree)}</div>;
 }
