@@ -64,7 +64,7 @@ export default function HotelsPage() {
             src="/jmk-logo.png"
             alt="JMK Hotels"
             width={228}
-            height={80}
+            height={60}
             style={{ objectFit: 'contain' }}
           />
         </div>
