@@ -26,6 +26,7 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
   const [data, setData] = useState<ServiceReportsData | null>(null);
   const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({});
   const [expandedFolders, setExpandedFolders] = useState<{ [key: string]: boolean }>({});
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -33,7 +34,7 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
       if (!apiUrl) {
-        console.error('NEXT_PUBLIC_API_URL is not set.');
+        setError('API URL is missing');
         return;
       }
 
@@ -42,10 +43,13 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
         if (!response.ok) {
           throw new Error('Failed to fetch service reports');
         }
-        const result = await response.json();
+
+        const result: ServiceReportsData = await response.json();
         setData(result);
-      } catch (error) {
-        console.error('Failed to load service reports', error);
+        setError(null);
+      } catch (err: any) {
+        console.error('Service report load error:', err);
+        setError(err.message || 'Unknown error');
       }
     }
 
@@ -66,13 +70,17 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
     }));
   };
 
+  if (error) {
+    return <div className={styles.notice}>⚠️ {error}</div>;
+  }
+
   if (!data) {
     return <div className={styles.notice}>Loading service reports...</div>;
   }
 
   return (
     <div className={styles.container}>
-      {Object.keys(data).map(section => (
+      {Object.entries(data).map(([section, folders]) => (
         <div key={section} className={styles.folder}>
           <div
             className={styles.folderHeader}
@@ -85,7 +93,7 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
           </div>
 
           {expandedSections[section] &&
-            Object.keys(data[section]).map(folderName => (
+            Object.entries(folders).map(([folderName, files]) => (
               <div key={folderName} className={styles.folder}>
                 <div
                   className={styles.folderHeader}
@@ -99,18 +107,29 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
 
                 {expandedFolders[folderName] && (
                   <ul className={styles.fileList}>
-                    {Array.isArray(data[section][folderName]) &&
-                      data[section][folderName].map((file, index) => (
+                    {files.map((file, index) => {
+                      const fileUrl = file.url;
+                      const isSelected = selectedFile === fileUrl;
+
+                      return (
                         <li key={index} className={styles.fileItem}>
                           <a
                             href="#"
-                            onClick={() => onSelect(file.url)}
-                            className={`${styles.fileLink} ${selectedFile === file.url ? styles.activeFile : ''}`}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (fileUrl && fileUrl.startsWith('https://')) {
+                                onSelect(fileUrl);
+                              } else {
+                                console.warn('Invalid file URL:', file);
+                              }
+                            }}
+                            className={`${styles.fileLink} ${isSelected ? styles.activeFile : ''}`}
                           >
-                            📄 {file.filename}
+                            📄 {file.filename.replace(/^.*[\\/]/, '')}
                           </a>
                         </li>
-                      ))}
+                      );
+                    })}
                   </ul>
                 )}
               </div>
