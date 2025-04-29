@@ -20,8 +20,8 @@ export default function HeaderBar({
           <img
             src="/jmk-logo.png"
             alt="JMK Logo"
-            width={226}
-            height={80}
+            width={186}
+            height={60}
             style={{ objectFit: 'contain', cursor: 'pointer' }}
           />
         </Link>
