@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
+import isMobile from 'ismobilejs';
 
 import { speckleModels } from '@/data/speckleModels';
 import { hotelNames } from '@/data/hotelMetadata';
@@ -15,25 +16,29 @@ export default function BuildingPage() {
   const { hotelId } = useParams<{ hotelId: string }>();
   const hotelName = hotelNames[hotelId] || 'Unknown Hotel';
   const hasModel = Boolean(speckleModels[hotelId]);
+
   const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
   const [load3D, setLoad3D] = useState(false);
 
   const handleSelectDrawing = (filePath: string) => {
-    setSelectedDrawing(filePath);
+    if (isMobile().any) {
+      window.open(filePath, '_blank');
+    } else {
+      setSelectedDrawing(filePath);
+    }
   };
 
   const handleBackToModel = () => {
     setSelectedDrawing(null);
-    setLoad3D(false); // reset to image
+    setLoad3D(false);
   };
 
   return (
     <div className={styles.container}>
-      {/* Left Panel – Drawings */}
+      {/* Left Panel – Drawing Folders */}
       <div className={styles.leftPanel}>
         <div className={styles.headingRow}>
           <h2 className={styles.heading}>📂 Drawings</h2>
-
           {hasModel && (
             <button className={styles.backToModelButton} onClick={handleBackToModel}>
               <img src="/3d.svg" alt="3D Model" className={styles.cubeIcon} />
@@ -57,6 +62,7 @@ export default function BuildingPage() {
           <iframe
             src={selectedDrawing}
             className={styles.viewer}
+            title="Drawing Viewer"
             style={{ width: '100%', height: '100%', border: 'none' }}
           />
         ) : hasModel ? (
