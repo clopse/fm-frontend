@@ -33,7 +33,6 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
       try {
         const response = await fetch(`${apiUrl}/files/tree/${hotelId}`);
         if (!response.ok) throw new Error('Failed to fetch folder structure');
-
         const result: FileNode[] = await response.json();
         setTree(result);
       } catch (err: any) {
@@ -41,6 +40,7 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
         setError(err.message || 'Unknown error');
       }
     }
+
     fetchData();
   }, [hotelId]);
 
@@ -48,6 +48,22 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
     const newSet = new Set(expanded);
     newSet.has(path) ? newSet.delete(path) : newSet.add(path);
     setExpanded(newSet);
+  };
+
+  const fetchFileUrl = async (fullPath: string) => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    try {
+      const encoded = encodeURIComponent(fullPath);
+      const res = await fetch(`${apiUrl}/reports/${hotelId}/${encoded}`);
+      const data = await res.json();
+      if (data.url) {
+        onSelect(data.url);
+      } else {
+        console.warn('No URL returned');
+      }
+    } catch (err) {
+      console.error('Failed to fetch signed URL:', err);
+    }
   };
 
   const renderTree = (nodes: FileNode[], parentPath = ''): JSX.Element[] => {
@@ -68,7 +84,7 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
             )}
             <span
               className={node.url ? styles.fileLink : styles.folderName}
-              onClick={() => node.url && onSelect(node.url)}
+              onClick={() => !node.children && fetchFileUrl(path.replace(/^\/+/, ''))}
               style={{
                 cursor: node.url ? 'pointer' : 'default',
                 fontWeight: selectedFile === node.url ? 'bold' : 'normal'
