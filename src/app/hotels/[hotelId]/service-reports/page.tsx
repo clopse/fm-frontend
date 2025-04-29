@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import isMobile from 'is-mobile'; // 🔍 install if needed
+import isMobile from 'ismobilejs';
 import ServiceReportsList from '@/components/ServiceReportsList';
 import styles from '@/styles/BuildingDrawingsPage.module.css';
 
