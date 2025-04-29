@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
 import styles from '@/styles/SafetyScoreLeaderboard.module.css';
 import { hotels } from '@/lib/hotels';
@@ -81,19 +82,23 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
           return (
             <div key={entry.hotel} className={styles.row}>
               <div className={styles.logoCell}>
-                <Image
-                  src={`/icons/${hotelId}-icon.png`}
-                  alt={entry.hotel}
-                  width={150}
-                  height={90}
-                  style={{
-                    height: '90px',
-                    width: 'auto',
-                    maxWidth: '100%',
-                    objectFit: 'contain',
-                  }}
+                <Link href={`/hotels/${hotelId}`}>
+                  <Image
+                    src={`/icons/${hotelId}-icon.png`}
+                    alt={entry.hotel}
+                    width={150}
+                    height={90}
+                    style={{
+                      height: '90px',
+                      width: 'auto',
+                      maxWidth: '100%',
+                      objectFit: 'contain',
+                      cursor: 'pointer',
+                    }}
                   />
+                </Link>
               </div>
+
               <div className={styles.barWrapper}>
                 <div
                   className={styles.bar}
