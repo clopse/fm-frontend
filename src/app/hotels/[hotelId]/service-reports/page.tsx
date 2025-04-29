@@ -19,20 +19,14 @@ export default function ServiceReportsPage() {
   }, []);
 
   const isPDF = selectedFile?.endsWith('.pdf');
-  const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif)$/i);
+  const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif|png)$/i);
 
   return (
     <div className={styles.container}>
       <div className={styles.leftPanel}>
         <ServiceReportsList
           hotelId={hotelId}
-          onSelect={(url) => {
-            if (isMobile().any) {
-              window.open(url, '_blank');
-            } else {
-              setSelectedFile(url);
-            }
-          }}
+          onSelect={setSelectedFile}
           selectedFile={selectedFile}
         />
       </div>
@@ -40,23 +34,36 @@ export default function ServiceReportsPage() {
       <div className={styles.rightPanel}>
         {!selectedFile ? (
           <div className={styles.viewerPlaceholder}>Select a file to preview</div>
+        ) : isMobile().any ? (
+          <a
+            href={selectedFile}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.viewerPlaceholder}
+          >
+            Tap to download this file
+          </a>
         ) : isPDF ? (
           <iframe
             src={selectedFile}
             className={styles.viewer}
             title="PDF Viewer"
-            style={{ width: '100%', height: '100%', border: 'none' }}
           />
         ) : isImage ? (
           <img
             src={selectedFile}
-            alt="Uploaded file"
+            alt="Preview"
             className={styles.viewer}
           />
         ) : (
-          <div className={styles.viewerPlaceholder}>
-            Cannot preview this file type.
-          </div>
+          <a
+            href={selectedFile}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.viewerPlaceholder}
+          >
+            Download this file
+          </a>
         )}
       </div>
     </div>
