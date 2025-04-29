@@ -8,6 +8,7 @@ import styles from '@/styles/BuildingDrawingsPage.module.css';
 export default function ServiceReportsPage() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [hotelId, setHotelId] = useState<string>('');
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -15,6 +16,7 @@ export default function ServiceReportsPage() {
       if (parts.length >= 3) {
         setHotelId(parts[2]);
       }
+      setIsMobileDevice(isMobile(window.navigator).any);
     }
   }, []);
 
@@ -35,7 +37,7 @@ export default function ServiceReportsPage() {
       <div className={styles.rightPanel}>
         {!selectedFile ? (
           <div className={styles.viewerPlaceholder}>Select a file to preview</div>
-        ) : isMobile() ? (
+        ) : isMobileDevice ? (
           <a href={selectedFile} download style={{ padding: '1rem' }}>
             Tap to download this file
           </a>
