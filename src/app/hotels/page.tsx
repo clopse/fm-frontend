@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { User2 } from 'lucide-react';
+
 import { SafetyScoreLeaderboard } from '@/components/SafetyScoreLeaderboard';
 import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
 import { RecentUploads } from '@/components/RecentUploads';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
 import UserPanel from '@/components/UserPanel';
+import { hotels } from '@/lib/hotels';
+
 import styles from '@/styles/AdminDashboard.module.css';
 import headerStyles from '@/styles/HeaderBar.module.css';
 
@@ -16,25 +20,36 @@ type LeaderboardEntry = { hotel: string; score: number };
 export default function HotelsPage() {
   const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
   const [currentHotel, setCurrentHotel] = useState('Select Hotel');
 
   useEffect(() => {
-    setLeaderboardData([
-      { hotel: 'Holiday Inn Express', score: 85 },
-      { hotel: 'Moxy Cork', score: 92 },
-      { hotel: 'Hampton Dublin', score: 88 },
-    ]);
+    setLeaderboardData(
+      hotels.map((hotel) => ({
+        hotel: hotel.name,
+        score: Math.floor(Math.random() * 21) + 80, // simulate 80–100% score
+      }))
+    );
+
     setRecentUploads([
-      { hotel: 'Holiday Inn Express', report: 'Fire Extinguisher Report 2025', date: '2025-04-01' },
-      { hotel: 'Moxy Cork', report: 'Electrical Inspection', date: '2025-03-25' },
+      {
+        hotel: 'Holiday Inn Express',
+        report: 'Fire Extinguisher Report 2025',
+        date: '2025-04-01',
+      },
+      {
+        hotel: 'Moxy Cork',
+        report: 'Electrical Inspection',
+        date: '2025-03-25',
+      },
+      // Add more uploads if needed
     ]);
   }, []);
 
   const handleHotelSelect = (hotelName: string) => {
     setCurrentHotel(hotelName);
-    setIsModalOpen(false);
+    setIsHotelModalOpen(false);
   };
 
   return (
@@ -57,7 +72,48 @@ export default function HotelsPage() {
         </button>
       </div>
 
-      {/* User Panel */}
+      {/* Slide-in User Panel */}
       <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
 
-      {/* HEADER */
+      {/* Sticky Header with Logo and Selector */}
+      <header className={headerStyles.header}>
+        <div className={headerStyles.left}>
+          <Image src="/jmk-logo.png" alt="JMK Hotels" width={36} height={36} style={{ marginRight: '8px' }} />
+          <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>JMK Hotels</span>
+        </div>
+        <div className={headerStyles.center}>
+          <button
+            className={headerStyles.selector}
+            onClick={() => setIsHotelModalOpen(true)}
+          >
+            {currentHotel} <span className={headerStyles.arrow}>⌄</span>
+          </button>
+        </div>
+        <div className={headerStyles.right}></div>
+      </header>
+
+      {/* Hotel Selector Modal */}
+      <HotelSelectorModal
+        isOpen={isHotelModalOpen}
+        setIsOpen={setIsHotelModalOpen}
+        onSelectHotel={handleHotelSelect}
+      />
+
+      {/* Dashboard Sections */}
+      <div className={`${styles.section} ${styles.topSection}`}>
+        <h2 className={styles.header}>Safety Score Leaderboard</h2>
+        <SafetyScoreLeaderboard data={leaderboardData} />
+      </div>
+
+      <div className={`${styles.section} ${styles.middleSection}`}>
+        <h2 className={styles.header}>Hotel Utilities Comparison</h2>
+        <UtilitiesGraphs />
+      </div>
+
+      <div className={`${styles.section} ${styles.recentUploadsSection}`}>
+        <h2 className={styles.header}>Recent Uploads</h2>
+        <RecentUploads uploads={recentUploads} />
+      </div>
+    </div>
+  );
+}
