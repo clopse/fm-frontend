@@ -18,8 +18,10 @@ export default function ServiceReportsPage() {
     }
   }, []);
 
-  const isPDF = selectedFile?.endsWith('.pdf');
-  const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif|png)$/i);
+  const isPDF = selectedFile?.toLowerCase().endsWith('.pdf');
+  const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif)$/i);
+
+  const isMobileDevice = isMobile().any;
 
   return (
     <div className={styles.container}>
@@ -34,7 +36,7 @@ export default function ServiceReportsPage() {
       <div className={styles.rightPanel}>
         {!selectedFile ? (
           <div className={styles.viewerPlaceholder}>Select a file to preview</div>
-        ) : isMobile().any ? (
+        ) : isMobileDevice ? (
           <a
             href={selectedFile}
             target="_blank"
@@ -48,6 +50,7 @@ export default function ServiceReportsPage() {
             src={selectedFile}
             className={styles.viewer}
             title="PDF Viewer"
+            style={{ border: 'none' }}
           />
         ) : isImage ? (
           <img
