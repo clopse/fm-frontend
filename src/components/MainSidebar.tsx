@@ -26,9 +26,20 @@ export default function MainSidebar({ isMobile = false, onItemClick }: MainSideb
 
   return (
     <>
+      {/* JMK Logo linking to homepage */}
       <div className={styles.logoContainer}>
-        <Image src="/jmk-logo.png" alt="JMK Logo" width={120} height={40} />
+        <Link href="https://jmkfacilities.ie/hotels">
+          <Image
+            src="/jmk-logo.png"
+            alt="JMK Logo"
+            width={120}
+            height={40}
+            style={{ cursor: 'pointer', objectFit: 'contain' }}
+          />
+        </Link>
       </div>
+
+      {/* Sidebar Navigation */}
       <nav className={styles.sidebarNav}>
         <Link href={`/hotels/${hotelId}/building`} className={styles.navItem} onClick={handleClick}>
           <Building2 size={22} />
