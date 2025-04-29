@@ -2,7 +2,6 @@
   width: 100%;
 }
 
-/* Header area for title + dropdown */
 .boxHeader {
   display: flex;
   justify-content: space-between;
@@ -16,7 +15,6 @@
   color: #333;
 }
 
-/* Dropdown styles */
 .dropdownWrapper {
   position: relative;
 }
@@ -50,7 +48,6 @@
   cursor: pointer;
 }
 
-/* Leaderboard rows */
 .leaderboard {
   display: flex;
   flex-direction: column;
@@ -64,7 +61,7 @@
 }
 
 .label {
-  flex: 0 0 40px;
+  flex: 0 0 100px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,7 +95,7 @@
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: #222; /* Dark grey for visibility */
+  color: #222;
   font-weight: 600;
   font-size: 0.9rem;
   cursor: help;
