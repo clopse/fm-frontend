@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
+
 import { speckleModels } from '@/data/speckleModels';
 import { hotelNames } from '@/data/hotelMetadata';
 import SpeckleEmbed from '@/components/SpeckleEmbed';
@@ -14,18 +16,20 @@ export default function BuildingPage() {
   const hotelName = hotelNames[hotelId] || 'Unknown Hotel';
   const hasModel = Boolean(speckleModels[hotelId]);
   const [selectedDrawing, setSelectedDrawing] = useState<string | null>(null);
+  const [load3D, setLoad3D] = useState(false);
 
-  // 🛡 FIX: No API fetch - just set direct PDF URL
   const handleSelectDrawing = (filePath: string) => {
     setSelectedDrawing(filePath);
   };
 
   const handleBackToModel = () => {
     setSelectedDrawing(null);
+    setLoad3D(false); // reset to image
   };
 
   return (
     <div className={styles.container}>
+      {/* Left Panel – Drawings */}
       <div className={styles.leftPanel}>
         <div className={styles.headingRow}>
           <h2 className={styles.heading}>📂 Drawings</h2>
@@ -47,6 +51,7 @@ export default function BuildingPage() {
         )}
       </div>
 
+      {/* Right Panel – Viewer */}
       <div className={styles.rightPanel}>
         {selectedDrawing ? (
           <iframe
@@ -55,7 +60,21 @@ export default function BuildingPage() {
             style={{ width: '100%', height: '100%', border: 'none' }}
           />
         ) : hasModel ? (
-          <SpeckleEmbed height="100%" />
+          load3D ? (
+            <SpeckleEmbed height="100%" />
+          ) : (
+            <div className={styles.previewWrapper} onClick={() => setLoad3D(true)}>
+              <Image
+                src={`/previews/${hotelId}.png`}
+                alt={`${hotelName} Preview`}
+                fill
+                className={styles.previewImage}
+              />
+              <div className={styles.playOverlay}>
+                <img src="/play.svg" alt="Play 3D" className={styles.playButton} />
+              </div>
+            </div>
+          )
         ) : (
           <HotelImage hotelId={hotelId} alt={`${hotelName} Image`} />
         )}
