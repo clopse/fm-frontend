@@ -1,8 +1,8 @@
 'use client';
 
-import styles from '@/styles/SafetyScoreLeaderboard.module.css';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import styles from '@/styles/SafetyScoreLeaderboard.module.css';
 import { hotels } from '@/lib/hotels';
 
 type ScoreEntry = {
@@ -22,7 +22,7 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
   }, [data]);
 
   const getHotelId = (name: string): string => {
-    return hotels.find(h => h.name === name)?.id || 'unknown';
+    return hotels.find((h) => h.name === name)?.id || 'unknown';
   };
 
   return (
@@ -38,7 +38,12 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
                   alt={entry.hotel}
                   width={32}
                   height={32}
-                  className={styles.icon}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    objectFit: 'contain',
+                    borderRadius: '4px',
+                  }}
                 />
               </div>
               <div className={styles.barWrapper}>
