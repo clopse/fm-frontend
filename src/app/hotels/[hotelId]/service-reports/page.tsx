@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import isMobile from 'is-mobile'; // 🔍 install if needed
 import ServiceReportsList from '@/components/ServiceReportsList';
-import styles from '@/styles/BuildingDrawingsPage.module.css'; // Reusing good 2-column layout
+import styles from '@/styles/BuildingDrawingsPage.module.css';
 
 export default function ServiceReportsPage() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -18,7 +19,7 @@ export default function ServiceReportsPage() {
   }, []);
 
   if (!hotelId) {
-    return <div className={styles.notice}>Loading...</div>; // 🔥 avoid hydration errors
+    return <div className={styles.notice}>Loading...</div>;
   }
 
   return (
@@ -32,24 +33,28 @@ export default function ServiceReportsPage() {
       </div>
 
       <div className={styles.rightPanel}>
-        {selectedFile ? (
-          selectedFile.endsWith('.pdf') ? (
-            <iframe
-              src={selectedFile}
-              className={styles.viewer}
-              title="Document Viewer"
-            />
-          ) : selectedFile.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-            <img
-              src={selectedFile}
-              alt="Uploaded Image"
-              className={styles.viewer}
-            />
-          ) : (
-            <div className={styles.viewerPlaceholder}>Preview not available</div>
-          )
-        ) : (
+        {!selectedFile ? (
           <div className={styles.viewerPlaceholder}>Select a file to preview</div>
+        ) : isMobile() ? (
+          <a href={selectedFile} download style={{ padding: '1rem' }}>
+            Tap to download this file
+          </a>
+        ) : selectedFile.endsWith('.pdf') ? (
+          <iframe
+            src={selectedFile}
+            className={styles.viewer}
+            title="PDF Preview"
+          />
+        ) : selectedFile.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+          <img
+            src={selectedFile}
+            alt="Uploaded file"
+            className={styles.viewer}
+          />
+        ) : (
+          <a href={selectedFile} download className={styles.viewerPlaceholder}>
+            Download this file
+          </a>
         )}
       </div>
     </div>
