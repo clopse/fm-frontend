@@ -84,15 +84,15 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
                 <Image
                   src={`/icons/${hotelId}-icon.png`}
                   alt={entry.hotel}
-                  height={90}
                   width={150}
+                  height={90}
                   style={{
                     height: '90px',
                     width: 'auto',
-                    maxWidth: '150px',
+                    maxWidth: '100%',
                     objectFit: 'contain',
                   }}
-                />
+                  />
               </div>
               <div className={styles.barWrapper}>
                 <div
