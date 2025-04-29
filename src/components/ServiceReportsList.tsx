@@ -1,71 +1,95 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import isMobile from 'ismobilejs';
-import ServiceReportsList from '@/components/ServiceReportsList';
-import styles from '@/styles/BuildingDrawingsPage.module.css';
+import styles from '@/styles/ServiceReportsList.module.css';
 
-export default function ServiceReportsPage() {
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [hotelId, setHotelId] = useState<string>('');
+interface FileNode {
+  name: string;
+  url?: string;
+  children?: FileNode[];
+}
+
+interface Props {
+  hotelId: string;
+  onSelect: (url: string) => void;
+  selectedFile: string | null;
+}
+
+export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: Props) {
+  const [tree, setTree] = useState<FileNode[] | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const parts = window.location.pathname.split('/');
-      if (parts.length >= 3) {
-        setHotelId(parts[2]);
+    async function fetchData() {
+      if (!hotelId) return;
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      if (!apiUrl) {
+        setError('API URL is missing');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${apiUrl}/files/tree/${hotelId}`);
+        if (!response.ok) throw new Error('Failed to fetch folder structure');
+
+        const result: FileNode[] = await response.json();
+        setTree(result);
+      } catch (err: any) {
+        console.error('Folder load error:', err);
+        setError(err.message || 'Unknown error');
       }
     }
-  }, []);
+    fetchData();
+  }, [hotelId]);
 
-  useEffect(() => {
-    if (selectedFile && isMobile().any) {
-      window.open(selectedFile, '_blank');
-    }
-  }, [selectedFile]);
+  const toggle = (path: string) => {
+    const newSet = new Set(expanded);
+    newSet.has(path) ? newSet.delete(path) : newSet.add(path);
+    setExpanded(newSet);
+  };
 
-  if (!hotelId) {
-    return <div className={styles.notice}>Loading...</div>;
-  }
+  const renderTree = (nodes: FileNode[], parentPath = ''): JSX.Element[] => {
+    return nodes.map((node) => {
+      const path = `${parentPath}/${node.name}`;
+      const isExpanded = expanded.has(path);
 
-  const isPDF = selectedFile?.endsWith('.pdf');
-  const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif)$/i);
+      return (
+        <div key={path} className={styles.folder}>
+          <div
+            className={styles.folderHeader}
+            onClick={() => node.children ? toggle(path) : undefined}
+          >
+            {node.children ? (
+              <span className={styles.arrow}>{isExpanded ? '▼' : '▶'}</span>
+            ) : (
+              <span className={styles.arrow} />
+            )}
+            <span
+              className={node.url ? styles.fileLink : styles.folderName}
+              onClick={() => node.url && onSelect(node.url)}
+              style={{
+                cursor: node.url ? 'pointer' : 'default',
+                fontWeight: selectedFile === node.url ? 'bold' : 'normal'
+              }}
+            >
+              {node.url ? `📄 ${node.name}` : `📂 ${node.name}`}
+            </span>
+          </div>
 
-  return (
-    <div className={styles.container}>
-      <div className={styles.leftPanel}>
-        <ServiceReportsList
-          hotelId={hotelId}
-          onSelect={setSelectedFile}
-          selectedFile={selectedFile}
-        />
-      </div>
+          {isExpanded && node.children && (
+            <div style={{ marginLeft: '1rem' }}>
+              {renderTree(node.children, path)}
+            </div>
+          )}
+        </div>
+      );
+    });
+  };
 
-      <div className={styles.rightPanel}>
-        {!selectedFile ? (
-          <div className={styles.viewerPlaceholder}>Select a file to preview</div>
-        ) : isMobile().any ? (
-          <div className={styles.viewerPlaceholder}>Opening file...</div>
-        ) : isPDF ? (
-          <iframe
-            src={selectedFile}
-            className={styles.viewer}
-            title="PDF Viewer"
-          />
-        ) : isImage ? (
-          <img
-            src={selectedFile}
-            alt="Uploaded file"
-            className={styles.viewer}
-          />
-        ) : (
-          <iframe
-            src={selectedFile}
-            className={styles.viewer}
-            title="File Viewer"
-          />
-        )}
-      </div>
-    </div>
-  );
+  if (error) return <div className={styles.notice}>⚠️ {error}</div>;
+  if (!tree) return <div className={styles.notice}>Loading service reports...</div>;
+
+  return <div className={styles.container}>{renderTree(tree)}</div>;
 }
