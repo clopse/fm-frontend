@@ -5,6 +5,7 @@ import styles from '@/styles/ServiceReportsList.module.css';
 
 interface FileNode {
   name: string;
+  path?: string;
   url?: string;
   children?: FileNode[];
 }
@@ -33,6 +34,7 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
       try {
         const response = await fetch(`${apiUrl}/files/tree/${hotelId}`);
         if (!response.ok) throw new Error('Failed to fetch folder structure');
+
         const result: FileNode[] = await response.json();
         setTree(result);
       } catch (err: any) {
@@ -40,7 +42,6 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
         setError(err.message || 'Unknown error');
       }
     }
-
     fetchData();
   }, [hotelId]);
 
@@ -50,19 +51,16 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
     setExpanded(newSet);
   };
 
-  const fetchFileUrl = async (fullPath: string) => {
+  const handleFileClick = async (node: FileNode) => {
+    if (!node.path) return;
+
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     try {
-      const encoded = encodeURIComponent(fullPath);
-      const res = await fetch(`${apiUrl}/reports/${hotelId}/${encoded}`);
-      const data = await res.json();
-      if (data.url) {
-        onSelect(data.url);
-      } else {
-        console.warn('No URL returned');
-      }
+      const res = await fetch(`${apiUrl}/reports/${node.path}`);
+      const { url } = await res.json();
+      if (url) onSelect(url);
     } catch (err) {
-      console.error('Failed to fetch signed URL:', err);
+      console.error('Signed URL fetch error:', err);
     }
   };
 
@@ -83,14 +81,14 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
               <span className={styles.arrow} />
             )}
             <span
-              className={node.url ? styles.fileLink : styles.folderName}
-              onClick={() => !node.children && fetchFileUrl(path.replace(/^\/+/, ''))}
+              className={node.path ? styles.fileLink : styles.folderName}
+              onClick={() => node.path && handleFileClick(node)}
               style={{
-                cursor: node.url ? 'pointer' : 'default',
+                cursor: node.path ? 'pointer' : 'default',
                 fontWeight: selectedFile === node.url ? 'bold' : 'normal'
               }}
             >
-              {node.url ? `📄 ${node.name}` : `📂 ${node.name}`}
+              {node.path ? `📄 ${node.name}` : `📂 ${node.name}`}
             </span>
           </div>
 
