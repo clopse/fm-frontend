@@ -80,16 +80,16 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
           const hotelId = getHotelId(entry.hotel);
           return (
             <div key={entry.hotel} className={styles.row}>
-              <div className={styles.label}>
+              <div className={styles.logoCell}>
                 <Image
                   src={`/icons/${hotelId}-icon.png`}
                   alt={entry.hotel}
-                  width={9999} // ignored
                   height={90}
+                  width={150}
                   style={{
                     height: '90px',
                     width: 'auto',
-                    maxWidth: '180px',
+                    maxWidth: '150px',
                     objectFit: 'contain',
                   }}
                 />
@@ -103,10 +103,7 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
                       entry.score >= 85 ? '#28a745' : entry.score >= 70 ? '#ffc107' : '#dc3545',
                   }}
                 />
-                <span
-                  className={styles.score}
-                  title="430 / 470 Points"
-                >
+                <span className={styles.score} title="430 / 470 Points">
                   {entry.score}%
                 </span>
               </div>
