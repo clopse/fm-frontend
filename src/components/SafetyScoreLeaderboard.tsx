@@ -16,7 +16,6 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
-    // Sort data (score DESC, tie-break by name)
     const sorted = [...data].sort((a, b) => {
       if (b.score === a.score) return a.hotel.localeCompare(b.hotel);
       return b.score - a.score;
@@ -29,7 +28,6 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
     if (saved) {
       setSelectedHotels(JSON.parse(saved));
     } else {
-      // default = all hotels
       setSelectedHotels(hotels.map(h => h.id));
     }
   }, []);
@@ -38,13 +36,12 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
     const updated = selectedHotels.includes(id)
       ? selectedHotels.filter(h => h !== id)
       : [...selectedHotels, id];
-
     setSelectedHotels(updated);
     localStorage.setItem('selectedHotels', JSON.stringify(updated));
   };
 
   const getHotelId = (name: string): string => {
-    return hotels.find(h => h.name === name)?.id || 'unknown';
+    return hotels.find((h) => h.name === name)?.id || 'unknown';
   };
 
   const filteredData = sortedData.filter((entry) => {
@@ -57,7 +54,6 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
       <div className={styles.boxHeader}>
         <h2 className={styles.header}>Safety Score Leaderboard</h2>
 
-        {/* Dropdown Trigger */}
         <div className={styles.dropdownWrapper}>
           <button onClick={() => setDropdownOpen(!dropdownOpen)} className={styles.dropdownButton}>
             ▼
@@ -88,13 +84,13 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
                 <Image
                   src={`/icons/${hotelId}-icon.png`}
                   alt={entry.hotel}
-                  width={32}
-                  height={32}
+                  width={9999} // ignored
+                  height={90}
                   style={{
-                    width: '32px',
-                    height: '32px',
+                    height: '90px',
+                    width: 'auto',
+                    maxWidth: '180px',
                     objectFit: 'contain',
-                    borderRadius: '4px',
                   }}
                 />
               </div>
