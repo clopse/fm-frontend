@@ -78,9 +78,8 @@ export default function HotelsPage() {
       {/* Sticky Header with Logo and Selector */}
       <header className={headerStyles.header}>
         <div className={headerStyles.left}>
-          <Image src="/jmk-logo.png" alt="JMK Hotels" width={36} height={36} style={{ marginRight: '8px' }} />
-          <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>JMK Hotels</span>
-        </div>
+        <Image src="/jmk-logo.png" alt="JMK Hotels" width={150} height={100} />
+      </div>
         <div className={headerStyles.center}>
           <button
             className={headerStyles.selector}
