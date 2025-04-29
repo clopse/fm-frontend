@@ -7,7 +7,7 @@ import HotelSelectorModal from './HotelSelectorModal';
 import MainSidebar from './MainSidebar';
 import UserPanel from './UserPanel';
 import { hotels } from '@/lib/hotels';
-import { User2, ArrowLeft, Menu } from 'lucide-react';
+import { ArrowLeft, Menu } from 'lucide-react';
 import styles from '@/styles/MainSidebar.module.css';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
@@ -17,12 +17,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const rawPathname = usePathname();
-  const pathname = rawPathname.endsWith('/') && rawPathname !== '/' 
-    ? rawPathname.slice(0, -1) 
+  const pathname = rawPathname.endsWith('/') && rawPathname !== '/'
+    ? rawPathname.slice(0, -1)
     : rawPathname;
 
   const router = useRouter();
-
   const isDashboardHome = /^\/hotels\/[^/]+$/.test(pathname);
 
   useEffect(() => {
@@ -53,10 +52,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <HeaderBar
           onHotelSelectClick={() => setModalOpen(true)}
           currentHotelName={currentHotelName}
+          onUserIconClick={() => setUserPanelOpen(true)} // pass user icon toggle
         />
       )}
 
       <HotelSelectorModal isOpen={isModalOpen} setIsOpen={setModalOpen} />
+      <UserPanel isOpen={isUserPanelOpen} onClose={() => setUserPanelOpen(false)} />
 
       <div className={styles.toggleSidebarButton} onClick={toggleSidebar}>
         {isSidebarOpen ? <ArrowLeft size={20} /> : <Menu size={20} />}
@@ -74,25 +75,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
       </div>
-
-      <div style={{ position: 'fixed', top: 10, right: 20, zIndex: 1100 }}>
-        <button
-          onClick={() => setUserPanelOpen(true)}
-          style={{
-            background: 'white',
-            borderRadius: '50%',
-            border: '1px solid #ccc',
-            padding: '10px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-            cursor: 'pointer',
-          }}
-          title="Account"
-        >
-          <User2 size={20} />
-        </button>
-      </div>
-
-      <UserPanel isOpen={isUserPanelOpen} onClose={() => setUserPanelOpen(false)} />
     </div>
   );
 }
