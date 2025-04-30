@@ -28,7 +28,12 @@ export default function ServiceReportsPage() {
 
       <div className={styles.rightPanel}>
         {!selectedFile ? (
-          <div className={styles.viewerPlaceholder}>Select a file to preview</div>
+          <div className={styles.viewerPlaceholder}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
+              <strong>Select a file to preview</strong>
+            </div>
+          </div>
         ) : isMobileDevice ? (
           <a
             href={selectedFile}
