@@ -25,35 +25,34 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
   const [parsed, setParsed] = useState<ParsedData | null>(null);
   const [utilityType, setUtilityType] = useState("electricity");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
     setFile(selected);
+    setParsed(null);
+    setError("");
 
     const formData = new FormData();
     formData.append("file", selected);
 
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/parse-pdf`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/parse-pdf`, {
         method: "POST",
         body: formData,
       });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("❌ PDF parsing failed:", errorText);
-        alert("Failed to parse PDF.");
-        setLoading(false);
+        setError("Failed to parse PDF.");
         return;
       }
 
       const data = await res.json();
       setParsed(data);
-    } catch (err) {
-      console.error("❌ Error reading PDF:", err);
-      alert("Error uploading file.");
+    } catch (e) {
+      setError("Parse request failed.");
     } finally {
       setLoading(false);
     }
@@ -64,7 +63,10 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
   };
 
   const handleSubmit = async () => {
-    if (!file || !parsed) return;
+    if (!file || !parsed) {
+      alert("Missing data.");
+      return;
+    }
 
     const formData = new FormData();
     formData.append("hotel_id", hotelId);
@@ -79,25 +81,17 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
     formData.append("confidence_score", String(parsed.confidence_score ?? ""));
     formData.append("file", file);
 
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/save-corrected`, {
-        method: "POST",
-        body: formData,
-      });
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/save-corrected`, {
+      method: "POST",
+      body: formData,
+    });
 
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error("❌ Save failed:", res.status, errorText);
-        alert(`Save failed: ${res.status}`);
-        return;
-      }
-
-      console.log("✅ Utility file saved successfully.");
-      if (onSave) onSave();
+    if (res.ok) {
+      onSave?.();
       onClose();
-    } catch (err) {
-      console.error("❌ Submit error:", err);
-      alert("An error occurred while saving.");
+    } else {
+      const err = await res.text();
+      alert("Save failed: " + err);
     }
   };
 
@@ -117,18 +111,12 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
               <option value="gas">Gas</option>
               <option value="water">Water</option>
             </select>
-            {file && (
-              <iframe
-                src={URL.createObjectURL(file)}
-                width="100%"
-                height="600px"
-                style={{ border: "1px solid #ccc", marginTop: "1rem" }}
-              />
-            )}
+            {file && <iframe src={URL.createObjectURL(file)} width="100%" height="600px" />}
           </div>
 
           <div className={styles.right}>
             {loading && <p>Parsing PDF...</p>}
+            {error && <p style={{ color: "red" }}>{error}</p>}
             {parsed && (
               <>
                 <label>Billing Start</label>
@@ -151,9 +139,7 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
         </div>
 
         <div className={styles.footer}>
-          <button onClick={handleSubmit} disabled={!parsed || !file}>
-            Save
-          </button>
+          <button onClick={handleSubmit} disabled={!parsed}>Save</button>
         </div>
       </div>
     </div>
