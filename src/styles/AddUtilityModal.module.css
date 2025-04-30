@@ -101,3 +101,8 @@ iframe {
   background-color: #9ca3af;
   cursor: not-allowed;
 }
+
+.left iframe {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+}
