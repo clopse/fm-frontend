@@ -39,13 +39,14 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
       method: "POST",
       body: formData,
     });
+
     const data = await res.json();
     setParsed(data);
     setLoading(false);
   };
 
   const handleChange = (field: keyof ParsedData, value: string | number) => {
-    setParsed((prev) => prev ? { ...prev, [field]: value } : prev);
+    setParsed((prev) => (prev ? { ...prev, [field]: value } : prev));
   };
 
   const handleSubmit = async () => {
@@ -99,22 +100,56 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
             {parsed && (
               <>
                 <label>Billing Start</label>
-                <input value={parsed.billing_start} onChange={(e) => handleChange("billing_start", e.target.value)} />
+                <input
+                  value={parsed.billing_start}
+                  onChange={(e) => handleChange("billing_start", e.target.value)}
+                />
                 <label>Billing End</label>
-                <input value={parsed.billing_end} onChange={(e) => handleChange("billing_end", e.target.value)} />
+                <input
+                  value={parsed.billing_end}
+                  onChange={(e) => handleChange("billing_end", e.target.value)}
+                />
                 <label>Total kWh</label>
-                <input type="number" value={parsed.total_kwh} onChange={(e) => handleChange("total_kwh", Number(e.target.value))} />
+                <input
+                  type="number"
+                  value={parsed.total_kwh}
+                  onChange={(e) => handleChange("total_kwh", Number(e.target.value))}
+                />
                 <label>Total €</label>
-                <input type="number" value={parsed.total_eur} onChange={(e) => handleChange("total_eur", Number(e.target.value))} />
+                <input
+                  type="number"
+                  value={parsed.total_eur}
+                  onChange={(e) => handleChange("total_eur", Number(e.target.value))}
+                />
                 <label>Day kWh</label>
-                <input type="number" value={parsed.day_kwh ?? ""} onChange={(e) => handleChange("day_kwh", Number(e.target.value))} />
+                <input
+                  type="number"
+                  value={parsed.day_kwh ?? ""}
+                  onChange={(e) => handleChange("day_kwh", Number(e.target.value))}
+                />
                 <label>Night kWh</label>
-                <input type="number" value={parsed.night_kwh ?? ""} onChange={(e) => handleChange("night_kwh", Number(e.target.value))} />
+                <input
+                  type="number"
+                  value={parsed.night_kwh ?? ""}
+                  onChange={(e) => handleChange("night_kwh", Number(e.target.value))}
+                />
                 <label>Subtotal €</label>
-                <input type="number" value={parsed.subtotal_eur ?? ""} onChange={(e) => handleChange("subtotal_eur", Number(e.target.value))} />
+                <input
+                  type="number"
+                  value={parsed.subtotal_eur ?? ""}
+                  onChange={(e) => handleChange("subtotal_eur", Number(e.target.value))}
+                />
               </>
             )}
           </div>
         </div>
 
-        <div className={sty
+        <div className={styles.footer}>
+          <button onClick={handleSubmit} disabled={!parsed}>
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
