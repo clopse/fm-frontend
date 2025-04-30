@@ -1,36 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useParams } from 'next/navigation';
 import isMobile from 'ismobilejs';
 import ServiceReportsList from '@/components/ServiceReportsList';
 import styles from '@/styles/BuildingDrawingsPage.module.css';
 
 export default function ServiceReportsPage() {
+  const { hotelId } = useParams<{ hotelId: string }>();
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [hotelId, setHotelId] = useState<string>('');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const parts = window.location.pathname.split('/');
-      if (parts.length >= 3) {
-        setHotelId(parts[2]);
-      }
-    }
-  }, []);
 
   const isPDF = selectedFile?.toLowerCase().endsWith('.pdf');
   const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif)$/i);
-
   const isMobileDevice = isMobile().any;
 
   return (
     <div className={styles.container}>
       <div className={styles.leftPanel}>
-        <ServiceReportsList
-          hotelId={hotelId}
-          onSelect={setSelectedFile}
-          selectedFile={selectedFile}
-        />
+        {hotelId && (
+          <ServiceReportsList
+            hotelId={hotelId}
+            onSelect={setSelectedFile}
+            selectedFile={selectedFile}
+          />
+        )}
       </div>
 
       <div className={styles.rightPanel}>
