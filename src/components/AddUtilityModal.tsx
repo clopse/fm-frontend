@@ -25,37 +25,29 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
   const [parsed, setParsed] = useState<ParsedData | null>(null);
   const [utilityType, setUtilityType] = useState("electricity");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (!selected) return;
     setFile(selected);
-    setParsed(null);
-    setError("");
 
     const formData = new FormData();
     formData.append("file", selected);
 
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/parse-pdf`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/parse-pdf`, {
         method: "POST",
         body: formData,
       });
 
-      if (!res.ok) {
-        setError("Failed to parse PDF.");
-        return;
-      }
-
+      if (!res.ok) throw new Error("Failed to parse PDF");
       const data = await res.json();
       setParsed(data);
-    } catch (e) {
-      setError("Parse request failed.");
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      alert("❌ Failed to parse PDF.");
     }
+    setLoading(false);
   };
 
   const handleChange = (field: keyof ParsedData, value: string | number) => {
@@ -64,7 +56,7 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
 
   const handleSubmit = async () => {
     if (!file || !parsed) {
-      alert("Missing data.");
+      alert("Missing file or parsed data.");
       return;
     }
 
@@ -81,17 +73,17 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
     formData.append("confidence_score", String(parsed.confidence_score ?? ""));
     formData.append("file", file);
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/save-corrected`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/save-corrected`, {
       method: "POST",
       body: formData,
     });
 
-    if (res.ok) {
+    if (!res.ok) {
+      const msg = await res.text();
+      alert(`Save failed: ${res.status}\n${msg}`);
+    } else {
       onSave?.();
       onClose();
-    } else {
-      const err = await res.text();
-      alert("Save failed: " + err);
     }
   };
 
@@ -111,35 +103,64 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
               <option value="gas">Gas</option>
               <option value="water">Water</option>
             </select>
-            {file && <iframe src={URL.createObjectURL(file)} width="100%" height="600px" />}
+            {file && (
+              <iframe src={URL.createObjectURL(file)} width="100%" height="600px" />
+            )}
           </div>
 
           <div className={styles.right}>
             {loading && <p>Parsing PDF...</p>}
-            {error && <p style={{ color: "red" }}>{error}</p>}
             {parsed && (
               <>
                 <label>Billing Start</label>
-                <input value={parsed.billing_start} onChange={(e) => handleChange("billing_start", e.target.value)} />
+                <input
+                  value={parsed.billing_start}
+                  onChange={(e) => handleChange("billing_start", e.target.value)}
+                />
                 <label>Billing End</label>
-                <input value={parsed.billing_end} onChange={(e) => handleChange("billing_end", e.target.value)} />
+                <input
+                  value={parsed.billing_end}
+                  onChange={(e) => handleChange("billing_end", e.target.value)}
+                />
                 <label>Total kWh</label>
-                <input type="number" value={parsed.total_kwh} onChange={(e) => handleChange("total_kwh", Number(e.target.value))} />
+                <input
+                  type="number"
+                  value={parsed.total_kwh}
+                  onChange={(e) => handleChange("total_kwh", Number(e.target.value))}
+                />
                 <label>Total €</label>
-                <input type="number" value={parsed.total_eur} onChange={(e) => handleChange("total_eur", Number(e.target.value))} />
+                <input
+                  type="number"
+                  value={parsed.total_eur}
+                  onChange={(e) => handleChange("total_eur", Number(e.target.value))}
+                />
                 <label>Day kWh</label>
-                <input type="number" value={parsed.day_kwh ?? ""} onChange={(e) => handleChange("day_kwh", Number(e.target.value))} />
+                <input
+                  type="number"
+                  value={parsed.day_kwh ?? ""}
+                  onChange={(e) => handleChange("day_kwh", Number(e.target.value))}
+                />
                 <label>Night kWh</label>
-                <input type="number" value={parsed.night_kwh ?? ""} onChange={(e) => handleChange("night_kwh", Number(e.target.value))} />
+                <input
+                  type="number"
+                  value={parsed.night_kwh ?? ""}
+                  onChange={(e) => handleChange("night_kwh", Number(e.target.value))}
+                />
                 <label>Subtotal €</label>
-                <input type="number" value={parsed.subtotal_eur ?? ""} onChange={(e) => handleChange("subtotal_eur", Number(e.target.value))} />
+                <input
+                  type="number"
+                  value={parsed.subtotal_eur ?? ""}
+                  onChange={(e) => handleChange("subtotal_eur", Number(e.target.value))}
+                />
               </>
             )}
           </div>
         </div>
 
         <div className={styles.footer}>
-          <button onClick={handleSubmit} disabled={!parsed}>Save</button>
+          <button onClick={handleSubmit} disabled={!parsed}>
+            Save
+          </button>
         </div>
       </div>
     </div>
