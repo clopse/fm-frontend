@@ -17,6 +17,8 @@ interface Props {
   selectedFile: string | null;
 }
 
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: Props) {
   const [tree, setTree] = useState<FileNode[] | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -80,7 +82,7 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
                 fontWeight: isFile && selectedFile === node.path ? 'bold' : 'normal',
               }}
             >
-              {isFile ? `📄 ${node.name}` : `📂 ${node.name}`}
+              {isFile ? `📄 ${node.name}` : `📂 ${capitalize(node.name)}`}
             </span>
           </div>
 
