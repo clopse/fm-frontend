@@ -69,11 +69,6 @@
   background-color: #fff;
 }
 
-iframe {
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-}
-
 .footer {
   padding: 1rem 1.5rem;
   display: flex;
