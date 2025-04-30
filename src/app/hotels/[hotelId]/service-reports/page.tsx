@@ -13,13 +13,21 @@ export default function ServiceReportsPage() {
   const isPDF = selectedFile?.toLowerCase().endsWith('.pdf');
   const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif)$/i);
 
+  const handleSelectFile = (filePath: string) => {
+    if (isMobile().any) {
+      window.open(filePath, '_blank');
+    } else {
+      setSelectedFile(filePath);
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.leftPanel}>
         {hotelId && (
           <ServiceReportsList
             hotelId={hotelId}
-            onSelect={setSelectedFile}
+            onSelect={handleSelectFile}
             selectedFile={selectedFile}
           />
         )}
