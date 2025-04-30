@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import styles from '@/styles/ServiceReportsList.module.css';
 
+const S3_BASE_URL = "https://jmk-project-uploads.s3.amazonaws.com";
+
 interface FileNode {
   name: string;
-  path?: string;
+  path?: string; // e.g., reports/Diskin/Report.pdf
   children?: FileNode[];
 }
 
@@ -46,22 +48,11 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
     setExpanded(newSet);
   };
 
-  const handleFileClick = async (node: FileNode) => {
+  const handleFileClick = (node: FileNode) => {
     if (!node.path) return;
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    try {
-      const encodedPath = encodeURIComponent(node.path);
-      const res = await fetch(`${apiUrl}/reports/${hotelId}/${encodedPath}`);
-      const { url } = await res.json();
-
-      if (url) {
-        console.log('Fetched signed URL:', url);
-        onSelect(url);
-      }
-    } catch (err) {
-      console.error('Failed to load signed URL:', err);
-    }
+    const fileUrl = `${S3_BASE_URL}/${hotelId}/${encodeURIComponent(node.path).replace(/%2F/g, '/')}`;
+    onSelect(fileUrl);
   };
 
   const renderTree = (nodes: FileNode[], parentPath = ''): JSX.Element[] =>
