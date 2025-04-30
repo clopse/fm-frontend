@@ -23,7 +23,7 @@ interface Props {
 export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<ParsedData | null>(null);
-  const [utilityType, setUtilityType] = useState("gas");
+  const [utilityType, setUtilityType] = useState("electricity");
   const [loading, setLoading] = useState(false);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -35,14 +35,28 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
     formData.append("file", selected);
 
     setLoading(true);
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/parse-pdf`, {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/parse-pdf`, {
+        method: "POST",
+        body: formData,
+      });
 
-    const data = await res.json();
-    setParsed(data);
-    setLoading(false);
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("❌ PDF parsing failed:", errorText);
+        alert("Failed to parse PDF.");
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      setParsed(data);
+    } catch (err) {
+      console.error("❌ Error reading PDF:", err);
+      alert("Error uploading file.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (field: keyof ParsedData, value: string | number) => {
@@ -65,13 +79,26 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
     formData.append("confidence_score", String(parsed.confidence_score ?? ""));
     formData.append("file", file);
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/save-corrected`, {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/save-corrected`, {
+        method: "POST",
+        body: formData,
+      });
 
-    if (res.ok && onSave) onSave();
-    onClose();
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("❌ Save failed:", res.status, errorText);
+        alert(`Save failed: ${res.status}`);
+        return;
+      }
+
+      console.log("✅ Utility file saved successfully.");
+      if (onSave) onSave();
+      onClose();
+    } catch (err) {
+      console.error("❌ Submit error:", err);
+      alert("An error occurred while saving.");
+    }
   };
 
   return (
@@ -86,12 +113,17 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
           <div className={styles.left}>
             <input type="file" accept="application/pdf" onChange={handleFileChange} />
             <select value={utilityType} onChange={(e) => setUtilityType(e.target.value)}>
-              <option value="gas">Gas</option>
               <option value="electricity">Electricity</option>
+              <option value="gas">Gas</option>
               <option value="water">Water</option>
             </select>
             {file && (
-              <iframe src={URL.createObjectURL(file)} width="100%" height="400px" />
+              <iframe
+                src={URL.createObjectURL(file)}
+                width="100%"
+                height="600px"
+                style={{ border: "1px solid #ccc", marginTop: "1rem" }}
+              />
             )}
           </div>
 
@@ -100,52 +132,26 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
             {parsed && (
               <>
                 <label>Billing Start</label>
-                <input
-                  value={parsed.billing_start}
-                  onChange={(e) => handleChange("billing_start", e.target.value)}
-                />
+                <input value={parsed.billing_start} onChange={(e) => handleChange("billing_start", e.target.value)} />
                 <label>Billing End</label>
-                <input
-                  value={parsed.billing_end}
-                  onChange={(e) => handleChange("billing_end", e.target.value)}
-                />
+                <input value={parsed.billing_end} onChange={(e) => handleChange("billing_end", e.target.value)} />
                 <label>Total kWh</label>
-                <input
-                  type="number"
-                  value={parsed.total_kwh}
-                  onChange={(e) => handleChange("total_kwh", Number(e.target.value))}
-                />
+                <input type="number" value={parsed.total_kwh} onChange={(e) => handleChange("total_kwh", Number(e.target.value))} />
                 <label>Total €</label>
-                <input
-                  type="number"
-                  value={parsed.total_eur}
-                  onChange={(e) => handleChange("total_eur", Number(e.target.value))}
-                />
+                <input type="number" value={parsed.total_eur} onChange={(e) => handleChange("total_eur", Number(e.target.value))} />
                 <label>Day kWh</label>
-                <input
-                  type="number"
-                  value={parsed.day_kwh ?? ""}
-                  onChange={(e) => handleChange("day_kwh", Number(e.target.value))}
-                />
+                <input type="number" value={parsed.day_kwh ?? ""} onChange={(e) => handleChange("day_kwh", Number(e.target.value))} />
                 <label>Night kWh</label>
-                <input
-                  type="number"
-                  value={parsed.night_kwh ?? ""}
-                  onChange={(e) => handleChange("night_kwh", Number(e.target.value))}
-                />
+                <input type="number" value={parsed.night_kwh ?? ""} onChange={(e) => handleChange("night_kwh", Number(e.target.value))} />
                 <label>Subtotal €</label>
-                <input
-                  type="number"
-                  value={parsed.subtotal_eur ?? ""}
-                  onChange={(e) => handleChange("subtotal_eur", Number(e.target.value))}
-                />
+                <input type="number" value={parsed.subtotal_eur ?? ""} onChange={(e) => handleChange("subtotal_eur", Number(e.target.value))} />
               </>
             )}
           </div>
         </div>
 
         <div className={styles.footer}>
-          <button onClick={handleSubmit} disabled={!parsed}>
+          <button onClick={handleSubmit} disabled={!parsed || !file}>
             Save
           </button>
         </div>
