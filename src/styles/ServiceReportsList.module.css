@@ -19,6 +19,20 @@
   gap: 0.5rem;
 }
 
+.viewerPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 1.2rem;
+  color: #777;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px dashed #ddd;
+  text-align: center;
+  padding: 1rem;
+}
+
 .folder {
   margin-bottom: 1rem;
 }
