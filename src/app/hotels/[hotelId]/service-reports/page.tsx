@@ -12,7 +12,6 @@ export default function ServiceReportsPage() {
 
   const isPDF = selectedFile?.toLowerCase().endsWith('.pdf');
   const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif)$/i);
-  const isMobileDevice = isMobile().any;
 
   return (
     <div className={styles.container}>
@@ -34,15 +33,6 @@ export default function ServiceReportsPage() {
               <strong>Select a file to preview</strong>
             </div>
           </div>
-        ) : isMobileDevice ? (
-          <a
-            href={selectedFile}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.viewerPlaceholder}
-          >
-            Tap to download this file
-          </a>
         ) : isPDF ? (
           <iframe
             src={selectedFile}
