@@ -51,9 +51,14 @@ export default function ServiceReportsList({ hotelId, onSelect, selectedFile }: 
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
     try {
-      const res = await fetch(`${apiUrl}/reports/${hotelId}/${node.path}`);
+      const encodedPath = encodeURIComponent(node.path);
+      const res = await fetch(`${apiUrl}/reports/${hotelId}/${encodedPath}`);
       const { url } = await res.json();
-      if (url) onSelect(url);
+
+      if (url) {
+        console.log('Fetched signed URL:', url);
+        onSelect(url);
+      }
     } catch (err) {
       console.error('Failed to load signed URL:', err);
     }
