@@ -30,6 +30,7 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
     const selected = e.target.files?.[0];
     if (!selected) return;
     setFile(selected);
+    setParsed(null);
 
     const formData = new FormData();
     formData.append("file", selected);
@@ -42,10 +43,11 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
       });
 
       if (!res.ok) throw new Error("Failed to parse PDF");
+
       const data = await res.json();
       setParsed(data);
     } catch (err) {
-      alert("❌ Failed to parse PDF.");
+      alert("Failed to parse PDF.");
     }
     setLoading(false);
   };
@@ -55,10 +57,7 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
   };
 
   const handleSubmit = async () => {
-    if (!file || !parsed) {
-      alert("Missing file or parsed data.");
-      return;
-    }
+    if (!file || !parsed) return;
 
     const formData = new FormData();
     formData.append("hotel_id", hotelId);
@@ -78,12 +77,12 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
       body: formData,
     });
 
-    if (!res.ok) {
-      const msg = await res.text();
-      alert(`Save failed: ${res.status}\n${msg}`);
-    } else {
-      onSave?.();
+    if (res.ok) {
+      if (onSave) onSave();
       onClose();
+    } else {
+      const errText = await res.text();
+      alert("Save failed: " + res.status + " - " + errText);
     }
   };
 
@@ -104,7 +103,10 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
               <option value="water">Water</option>
             </select>
             {file && (
-              <iframe src={URL.createObjectURL(file)} width="100%" height="600px" />
+              <iframe
+                src={URL.createObjectURL(file)}
+                style={{ width: "100%", height: "500px", border: "1px solid #ccc", borderRadius: "6px" }}
+              />
             )}
           </div>
 
@@ -113,45 +115,19 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
             {parsed && (
               <>
                 <label>Billing Start</label>
-                <input
-                  value={parsed.billing_start}
-                  onChange={(e) => handleChange("billing_start", e.target.value)}
-                />
+                <input value={parsed.billing_start} onChange={(e) => handleChange("billing_start", e.target.value)} />
                 <label>Billing End</label>
-                <input
-                  value={parsed.billing_end}
-                  onChange={(e) => handleChange("billing_end", e.target.value)}
-                />
+                <input value={parsed.billing_end} onChange={(e) => handleChange("billing_end", e.target.value)} />
                 <label>Total kWh</label>
-                <input
-                  type="number"
-                  value={parsed.total_kwh}
-                  onChange={(e) => handleChange("total_kwh", Number(e.target.value))}
-                />
+                <input type="number" value={parsed.total_kwh} onChange={(e) => handleChange("total_kwh", Number(e.target.value))} />
                 <label>Total €</label>
-                <input
-                  type="number"
-                  value={parsed.total_eur}
-                  onChange={(e) => handleChange("total_eur", Number(e.target.value))}
-                />
+                <input type="number" value={parsed.total_eur} onChange={(e) => handleChange("total_eur", Number(e.target.value))} />
                 <label>Day kWh</label>
-                <input
-                  type="number"
-                  value={parsed.day_kwh ?? ""}
-                  onChange={(e) => handleChange("day_kwh", Number(e.target.value))}
-                />
+                <input type="number" value={parsed.day_kwh ?? ""} onChange={(e) => handleChange("day_kwh", Number(e.target.value))} />
                 <label>Night kWh</label>
-                <input
-                  type="number"
-                  value={parsed.night_kwh ?? ""}
-                  onChange={(e) => handleChange("night_kwh", Number(e.target.value))}
-                />
+                <input type="number" value={parsed.night_kwh ?? ""} onChange={(e) => handleChange("night_kwh", Number(e.target.value))} />
                 <label>Subtotal €</label>
-                <input
-                  type="number"
-                  value={parsed.subtotal_eur ?? ""}
-                  onChange={(e) => handleChange("subtotal_eur", Number(e.target.value))}
-                />
+                <input type="number" value={parsed.subtotal_eur ?? ""} onChange={(e) => handleChange("subtotal_eur", Number(e.target.value))} />
               </>
             )}
           </div>
