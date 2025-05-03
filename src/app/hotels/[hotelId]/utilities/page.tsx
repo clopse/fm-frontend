@@ -3,15 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  LineChart,
-  Line,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  LineChart, Line,
 } from "recharts";
 import styles from "./utilities.module.css";
 import { hotelNames } from "@/data/hotelMetadata";
@@ -52,105 +45,68 @@ export default function UtilitiesDashboard() {
   const [multiHotelData, setMultiHotelData] = useState<HotelTotals[]>([]);
   const [showModal, setShowModal] = useState(false);
 
-  useEffect(() => {
+  const fetchData = async () => {
     if (!hotelId) return;
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/${hotelId}/${year}`);
+    const data = await res.json();
+    setElectricity(data.electricity || []);
+    setGas(data.gas || []);
+  };
 
-    async function fetchData() {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/${hotelId}/${year}`);
-      const data = await res.json();
-
-      setElectricity(data.electricity || []);
-      setGas(data.gas || []);
-    }
-
-    fetchData();
-  }, [hotelId, year]);
+  useEffect(() => { fetchData(); }, [hotelId, year]);
 
   useEffect(() => {
     async function fetchAllHotelData() {
-      const promises = hotelOptions.map(async (id) => {
+      const results = await Promise.all(hotelOptions.map(async (id) => {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/${id}/${year}`);
         const data = await res.json();
-        const eTotal = data.electricity?.reduce((sum: number, e: ElectricityEntry) => {
-          return sum + (viewMode === "eur" ? e.total_eur : viewMode === "room" ? e.per_room_kwh : e.total_kwh);
-        }, 0);
-        const gTotal = data.gas?.reduce((sum: number, g: GasEntry) => {
-          return sum + (viewMode === "eur" ? g.total_eur : viewMode === "room" ? g.per_room_kwh : g.total_kwh);
-        }, 0);
-        return { hotelId: id, electricity: Math.round(eTotal), gas: Math.round(gTotal) };
-      });
-      const results = await Promise.all(promises);
+        const electricity = data.electricity?.reduce((sum: number, e: ElectricityEntry) =>
+          sum + (viewMode === "eur" ? e.total_eur : viewMode === "room" ? e.per_room_kwh : e.total_kwh), 0) || 0;
+        const gas = data.gas?.reduce((sum: number, g: GasEntry) =>
+          sum + (viewMode === "eur" ? g.total_eur : viewMode === "room" ? g.per_room_kwh : g.total_kwh), 0) || 0;
+        return { hotelId: id, electricity: Math.round(electricity), gas: Math.round(gas) };
+      }));
       setMultiHotelData(results);
     }
 
     fetchAllHotelData();
   }, [year, viewMode]);
 
-  const getElectricityData = () => {
-    return electricity.map((e) => ({
+  const formatElectricity = () =>
+    electricity.map((e) => ({
       ...e,
-      value:
-        viewMode === "eur"
-          ? e.total_eur
-          : viewMode === "room"
-          ? e.per_room_kwh
-          : e.total_kwh,
+      value: viewMode === "eur" ? e.total_eur : viewMode === "room" ? e.per_room_kwh : e.total_kwh,
     }));
-  };
 
-  const getGasData = () => {
-    return gas.map((g) => ({
+  const formatGas = () =>
+    gas.map((g) => ({
       ...g,
-      value:
-        viewMode === "eur"
-          ? g.total_eur
-          : viewMode === "room"
-          ? g.per_room_kwh
-          : g.total_kwh,
+      value: viewMode === "eur" ? g.total_eur : viewMode === "room" ? g.per_room_kwh : g.total_kwh,
     }));
-  };
 
-  const totalElectricity = electricity.reduce(
-    (sum, e) =>
-      sum +
-      (viewMode === "eur" ? e.total_eur : viewMode === "room" ? e.per_room_kwh : e.total_kwh),
-    0
-  );
+  const totalElectricity = electricity.reduce((sum, e) =>
+    sum + (viewMode === "eur" ? e.total_eur : viewMode === "room" ? e.per_room_kwh : e.total_kwh), 0);
 
-  const totalGas = gas.reduce(
-    (sum, g) =>
-      sum +
-      (viewMode === "eur" ? g.total_eur : viewMode === "room" ? g.per_room_kwh : g.total_kwh),
-    0
-  );
+  const totalGas = gas.reduce((sum, g) =>
+    sum + (viewMode === "eur" ? g.total_eur : viewMode === "room" ? g.per_room_kwh : g.total_kwh), 0);
 
-  if (!hotelId) {
-    return <p>Loading hotel data...</p>;
-  }
+  if (!hotelId) return <p>Loading hotel data...</p>;
 
   return (
     <div className={styles.wrapper}>
       <div className={styles.controls}>
         <h2>{hotelNames[hotelId] || hotelId.toUpperCase()} Utilities Dashboard</h2>
         <div>
-          <label htmlFor="year">Year:</label>
-          <select
-            id="year"
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-          >
+          <label>Year:</label>
+          <select value={year} onChange={(e) => setYear(e.target.value)}>
             <option value="2023">2023</option>
             <option value="2024">2024</option>
             <option value="2025">2025</option>
           </select>
         </div>
         <div>
-          <label htmlFor="view">View by:</label>
-          <select
-            id="view"
-            value={viewMode}
-            onChange={(e) => setViewMode(e.target.value)}
-          >
+          <label>View:</label>
+          <select value={viewMode} onChange={(e) => setViewMode(e.target.value)}>
             <option value="kwh">kWh</option>
             <option value="eur">€ Cost</option>
             <option value="room">kWh/room</option>
@@ -166,10 +122,7 @@ export default function UtilitiesDashboard() {
         <AddUtilityModal
           hotelId={hotelId}
           onClose={() => setShowModal(false)}
-          onSave={() => {
-            setShowModal(false);
-            // Optional: Trigger refetch of data
-          }}
+          onSave={fetchData}
         />
       )}
 
@@ -187,11 +140,11 @@ export default function UtilitiesDashboard() {
       <div className={styles.chartWrapper}>
         <h3>Electricity by Month ({viewMode})</h3>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={getElectricityData()}>
+          <BarChart data={formatElectricity()}>
             <XAxis dataKey="month" />
             <YAxis />
             <Tooltip />
-            <Bar dataKey="value" fill="#2563eb" name={viewMode} />
+            <Bar dataKey="value" fill="#2563eb" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -199,41 +152,41 @@ export default function UtilitiesDashboard() {
       <div className={styles.chartWrapper}>
         <h3>Gas by Period ({viewMode})</h3>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={getGasData()}>
+          <BarChart data={formatGas()}>
             <XAxis dataKey="period" />
             <YAxis />
             <Tooltip />
-            <Bar dataKey="value" fill="#10b981" name={viewMode} />
+            <Bar dataKey="value" fill="#10b981" />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       <div className={styles.chartWrapper}>
-        <h3>Electricity Trend Line ({viewMode})</h3>
+        <h3>Electricity Trend Line</h3>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={getElectricityData()}>
+          <LineChart data={formatElectricity()}>
             <XAxis dataKey="month" />
             <YAxis />
             <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#7c3aed" name={viewMode} />
+            <Line type="monotone" dataKey="value" stroke="#7c3aed" />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
       <div className={styles.chartWrapper}>
-        <h3>Gas Trend Line ({viewMode})</h3>
+        <h3>Gas Trend Line</h3>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={getGasData()}>
+          <LineChart data={formatGas()}>
             <XAxis dataKey="period" />
             <YAxis />
             <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#059669" name={viewMode} />
+            <Line type="monotone" dataKey="value" stroke="#059669" />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
       <div className={styles.chartWrapper}>
-        <h3>Multi-Hotel Comparison ({viewMode})</h3>
+        <h3>Multi-Hotel Comparison</h3>
         <ResponsiveContainer width="100%" height={350}>
           <BarChart data={multiHotelData}>
             <XAxis dataKey="hotelId" tickFormatter={(id) => hotelNames[id] || id} />
