@@ -16,45 +16,35 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
   const [billingStart, setBillingStart] = useState("");
   const [billingEnd, setBillingEnd] = useState("");
   const [uploading, setUploading] = useState(false);
-  const [autoParsed, setAutoParsed] = useState<any>(null);
 
-  const handleFileChange = async (f: File | null) => {
-    setFile(f);
-    setAutoParsed(null);
-    if (!f) return;
-
+  const autoParse = async (selectedFile: File) => {
     const formData = new FormData();
-    formData.append("file", f);
-    formData.append("hotel_id", hotelId);
-    formData.append("utility_type", utilityType);
-    formData.append("supplier", supplier);
-    formData.append("billing_start", "2024-01-01"); // temporary fallback
-    formData.append("billing_end", "2024-01-31");
+    formData.append("file", selectedFile);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/parse-and-save`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/parse-pdf`, {
         method: "POST",
         body: formData,
       });
+
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.detail || "Auto-parse failed");
+      if (res.ok) {
+        console.log("✅ Auto-parse result:", data);
+        setBillingStart(data.billing_start || "");
+        setBillingEnd(data.billing_end || "");
+        // Future: auto-set supplier and type based on detection if needed
+      } else {
+        console.error("❌ Auto-parse failed:", data.detail);
       }
-
-      const filename = data.metadata_path || "";
-      const json = await fetch(`${filename}`).then((r) => r.json());
-      setAutoParsed(json);
-
-      if (json.billing_period) {
-        setBillingStart(json.billing_period.startDate || "");
-        setBillingEnd(json.billing_period.endDate || "");
-      }
-
-    } catch (err: any) {
-      console.error("❌ Auto-parse failed:", err);
-      alert("Warning: Parser could not auto-fill fields. You can still continue manually.");
+    } catch (err) {
+      console.error("❌ Auto-parse error:", err);
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0] || null;
+    setFile(selected);
+    if (selected) autoParse(selected);
   };
 
   const handleSubmit = async () => {
@@ -67,8 +57,8 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("hotel_id", hotelId);
-    formData.append("utility_type", utilityType);
-    formData.append("supplier", supplier);
+    formData.append("utility_type", utilityType.toLowerCase());
+    formData.append("supplier", supplier.toLowerCase());
     formData.append("billing_start", billingStart);
     formData.append("billing_end", billingEnd);
 
@@ -103,9 +93,10 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
           <button onClick={onClose}>✕</button>
         </div>
 
-        <div className={styles.body}>
-          <div className={styles.left}>
-            <input type="file" accept="application/pdf" onChange={(e) => handleFileChange(e.target.files?.[0] || null)} />
+        <div className={styles.body} style={{ display: "flex", gap: "2rem" }}>
+          {/* Left: form */}
+          <div style={{ flex: 1 }}>
+            <input type="file" accept="application/pdf" onChange={handleFileChange} />
             <select value={utilityType} onChange={(e) => setUtilityType(e.target.value)}>
               <option value="electricity">Electricity</option>
               <option value="gas">Gas</option>
@@ -118,11 +109,14 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
             <input type="date" value={billingStart} onChange={(e) => setBillingStart(e.target.value)} />
             <label>Billing End</label>
             <input type="date" value={billingEnd} onChange={(e) => setBillingEnd(e.target.value)} />
+          </div>
 
+          {/* Right: preview */}
+          <div style={{ flex: 1 }}>
             {file && (
               <iframe
                 src={URL.createObjectURL(file)}
-                style={{ width: "100%", height: "400px", border: "1px solid #ccc", borderRadius: "6px" }}
+                style={{ width: "100%", height: "500px", border: "1px solid #ccc", borderRadius: "6px" }}
               />
             )}
           </div>
