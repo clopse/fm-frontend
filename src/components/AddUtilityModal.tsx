@@ -16,6 +16,46 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
   const [billingStart, setBillingStart] = useState("");
   const [billingEnd, setBillingEnd] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [autoParsed, setAutoParsed] = useState<any>(null);
+
+  const handleFileChange = async (f: File | null) => {
+    setFile(f);
+    setAutoParsed(null);
+    if (!f) return;
+
+    const formData = new FormData();
+    formData.append("file", f);
+    formData.append("hotel_id", hotelId);
+    formData.append("utility_type", utilityType);
+    formData.append("supplier", supplier);
+    formData.append("billing_start", "2024-01-01"); // temporary fallback
+    formData.append("billing_end", "2024-01-31");
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/parse-and-save`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || "Auto-parse failed");
+      }
+
+      const filename = data.metadata_path || "";
+      const json = await fetch(`${filename}`).then((r) => r.json());
+      setAutoParsed(json);
+
+      if (json.billing_period) {
+        setBillingStart(json.billing_period.startDate || "");
+        setBillingEnd(json.billing_period.endDate || "");
+      }
+
+    } catch (err: any) {
+      console.error("❌ Auto-parse failed:", err);
+      alert("Warning: Parser could not auto-fill fields. You can still continue manually.");
+    }
+  };
 
   const handleSubmit = async () => {
     if (!file || !billingStart || !billingEnd) {
@@ -65,7 +105,7 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
 
         <div className={styles.body}>
           <div className={styles.left}>
-            <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            <input type="file" accept="application/pdf" onChange={(e) => handleFileChange(e.target.files?.[0] || null)} />
             <select value={utilityType} onChange={(e) => setUtilityType(e.target.value)}>
               <option value="electricity">Electricity</option>
               <option value="gas">Gas</option>
