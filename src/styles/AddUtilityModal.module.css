@@ -33,6 +33,7 @@
   flex: 1;
   overflow: hidden;
   overflow-y: auto;
+  width: 50%;
   padding: 1rem;
   gap: 2rem;
 }
