@@ -43,23 +43,24 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
         console.log("✅ Auto-parse result:", data);
         const mapped = mapParsedChargesToFormFields(data.full_data || {});
 
-        setBillingStart(mapped.billing_start);
-        setBillingEnd(mapped.billing_end);
-        setDayKWh(mapped.day_kwh);
-        setNightKWh(mapped.night_kwh);
-        setDayRate(mapped.day_rate);
-        setNightRate(mapped.night_rate);
-        setDayTotal(mapped.day_total);
-        setNightTotal(mapped.night_total);
-        setMIC(mapped.mic);
-        setCapacityCharge(mapped.capacity_charge);
-        setPSOLevy(mapped.pso_levy);
-        setElectricityTax(mapped.electricity_tax);
-        setVAT(mapped.vat);
-        setTotalAmount(mapped.total_amount);
+        // ✅ Force all values to string (avoids TS errors)
+        setBillingStart(String(mapped.billing_start || ""));
+        setBillingEnd(String(mapped.billing_end || ""));
+        setDayKWh(String(mapped.day_kwh || ""));
+        setNightKWh(String(mapped.night_kwh || ""));
+        setDayRate(String(mapped.day_rate || ""));
+        setNightRate(String(mapped.night_rate || ""));
+        setDayTotal(String(mapped.day_total || ""));
+        setNightTotal(String(mapped.night_total || ""));
+        setMIC(String(mapped.mic || ""));
+        setCapacityCharge(String(mapped.capacity_charge || ""));
+        setPSOLevy(String(mapped.pso_levy || ""));
+        setElectricityTax(String(mapped.electricity_tax || ""));
+        setVAT(String(mapped.vat || ""));
+        setTotalAmount(String(mapped.total_amount || ""));
 
         const requiredFields = ["billing_start", "billing_end", "day_kwh", "night_kwh", "total_amount"];
-        const missing = requiredFields.filter(k => !mapped[k]);
+        const missing = requiredFields.filter(k => !mapped[k as keyof typeof mapped]);
         if (missing.length) {
           alert(`⚠️ Missing fields: ${missing.join(", ")}`);
         }
@@ -135,10 +136,7 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
         <div className={styles.body}>
           <div className={styles.left}>
             {file ? (
-              <iframe
-                src={URL.createObjectURL(file)}
-                className={styles.pdfPreview}
-              />
+              <iframe src={URL.createObjectURL(file)} className={styles.pdfPreview} />
             ) : (
               <input type="file" accept="application/pdf" onChange={handleFileChange} />
             )}
