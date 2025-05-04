@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import styles from "@/styles/AddUtilityModal.module.css";
+import { mapParsedChargesToFormFields } from "@/utils/mapParsedCharges";
 
 interface Props {
   hotelId: string;
@@ -40,20 +41,28 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
       const data = await res.json();
       if (res.ok) {
         console.log("✅ Auto-parse result:", data);
-        setBillingStart(data.billing_start || "");
-        setBillingEnd(data.billing_end || "");
-        setDayKWh(data.day_kwh || "");
-        setNightKWh(data.night_kwh || "");
-        setDayRate(data.day_rate || "");
-        setNightRate(data.night_rate || "");
-        setDayTotal(data.day_total || "");
-        setNightTotal(data.night_total || "");
-        setMIC(data.mic || "");
-        setCapacityCharge(data.capacity_charge || "");
-        setPSOLevy(data.pso_levy || "");
-        setElectricityTax(data.electricity_tax || "");
-        setVAT(data.vat || "");
-        setTotalAmount(data.total_amount || "");
+        const mapped = mapParsedChargesToFormFields(data.full_data || {});
+
+        setBillingStart(mapped.billing_start);
+        setBillingEnd(mapped.billing_end);
+        setDayKWh(mapped.day_kwh);
+        setNightKWh(mapped.night_kwh);
+        setDayRate(mapped.day_rate);
+        setNightRate(mapped.night_rate);
+        setDayTotal(mapped.day_total);
+        setNightTotal(mapped.night_total);
+        setMIC(mapped.mic);
+        setCapacityCharge(mapped.capacity_charge);
+        setPSOLevy(mapped.pso_levy);
+        setElectricityTax(mapped.electricity_tax);
+        setVAT(mapped.vat);
+        setTotalAmount(mapped.total_amount);
+
+        const requiredFields = ["billing_start", "billing_end", "day_kwh", "night_kwh", "total_amount"];
+        const missing = requiredFields.filter(k => !mapped[k]);
+        if (missing.length) {
+          alert(`⚠️ Missing fields: ${missing.join(", ")}`);
+        }
       } else {
         console.error("❌ Auto-parse failed:", data.detail);
       }
@@ -124,7 +133,6 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
         </div>
 
         <div className={styles.body}>
-          {/* Left: PDF Viewer */}
           <div className={styles.left}>
             {file ? (
               <iframe
@@ -136,7 +144,6 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
             )}
           </div>
 
-          {/* Right: Form Fields */}
           <div className={styles.right}>
             <div className={styles.row}>
               <div><label>Billing Start</label><input type="date" value={billingStart} onChange={(e) => setBillingStart(e.target.value)} /></div>
