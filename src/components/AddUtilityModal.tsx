@@ -124,7 +124,7 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
         </div>
 
         <div className={styles.body}>
-          {/* Left: PDF viewer */}
+          {/* Left: PDF Viewer */}
           <div className={styles.left}>
             {file ? (
               <iframe
@@ -136,36 +136,33 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
             )}
           </div>
 
-          {/* Right: Parsed fields */}
+          {/* Right: Form Fields */}
           <div className={styles.right}>
-            <label>Billing Start</label>
-            <input type="date" value={billingStart} onChange={(e) => setBillingStart(e.target.value)} />
-            <label>Billing End</label>
-            <input type="date" value={billingEnd} onChange={(e) => setBillingEnd(e.target.value)} />
-            <label>Day Units (kWh)</label>
-            <input value={dayKWh} onChange={(e) => setDayKWh(e.target.value)} />
-            <label>Night Units (kWh)</label>
-            <input value={nightKWh} onChange={(e) => setNightKWh(e.target.value)} />
-            <label>MIC (kVa)</label>
-            <input value={mic} onChange={(e) => setMIC(e.target.value)} />
-            <label>Day Rate</label>
-            <input value={dayRate} onChange={(e) => setDayRate(e.target.value)} />
-            <label>Night Rate</label>
-            <input value={nightRate} onChange={(e) => setNightRate(e.target.value)} />
-            <label>Day Total (€)</label>
-            <input value={dayTotal} onChange={(e) => setDayTotal(e.target.value)} />
-            <label>Night Total (€)</label>
-            <input value={nightTotal} onChange={(e) => setNightTotal(e.target.value)} />
-            <label>Capacity Charge (€)</label>
-            <input value={capacityCharge} onChange={(e) => setCapacityCharge(e.target.value)} />
-            <label>PSO Levy (€)</label>
-            <input value={psoLevy} onChange={(e) => setPSOLevy(e.target.value)} />
-            <label>Electricity Tax (€)</label>
-            <input value={electricityTax} onChange={(e) => setElectricityTax(e.target.value)} />
-            <label>VAT (€)</label>
-            <input value={vat} onChange={(e) => setVAT(e.target.value)} />
-            <label>Total Amount (€)</label>
-            <input value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} />
+            <h3>Billing Info</h3>
+            <div className={styles.row}>
+              <div><label>Billing Start</label><input type="date" value={billingStart} onChange={(e) => setBillingStart(e.target.value)} /></div>
+              <div><label>Billing End</label><input type="date" value={billingEnd} onChange={(e) => setBillingEnd(e.target.value)} /></div>
+            </div>
+
+            <h3>Consumption</h3>
+            <div className={styles.row}>
+              <div><label>Day Units (kWh)</label><input value={dayKWh} onChange={(e) => setDayKWh(e.target.value)} /></div>
+              <div><label>Night Units (kWh)</label><input value={nightKWh} onChange={(e) => setNightKWh(e.target.value)} /></div>
+              <div><label>MIC (kVa)</label><input value={mic} onChange={(e) => setMIC(e.target.value)} /></div>
+              <div><label>Total Amount (€)</label><input value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} /></div>
+            </div>
+
+            <h3>Charges</h3>
+            <div className={styles.row}>
+              <div><label>Day Rate</label><input value={dayRate} onChange={(e) => setDayRate(e.target.value)} /></div>
+              <div><label>Night Rate</label><input value={nightRate} onChange={(e) => setNightRate(e.target.value)} /></div>
+              <div><label>Day Total (€)</label><input value={dayTotal} onChange={(e) => setDayTotal(e.target.value)} /></div>
+              <div><label>Night Total (€)</label><input value={nightTotal} onChange={(e) => setNightTotal(e.target.value)} /></div>
+              <div><label>Capacity Charge (€)</label><input value={capacityCharge} onChange={(e) => setCapacityCharge(e.target.value)} /></div>
+              <div><label>PSO Levy (€)</label><input value={psoLevy} onChange={(e) => setPSOLevy(e.target.value)} /></div>
+              <div><label>Electricity Tax (€)</label><input value={electricityTax} onChange={(e) => setElectricityTax(e.target.value)} /></div>
+              <div><label>VAT (€)</label><input value={vat} onChange={(e) => setVAT(e.target.value)} /></div>
+            </div>
           </div>
         </div>
 
