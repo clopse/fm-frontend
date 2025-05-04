@@ -138,7 +138,6 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
 
           {/* Right: Form Fields */}
           <div className={styles.right}>
-            <h3>Billing Info</h3>
             <div className={styles.row}>
               <div><label>Billing Start</label><input type="date" value={billingStart} onChange={(e) => setBillingStart(e.target.value)} /></div>
               <div><label>Billing End</label><input type="date" value={billingEnd} onChange={(e) => setBillingEnd(e.target.value)} /></div>
