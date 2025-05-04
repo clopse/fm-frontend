@@ -1,5 +1,3 @@
-// utils/mapParsedCharges.ts
-
 type ParsedCharge = {
   description: string;
   quantity: number;
@@ -10,42 +8,44 @@ type ParsedCharge = {
 
 type ParsedData = {
   charges: ParsedCharge[];
-  taxDetails: any;
-  totalAmount: any;
-  billingPeriod: any;
-  meterDetails: any;
+  taxDetails: {
+    vatAmount?: number;
+    electricityTax?: {
+      amount?: number;
+      quantity?: { value: number; unit: string };
+      rate?: { value: number; unit: string };
+    };
+  };
+  totalAmount: { value: number };
+  billingPeriod: { startDate?: string; endDate?: string };
+  meterDetails: { mic?: { value?: number } };
 };
-
-function getCharge(charges: ParsedCharge[], key: string): ParsedCharge | undefined {
-  return charges.find(c => c.description.toLowerCase().includes(key));
-}
 
 export function mapParsedChargesToFormFields(parsed: ParsedData) {
   const charges = parsed.charges || [];
 
-  const day = getCharge(charges, "day units");
-  const night = getCharge(charges, "night units");
-  const capacity = getCharge(charges, "capacity charge");
-  const pso = getCharge(charges, "pso");
-  const standing = getCharge(charges, "standing charge");
+  const get = (key: string, field: keyof ParsedCharge) => {
+    const found = charges.find(c => c.description.toLowerCase().includes(key));
+    return found ? found[field] : "";
+  };
 
   return {
     billing_start: parsed.billingPeriod?.startDate || "",
     billing_end: parsed.billingPeriod?.endDate || "",
 
-    day_kwh: String(day?.quantity || ""),
-    night_kwh: String(night?.quantity || ""),
-    mic: String(parsed.meterDetails?.mic?.value || ""),
+    day_kwh: get("day", "quantity"),
+    night_kwh: get("night", "quantity"),
+    mic: parsed.meterDetails?.mic?.value?.toString() || "",
 
-    day_rate: String(day?.rate || ""),
-    night_rate: String(night?.rate || ""),
-    day_total: String(day?.total || ""),
-    night_total: String(night?.total || ""),
+    day_rate: get("day", "rate"),
+    night_rate: get("night", "rate"),
+    day_total: get("day", "total"),
+    night_total: get("night", "total"),
 
-    capacity_charge: String(capacity?.total || ""),
-    pso_levy: String(pso?.total || ""),
-    electricity_tax: String(parsed.taxDetails?.electricityTax?.amount || ""),
-    vat: String(parsed.taxDetails?.vatAmount || ""),
-    total_amount: String(parsed.totalAmount?.value || ""),
+    capacity_charge: get("capacity", "total"),
+    pso_levy: get("pso", "total"),
+    electricity_tax: parsed.taxDetails?.electricityTax?.amount?.toString() || "",
+    vat: parsed.taxDetails?.vatAmount?.toString() || "",
+    total_amount: parsed.totalAmount?.value?.toString() || "",
   };
 }
