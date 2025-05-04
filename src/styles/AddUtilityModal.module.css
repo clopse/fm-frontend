@@ -9,13 +9,14 @@
 }
 
 .modal {
-  width: 90%;
-  max-width: 1000px;
+  width: 95%;
+  max-width: 1400px;
   background: white;
   border-radius: 10px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .header {
@@ -24,40 +25,64 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .body {
   display: flex;
-  padding: 1rem;
+  flex-direction: row;
   gap: 2rem;
+  padding: 1.5rem;
 }
 
 .left {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+}
+
+.pdfPreview {
+  width: 100%;
+  height: 1200px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
 }
 
 .right {
-  flex: 1;
+  flex: 1.4;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
-.right input,
-.left input,
-.left select {
+.right h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.3rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.row label {
+  font-weight: 500;
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #374151;
+}
+
+.row input {
   padding: 0.5rem;
   font-size: 1rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
-}
-
-.right label {
-  font-weight: 500;
-  margin-top: 0.5rem;
+  width: 100%;
 }
 
 .footer {
@@ -65,11 +90,25 @@
   display: flex;
   justify-content: flex-end;
   background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
 }
 
-.pdfPreview {
-  width: 100%;
-  height: 1400px; /* ← previously 500px */
-  border: 1px solid #ccc;
+button {
+  background-color: #2563eb;
+  color: white;
+  padding: 0.5rem 1.25rem;
+  border: none;
   border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+button:hover:enabled {
+  background-color: #1d4ed8;
 }
