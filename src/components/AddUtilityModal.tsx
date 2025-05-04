@@ -32,7 +32,7 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
     formData.append("file", selectedFile);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/parse-pdf`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/parse-pdf`, {
         method: "POST",
         body: formData,
       });
@@ -96,7 +96,7 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
     formData.append("total_amount", totalAmount);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/parse-and-save`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/parse-and-save`, {
         method: "POST",
         body: formData,
       });
