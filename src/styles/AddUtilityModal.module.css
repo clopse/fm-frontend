@@ -14,10 +14,9 @@
   max-height: 90vh;
   background: white;
   border-radius: 10px;
-  overflow: hidden;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .header {
@@ -32,14 +31,12 @@
   display: flex;
   flex: 1;
   overflow: hidden;
-  overflow-y: auto;
-  width: 50%;
   padding: 1rem;
   gap: 2rem;
 }
 
 .left {
-  flex: 1.5;
+  flex: 1;
   min-width: 600px;
   max-width: 700px;
   display: flex;
@@ -48,14 +45,15 @@
 
 .right {
   flex: 1;
+  width: 50%;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  overflow-y: auto;
   max-height: 80vh;
-  overflow: hidden;
   padding-right: 0.5rem;
-  width: 50%;
 }
+
 .right input,
 .left input,
 .left select {
