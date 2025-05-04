@@ -3,6 +3,7 @@
 import { useState } from "react";
 import styles from "@/styles/AddUtilityModal.module.css";
 import { mapParsedChargesToFormFields } from "@/utils/mapParsedCharges";
+import { convertToISODate } from "@/utils/formatDate";
 
 interface Props {
   hotelId: string;
@@ -44,8 +45,8 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
         const mapped = mapParsedChargesToFormFields(data.full_data || {});
 
         // ✅ Force all values to string (avoids TS errors)
-        setBillingStart(String(mapped.billing_start || ""));
-        setBillingEnd(String(mapped.billing_end || ""));
+        setBillingStart(convertToISODate(mapped.billing_start));
+        setBillingEnd(convertToISODate(mapped.billing_end));
         setDayKWh(String(mapped.day_kwh || ""));
         setNightKWh(String(mapped.night_kwh || ""));
         setDayRate(String(mapped.day_rate || ""));
