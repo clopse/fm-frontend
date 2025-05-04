@@ -53,6 +53,7 @@
   max-height: 80vh;
   overflow: hidden;
   padding-right: 0.5rem;
+  width: 50%;
 }
 .right input,
 .left input,
