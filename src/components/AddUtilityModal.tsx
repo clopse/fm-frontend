@@ -73,7 +73,11 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
         </div>
 
         <div className={styles.footer}>
-          <button onClick={handleSubmit} disabled={!file || uploading}>
+          <button
+            className={styles.uploadButton}
+            onClick={handleSubmit}
+            disabled={!file || uploading}
+          >
             {uploading ? "Uploading..." : "Upload Bill"}
           </button>
         </div>
