@@ -84,7 +84,7 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
 
       const { jobId } = await res.json();
 
-      setStatus("✅ File uploaded. Waiting for parsing...");
+      setStatus("✅ File uploaded successfully. Your dashboard will update shortly.");
       setTimeout(() => {
         pollForParsedData(jobId); // Begin polling after delay
       }, 3000); // Optional short delay before first poll
