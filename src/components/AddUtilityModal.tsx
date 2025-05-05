@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import styles from "@/styles/AddUtilityModal.module.css";
 
 interface Props {
@@ -12,49 +12,48 @@ interface Props {
 export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [status, setStatus] = useState("");// This is the status message for polling results
-  const [attempts, setAttempts] = useState(0);
+  const [status, setStatus] = useState("");
+  const [attemptCount, setAttemptCount] = useState(0);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     setFile(selected);
-    setMessage("");
     setStatus("");
   };
 
   const pollForParsedData = async (jobId: string) => {
-    const maxAttempts = 10;
-    setAttempts(0); // reset attempts
+    const maxAttempts = 20;
 
-    const fetchJobStatus = async () => {
-      if (attempts >= maxAttempts) {
-        setStatus("❌ Parsing timed out. Please try again.");
+    const poll = async (attempt: number) => {
+      if (attempt >= maxAttempts) {
+        setStatus("❌ Parsing timed out. Please try again later.");
         return;
       }
 
       try {
-        const res = await fetch(`/api/utilities/${hotelId}/2025`);
-        if (!res.ok) {
-          throw new Error("No result available yet.");
-        }
+        const res = await fetch(`/api/utilities/status/${jobId}`);
+        if (!res.ok) throw new Error("Status not ready yet.");
 
         const data = await res.json();
         if (data.status === "completed") {
           setStatus("✅ Parsing completed successfully.");
+          onSave?.();
+          setTimeout(onClose, 2000);
           return;
         } else {
-          setAttempts(prev => prev + 1);
-          setStatus(`⏳ Still processing, attempt #${attempts + 1}`);
-          setTimeout(fetchJobStatus, Math.min(1000 * Math.pow(2, attempts), 60000)); // Exponential backoff
+          setStatus(`⏳ Still processing... attempt #${attempt + 1}`);
+          const delay = Math.min(2000 * Math.pow(1.5, attempt), 30000);
+          setTimeout(() => poll(attempt + 1), delay);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
-        setStatus(`❌ Error checking status: ${err.message}`);
+        setStatus(`❌ Error: ${err.message}`);
+        const delay = 5000;
+        setTimeout(() => poll(attempt + 1), delay);
       }
     };
 
-    fetchJobStatus();
+    poll(0);
   };
 
   const handleSubmit = async () => {
@@ -64,7 +63,6 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
     }
 
     setUploading(true);
-    setMessage("");
     setStatus("⏳ Uploading bill...");
 
     const formData = new FormData();
@@ -84,14 +82,13 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
         throw new Error(data.detail || "Upload failed");
       }
 
-      const { jobId, documentId } = await res.json();
-      setStatus("✅ File uploaded successfully. Processing in the background...");
-      setTimeout(() => {
-        pollForParsedData(jobId); // Start polling for document processing
-      }, 2000); // Delay before starting polling
+      const { jobId } = await res.json();
 
-      onSave?.();
-      setTimeout(onClose, 2000);
+      setStatus("✅ File uploaded. Waiting for parsing...");
+      setTimeout(() => {
+        pollForParsedData(jobId); // Begin polling after delay
+      }, 3000); // Optional short delay before first poll
+
     } catch (err: any) {
       console.error(err);
       setStatus(`❌ Upload failed: ${err.message}`);
@@ -111,7 +108,6 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
         <div className={styles.body}>
           <input type="file" accept="application/pdf" onChange={handleFileChange} />
           {file && <p>📄 {file.name}</p>}
-          {message && <p>{message}</p>}
           {status && <p>{status}</p>}
         </div>
 
