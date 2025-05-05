@@ -82,12 +82,9 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
         throw new Error(data.detail || "Upload failed");
       }
 
-      const { jobId } = await res.json();
-
       setStatus("✅ File uploaded successfully. Your dashboard will update shortly.");
-      setTimeout(() => {
-        pollForParsedData(jobId); // Begin polling after delay
-      }, 3000); // Optional short delay before first poll
+      onSave?.();
+      setTimeout(onClose, 2000);
 
     } catch (err: any) {
       console.error(err);
