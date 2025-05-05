@@ -49,7 +49,7 @@
   justify-content: flex-end;
 }
 
-button {
+.uploadbutton {
   background-color: #0070f3;
   color: white;
   border: none;
@@ -58,7 +58,7 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
+.uploadbutton:disabled {
   background-color: #ccc;
   cursor: not-allowed;
 }
