@@ -16,6 +16,19 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
   const [detectedType, setDetectedType] = useState<string | null>(null);
   const [manualType, setManualType] = useState<string>("");
 
+  const pollJobStatus = async (jobId: string, label: string) => {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/job-status/${jobId}`);
+      if (!res.ok) throw new Error(`${label} job failed to fetch`);
+
+      const data = await res.json();
+      if (data.status === "completed") return true;
+      if (data.status === "error") throw new Error(`${label} job failed`);
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+    throw new Error(`${label} job timed out`);
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     setFile(selected);
@@ -66,7 +79,7 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
     }
 
     setUploading(true);
-    setStatus("⏳ Uploading bill...");
+    setStatus("⏳ Uploading file to DocuPanda...");
 
     const formData = new FormData();
     formData.append("file", file);
@@ -75,22 +88,49 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
     formData.append("utility_type", utilityType);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/parse-and-save`, {
+      const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/parse-and-save`, {
         method: "POST",
         body: formData,
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || "Upload failed");
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      const {
+        upload_job_id,
+        standardization_job_id,
+        standardization_id,
+        document_id,
+        filename,
+        bill_type,
+      } = await uploadRes.json();
+
+      setStatus("⏳ Waiting for DocuPanda to process the file...");
+      await pollJobStatus(upload_job_id, "Upload");
+      await pollJobStatus(standardization_job_id, "Standardization");
+
+      setStatus("✅ Finalizing and saving parsed data...");
+      const finalizeData = new FormData();
+      finalizeData.append("document_id", document_id);
+      finalizeData.append("standardization_id", standardization_id);
+      finalizeData.append("hotel_id", hotelId);
+      finalizeData.append("bill_type", bill_type);
+      finalizeData.append("filename", filename);
+
+      const finalizeRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/finalize`, {
+        method: "POST",
+        body: finalizeData,
+      });
+
+      if (!finalizeRes.ok) {
+        const errData = await finalizeRes.json();
+        throw new Error(errData.detail || "Finalize failed");
       }
 
-      setStatus("✅ File uploaded successfully. Your dashboard will update shortly.");
+      setStatus("✅ Upload complete. Dashboard will refresh shortly.");
       onSave?.();
       setTimeout(onClose, 2000);
     } catch (err: any) {
       console.error(err);
-      setStatus(`❌ Upload failed: ${err.message}`);
+      setStatus(`❌ Error: ${err.message}`);
     } finally {
       setUploading(false);
     }
