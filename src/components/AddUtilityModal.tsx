@@ -13,52 +13,55 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState("");
-  const [attemptCount, setAttemptCount] = useState(0);
+  const [detectedType, setDetectedType] = useState<string | null>(null);
+  const [manualType, setManualType] = useState<string>("");
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     setFile(selected);
     setStatus("");
-  };
+    setDetectedType(null);
+    setManualType("");
 
-  const pollForParsedData = async (jobId: string) => {
-    const maxAttempts = 20;
+    if (!selected) return;
 
-    const poll = async (attempt: number) => {
-      if (attempt >= maxAttempts) {
-        setStatus("❌ Parsing timed out. Please try again later.");
-        return;
+    const formData = new FormData();
+    formData.append("file", selected);
+
+    setStatus("⏳ Checking file type...");
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/precheck`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Precheck failed");
+
+      const data = await res.json();
+      if (data.bill_type === "electricity" || data.bill_type === "gas") {
+        setDetectedType(data.bill_type);
+        setStatus(`✅ Detected: ${data.bill_type} bill`);
+      } else {
+        setDetectedType("unknown");
+        setStatus("⚠️ Unknown bill type — please select manually.");
       }
-
-      try {
-        const res = await fetch(`/api/utilities/status/${jobId}`);
-        if (!res.ok) throw new Error("Status not ready yet.");
-
-        const data = await res.json();
-        if (data.status === "completed") {
-          setStatus("✅ Parsing completed successfully.");
-          onSave?.();
-          setTimeout(onClose, 2000);
-          return;
-        } else {
-          setStatus(`⏳ Still processing... attempt #${attempt + 1}`);
-          const delay = Math.min(2000 * Math.pow(1.5, attempt), 30000);
-          setTimeout(() => poll(attempt + 1), delay);
-        }
-      } catch (err: any) {
-        console.error(err);
-        setStatus(`❌ Error: ${err.message}`);
-        const delay = 5000;
-        setTimeout(() => poll(attempt + 1), delay);
-      }
-    };
-
-    poll(0);
+    } catch (err: any) {
+      console.error(err);
+      setStatus("❌ Failed to check bill type");
+      setDetectedType("unknown");
+    }
   };
 
   const handleSubmit = async () => {
     if (!file) {
       alert("Please select a file.");
+      return;
+    }
+
+    const utilityType = detectedType !== "unknown" ? detectedType : manualType;
+    if (!utilityType) {
+      alert("Please select a utility type.");
       return;
     }
 
@@ -69,7 +72,7 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
     formData.append("file", file);
     formData.append("hotel_id", hotelId);
     formData.append("supplier", "docupanda");
-    formData.append("utility_type", "auto");
+    formData.append("utility_type", utilityType);
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/parse-and-save`, {
@@ -85,7 +88,6 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
       setStatus("✅ File uploaded successfully. Your dashboard will update shortly.");
       onSave?.();
       setTimeout(onClose, 2000);
-
     } catch (err: any) {
       console.error(err);
       setStatus(`❌ Upload failed: ${err.message}`);
@@ -106,6 +108,21 @@ export default function AddUtilityModal({ hotelId, onClose, onSave }: Props) {
           <input type="file" accept="application/pdf" onChange={handleFileChange} />
           {file && <p>📄 {file.name}</p>}
           {status && <p>{status}</p>}
+
+          {detectedType === "unknown" && (
+            <div>
+              <label>Select Utility Type:</label>
+              <select
+                value={manualType}
+                onChange={(e) => setManualType(e.target.value)}
+                disabled={uploading}
+              >
+                <option value="">-- Select --</option>
+                <option value="electricity">Electricity</option>
+                <option value="gas">Gas</option>
+              </select>
+            </div>
+          )}
         </div>
 
         <div className={styles.footer}>
