@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import styles from '@/styles/CompliancePage.module.css';
 import TaskCard from '@/components/TaskCard';
 import TaskUploadBox from '@/components/TaskUploadBox';
-import compliance from '@/data/compliance.json';
+import rawCompliance from '@/data/compliance.json';
 
 interface UploadData {
   file: File;
@@ -24,7 +24,7 @@ interface Task {
   mandatory: boolean;
   points: number;
   info_popup: string;
-  subtasks?: { label: string }[];
+  subtasks?: string[];
 }
 
 interface ComplianceSection {
@@ -32,10 +32,12 @@ interface ComplianceSection {
   tasks: Task[];
 }
 
+const compliance = rawCompliance as Record<string, ComplianceSection>;
+
 export default function CompliancePage() {
   const { hotelId } = useParams();
   const [uploads, setUploads] = useState<Record<string, UploadData | null>>({});
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -55,7 +57,7 @@ export default function CompliancePage() {
     <div className={styles.wrapper}>
       <h1 className={styles.pageTitle}>Compliance Overview</h1>
 
-      {(compliance as Record<string, ComplianceSection>).map(([sectionName, section]) => (
+      {Object.entries(compliance).map(([sectionName, section]) => (
         <div key={sectionName} className={styles.groupSection}>
           <h2 className={styles.groupTitle}>{sectionName}</h2>
           <div className={styles.taskList}>
@@ -67,7 +69,7 @@ export default function CompliancePage() {
                   task={task}
                   fileInfo={fileInfo}
                   onClick={() => {
-                    setSelectedTask(task);
+                    setSelectedTask(task.task_id);
                     setVisible(true);
                   }}
                 />
@@ -81,9 +83,11 @@ export default function CompliancePage() {
         <TaskUploadBox
           visible={visible}
           hotelId={hotelId as string}
-          task={selectedTask}
-          fileInfo={uploads[selectedTask.task_id] || null}
-          onUpload={(file) => handleUpload(selectedTask.task_id, file)}
+          task={Object.values(compliance)
+            .flatMap((section) => section.tasks)
+            .find((t) => t.task_id === selectedTask)!}
+          fileInfo={uploads[selectedTask] || null}
+          onUpload={(file) => handleUpload(selectedTask, file)}
           onClose={() => setVisible(false)}
         />
       )}
