@@ -3,10 +3,10 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import styles from '@/styles/MainSidebar.module.css';
+import styles from '@/styles/ComplianceSidebar.module.css';
 import {
   Building2,
-  Activity,
+  ShieldCheck,
   PlugZap,
   FileText,
   ClipboardList
@@ -45,9 +45,9 @@ export default function MainSidebar({ isMobile = false, onItemClick }: MainSideb
           <Building2 size={22} />
           <span>Building</span>
         </Link>
-        <Link href={`/hotels/${hotelId}/safety-score`} className={styles.navItem} onClick={handleClick}>
-          <Activity size={22} />
-          <span>Safety Score</span>
+        <Link href={`/hotels/${hotelId}/compliance`} className={styles.navItem} onClick={handleClick}>
+          <ShieldCheck size={22} />
+          <span>Compliance</span>
         </Link>
         <Link href={`/hotels/${hotelId}/utilities`} className={styles.navItem} onClick={handleClick}>
           <PlugZap size={22} />
