@@ -6,12 +6,22 @@ import { hotelNames } from '@/data/hotelMetadata';
 import styles from '@/styles/HotelDashboard.module.css';
 import MonthlyChecklist from '@/components/MonthlyChecklist';
 
+interface TaskItem {
+  task_id: string;
+  label: string;
+  frequency: string;
+  category: string;
+  info_popup: string;
+}
+
 export default function HotelDashboard() {
   const { hotelId } = useParams<{ hotelId: string }>();
   const hotelName = hotelNames[hotelId as keyof typeof hotelNames] || 'Unknown Hotel';
 
   const [score, setScore] = useState<number>(0);
   const [points, setPoints] = useState<string>("0/0");
+  const [dueNow, setDueNow] = useState<TaskItem[]>([]);
+  const [dueSoon, setDueSoon] = useState<TaskItem[]>([]);
 
   useEffect(() => {
     fetch(`/api/compliance/score/${hotelId}`)
@@ -20,10 +30,33 @@ export default function HotelDashboard() {
         setScore(data.score_percent || 0);
         setPoints(`${data.earned_points}/${data.total_points}`);
       });
+
+    fetch(`/api/compliance/due-tasks/${hotelId}`)
+      .then(res => res.json())
+      .then(data => {
+        setDueNow(data.due_now || []);
+        setDueSoon(data.due_soon || []);
+      });
   }, [hotelId]);
 
   const scoreColor =
     score < 60 ? '#e74c3c' : score < 80 ? '#f39c12' : '#27ae60';
+
+  const renderTasks = (tasks: TaskItem[]) => (
+    <ul className={styles.taskList}>
+      {tasks.map(task => (
+        <li key={task.task_id}>
+          <strong>{task.label}</strong>
+          <button
+            className={styles.info}
+            onClick={() => alert(task.info_popup)}
+          >
+            ℹ️
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
 
   return (
     <div
@@ -56,12 +89,12 @@ export default function HotelDashboard() {
 
         <div className={styles.checklistSection}>
           <h2>📌 Tasks Due This Month</h2>
-          <p>(Coming soon...)</p>
+          {dueNow.length > 0 ? renderTasks(dueNow) : <p>No report-based tasks due this month.</p>}
         </div>
 
         <div className={styles.checklistSection}>
           <h2>🔜 Next Month's Uploadable Tasks</h2>
-          <p>(Coming soon...)</p>
+          {dueSoon.length > 0 ? renderTasks(dueSoon) : <p>No tasks forecasted for next month.</p>}
         </div>
       </div>
     </div>
