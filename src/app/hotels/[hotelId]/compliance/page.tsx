@@ -2,72 +2,105 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import styles from '@/styles/CompliancePage.module.css';
-import TaskCard from '@/components/TaskCard';
-import TaskUploadBox from '@/components/TaskUploadBox';
-import { complianceGroups } from '@/data/complianceTasks';
+import styles from '@/styles/ComplianceDashboard.module.css';
 
-interface UploadData {
-  file: File;
-  uploadedAt: Date;
-  reportDate?: Date;
-  score: number;
+interface Task {
+  task_id: string;
+  label: string;
+  info_popup: string;
 }
 
-export default function CompliancePage() {
+export default function ComplianceDashboard() {
   const { hotelId } = useParams();
-  const [uploads, setUploads] = useState<Record<string, UploadData | null>>({});
-  const [selectedTask, setSelectedTask] = useState<string | null>(null);
-  const [visible, setVisible] = useState(false);
+  const [dueNow, setDueNow] = useState<Task[]>([]);
+  const [nextMonth, setNextMonth] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [acknowledged, setAcknowledged] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    const saved = localStorage.getItem(`compliance-${hotelId}`);
-    if (saved) {
-      setUploads(JSON.parse(saved));
+    async function fetchData() {
+      try {
+        const res = await fetch(`/api/compliance/due-tasks/${hotelId}`);
+        const data = await res.json();
+        setDueNow(data.due_this_month || []);
+        setNextMonth(data.next_month_uploadables || []);
+      } catch (err) {
+        console.error('Failed to load compliance tasks', err);
+      } finally {
+        setLoading(false);
+      }
     }
+
+    fetchData();
   }, [hotelId]);
 
-  const handleUpload = (taskId: string, fileInfo: UploadData | null) => {
-    const updated = { ...uploads, [taskId]: fileInfo };
-    setUploads(updated);
-    localStorage.setItem(`compliance-${hotelId}`, JSON.stringify(updated));
+  const handleAcknowledge = async (taskId: string) => {
+    const res = await fetch('/api/compliance/acknowledge-task', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotel_id: hotelId, task_id: taskId }),
+    });
+
+    if (res.ok) {
+      setAcknowledged((prev) => ({ ...prev, [taskId]: true }));
+    } else {
+      alert('Failed to acknowledge task.');
+    }
   };
 
   return (
-    <div className={styles.wrapper}>
-      <h1 className={styles.pageTitle}>Compliance Overview</h1>
+    <div className={styles.container}>
+      <h1>Compliance Overview</h1>
 
-      {complianceGroups.map((section) => (
-        <div key={section.section} className={styles.groupSection}>
-          <h2 className={styles.groupTitle}>{section.section}</h2>
-          <div className={styles.taskList}>
-            {section.tasks.map((task) => {
-              const fileInfo = uploads[task.task_id] || null;
-              return (
-                <TaskCard
-                  key={task.task_id}
-                  task={task}
-                  fileInfo={fileInfo}
-                  onClick={() => {
-                    setSelectedTask(task.task_id);
-                    setVisible(true);
-                  }}
-                />
-              );
-            })}
-          </div>
-        </div>
-      ))}
+      {loading ? (
+        <p>Loading tasks...</p>
+      ) : (
+        <>
+          <section>
+            <h2>🟠 Due This Month</h2>
+            {dueNow.length === 0 ? <p>✅ All clear this month!</p> : (
+              <ul className={styles.taskList}>
+                {dueNow.map((task) => (
+                  <li key={task.task_id}>
+                    <span>{task.label}</span>
+                    <button
+                      title={task.info_popup}
+                      className={styles.infoBtn}
+                    >
+                      ℹ️
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-      {selectedTask && (
-        <TaskUploadBox
-          visible={visible}
-          hotelId={hotelId as string}
-          task={complianceGroups.flatMap((s) => s.tasks).find((t) => t.task_id === selectedTask)!}
-          fileInfo={uploads[selectedTask] || null}
-          onUpload={(file) => handleUpload(selectedTask, file)}
-          onClose={() => setVisible(false)}
-        />
+          <section>
+            <h2>🟡 Uploadable Next Month</h2>
+            {nextMonth.length === 0 ? <p>✅ No early warnings!</p> : (
+              <ul className={styles.taskList}>
+                {nextMonth.map((task) => (
+                  <li key={task.task_id}>
+                    <span>{task.label}</span>
+                    <button
+                      title={task.info_popup}
+                      className={styles.infoBtn}
+                    >
+                      ℹ️
+                    </button>
+                    <button
+                      className={styles.ackBtn}
+                      onClick={() => handleAcknowledge(task.task_id)}
+                      disabled={acknowledged[task.task_id]}
+                    >
+                      {acknowledged[task.task_id] ? '✔ Acknowledged' : 'Acknowledge'}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </>
       )}
     </div>
   );
