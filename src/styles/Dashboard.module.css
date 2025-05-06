@@ -14,4 +14,27 @@
     font-size: 1.125rem;
     color: #4A4A4A;
   }
-  
+
+  .taskList {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5rem 0;
+}
+
+.taskList li {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  background: #f7f9fc;
+  margin-bottom: 0.5rem;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.taskList li button {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  margin-left: auto;
+  cursor: pointer;
+}
