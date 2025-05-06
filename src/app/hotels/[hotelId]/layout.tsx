@@ -1,8 +1,8 @@
-// src/app/(dashboard)/layout.tsx
+// /src/app/hotels/[hotelId]/layout.tsx
 'use client';
 
-import MainLayout from '@/components/MainLayout';
+import HotelLayout from '@/components/HotelLayout';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return <MainLayout>{children}</MainLayout>;
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return <HotelLayout>{children}</HotelLayout>;
 }
