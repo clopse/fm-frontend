@@ -1,5 +1,9 @@
-// complianceTasks.ts
-import raw from './compliance.json';
+import data from './compliance.json';
+
+export interface SubTask {
+  label: string;
+  points: number;
+}
 
 export interface ComplianceTask {
   task_id: string;
@@ -11,12 +15,13 @@ export interface ComplianceTask {
   mandatory: boolean;
   points: number;
   info_popup: string;
-  subtasks?: { label: string; points: number }[];
+  subtasks?: SubTask[];
 }
 
-export interface ComplianceGroup {
+export interface ComplianceSection {
   section: string;
   tasks: ComplianceTask[];
 }
 
-export const complianceGroups: ComplianceGroup[] = raw;
+// Final export
+export const complianceGroups: ComplianceSection[] = data;
