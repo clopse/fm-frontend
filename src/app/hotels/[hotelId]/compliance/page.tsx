@@ -32,7 +32,8 @@ interface ComplianceSection {
   tasks: Task[];
 }
 
-const compliance = rawCompliance as Record<string, ComplianceSection>;
+// ✅ Treat as array of sections
+const compliance: ComplianceSection[] = rawCompliance;
 
 export default function CompliancePage() {
   const { hotelId } = useParams();
@@ -57,9 +58,9 @@ export default function CompliancePage() {
     <div className={styles.wrapper}>
       <h1 className={styles.pageTitle}>Compliance Overview</h1>
 
-      {Object.entries(compliance).map(([sectionName, section]) => (
-        <div key={sectionName} className={styles.groupSection}>
-          <h2 className={styles.groupTitle}>{sectionName}</h2>
+      {compliance.map((section) => (
+        <div key={section.section} className={styles.groupSection}>
+          <h2 className={styles.groupTitle}>{section.section}</h2>
           <div className={styles.taskList}>
             {section.tasks.map((task) => {
               const fileInfo = uploads[task.task_id] || null;
@@ -83,9 +84,7 @@ export default function CompliancePage() {
         <TaskUploadBox
           visible={visible}
           hotelId={hotelId as string}
-          task={Object.values(compliance)
-            .flatMap((section) => section.tasks)
-            .find((t) => t.task_id === selectedTask)!}
+          task={compliance.flatMap((g) => g.tasks).find((t) => t.task_id === selectedTask)!}
           fileInfo={uploads[selectedTask] || null}
           onUpload={(file) => handleUpload(selectedTask, file)}
           onClose={() => setVisible(false)}
