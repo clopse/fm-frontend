@@ -8,7 +8,7 @@ import MainSidebar from './MainSidebar';
 import UserPanel from './UserPanel';
 import { hotels } from '@/lib/hotels';
 import { ArrowLeft, Menu } from 'lucide-react';
-import styles from '@/styles/ComplianceSidebar.module.css'; // ✅ renamed module for consistency
+import styles from '@/styles/MainSidebar.module.css';
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const [isModalOpen, setModalOpen] = useState(false);
