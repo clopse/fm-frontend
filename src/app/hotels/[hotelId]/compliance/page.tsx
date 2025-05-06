@@ -42,14 +42,14 @@ export default function CompliancePage() {
           <h2 className={styles.groupTitle}>{sectionName}</h2>
           <div className={styles.taskList}>
             {section.tasks.map((task) => {
-              const fileInfo = uploads[task.id] || null;
+              const fileInfo = uploads[task.task_id] || null;
               return (
                 <TaskCard
-                  key={task.id}
+                  key={task.task_id}
                   task={task}
                   fileInfo={fileInfo}
                   onClick={() => {
-                    setSelectedTask(task.id);
+                    setSelectedTask(task.task_id);
                     setVisible(true);
                   }}
                 />
@@ -63,7 +63,9 @@ export default function CompliancePage() {
         <TaskUploadBox
           visible={visible}
           hotelId={hotelId as string}
-          task={Object.values(compliance).flatMap(group => group.tasks).find(t => t.id === selectedTask)!}
+          task={Object.values(compliance)
+            .flatMap((group) => group.tasks)
+            .find((t) => t.task_id === selectedTask)!}
           fileInfo={uploads[selectedTask] || null}
           onUpload={(file) => handleUpload(selectedTask, file)}
           onClose={() => setVisible(false)}
