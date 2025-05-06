@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { User2 } from 'lucide-react';
 
-import { SafetyScoreLeaderboard } from '@/components/SafetyScoreLeaderboard';
+import { ComplianceLeaderboard } from '@/components/ComplianceLeaderboard';
 import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
 import { RecentUploads } from '@/components/RecentUploads';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
@@ -105,7 +105,7 @@ export default function HotelsPage() {
 
       {/* Dashboard Sections */}
       <div className={`${styles.section} ${styles.topSection}`}>
-        <SafetyScoreLeaderboard data={leaderboardData} />
+        <ComplianceLeaderboard data={leaderboardData} />
       </div>
 
       <div className={`${styles.section} ${styles.middleSection}`}>
