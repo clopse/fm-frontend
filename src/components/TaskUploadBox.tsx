@@ -13,14 +13,19 @@ export interface UploadData {
   score: number;
 }
 
+interface ComplianceTask {
+  task_id: string;
+  label: string;
+  points: number;
+  type: 'upload' | 'confirmation';
+  mandatory: boolean;
+  info_popup: string;
+}
+
 interface TaskUploadBoxProps {
   visible: boolean;
   hotelId: string;
-  task: {
-    id: string;
-    label: string;
-    points?: number;
-  };
+  task: ComplianceTask;
   fileInfo: UploadData | null;
   onUpload: (fileInfo: UploadData | null) => void;
   onClose: () => void;
@@ -53,23 +58,22 @@ export default function TaskUploadBox({
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0];
-    if (selected) {
-      setFile(selected);
-    }
+    if (selected) setFile(selected);
   };
 
   const handleUploadSubmit = async () => {
     if (!file) return;
 
     setUploading(true);
+
     const formData = new FormData();
     formData.append('hotel_id', hotelId);
-    formData.append('task_id', task.id);
+    formData.append('task_id', task.task_id);
     formData.append('report_date', reportDate);
     formData.append('file', file);
 
     try {
-      const res = await fetch('https://fm-backend-sv3s.onrender.com/uploads/safety-score', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/uploads/compliance`, {
         method: 'POST',
         body: formData,
       });
@@ -82,11 +86,10 @@ export default function TaskUploadBox({
         return;
       }
 
-      let json;
       try {
-        json = await res.json();
-        console.log("Upload successful:", json.message);
-      } catch (parseError) {
+        const json = await res.json();
+        console.log("Upload successful:", json.message || json);
+      } catch {
         console.warn("Upload succeeded, but response wasn't JSON.");
       }
 
@@ -94,16 +97,11 @@ export default function TaskUploadBox({
         file,
         uploadedAt: new Date(),
         reportDate: new Date(reportDate),
-        score: task.points ?? 10,
+        score: task.points,
       });
-
-    } catch (networkError) {
-      console.error("Network error:", networkError);
-      if (networkError instanceof Error) {
-        alert("Network error: " + networkError.message);
-      } else {
-        alert("Unknown network error occurred.");
-      }
+    } catch (err) {
+      console.error("Network error:", err);
+      alert("Network error: " + (err instanceof Error ? err.message : 'unknown'));
     } finally {
       setUploading(false);
     }
@@ -116,9 +114,14 @@ export default function TaskUploadBox({
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeaderBar}>
           <h3 className={styles.modalTitle}>{task.label}</h3>
-          <button className={styles.closeBtn} onClick={onClose}>
-            ✕
-          </button>
+          <span className={styles.mandatoryTag}>
+            {task.mandatory ? 'Mandatory' : 'Optional'}
+          </span>
+          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+        </div>
+
+        <div className={styles.infoBox}>
+          <p>{task.info_popup}</p>
         </div>
 
         <div className={styles.modalContent}>
