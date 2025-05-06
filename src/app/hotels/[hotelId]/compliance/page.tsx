@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import styles from '@/styles/CompliancePage.module.css';
 import TaskCard from '@/components/TaskCard';
 import TaskUploadBox from '@/components/TaskUploadBox';
-import rawCompliance from '@/data/compliance.json';
+import { complianceGroups } from '@/data/complianceTasks';
 
 interface UploadData {
   file: File;
@@ -13,27 +13,6 @@ interface UploadData {
   reportDate?: Date;
   score: number;
 }
-
-interface Task {
-  task_id: string;
-  label: string;
-  frequency: string;
-  category: string;
-  type: 'upload' | 'confirmation';
-  needs_report: string;
-  mandatory: boolean;
-  points: number;
-  info_popup: string;
-  subtasks?: string[];
-}
-
-interface ComplianceSection {
-  section: string;
-  tasks: Task[];
-}
-
-// ✅ Treat as array of sections
-const compliance: ComplianceSection[] = rawCompliance;
 
 export default function CompliancePage() {
   const { hotelId } = useParams();
@@ -58,7 +37,7 @@ export default function CompliancePage() {
     <div className={styles.wrapper}>
       <h1 className={styles.pageTitle}>Compliance Overview</h1>
 
-      {compliance.map((section) => (
+      {complianceGroups.map((section) => (
         <div key={section.section} className={styles.groupSection}>
           <h2 className={styles.groupTitle}>{section.section}</h2>
           <div className={styles.taskList}>
@@ -84,7 +63,7 @@ export default function CompliancePage() {
         <TaskUploadBox
           visible={visible}
           hotelId={hotelId as string}
-          task={compliance.flatMap((g) => g.tasks).find((t) => t.task_id === selectedTask)!}
+          task={complianceGroups.flatMap((s) => s.tasks).find((t) => t.task_id === selectedTask)!}
           fileInfo={uploads[selectedTask] || null}
           onUpload={(file) => handleUpload(selectedTask, file)}
           onClose={() => setVisible(false)}
