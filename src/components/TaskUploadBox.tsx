@@ -74,22 +74,21 @@ export default function TaskUploadBox({
     formData.append('file', file);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/uploads/compliance`, {
-        method: 'POST',
-        body: formData,
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
 
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text);
       }
 
-      try {
-        const json = await res.json();
-        console.log('✅ Uploaded:', json.message || json);
-      } catch {
-        console.warn('Upload succeeded, but no JSON returned.');
-      }
+      const json = await res.json();
+      console.log('✅ Uploaded:', json.message || json);
 
       onUpload({
         file,
@@ -115,7 +114,9 @@ export default function TaskUploadBox({
           <span className={styles.mandatoryTag}>
             {task.mandatory ? 'Mandatory' : 'Optional'}
           </span>
-          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+          <button className={styles.closeBtn} onClick={onClose}>
+            ✕
+          </button>
         </div>
 
         <div className={styles.infoBox}>
