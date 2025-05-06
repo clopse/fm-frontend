@@ -38,38 +38,24 @@ export default function CompliancePage() {
     <div className={styles.wrapper}>
       <h1 className={styles.pageTitle}>Compliance Overview</h1>
 
-      {Object.entries(compliance).map(([groupName, tasks]) => (
-        <div key={groupName} className={styles.groupSection}>
-          <h2 className={styles.groupTitle}>{groupName}</h2>
-          <div className={styles.taskList}>
-            {tasks.map((task) => {
-              const fileInfo = uploads[task.id] || null;
-              return (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  fileInfo={fileInfo}
-                  onClick={() => {
-                    setSelectedTask(task.id);
-                    setVisible(true);
-                  }}
-                />
-              );
-            })}
-          </div>
-        </div>
-      ))}
-
-      {selectedTask && (
-        <TaskUploadBox
-          visible={visible}
-          hotelId={hotelId as string}
-          task={Object.values(compliance).flat().find(t => t.id === selectedTask)!}
-          fileInfo={uploads[selectedTask] || null}
-          onUpload={(file) => handleUpload(selectedTask, file)}
-          onClose={() => setVisible(false)}
-        />
-      )}
+     {Object.entries(compliance).map(([groupName, group]) => (
+      <div key={groupName} className={styles.groupSection}>
+        <h2 className={styles.groupTitle}>{groupName}</h2>
+        <div className={styles.taskList}>
+          {group.tasks.map((task) => {
+            const fileInfo = uploads[task.id] || null;
+            return (
+              <TaskCard
+                key={task.id}
+                task={task}
+                fileInfo={fileInfo}
+                onClick={() => {
+                  setSelectedTask(task.id);
+                  setVisible(true);
+            }}
+          />
+        );
+      })}
     </div>
-  );
-}
+  </div>
+))}
