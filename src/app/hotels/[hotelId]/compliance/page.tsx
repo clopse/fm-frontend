@@ -1,3 +1,4 @@
+// /src/app/hotels/[hotelId]/compliance/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -5,13 +6,14 @@ import { useParams } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
 import styles from '@/styles/CompliancePage.module.css';
 import { getDueTasks, acknowledgeTask } from '@/utils/complianceApi';
-import { Info } from 'lucide-react';
+import { Info, CheckCircle, UploadCloud, ShieldCheck } from 'lucide-react';
 
 interface Task {
   task_id: string;
   label: string;
   info_popup: string;
   points: number;
+  category?: string;
 }
 
 export default function CompliancePage() {
@@ -51,49 +53,53 @@ export default function CompliancePage() {
     }
   };
 
+  const renderTaskItem = (task: Task, isAcknowledgeable = false) => (
+    <li key={task.task_id} className={styles.taskCard}>
+      <UploadCloud size={20} className={styles.icon} />
+      <div className={styles.labelArea}>
+        <strong>{task.label}</strong>
+        <p className={styles.tooltipText}>{task.info_popup}</p>
+      </div>
+      {isAcknowledgeable ? (
+        acknowledged.includes(task.task_id) ? (
+          <span className={styles.acknowledged}><CheckCircle size={18} /> Acknowledged</span>
+        ) : (
+          <button onClick={() => handleAcknowledge(task.task_id)} className={styles.ackButton}>
+            Acknowledge
+          </button>
+        )
+      ) : (
+        <ShieldCheck size={18} color="green" title="Due now" />
+      )}
+    </li>
+  );
+
   return (
     <div className={styles.container}>
       <h1 className={styles.heading}>{name} – Compliance Overview</h1>
 
-      {/* Placeholder Score Box */}
       <div className={styles.scoreBox}>
         <span className={styles.score}>430/470</span>
         <span className={styles.label}>Compliance Score</span>
       </div>
 
-      <h2>Tasks Due This Month</h2>
-      <ul className={styles.taskList}>
-        {dueTasks.map((task) => (
-          <li key={task.task_id}>
-            {task.label}
-            <span title={task.info_popup}>
-              <Info size={16} style={{ marginLeft: '0.5rem', cursor: 'pointer' }} />
-            </span>
-          </li>
-        ))}
-        {dueTasks.length === 0 && <p>✅ All current uploadable tasks completed.</p>}
-      </ul>
+      <section>
+        <h2 className={styles.sectionTitle}>Tasks Due This Month</h2>
+        <ul className={styles.taskList}>
+          {dueTasks.length > 0 ? dueTasks.map((task) => renderTaskItem(task)) : (
+            <p className={styles.complete}>✅ All current uploadable tasks completed.</p>
+          )}
+        </ul>
+      </section>
 
-      <h2>Uploadable Tasks Coming Next Month</h2>
-      <ul className={styles.taskList}>
-        {nextMonthTasks.map((task) => (
-          <li key={task.task_id}>
-            {task.label}
-            <span title={task.info_popup}>
-              <Info size={16} style={{ marginLeft: '0.5rem', cursor: 'pointer' }} />
-            </span>
-            {!acknowledged.includes(task.task_id) && (
-              <button onClick={() => handleAcknowledge(task.task_id)} style={{ marginLeft: 'auto' }}>
-                Acknowledge
-              </button>
-            )}
-            {acknowledged.includes(task.task_id) && (
-              <span style={{ marginLeft: 'auto', color: 'green' }}>✅ Acknowledged</span>
-            )}
-          </li>
-        ))}
-        {nextMonthTasks.length === 0 && <p>✅ No upload tasks pending for next month.</p>}
-      </ul>
+      <section>
+        <h2 className={styles.sectionTitle}>Next Month’s Uploadable Tasks</h2>
+        <ul className={styles.taskList}>
+          {nextMonthTasks.length > 0 ? nextMonthTasks.map((task) => renderTaskItem(task, true)) : (
+            <p className={styles.complete}>✅ No upload tasks pending for next month.</p>
+          )}
+        </ul>
+      </section>
     </div>
   );
 }
