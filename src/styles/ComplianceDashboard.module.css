@@ -1,139 +1,60 @@
-.page {
-  padding: 2rem 2.5rem;
-  font-family: 'Segoe UI', sans-serif;
-  background: #f5f7fa;
-  min-height: 100vh;
-  box-sizing: border-box;
-}
-
-/* Score chart section */
-.chartWrapperWithScore {
-  position: relative;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  padding: 2rem 2rem 3rem;
-  margin-bottom: 2rem;
-}
-
-.scoreOverlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 3rem;
-  font-weight: bold;
-  padding: 0.5rem 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  z-index: 10;
-}
-
-.full {
-  background-color: #28a745;
-  color: white;
-}
-
-.partial {
-  background-color: #ffc107;
-  color: black;
-}
-
-.low {
-  background-color: #dc3545;
-  color: white;
-}
-
-/* Filter buttons */
-.filterBar {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  margin-bottom: 2.5rem;
-}
-
-.filterButton {
+.container {
+  padding: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
   background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 20px;
-  padding: 0.4rem 1rem;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 0.95rem;
-  transition: all 0.2s ease;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
-.filterButton:hover {
-  background: #f0f0f0;
+h1 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
 }
 
-.activeFilter {
-  background-color: #007bff;
-  border-color: #007bff;
-  color: white;
-}
-
-/* Group section */
-.group {
-  margin-bottom: 3rem;
-}
-
-.groupTitle {
+h2 {
+  margin-top: 2rem;
   font-size: 1.4rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-  border-left: 4px solid #007bff;
-  padding-left: 1rem;
-  color: #222;
+  color: #333;
 }
 
-/* Task list */
 .taskList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  justify-content: flex-start;
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
 }
 
-/* Task cards */
-.card {
-  width: 280px;
-  padding: 1.25rem;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: transform 0.15s ease;
+.taskList li {
+  display: flex;
+  align-items: center;
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.taskList span {
+  flex: 1;
+}
+
+.infoBtn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-right: 1rem;
+}
+
+.ackBtn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
   cursor: pointer;
 }
 
-.card:hover {
-  transform: translateY(-4px);
-}
-
-.cardHeader {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.scoreBadge {
-  float: right;
-  font-weight: bold;
-  padding: 0.3rem 0.6rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
-}
-
-.scoreBadge.green {
-  background: #28a745;
-  color: white;
-}
-
-.scoreBadge.yellow {
-  background: #ffc107;
-  color: black;
-}
-
-.scoreBadge.red {
-  background: #dc3545;
-  color: white;
+.ackBtn:disabled {
+  background-color: #28a745;
 }
