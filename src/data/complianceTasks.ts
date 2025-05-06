@@ -1,16 +1,18 @@
-import data from './compliance.json';
+import rawData from './compliance.json';
 
 export interface SubTask {
   label: string;
   points: number;
 }
 
+export type ComplianceType = 'upload' | 'confirmation';
+
 export interface ComplianceTask {
   task_id: string;
   label: string;
   frequency: string;
   category: string;
-  type: 'upload' | 'confirmation';
+  type: ComplianceType; // Strict
   needs_report: 'yes' | 'no';
   mandatory: boolean;
   points: number;
@@ -23,5 +25,5 @@ export interface ComplianceSection {
   tasks: ComplianceTask[];
 }
 
-// Final export
-export const complianceGroups: ComplianceSection[] = data;
+// 💥 Cast JSON safely
+export const complianceGroups: ComplianceSection[] = rawData as ComplianceSection[];
