@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { User2 } from 'lucide-react';
 
-import { ComplianceLeaderboard } from '@/components/ComplianceLeaderboard';
+import ComplianceLeaderboard from '@/components/ComplianceLeaderboard';
 import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
 import { RecentUploads } from '@/components/RecentUploads';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
