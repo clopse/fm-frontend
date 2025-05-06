@@ -36,3 +36,16 @@
   border-radius: 12px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }
+
+.ackButton {
+  background: none;
+  border: none;
+  margin-left: auto;
+  cursor: pointer;
+  color: green;
+  transition: transform 0.2s ease;
+}
+
+.ackButton:hover {
+  transform: scale(1.2);
+}
