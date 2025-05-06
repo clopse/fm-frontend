@@ -3,25 +3,25 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import styles from '@/styles/SafetyScoreLeaderboard.module.css';
+import styles from '@/styles/ComplianceLeaderboard.module.css';
 import { hotels } from '@/lib/hotels';
 
-type ScoreEntry = {
+type ComplianceEntry = {
   hotel: string;
-  score: number;
+  compliance: number;
 };
 
-export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
-  const [sortedData, setSortedData] = useState<ScoreEntry[]>([]);
+export function ComplianceLeaderboard({ data }: { data: ComplianceEntry[] }) {
+  const [sortedCompliance, setSortedCompliance] = useState<ComplianceEntry[]>([]);
   const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
     const sorted = [...data].sort((a, b) => {
-      if (b.score === a.score) return a.hotel.localeCompare(b.hotel);
-      return b.score - a.score;
+      if (b.compliance === a.compliance) return a.hotel.localeCompare(b.hotel);
+      return b.compliance - a.compliance;
     });
-    setSortedData(sorted);
+    setSortedCompliance(sorted);
   }, [data]);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
     return hotels.find((h) => h.name === name)?.id || 'unknown';
   };
 
-  const filteredData = sortedData.filter((entry) => {
+  const filteredCompliance = sortedCompliance.filter((entry) => {
     const id = getHotelId(entry.hotel);
     return selectedHotels.includes(id);
   });
@@ -53,7 +53,7 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
   return (
     <div className={styles.container}>
       <div className={styles.boxHeader}>
-        <h2 className={styles.header}>Safety Score Leaderboard</h2>
+        <h2 className={styles.header}>Compliance Leaderboard</h2>
 
         <div className={styles.dropdownWrapper}>
           <button onClick={() => setDropdownOpen(!dropdownOpen)} className={styles.dropdownButton}>
@@ -77,7 +77,7 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
       </div>
 
       <div className={styles.leaderboard}>
-        {filteredData.map((entry) => {
+        {filteredCompliance.map((entry) => {
           const hotelId = getHotelId(entry.hotel);
           return (
             <div key={entry.hotel} className={styles.row}>
@@ -103,13 +103,16 @@ export function SafetyScoreLeaderboard({ data }: { data: ScoreEntry[] }) {
                 <div
                   className={styles.bar}
                   style={{
-                    width: `${entry.score}%`,
+                    width: `${entry.compliance}%`,
                     backgroundColor:
-                      entry.score >= 85 ? '#28a745' : entry.score >= 70 ? '#ffc107' : '#dc3545',
+                      entry.compliance >= 85 ? '#28a745' : entry.compliance >= 70 ? '#ffc107' : '#dc3545',
                   }}
                 />
-                <span className={styles.score} title="430 / 470 Points">
-                  {entry.score}%
+                <span
+                  className={styles.score}
+                  title="Compliance % based on completed tasks"
+                >
+                  {entry.compliance}%
                 </span>
               </div>
             </div>
