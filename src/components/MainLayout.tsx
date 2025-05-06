@@ -8,7 +8,7 @@ import MainSidebar from './MainSidebar';
 import UserPanel from './UserPanel';
 import { hotels } from '@/lib/hotels';
 import { ArrowLeft, Menu } from 'lucide-react';
-import styles from '@/styles/MainSidebar.module.css';
+import styles from '@/styles/ComplianceSidebar.module.css'; // ✅ renamed module for consistency
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const [isModalOpen, setModalOpen] = useState(false);
@@ -52,7 +52,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <HeaderBar
           onHotelSelectClick={() => setModalOpen(true)}
           currentHotelName={currentHotelName}
-          onUserIconClick={() => setUserPanelOpen(true)} // pass user icon toggle
+          onUserIconClick={() => setUserPanelOpen(true)}
         />
       )}
 
