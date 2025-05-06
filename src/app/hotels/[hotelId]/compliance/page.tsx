@@ -21,7 +21,6 @@ export default function CompliancePage() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    // Load existing compliance data for this hotel if available
     const saved = localStorage.getItem(`compliance-${hotelId}`);
     if (saved) {
       setUploads(JSON.parse(saved));
@@ -38,24 +37,38 @@ export default function CompliancePage() {
     <div className={styles.wrapper}>
       <h1 className={styles.pageTitle}>Compliance Overview</h1>
 
-     {Object.entries(compliance).map(([groupName, group]) => (
-      <div key={groupName} className={styles.groupSection}>
-        <h2 className={styles.groupTitle}>{groupName}</h2>
-        <div className={styles.taskList}>
-          {group.tasks.map((task) => {
-            const fileInfo = uploads[task.id] || null;
-            return (
-              <TaskCard
-                key={task.id}
-                task={task}
-                fileInfo={fileInfo}
-                onClick={() => {
-                  setSelectedTask(task.id);
-                  setVisible(true);
-            }}
-          />
-        );
-      })}
+      {Object.entries(compliance).map(([sectionName, section]) => (
+        <div key={sectionName} className={styles.groupSection}>
+          <h2 className={styles.groupTitle}>{sectionName}</h2>
+          <div className={styles.taskList}>
+            {section.tasks.map((task) => {
+              const fileInfo = uploads[task.id] || null;
+              return (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  fileInfo={fileInfo}
+                  onClick={() => {
+                    setSelectedTask(task.id);
+                    setVisible(true);
+                  }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {selectedTask && (
+        <TaskUploadBox
+          visible={visible}
+          hotelId={hotelId as string}
+          task={Object.values(compliance).flatMap(group => group.tasks).find(t => t.id === selectedTask)!}
+          fileInfo={uploads[selectedTask] || null}
+          onUpload={(file) => handleUpload(selectedTask, file)}
+          onClose={() => setVisible(false)}
+        />
+      )}
     </div>
-  </div>
-))}
+  );
+}
