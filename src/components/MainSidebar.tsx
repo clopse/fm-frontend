@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
-import styles from '@/styles/ComplianceSidebar.module.css';
+import styles from '@/styles/MainSidebar.module.css';
 import {
   Building2,
   ShieldCheck,
