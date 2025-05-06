@@ -1,49 +1,36 @@
-# /app/main.py
+/* src/styles/CompliancePage.module.css */
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-import os
+.wrapper {
+  padding: 2rem;
+  background-color: #f9f9f9;
+  min-height: 100vh;
+}
 
-# Load environment variables from .env.local
-load_dotenv()
+.pageTitle {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: #222;
+}
 
-# Routers
-from app.routers import (
-    uploads,
-    utilities,
-    drawings,
-    tenders,
-    compliance,  # ✅ Updated from safety to compliance
-    files,       # ✅ For service reports, renamed to files
-)
+.groupSection {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
 
-app = FastAPI()
+.groupTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #333;
+}
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://jmkfacilities.ie",
-        "https://www.jmkfacilities.ie",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000"
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Include Routers
-app.include_router(utilities.router)
-app.include_router(tenders.router)
-app.include_router(drawings.router)
-app.include_router(compliance.router, prefix="/compliance", tags=["compliance"])  # ✅ Corrected
-app.include_router(files.router)
-
-@app.get("/")
-def read_root():
-    return {"message": "JMK Project API is running 🚀"}
-
-@app.get("/health")
-def health_check():
-    return {"status": "ok"}
+.taskList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
