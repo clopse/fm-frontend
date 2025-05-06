@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from '@/styles/TaskUploadBox.module.css';
 import { Document, Page, pdfjs } from 'react-pdf';
 
@@ -42,7 +42,9 @@ export default function TaskUploadBox({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [reportDate, setReportDate] = useState<string>(new Date().toISOString().substring(0, 10));
+  const [reportDate, setReportDate] = useState<string>(
+    new Date().toISOString().substring(0, 10)
+  );
   const [numPages, setNumPages] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -56,8 +58,8 @@ export default function TaskUploadBox({
     }
   }, [file]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = event.target.files?.[0];
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
     if (selected) setFile(selected);
   };
 
@@ -65,7 +67,6 @@ export default function TaskUploadBox({
     if (!file) return;
 
     setUploading(true);
-
     const formData = new FormData();
     formData.append('hotel_id', hotelId);
     formData.append('task_id', task.task_id);
@@ -79,18 +80,15 @@ export default function TaskUploadBox({
       });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Upload failed:", errorText);
-        alert("Upload failed:\n" + errorText);
-        setUploading(false);
-        return;
+        const text = await res.text();
+        throw new Error(text);
       }
 
       try {
         const json = await res.json();
-        console.log("Upload successful:", json.message || json);
+        console.log('✅ Uploaded:', json.message || json);
       } catch {
-        console.warn("Upload succeeded, but response wasn't JSON.");
+        console.warn('Upload succeeded, but no JSON returned.');
       }
 
       onUpload({
@@ -99,9 +97,9 @@ export default function TaskUploadBox({
         reportDate: new Date(reportDate),
         score: task.points,
       });
-    } catch (err) {
-      console.error("Network error:", err);
-      alert("Network error: " + (err instanceof Error ? err.message : 'unknown'));
+    } catch (err: any) {
+      alert('Upload failed: ' + (err?.message || 'Unknown error'));
+      console.error(err);
     } finally {
       setUploading(false);
     }
@@ -137,7 +135,10 @@ export default function TaskUploadBox({
 
           {!file && (
             <>
-              <button className={styles.uploadBtn} onClick={() => fileInputRef.current?.click()}>
+              <button
+                className={styles.uploadBtn}
+                onClick={() => fileInputRef.current?.click()}
+              >
                 Select File
               </button>
               <input
@@ -167,7 +168,7 @@ export default function TaskUploadBox({
               ) : file.type.startsWith('image/') ? (
                 <img src={fileUrl} className={styles.previewFrame} alt="Preview" />
               ) : (
-                <p>Unsupported preview — will upload fine</p>
+                <p>File selected: {file.name}</p>
               )}
             </div>
           )}
