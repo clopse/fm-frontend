@@ -1,51 +1,77 @@
 .card {
-    width: 100%;
-    max-width: 320px;
-    padding: 1rem 1.25rem;
-    background: #ffffff;
-    border-radius: 10px;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    background-color: #f7fbff;
-  }
-  
-  .cardHeader {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #333;
-    flex: 1;
-  }
-  
-  .scoreBadge {
-    font-weight: 600;
-    padding: 0.35rem 0.65rem;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    white-space: nowrap;
-  }
-  
-  .green {
-    background: #28a745;
-    color: white;
-  }
-  
-  .yellow {
-    background: #ffc107;
-    color: black;
-  }
-  
-  .red {
-    background: #dc3545;
-    color: white;
-  }
-  
+  width: 100%;
+  max-width: 320px;
+  padding: 1rem 1.25rem;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+  background-color: #f7fbff;
+}
+
+.cardHeader {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cardFooter {
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.scoreBadge {
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.taskType {
+  font-size: 0.75rem;
+  color: #555;
+  background: #f0f0f0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.mandatory {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: white;
+  background: #dc3545;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+}
+
+.green {
+  background: #28a745;
+  color: white;
+}
+
+.yellow {
+  background: #ffc107;
+  color: black;
+}
+
+.red {
+  background: #dc3545;
+  color: white;
+}
