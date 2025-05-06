@@ -1,122 +1,121 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
-import { User2 } from 'lucide-react';
-
-import { ComplianceLeaderboard } from '@/components/ComplianceLeaderboard';
-import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
-import { RecentUploads } from '@/components/RecentUploads';
-import HotelSelectorModal from '@/components/HotelSelectorModal';
-import UserPanel from '@/components/UserPanel';
+import styles from '@/styles/ComplianceLeaderboard.module.css';
 import { hotels } from '@/lib/hotels';
 
-import styles from '@/styles/AdminDashboard.module.css';
-import headerStyles from '@/styles/HeaderBar.module.css';
+type LeaderboardEntry = {
+  hotel: string;
+  score: number;
+};
 
-// ✅ Fixed component usage (was SafetyScoreLeaderboard before refactor)
-type Upload = { hotel: string; report: string; date: string };
-type LeaderboardEntry = { hotel: string; score: number };
+interface Props {
+  data: LeaderboardEntry[];
+}
 
-export default function HotelsPage() {
-  const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
-  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
-  const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
-  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
-  const [currentHotel, setCurrentHotel] = useState('Select Hotel');
+export default function ComplianceLeaderboard({ data }: Props) {
+  const [sortedData, setSortedData] = useState<LeaderboardEntry[]>([]);
+  const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   useEffect(() => {
-    // Simulated data for now
-    setLeaderboardData(
-      hotels.map((hotel) => ({
-        hotel: hotel.name,
-        score: Math.floor(Math.random() * 21) + 80, // 80–100%
-      }))
-    );
-
-    setRecentUploads([
-      {
-        hotel: 'Holiday Inn Express',
-        report: 'Fire Extinguisher Report 2025',
-        date: '2025-04-01',
-      },
-      {
-        hotel: 'Moxy Cork',
-        report: 'Electrical Inspection',
-        date: '2025-03-25',
-      },
-    ]);
+    const saved = localStorage.getItem('selectedHotels');
+    if (saved) {
+      setSelectedHotels(JSON.parse(saved));
+    } else {
+      setSelectedHotels(hotels.map(h => h.id));
+    }
   }, []);
 
-  const handleHotelSelect = (hotelName: string) => {
-    setCurrentHotel(hotelName);
-    setIsHotelModalOpen(false);
+  useEffect(() => {
+    const sorted = [...data].sort((a, b) => {
+      if (b.score === a.score) return a.hotel.localeCompare(b.hotel);
+      return b.score - a.score;
+    });
+    setSortedData(sorted);
+  }, [data]);
+
+  const toggleHotel = (id: string) => {
+    const updated = selectedHotels.includes(id)
+      ? selectedHotels.filter(h => h !== id)
+      : [...selectedHotels, id];
+    setSelectedHotels(updated);
+    localStorage.setItem('selectedHotels', JSON.stringify(updated));
   };
+
+  const getHotelId = (name: string): string =>
+    hotels.find((h) => h.name === name)?.id || 'unknown';
+
+  const filteredData = sortedData.filter(entry =>
+    selectedHotels.includes(getHotelId(entry.hotel))
+  );
 
   return (
     <div className={styles.container}>
-      {/* Slide-in User Panel */}
-      <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
-
-      {/* Header */}
-      <header className={headerStyles.header}>
-        <div className={headerStyles.left}>
-          <Image
-            src="/jmk-logo.png"
-            alt="JMK Hotels"
-            width={228}
-            height={60}
-            style={{ objectFit: 'contain' }}
-          />
-        </div>
-
-        <div className={headerStyles.center}>
-          <button
-            className={headerStyles.selector}
-            onClick={() => setIsHotelModalOpen(true)}
-          >
-            {currentHotel} <span className={headerStyles.arrow}>⌄</span>
+      <div className={styles.boxHeader}>
+        <h2 className={styles.header}>Compliance Leaderboard</h2>
+        <div className={styles.dropdownWrapper}>
+          <button onClick={() => setDropdownOpen(!dropdownOpen)} className={styles.dropdownButton}>
+            ▼
           </button>
+          {dropdownOpen && (
+            <div className={styles.dropdownMenu}>
+              {hotels.map((hotel) => (
+                <label key={hotel.id} className={styles.dropdownItem}>
+                  <input
+                    type="checkbox"
+                    checked={selectedHotels.includes(hotel.id)}
+                    onChange={() => toggleHotel(hotel.id)}
+                  />
+                  {hotel.name}
+                </label>
+              ))}
+            </div>
+          )}
         </div>
-
-        <div className={headerStyles.right}>
-          <button
-            onClick={() => setIsUserPanelOpen(true)}
-            style={{
-              background: 'white',
-              borderRadius: '50%',
-              border: '1px solid #ccc',
-              padding: '10px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-              cursor: 'pointer',
-            }}
-            title="Account"
-          >
-            <User2 size={20} />
-          </button>
-        </div>
-      </header>
-
-      {/* Hotel Selector Modal */}
-      <HotelSelectorModal
-        isOpen={isHotelModalOpen}
-        setIsOpen={setIsHotelModalOpen}
-        onSelectHotel={handleHotelSelect}
-      />
-
-      {/* Dashboard Sections */}
-      <div className={`${styles.section} ${styles.topSection}`}>
-        <ComplianceLeaderboard data={leaderboardData} />
       </div>
 
-      <div className={`${styles.section} ${styles.middleSection}`}>
-        <h2 className={styles.header}>Hotel Utilities Comparison</h2>
-        <UtilitiesGraphs />
-      </div>
+      <div className={styles.leaderboard}>
+        {filteredData.map((entry) => {
+          const hotelId = getHotelId(entry.hotel);
+          return (
+            <div key={entry.hotel} className={styles.row}>
+              <div className={styles.logoCell}>
+                <Link href={`/hotels/${hotelId}`}>
+                  <Image
+                    src={`/icons/${hotelId}-icon.png`}
+                    alt={entry.hotel}
+                    width={150}
+                    height={90}
+                    style={{
+                      height: '90px',
+                      width: 'auto',
+                      maxWidth: '100%',
+                      objectFit: 'contain',
+                      cursor: 'pointer',
+                    }}
+                  />
+                </Link>
+              </div>
 
-      <div className={`${styles.section} ${styles.recentUploadsSection}`}>
-        <h2 className={styles.header}>Recent Uploads</h2>
-        <RecentUploads uploads={recentUploads} />
+              <div className={styles.barWrapper}>
+                <div
+                  className={styles.bar}
+                  style={{
+                    width: `${entry.score}%`,
+                    backgroundColor:
+                      entry.score >= 85 ? '#28a745' : entry.score >= 70 ? '#ffc107' : '#dc3545',
+                  }}
+                />
+                <span className={styles.score}>
+                  {entry.score}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
