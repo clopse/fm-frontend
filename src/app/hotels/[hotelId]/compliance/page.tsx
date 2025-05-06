@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import styles from '@/styles/CompliancePage.module.css';
 import TaskCard from '@/components/TaskCard';
 import TaskUploadBox from '@/components/TaskUploadBox';
-import { getComplianceData } from '@/lib/complianceData';
 import compliance from '@/data/compliance.json';
 
 interface UploadData {
