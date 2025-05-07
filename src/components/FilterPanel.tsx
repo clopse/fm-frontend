@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styles from '@/styles/FilterPanel.module.css';
 import { ChevronDown } from 'lucide-react';
 
@@ -21,6 +21,9 @@ export default function FilterPanel({ filters, onChange, categories, frequencies
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [frequencyOpen, setFrequencyOpen] = useState(false);
 
+  const categoryRef = useRef<HTMLDivElement>(null);
+  const frequencyRef = useRef<HTMLDivElement>(null);
+
   const toggleMultiValue = (key: 'category' | 'frequency', value: string) => {
     const current = filters[key];
     const newValues = current.includes(value)
@@ -29,17 +32,30 @@ export default function FilterPanel({ filters, onChange, categories, frequencies
     onChange({ ...filters, [key]: newValues });
   };
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+        setCategoryOpen(false);
+      }
+      if (frequencyRef.current && !frequencyRef.current.contains(event.target as Node)) {
+        setFrequencyOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <div className={styles.filterWrapper}>
       <div className={styles.filterRow}>
         {/* Category Dropdown */}
-        <div className={styles.dropdownWrapper}>
+        <div ref={categoryRef} className={styles.dropdownWrapper}>
           <div
             className={styles.dropdownButton}
             onClick={() => setCategoryOpen((prev) => !prev)}
           >
-            {filters.category.length ? filters.category.join(', ') : 'Select Categories'}{' '}
-            <ChevronDown size={16} />
+            {filters.category.length ? filters.category.join(', ') : 'Select Categories'} <ChevronDown size={16} />
           </div>
           {categoryOpen && (
             <div className={styles.dropdownMenu}>
@@ -58,13 +74,12 @@ export default function FilterPanel({ filters, onChange, categories, frequencies
         </div>
 
         {/* Frequency Dropdown */}
-        <div className={styles.dropdownWrapper}>
+        <div ref={frequencyRef} className={styles.dropdownWrapper}>
           <div
             className={styles.dropdownButton}
             onClick={() => setFrequencyOpen((prev) => !prev)}
           >
-            {filters.frequency.length ? filters.frequency.join(', ') : 'Select Frequencies'}{' '}
-            <ChevronDown size={16} />
+            {filters.frequency.length ? filters.frequency.join(', ') : 'Select Frequencies'} <ChevronDown size={16} />
           </div>
           {frequencyOpen && (
             <div className={styles.dropdownMenu}>
