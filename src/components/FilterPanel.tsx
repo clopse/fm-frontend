@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import styles from '@/styles/FilterPanel.module.css';
+import { ChevronDown } from 'lucide-react';
 
 interface FilterPanelProps {
   filters: {
@@ -17,69 +18,80 @@ interface FilterPanelProps {
 }
 
 export default function FilterPanel({ filters, onChange, categories, frequencies }: FilterPanelProps) {
-  const [showCatDropdown, setShowCatDropdown] = useState(false);
-  const [showFreqDropdown, setShowFreqDropdown] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [frequencyOpen, setFrequencyOpen] = useState(false);
 
-  const toggleCategory = (value: string) => {
-    onChange({ ...filters, category: value });
-    setShowCatDropdown(false);
-  };
-
-  const toggleFrequency = (value: string) => {
-    onChange({ ...filters, frequency: value });
-    setShowFreqDropdown(false);
+  const toggleValue = (key: 'category' | 'frequency', value: string) => {
+    const current = filters[key];
+    const newValue = current === value ? '' : value;
+    onChange({ ...filters, [key]: newValue });
   };
 
   return (
     <div className={styles.filterWrapper}>
       <div className={styles.filterRow}>
-        {/* Category dropdown */}
-        <div className={styles.filterItem}>
-          <label>Category</label>
-          <div onClick={() => setShowCatDropdown((v) => !v)} className={styles.dropdownHeader}>
-            {filters.category || 'All Categories'}
+        {/* Category Dropdown */}
+        <div className={styles.dropdownWrapper}>
+          <div
+            className={styles.dropdownButton}
+            onClick={() => setCategoryOpen((prev) => !prev)}
+          >
+            {filters.category || 'Select Category'} <ChevronDown size={16} />
           </div>
-          {showCatDropdown && (
-            <div className={styles.dropdownList}>
-              <label onClick={() => toggleCategory('')}>All</label>
+          {categoryOpen && (
+            <div className={styles.dropdownMenu}>
               {categories.map((cat) => (
-                <label key={cat} onClick={() => toggleCategory(cat)}>{cat}</label>
+                <label key={cat} className={styles.optionItem}>
+                  <input
+                    type="checkbox"
+                    checked={filters.category === cat}
+                    onChange={() => toggleValue('category', cat)}
+                  />
+                  {cat}
+                </label>
               ))}
             </div>
           )}
         </div>
 
-        {/* Frequency dropdown */}
-        <div className={styles.filterItem}>
-          <label>Frequency</label>
-          <div onClick={() => setShowFreqDropdown((v) => !v)} className={styles.dropdownHeader}>
-            {filters.frequency || 'All Frequencies'}
+        {/* Frequency Dropdown */}
+        <div className={styles.dropdownWrapper}>
+          <div
+            className={styles.dropdownButton}
+            onClick={() => setFrequencyOpen((prev) => !prev)}
+          >
+            {filters.frequency || 'Select Frequency'} <ChevronDown size={16} />
           </div>
-          {showFreqDropdown && (
-            <div className={styles.dropdownList}>
-              <label onClick={() => toggleFrequency('')}>All</label>
+          {frequencyOpen && (
+            <div className={styles.dropdownMenu}>
               {frequencies.map((freq) => (
-                <label key={freq} onClick={() => toggleFrequency(freq)}>{freq}</label>
+                <label key={freq} className={styles.optionItem}>
+                  <input
+                    type="checkbox"
+                    checked={filters.frequency === freq}
+                    onChange={() => toggleValue('frequency', freq)}
+                  />
+                  {freq}
+                </label>
               ))}
             </div>
           )}
         </div>
 
-        {/* Mandatory toggle */}
+        {/* Mandatory only checkbox */}
         <div className={styles.filterItem}>
           <label>
             <input
               type="checkbox"
               checked={filters.mandatoryOnly}
               onChange={(e) => onChange({ ...filters, mandatoryOnly: e.target.checked })}
-            />
-            &nbsp;Mandatory Only
+            />{' '}
+            Mandatory Only
           </label>
         </div>
 
-        {/* Search input */}
+        {/* Search field */}
         <div className={styles.filterItem}>
-          <label>Search</label>
           <input
             type="text"
             placeholder="Search by task..."
