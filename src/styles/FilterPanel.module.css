@@ -1,0 +1,60 @@
+.filterWrapper {
+  margin-bottom: 2rem;
+  padding: 1rem 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e1e4e8;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+}
+
+.filterHeader {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #003366;
+  margin-bottom: 1rem;
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.filterItem {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  min-width: 160px;
+}
+
+.filterItem label {
+  margin-bottom: 0.3rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.filterItem select,
+.filterItem input[type='checkbox'] {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+}
+
+.filterItem select:focus {
+  border-color: #0070f3;
+  outline: none;
+}
+
+@media (max-width: 768px) {
+  .filterRow {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .filterItem {
+    width: 100%;
+  }
+}
