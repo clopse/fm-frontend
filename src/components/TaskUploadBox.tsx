@@ -46,7 +46,7 @@ export default function TaskUploadBox({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [reportDate, setReportDate] = useState<string>(new Date().toISOString().substring(0, 10));
+  const [reportDate, setReportDate] = useState<string>('');
   const [numPages, setNumPages] = useState<number | null>(null);
   const [history, setHistory] = useState<UploadRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -69,6 +69,7 @@ export default function TaskUploadBox({
     if (file) {
       const url = URL.createObjectURL(file);
       setFileUrl(url);
+      setReportDate(new Date().toISOString().substring(0, 10));
       return () => URL.revokeObjectURL(url);
     }
   }, [file]);
@@ -96,6 +97,27 @@ export default function TaskUploadBox({
 
   const handleDownload = (url: string) => {
     window.open(url, '_blank');
+  };
+
+  const handleConfirm = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirmations/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hotel_id: hotelId, task_id: task.task_id, user: 'System' }),
+      });
+      if (!res.ok) throw new Error('Failed to confirm task');
+      const json = await res.json();
+      alert(json.message);
+      setFileUrl(null);
+      setFile(null);
+      setReportDate('');
+      onUpload(null);
+      setShowHistory(true);
+    } catch (err) {
+      alert('Confirmation failed');
+      console.error(err);
+    }
   };
 
   const renderPreview = () => {
@@ -162,9 +184,7 @@ export default function TaskUploadBox({
                   </label>
 
                   <div className={styles.previewActions}>
-                    <button className={styles.uploadBtn}>
-                      📤 Upload (stubbed – backend logic goes here)
-                    </button>
+                    <button className={styles.uploadBtn}>📤 Upload (pending)</button>
                   </div>
                 </>
               )}
@@ -181,8 +201,8 @@ export default function TaskUploadBox({
 
           {task.type === 'confirmation' && (
             <div className={styles.confirmBox}>
-              <button className={styles.confirmBtn}>
-                ✅ Confirm Task Done (stubbed)
+              <button className={styles.confirmBtn} onClick={handleConfirm}>
+                ✅ Confirm Task Done
               </button>
             </div>
           )}
