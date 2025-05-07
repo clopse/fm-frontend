@@ -1,65 +1,152 @@
 'use client';
 
-import React from 'react';
-import styles from '@/styles/FilterPanel.module.css';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import styles from '@/styles/CompliancePage.module.css';
+import TaskCard from '@/components/TaskCard';
+import TaskUploadBox from '@/components/TaskUploadBox';
+import FilterPanel from '@/components/FilterPanel';
+import { complianceGroups } from '@/data/complianceTasks';
+import { fetchComplianceScore } from '@/utils/complianceApi';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-interface FilterPanelProps {
-  filters: {
-    category: string;
-    frequency: string;
-    mandatoryOnly: boolean;
-    search: string;
-  };
-  onChange: (filters: FilterPanelProps['filters']) => void;
-  categories: string[];
-  frequencies: string[];
+interface MonthlyEntry {
+  score: number;
+  max: number;
 }
 
-export default function FilterPanel({ filters, onChange, categories, frequencies }: FilterPanelProps) {
-  const handleChange = (key: keyof FilterPanelProps['filters'], value: any) => {
-    onChange({ ...filters, [key]: value });
+interface ScoreData {
+  score: number;
+  max_score: number;
+  percent: number;
+  detailed: {
+    task_id: string;
+    scored: number;
+    max: number;
+    label: string;
+    valid_until: string | null;
+  }[];
+  task_breakdown?: {
+    [task_id: string]: number;
+  };
+  monthly_history?: {
+    [month: string]: MonthlyEntry;
+  };
+}
+
+export default function CompliancePage() {
+  const { hotelId } = useParams();
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
+  const [scoreData, setScoreData] = useState<ScoreData | null>(null);
+
+  const [filters, setFilters] = useState({
+    mandatoryOnly: false,
+    type: '',
+    frequency: '',
+    category: '',
+    search: '',
+  });
+
+  useEffect(() => {
+    if (!hotelId) return;
+    fetchComplianceScore(hotelId as string)
+      .then(setScoreData)
+      .catch(console.error);
+  }, [hotelId]);
+
+  const chartData = scoreData?.monthly_history
+    ? Object.entries(scoreData.monthly_history).map(([month, val]) => {
+        const data = val as MonthlyEntry;
+        return {
+          month,
+          percent: Math.round((data.score / data.max) * 100),
+        };
+      })
+    : [];
+
+  const handleUpload = async (file: File, reportDate: Date) => {
+    if (!hotelId || !selectedTask || !file) return;
+    await fetchComplianceScore(hotelId as string).then(setScoreData);
+    setVisible(false);
   };
 
+  const filteredGroups = complianceGroups.map((group) => ({
+    ...group,
+    tasks: group.tasks.filter((task) => {
+      const matchesMandatory = !filters.mandatoryOnly || task.mandatory;
+      const matchesType = !filters.type || task.type === filters.type;
+      const matchesFreq = !filters.frequency || task.frequency === filters.frequency;
+      const matchesCategory = !filters.category || task.category === filters.category;
+      const matchesSearch = !filters.search || task.label.toLowerCase().includes(filters.search.toLowerCase());
+      return matchesMandatory && matchesType && matchesFreq && matchesCategory && matchesSearch;
+    })
+  })).filter(group => group.tasks.length > 0);
+
+  const uniqueCategories = Array.from(new Set(complianceGroups.flatMap(g => g.tasks.map(t => t.category))));
+  const uniqueFrequencies = Array.from(new Set(complianceGroups.flatMap(g => g.tasks.map(t => t.frequency))));
+
   return (
-    <div className={styles.panel}>
-      <select
-        className={styles.select}
-        value={filters.category}
-        onChange={(e) => handleChange('category', e.target.value)}
-      >
-        <option value="">All Categories</option>
-        {categories.map((cat) => (
-          <option key={cat} value={cat}>{cat}</option>
-        ))}
-      </select>
+    <div className={styles.wrapper}>
+      <h1 className={styles.pageTitle}>Compliance Dashboard</h1>
 
-      <select
-        className={styles.select}
-        value={filters.frequency}
-        onChange={(e) => handleChange('frequency', e.target.value)}
-      >
-        <option value="">All Frequencies</option>
-        {frequencies.map((freq) => (
-          <option key={freq} value={freq}>{freq}</option>
-        ))}
-      </select>
+      {scoreData && (
+        <div className={styles.overviewBox}>
+          <div className={styles.scoreBlock}>
+            <strong>{scoreData.score}/{scoreData.max_score}</strong>
+            <span>Compliance Score</span>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData}>
+              <XAxis dataKey="month" />
+              <YAxis domain={[0, 100]} />
+              <Tooltip />
+              <Line type="monotone" dataKey="percent" stroke="#0070f3" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
-      <label className={styles.checkboxLabel}>
-        <input
-          type="checkbox"
-          checked={filters.mandatoryOnly}
-          onChange={(e) => handleChange('mandatoryOnly', e.target.checked)}
-        />
-        Mandatory Only
-      </label>
-
-      <input
-        type="text"
-        className={styles.search}
-        placeholder="Search by task..."
-        value={filters.search}
-        onChange={(e) => handleChange('search', e.target.value)}
+      <FilterPanel
+        filters={filters}
+        onChange={setFilters}
+        categories={uniqueCategories}
+        frequencies={uniqueFrequencies}
       />
+
+      {filteredGroups.map((section) => (
+        <div key={section.section} className={styles.groupSection}>
+          <h2 className={styles.groupTitle}>{section.section}</h2>
+          <div className={styles.taskList}>
+            {section.tasks.map((task) => (
+              <TaskCard
+                key={task.task_id}
+                task={task}
+                fileInfo={
+                  scoreData?.task_breakdown?.[task.task_id]
+                    ? { score: scoreData.task_breakdown[task.task_id] }
+                    : null
+                }
+                onClick={() => {
+                  setSelectedTask(task.task_id);
+                  setVisible(true);
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {selectedTask && (
+        <TaskUploadBox
+          visible={visible}
+          hotelId={hotelId as string}
+          task={complianceGroups.flatMap((g) => g.tasks).find(t => t.task_id === selectedTask)!}
+          fileInfo={null}
+          onUpload={(data) => handleUpload(data?.file!, data?.reportDate!)}
+          onClose={() => setVisible(false)}
+        />
+      )}
     </div>
   );
 }
