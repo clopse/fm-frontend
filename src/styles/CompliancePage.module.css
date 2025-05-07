@@ -1,94 +1,59 @@
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
+/* /src/styles/CompliancePage.module.css */
+
+.wrapper {
   padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  background-color: #f9fbfd;
 }
 
-.heading {
+.pageTitle {
   font-size: 2rem;
   font-weight: 600;
   margin-bottom: 2rem;
+  color: #222;
+  text-align: center;
 }
 
-.scoreBox {
-  background: #f5faff;
-  border: 1px solid #cce4f6;
-  padding: 1rem 2rem;
-  border-radius: 10px;
+.overviewBox {
+  background: white;
+  border: 1px solid #e1e4e8;
+  border-radius: 12px;
+  padding: 1.5rem;
   margin-bottom: 2rem;
-  display: inline-block;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
-.score {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #0070f3;
-}
-
-.label {
-  display: block;
-  font-size: 0.9rem;
-  color: #333;
-}
-
-.section {
-  margin-top: 2rem;
-}
-
-.sectionTitle {
-  font-size: 1.2rem;
-  font-weight: 500;
+.scoreBlock {
+  text-align: center;
   margin-bottom: 1rem;
 }
 
-.taskGrid {
+.scoreBlock strong {
+  font-size: 2rem;
+  color: #0070f3;
+}
+
+.scoreBlock span {
+  display: block;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.groupSection {
+  margin-bottom: 2rem;
+}
+
+.groupTitle {
+  font-size: 1.3rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+  color: #222;
+  padding-left: 0.5rem;
+}
+
+.taskList {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
-}
-
-.taskCard {
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.taskHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: 500;
-  font-size: 1rem;
-}
-
-.infoIcon {
-  cursor: pointer;
-  color: #555;
-}
-
-.points {
-  margin: 0.5rem 0;
-  font-size: 0.9rem;
-  color: #444;
-}
-
-.acknowledgeBtn {
-  background-color: #0070f3;
-  color: white;
-  border: none;
-  padding: 0.4rem 0.8rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.acknowledgedText {
-  color: green;
-  font-size: 0.85rem;
-  margin-top: 0.5rem;
+  gap: 1rem;
 }
