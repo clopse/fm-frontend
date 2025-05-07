@@ -25,14 +25,30 @@ export default function HotelsPage() {
   const [currentHotel, setCurrentHotel] = useState('Select Hotel');
 
   useEffect(() => {
-    // Simulated data for now
-    setLeaderboardData(
-      hotels.map((hotel) => ({
-        hotel: hotel.name,
-        score: Math.floor(Math.random() * 21) + 80, // 80–100%
-      }))
-    );
+    // Fetch leaderboard data from backend
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`)
+      .then((res) => res.json())
+      .then((apiData: LeaderboardEntry[]) => {
+        // Ensure all hotels are included, even if missing from API
+        const mapped = hotels.map((hotel) => {
+          const match = apiData.find((entry) => entry.hotel === hotel.name);
+          return {
+            hotel: hotel.name,
+            score: match ? match.score : 0,
+          };
+        });
+        setLeaderboardData(mapped);
+      })
+      .catch((err) => {
+        console.error('Error loading leaderboard:', err);
+        // fallback: show all 0s
+        setLeaderboardData(hotels.map((hotel) => ({
+          hotel: hotel.name,
+          score: 0,
+        })));
+      });
 
+    // Simulated recent uploads (could be API later)
     setRecentUploads([
       {
         hotel: 'Holiday Inn Express',
