@@ -9,7 +9,7 @@ import FilterPanel from '@/components/FilterPanel';
 import { complianceGroups } from '@/data/complianceTasks';
 import { fetchComplianceScore } from '@/utils/complianceApi';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Filter } from 'lucide-react';
+import Image from 'next/image';
 
 interface MonthlyEntry {
   score: number;
@@ -131,7 +131,7 @@ export default function CompliancePage() {
 
       <div className={styles.filterToggleRow}>
         <button className={styles.filterToggleButton} onClick={() => setShowFilters((prev) => !prev)}>
-          <Filter size={18} /> Filter Tasks
+          <Image src="/icons/filter-icon.png" alt="Filter" width={18} height={18} /> Filter Tasks
         </button>
       </div>
 
