@@ -22,33 +22,32 @@ export default function HotelsPage() {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
-  const [currentHotel, setCurrentHotel] = useState('Select Hotel');
+  const [currentHotel, setCurrentHotel] = useState(hotels[0].name); // default to first
 
   useEffect(() => {
-    // Fetch leaderboard data from backend
+    // Fetch leaderboard from API
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`)
       .then((res) => res.json())
       .then((apiData: LeaderboardEntry[]) => {
-        // Ensure all hotels are included, even if missing from API
         const mapped = hotels.map((hotel) => {
           const match = apiData.find((entry) => entry.hotel === hotel.name);
           return {
             hotel: hotel.name,
-            score: match ? match.score : 0,
+            score: match?.score ?? 0,
           };
         });
         setLeaderboardData(mapped);
       })
       .catch((err) => {
         console.error('Error loading leaderboard:', err);
-        // fallback: show all 0s
+        // fallback if API fails
         setLeaderboardData(hotels.map((hotel) => ({
           hotel: hotel.name,
           score: 0,
         })));
       });
 
-    // Simulated recent uploads (could be API later)
+    // Simulated uploads (replace with backend later)
     setRecentUploads([
       {
         hotel: 'Holiday Inn Express',
@@ -70,7 +69,6 @@ export default function HotelsPage() {
 
   return (
     <div className={styles.container}>
-      {/* Slide-in User Panel */}
       <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
 
       {/* Header */}
@@ -97,14 +95,7 @@ export default function HotelsPage() {
         <div className={headerStyles.right}>
           <button
             onClick={() => setIsUserPanelOpen(true)}
-            style={{
-              background: 'white',
-              borderRadius: '50%',
-              border: '1px solid #ccc',
-              padding: '10px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-              cursor: 'pointer',
-            }}
+            className={headerStyles.userBtn}
             title="Account"
           >
             <User2 size={20} />
@@ -112,14 +103,12 @@ export default function HotelsPage() {
         </div>
       </header>
 
-      {/* Hotel Selector Modal */}
       <HotelSelectorModal
         isOpen={isHotelModalOpen}
         setIsOpen={setIsHotelModalOpen}
         onSelectHotel={handleHotelSelect}
       />
 
-      {/* Dashboard Sections */}
       <div className={`${styles.section} ${styles.topSection}`}>
         <ComplianceLeaderboard data={leaderboardData} />
       </div>
