@@ -90,22 +90,40 @@ export default function CompliancePage() {
     <div className={styles.wrapper}>
       <h1 className={styles.pageTitle}>Compliance Dashboard</h1>
 
-      {scoreData && (
-        <div className={styles.overviewBox}>
-          <div className={styles.scoreBlock}>
-            <strong>{scoreData.score}/{scoreData.max_score}</strong>
-            <span>Compliance Score</span>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={chartData}>
-              <XAxis dataKey="month" />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Line type="monotone" dataKey="percent" stroke="#0070f3" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      <div className={styles.overviewBox}>
+  <div className={styles.scoreBlock}>
+    <strong>
+      {scoreData ? `${scoreData.score}/${scoreData.max_score}` : 'Loading...'}
+    </strong>
+    <span>Compliance Score</span>
+  </div>
+  <ResponsiveContainer width="100%" height={200}>
+    <LineChart
+      data={
+        chartData.length > 0
+          ? chartData
+          : [
+              { month: 'Jan', percent: 70 },
+              { month: 'Feb', percent: 75 },
+              { month: 'Mar', percent: 80 },
+              { month: 'Apr', percent: 85 },
+            ]
+      }
+    >
+      <XAxis dataKey="month" />
+      <YAxis domain={[0, 100]} />
+      <Tooltip />
+      <Line
+        type="monotone"
+        dataKey="percent"
+        stroke="#0070f3"
+        strokeWidth={2}
+        strokeDasharray={chartData.length === 0 ? '5 5' : undefined}
+      />
+    </LineChart>
+  </ResponsiveContainer>
+</div>
+
 
       <FilterPanel
         filters={filters}
