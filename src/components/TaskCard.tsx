@@ -19,7 +19,6 @@ interface Task {
 
 interface FileInfo {
   score: number;
-  [key: string]: any;
 }
 
 interface TaskCardProps {
@@ -42,15 +41,16 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, fileInfo, onClick }) => {
     <div className={styles.card} onClick={onClick}>
       <div className={styles.cardHeader}>
         {task.label}
-        {task.mandatory && <span className={styles.mandatory}>Mandatory</span>}
+        {task.mandatory && (
+          <span className={styles.mIcon} title="Mandatory">
+            🅜
+          </span>
+        )}
       </div>
 
       <div className={styles.cardFooter}>
         <span className={`${styles.scoreBadge} ${getColorClass()}`}>
           {score}/{max} pts
-        </span>
-        <span className={styles.taskType}>
-          {task.type === 'upload' ? '📄 Upload' : '✅ Confirm'}
         </span>
       </div>
     </div>
