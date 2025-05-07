@@ -6,8 +6,8 @@ import { ChevronDown } from 'lucide-react';
 
 interface FilterPanelProps {
   filters: {
-    category: string;
-    frequency: string;
+    category: string[];
+    frequency: string[];
     mandatoryOnly: boolean;
     search: string;
     type: string;
@@ -21,10 +21,12 @@ export default function FilterPanel({ filters, onChange, categories, frequencies
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [frequencyOpen, setFrequencyOpen] = useState(false);
 
-  const toggleValue = (key: 'category' | 'frequency', value: string) => {
+  const toggleMultiValue = (key: 'category' | 'frequency', value: string) => {
     const current = filters[key];
-    const newValue = current === value ? '' : value;
-    onChange({ ...filters, [key]: newValue });
+    const newValues = current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value];
+    onChange({ ...filters, [key]: newValues });
   };
 
   return (
@@ -36,7 +38,8 @@ export default function FilterPanel({ filters, onChange, categories, frequencies
             className={styles.dropdownButton}
             onClick={() => setCategoryOpen((prev) => !prev)}
           >
-            {filters.category || 'Select Category'} <ChevronDown size={16} />
+            {filters.category.length ? filters.category.join(', ') : 'Select Categories'}{' '}
+            <ChevronDown size={16} />
           </div>
           {categoryOpen && (
             <div className={styles.dropdownMenu}>
@@ -44,8 +47,8 @@ export default function FilterPanel({ filters, onChange, categories, frequencies
                 <label key={cat} className={styles.optionItem}>
                   <input
                     type="checkbox"
-                    checked={filters.category === cat}
-                    onChange={() => toggleValue('category', cat)}
+                    checked={filters.category.includes(cat)}
+                    onChange={() => toggleMultiValue('category', cat)}
                   />
                   {cat}
                 </label>
@@ -60,7 +63,8 @@ export default function FilterPanel({ filters, onChange, categories, frequencies
             className={styles.dropdownButton}
             onClick={() => setFrequencyOpen((prev) => !prev)}
           >
-            {filters.frequency || 'Select Frequency'} <ChevronDown size={16} />
+            {filters.frequency.length ? filters.frequency.join(', ') : 'Select Frequencies'}{' '}
+            <ChevronDown size={16} />
           </div>
           {frequencyOpen && (
             <div className={styles.dropdownMenu}>
@@ -68,26 +72,14 @@ export default function FilterPanel({ filters, onChange, categories, frequencies
                 <label key={freq} className={styles.optionItem}>
                   <input
                     type="checkbox"
-                    checked={filters.frequency === freq}
-                    onChange={() => toggleValue('frequency', freq)}
+                    checked={filters.frequency.includes(freq)}
+                    onChange={() => toggleMultiValue('frequency', freq)}
                   />
                   {freq}
                 </label>
               ))}
             </div>
           )}
-        </div>
-
-        {/* Mandatory only checkbox */}
-        <div className={styles.filterItem}>
-          <label>
-            <input
-              type="checkbox"
-              checked={filters.mandatoryOnly}
-              onChange={(e) => onChange({ ...filters, mandatoryOnly: e.target.checked })}
-            />{' '}
-            Mandatory Only
-          </label>
         </div>
 
         {/* Search field */}
