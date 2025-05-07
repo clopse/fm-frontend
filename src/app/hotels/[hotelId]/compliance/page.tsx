@@ -78,8 +78,8 @@ export default function CompliancePage() {
       })
     : [];
 
-  const handleUpload = async (file: File, reportDate: Date) => {
-    if (!hotelId || !selectedTask || !file) return;
+  const handleUpload = async () => {
+    if (!hotelId) return;
     await fetchComplianceScore(hotelId as string).then(setScoreData);
     setVisible(false);
   };
@@ -108,6 +108,22 @@ export default function CompliancePage() {
     new Set(complianceGroups.flatMap((g) => g.tasks.map((t) => t.frequency)))
   );
 
+  const selectedTaskObj = complianceGroups
+    .flatMap((g) => g.tasks)
+    .find((t) => t.task_id === selectedTask);
+
+  const selectedTaskUploads = scoreData?.detailed
+    ?.filter((t) => t.task_id === selectedTask)
+    .map((t) => ({
+      url: `${process.env.NEXT_PUBLIC_API_URL}/files/${hotelId}/compliance/${t.task_id}/${t.valid_until}.pdf`,
+      report_date: t.valid_until || '',
+      uploaded_by: 'System',
+    })) || [];
+
+  const refetchData = () => {
+    fetchComplianceScore(hotelId as string).then(setScoreData);
+  };
+
   return (
     <div className={styles.wrapper}>
       {scoreData && (
@@ -129,29 +145,24 @@ export default function CompliancePage() {
         </div>
       )}
 
-     <div className={styles.filterToggleRow}>
-      <button
-        className={styles.filterToggleButton}
-        onClick={() => setShowFilters((prev) => !prev)}
-        aria-label="Toggle Filters"
-      >
-        <Image
-          src="/icons/filter-icon.png"
-          alt="Filter"
-          width={25}
-          height={25}
-        />
-      </button>
-    </div>
+      <div className={styles.filterToggleRow}>
+        <button
+          className={styles.filterToggleButton}
+          onClick={() => setShowFilters((prev) => !prev)}
+          aria-label="Toggle Filters"
+        >
+          <Image src="/icons/filter-icon.png" alt="Filter" width={25} height={25} />
+        </button>
+      </div>
 
-    {showFilters && (
-      <FilterPanel
-        filters={filters}
-        onChange={setFilters}
-        categories={uniqueCategories}
-        frequencies={uniqueFrequencies}
-      />
-    )}
+      {showFilters && (
+        <FilterPanel
+          filters={filters}
+          onChange={setFilters}
+          categories={uniqueCategories}
+          frequencies={uniqueFrequencies}
+        />
+      )}
 
       {filteredGroups.map((section) => (
         <div key={section.section} className={styles.groupSection}>
@@ -176,22 +187,21 @@ export default function CompliancePage() {
         </div>
       ))}
 
-      {selectedTask && (
+      {selectedTask && selectedTaskObj && (
         <TaskUploadBox
           visible={visible}
           hotelId={hotelId as string}
           taskId={selectedTask}
-          label={selectedTaskObj?.label || 'Task'}
-          info={selectedTaskObj?.info_popup || ''}
-          lawRef={selectedTaskObj?.lawRef}
-          isMandatory={selectedTaskObj?.mandatory}
-          canConfirm={selectedTaskObj?.type === 'confirmation'}
-          isConfirmed={selectedTaskObj?.isConfirmed || false}
+          label={selectedTaskObj.label || 'Task'}
+          info={selectedTaskObj.info_popup || ''}
+          lawRef={selectedTaskObj.lawRef}
+          isMandatory={selectedTaskObj.mandatory}
+          canConfirm={selectedTaskObj.type === 'confirmation'}
+          isConfirmed={false}
           uploads={selectedTaskUploads}
           onSuccess={refetchData}
           onClose={() => setVisible(false)}
         />
-
       )}
     </div>
   );
