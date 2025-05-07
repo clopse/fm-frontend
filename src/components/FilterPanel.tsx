@@ -9,11 +9,19 @@ interface FilterPanelProps {
     frequency: string;
     mandatoryOnly: boolean;
     search: string;
+    type: string; // ← this was missing in your version
   };
-  onChange: (filters: FilterPanelProps['filters']) => void;
+  onChange: (filters: {
+    category: string;
+    frequency: string;
+    mandatoryOnly: boolean;
+    search: string;
+    type: string;
+  }) => void;
   categories: string[];
   frequencies: string[];
 }
+
 
 export default function FilterPanel({ filters, onChange, categories, frequencies }: FilterPanelProps) {
   const handleChange = (key: keyof FilterPanelProps['filters'], value: any) => {
