@@ -57,8 +57,8 @@ export default function TaskUploadBox({
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !reportDate) {
-      alert('Please select a file and valid report date.');
+    if (!selectedFile || !reportDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      alert('Please select a file and valid date (YYYY-MM-DD).');
       return;
     }
 
@@ -120,14 +120,23 @@ export default function TaskUploadBox({
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h3>{label}</h3>
-          {isMandatory && <span className={styles.mandatory}>M</span>}
+          {isMandatory && <span title="Mandatory task" className={styles.mandatory}>M</span>}
           <button className={styles.closeBtn} onClick={onClose}>×</button>
         </div>
 
         <div className={styles.infoBox}>
           {info}
-          {lawRef && <div className={styles.lawRef} title="Legal Reference">⚖️ {lawRef}</div>}
+          {lawRef && <div className={styles.lawRef}>⚖️ {lawRef}</div>}
         </div>
+
+        {uploads.length > 0 && (
+          <div className={styles.previewBox}>
+            <iframe src={uploads[0].url} className={styles.previewFrame} />
+            <div className={styles.previewMeta}>
+              Latest file: {uploads[0].report_date} by {uploads[0].uploaded_by}
+            </div>
+          </div>
+        )}
 
         <label className={styles.label}>Report Date:</label>
         <input
@@ -164,14 +173,14 @@ export default function TaskUploadBox({
           </button>
         )}
 
-        {uploads.length > 0 && (
+        {uploads.length > 1 && (
           <div className={styles.historySection}>
-            <h4>Previous Uploads</h4>
+            <h4>Upload History</h4>
             <ul className={styles.uploadList}>
-              {uploads.map((file, index) => (
-                <li key={index} className={styles.uploadItem}>
+              {uploads.slice(1).map((file, index) => (
+                <li key={index}>
                   <a href={file.url} target="_blank" rel="noopener noreferrer">View</a>
-                  <span>— {file.report_date} by {file.uploaded_by}</span>
+                  <span> — {file.report_date} by {file.uploaded_by}</span>
                 </li>
               ))}
             </ul>
