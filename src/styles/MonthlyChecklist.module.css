@@ -1,0 +1,60 @@
+.title {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.taskItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed #ddd;
+  padding: 0.75rem 0;
+  margin-bottom: 0.5rem;
+}
+
+.meta {
+  font-size: 0.8rem;
+  color: #777;
+  margin-top: 4px;
+}
+
+.infoBtn {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  margin-left: 0.5rem;
+  cursor: pointer;
+  color: #0070f3;
+}
+
+.infoBtn:hover {
+  transform: scale(1.2);
+  transition: transform 0.2s ease;
+}
+
+.confirmBtn {
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.confirmBtn:hover {
+  background-color: #0051a8;
+}
+
+.confirmed {
+  color: green;
+  font-weight: bold;
+}
