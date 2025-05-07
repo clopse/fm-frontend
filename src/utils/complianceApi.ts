@@ -1,5 +1,3 @@
-// /src/utils/complianceApi.ts
-
 export async function getDueTasks(hotelId: string) {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/due-tasks/${hotelId}`);
   if (!res.ok) throw new Error('Failed to fetch due tasks');
@@ -28,26 +26,25 @@ export async function uploadComplianceFile(
   reportDate: Date
 ) {
   const formData = new FormData();
-  formData.append('hotel_id', hotelId);
-  formData.append('task_id', taskId);
-  formData.append('report_date', reportDate.toISOString().split('T')[0]);
   formData.append('file', file);
+  formData.append('report_date', reportDate.toISOString().split('T')[0]);
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/uploads/compliance`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/uploads/compliance/${hotelId}/${taskId}`, {
     method: 'POST',
     body: formData,
   });
 
   if (!res.ok) throw new Error('File upload failed');
-  return res.json();
+  return res.json(); // { url: "https://..." }
 }
 
-export async function deleteHistoryEntry(hotelId: string, taskId: string, timestamp: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/delete-history`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hotel_id: hotelId, task_id: taskId, timestamp }),
+export async function deleteHistoryEntry(
+  hotelId: string,
+  taskId: string,
+  timestamp: string
+) {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/uploads/compliance/${hotelId}/${taskId}/${timestamp}`, {
+    method: 'DELETE',
   });
   if (!res.ok) throw new Error('Failed to delete history entry');
-  return res.json();
 }
