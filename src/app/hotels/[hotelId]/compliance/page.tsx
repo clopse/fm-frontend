@@ -1,103 +1,89 @@
+// /src/app/hotels/[hotelId]/compliance/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { hotelNames } from '@/data/hotelMetadata';
 import styles from '@/styles/CompliancePage.module.css';
-import { getDueTasks, acknowledgeTask } from '@/utils/complianceApi';
-import { Info, UploadCloud, ShieldCheck } from 'lucide-react';
-
-interface Task {
-  task_id: string;
-  label: string;
-  info_popup: string;
-  points: number;
-}
+import TaskCard from '@/components/TaskCard';
+import TaskUploadBox from '@/components/TaskUploadBox';
+import { complianceGroups } from '@/data/complianceTasks';
+import { fetchComplianceScore, uploadComplianceFile } from '@/utils/complianceApi';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function CompliancePage() {
   const { hotelId } = useParams();
-  const name = hotelNames[hotelId as keyof typeof hotelNames] || 'Current Hotel';
-
-  const [dueTasks, setDueTasks] = useState<Task[]>([]);
-  const [nextMonthTasks, setNextMonthTasks] = useState<Task[]>([]);
-  const [acknowledged, setAcknowledged] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
+  const [scoreData, setScoreData] = useState<any>(null);
 
   useEffect(() => {
     if (!hotelId) return;
-
-    const fetchData = async () => {
-      try {
-        const data = await getDueTasks(hotelId as string);
-        setDueTasks(data.due_this_month);
-        setNextMonthTasks(data.next_month_uploadables);
-      } catch (err) {
-        console.error('Error fetching due tasks', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
+    fetchComplianceScore(hotelId as string).then(setScoreData).catch(console.error);
   }, [hotelId]);
 
-  const handleAcknowledge = async (task_id: string) => {
-    if (!hotelId) return;
-    try {
-      await acknowledgeTask(hotelId as string, task_id);
-      setAcknowledged((prev) => [...prev, task_id]);
-    } catch (err) {
-      console.error('Failed to acknowledge task:', err);
-    }
+  const handleUpload = async (taskId: string, file: File, reportDate: Date) => {
+    if (!hotelId || !file || !reportDate) return;
+    await uploadComplianceFile(hotelId as string, taskId, file, reportDate);
+    const updated = await fetchComplianceScore(hotelId as string);
+    setScoreData(updated);
   };
 
-  const renderTaskItem = (task: Task, isAcknowledgeable = false) => (
-    <li key={task.task_id} className={styles.taskCard}>
-      <UploadCloud size={20} className={styles.icon} />
-      <div className={styles.labelArea}>
-        <strong>{task.label}</strong>
-        <span className={styles.tooltip}>
-          <Info size={14} />
-          <span className={styles.tooltipText}>{task.info_popup}</span>
-        </span>
-      </div>
-
-      {isAcknowledgeable && (
-        <div className={styles.ack}>
-          {acknowledged.includes(task.task_id) ? (
-            <span title="Acknowledged">
-              <ShieldCheck size={18} color="green" />
-            </span>
-          ) : (
-            <button onClick={() => handleAcknowledge(task.task_id)}>Acknowledge</button>
-          )}
-        </div>
-      )}
-    </li>
-  );
+  const chartData =
+    scoreData?.monthly_history
+      ? Object.entries(scoreData.monthly_history).map(([month, val]) => ({
+          month,
+          percent: Math.round((val.score / val.max) * 100),
+        }))
+      : [];
 
   return (
-    <div className={styles.container}>
-      <h1 className={styles.heading}>{name} – Compliance Overview</h1>
+    <div className={styles.wrapper}>
+      <h1 className={styles.pageTitle}>Compliance Overview</h1>
 
-      <div className={styles.scoreBox}>
-        <span className={styles.score}>430/470</span>
-        <span className={styles.label}>Compliance Score</span>
-      </div>
+      {scoreData && (
+        <div className={styles.overviewBox}>
+          <div className={styles.scoreBlock}>
+            <strong>{scoreData.score}/{scoreData.max_score}</strong>
+            <span>Compliance Score</span>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData}>
+              <XAxis dataKey="month" />
+              <YAxis domain={[0, 100]} />
+              <Tooltip />
+              <Line type="monotone" dataKey="percent" stroke="#0070f3" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
-      <h2>Tasks Due This Month</h2>
-      <ul className={styles.taskList}>
-        {dueTasks.length > 0
-          ? dueTasks.map((task) => renderTaskItem(task, false))
-          : <p>✅ All current uploadable tasks completed.</p>}
-      </ul>
+      {complianceGroups.map((section) => (
+        <div key={section.section} className={styles.groupSection}>
+          <h2 className={styles.groupTitle}>{section.section}</h2>
+          <div className={styles.taskList}>
+            {section.tasks.map((task) => (
+              <TaskCard
+                key={task.task_id}
+                task={task}
+                onClick={() => {
+                  setSelectedTask(task.task_id);
+                  setVisible(true);
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
 
-      <h2>Next Month’s Uploadable Tasks</h2>
-      <ul className={styles.taskList}>
-        {nextMonthTasks.length > 0
-          ? nextMonthTasks.map((task) => renderTaskItem(task, true))
-          : <p>✅ No upload tasks pending for next month.</p>}
-      </ul>
+      {selectedTask && (
+        <TaskUploadBox
+          visible={visible}
+          hotelId={hotelId as string}
+          task={complianceGroups.flatMap((s) => s.tasks).find((t) => t.task_id === selectedTask)!}
+          onUpload={(file, date) => handleUpload(selectedTask, file, date)}
+          onClose={() => setVisible(false)}
+        />
+      )}
     </div>
   );
 }
