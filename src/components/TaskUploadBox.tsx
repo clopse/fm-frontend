@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styles from '@/styles/TaskUploadBox.module.css';
 import { Document, Page, pdfjs } from 'react-pdf';
-import { deleteHistoryEntry } from '@/utils/complianceApi';
+import { deleteHistoryEntry, uploadComplianceFile } from '@/utils/complianceApi';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.js';
 
@@ -50,6 +50,7 @@ export default function TaskUploadBox({
   const [numPages, setNumPages] = useState<number | null>(null);
   const [history, setHistory] = useState<UploadRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
@@ -77,6 +78,26 @@ export default function TaskUploadBox({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
     if (selected) setFile(selected);
+  };
+
+  const handleUpload = async () => {
+    if (!file || !reportDate) return;
+    setIsUploading(true);
+    try {
+      const uploaded = await uploadComplianceFile(hotelId, task.task_id, file, new Date(reportDate));
+      alert('Upload successful.');
+      setFile(null);
+      setFileUrl(null);
+      setReportDate('');
+      setHistory((prev) => [uploaded, ...prev]);
+      onUpload(uploaded);
+      setShowHistory(true);
+    } catch (err) {
+      alert('Upload failed.');
+      console.error(err);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDelete = async (timestamp: string) => {
@@ -166,8 +187,11 @@ export default function TaskUploadBox({
           {task.type === 'upload' && (
             <>
               {!file && (
-                <button className={styles.uploadBtn} onClick={() => fileInputRef.current?.click()}>
-                  Select File
+                <button
+                  className={styles.uploadBtn}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Upload File
                 </button>
               )}
 
@@ -183,9 +207,13 @@ export default function TaskUploadBox({
                     />
                   </label>
 
-                  <div className={styles.previewActions}>
-                    <button className={styles.uploadBtn}>📤 Upload (pending)</button>
-                  </div>
+                  <button
+                    className={styles.confirmBtn}
+                    disabled={isUploading}
+                    onClick={handleUpload}
+                  >
+                    {isUploading ? 'Uploading...' : 'Submit'}
+                  </button>
                 </>
               )}
 
@@ -226,8 +254,8 @@ export default function TaskUploadBox({
                     <div style={{ marginTop: '0.25rem' }}>
                       {typeof entry.fileUrl === 'string' && entry.fileUrl && (
                         <>
-                          <button onClick={() => handlePreviewClick(entry.fileUrl!)}>🔍 View</button>{' '}
-                          <button onClick={() => handleDownload(entry.fileUrl!)}>⬇ Download</button>{' '}
+                          <button onClick={() => handlePreviewClick(entry.fileUrl)}>🔍 View</button>{' '}
+                          <button onClick={() => handleDownload(entry.fileUrl)}>⬇ Download</button>{' '}
                         </>
                       )}
                       <button onClick={() => handleDelete(entry.uploadedAt || entry.confirmedAt!)}>🗑 Delete</button>
