@@ -48,18 +48,18 @@ export default function TaskUploadBox({
   const [file, setFile] = useState<File | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [reportDate, setReportDate] = useState<string>('');
-  const [numPages, setNumPages] = useState<number | null>(null);
+  const [numPages, setNumPages] = useState<number>(0);
   const [history, setHistory] = useState<UploadRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  // load history
+  // Load history when opened
   useEffect(() => {
     if (!visible) return;
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/history/${hotelId}`)
-      .then((res) => res.json())
+      .then((r) => r.json())
       .then((json) => {
-        const recs = json?.[task.task_id] || [];
+        const recs: UploadRecord[] = json?.[task.task_id] || [];
         setHistory(recs);
         if (recs.length && !file) {
           setFileUrl(recs[0].fileUrl || null);
@@ -68,7 +68,7 @@ export default function TaskUploadBox({
       .catch(() => toast.error('Failed to load history'));
   }, [visible, hotelId, task.task_id, file]);
 
-  // preview newly selected file
+  // Preview newly selected file
   useEffect(() => {
     if (!file) return;
     const url = URL.createObjectURL(file);
@@ -78,54 +78,44 @@ export default function TaskUploadBox({
   }, [file]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0] ?? null;
-    setFile(f);
+    setFile(e.target.files?.[0] ?? null);
   };
 
   const handleUpload = async () => {
     if (!file || !reportDate) {
-      toast.error('Please select a file and date');
+      toast.error('Select a file and date');
       return;
     }
-
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('hotel_id', hotelId);
-      formData.append('task_id', task.task_id);
-      formData.append('report_date', reportDate);
-      formData.append('file', file);
+      const form = new FormData();
+      form.append('hotel_id', hotelId);
+      form.append('task_id', task.task_id);
+      form.append('report_date', reportDate);
+      form.append('file', file);
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`,
-        {
-          method: 'POST',
-          body: formData,
-        }
+        { method: 'POST', body: form }
       );
+      if (!res.ok) throw new Error(await res.text() || res.statusText);
+      const u = await res.json();
 
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(errText || res.statusText);
-      }
-
-      const uploaded = await res.json();
-      // assume uploaded has { fileName, fileUrl, uploadedAt, uploadedBy, reportDate }
-      const newRecord: UploadRecord = {
-        fileName: uploaded.fileName,
-        fileUrl: uploaded.fileUrl,
-        uploadedAt: uploaded.uploadedAt,
-        uploadedBy: uploaded.uploadedBy || 'System',
-        reportDate: uploaded.reportDate,
+      const newRec: UploadRecord = {
+        fileName: u.fileName,
+        fileUrl: u.fileUrl,
+        uploadedAt: u.uploadedAt,
+        uploadedBy: u.uploadedBy || 'System',
+        reportDate: u.reportDate,
         type: 'upload',
       };
 
       toast.success('Upload successful');
-      setHistory((h) => [newRecord, ...h]);
+      setHistory((h) => [newRec, ...h]);
       setFile(null);
-      setFileUrl(null);
+      setFileUrl(newRec.fileUrl || null);   // keep preview
       setReportDate('');
-      onUpload(newRecord);
+      onUpload(newRec);
       setShowHistory(true);
     } catch (err: any) {
       console.error(err);
@@ -149,7 +139,7 @@ export default function TaskUploadBox({
           }),
         }
       );
-      if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) throw new Error(await res.text() || res.statusText);
       const json = await res.json();
       toast.success(json.message || 'Confirmed');
       onUpload(null);
@@ -175,16 +165,14 @@ export default function TaskUploadBox({
     setFileUrl(url);
   };
 
-  const handleDownload = (url: string) => {
-    window.open(url, '_blank');
-  };
+  const handleDownload = (url: string) => window.open(url, '_blank');
 
   const renderPreview = () => {
     if (!fileUrl) return null;
-    if (fileUrl.endsWith('.pdf')) {
+    if (/\.pdf$/i.test(fileUrl)) {
       return (
         <Document file={fileUrl} onLoadSuccess={({ numPages }) => setNumPages(numPages)}>
-          {Array.from({ length: numPages ?? 0 }, (_, i) => (
+          {Array.from({ length: numPages }, (_, i) => (
             <Page
               key={i}
               pageNumber={i + 1}
@@ -200,7 +188,6 @@ export default function TaskUploadBox({
   };
 
   if (!visible) return null;
-
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -288,8 +275,7 @@ export default function TaskUploadBox({
               <ul className={styles.historyList}>
                 {history.map((h, i) => (
                   <li key={i} className={styles.historyItem}>
-                    <strong>{h.fileName || 'Confirmed'}</strong>
-                    <br />
+                    <strong>{h.fileName || 'Confirmed'}</strong><br />
                     {(h.uploadedBy || h.confirmedBy) || 'Unknown'} —{' '}
                     {h.uploadedAt || h.confirmedAt}
                     <div style={{ marginTop: '0.25rem' }}>
@@ -303,7 +289,9 @@ export default function TaskUploadBox({
                           </button>{' '}
                         </>
                       )}
-                      <button onClick={() => handleDelete(h.uploadedAt || h.confirmedAt!)}>
+                      <button
+                        onClick={() => handleDelete(h.uploadedAt || h.confirmedAt!)}
+                      >
                         🗑 Delete
                       </button>
                     </div>
