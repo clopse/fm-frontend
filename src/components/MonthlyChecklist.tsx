@@ -15,6 +15,7 @@ interface TaskItem {
   category: string;
   points: number;
   info_popup: string;
+  law_popup?: string;
   last_confirmed_date: string | null;
   is_confirmed_this_month: boolean;
 }
@@ -56,18 +57,30 @@ export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
       <ul className={styles.list}>
         {tasks.map((task) => (
           <li key={task.task_id} className={styles.taskItem}>
-            <div>
+            <div className={styles.taskHeader}>
               <strong>{task.label}</strong>
-              <button
-                className={styles.infoBtn}
-                onClick={() => alert(task.info_popup)}
-                title="Task Info"
-              >
-                ℹ️
-              </button>
-              <div className={styles.meta}>
-                <span>{task.frequency} • {task.category}</span>
+              <div className={styles.iconGroup}>
+                <button
+                  className={styles.infoBtn}
+                  onClick={() => alert(task.info_popup)}
+                  title="Task Info"
+                >
+                  ℹ️
+                </button>
+                {task.law_popup && (
+                  <button
+                    className={styles.lawBtn}
+                    onClick={() => alert(task.law_popup)}
+                    title="Legal Reference"
+                  >
+                    ⚖️
+                  </button>
+                )}
               </div>
+            </div>
+
+            <div className={styles.meta}>
+              <span>{task.frequency} • {task.category}</span>
             </div>
 
             {task.is_confirmed_this_month ? (
