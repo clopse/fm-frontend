@@ -130,8 +130,12 @@ export default function CompliancePage() {
       )}
 
       <div className={styles.filterToggleRow}>
-        <button className={styles.filterToggleButton} onClick={() => setShowFilters((prev) => !prev)}>
-          <Image src="/icons/filter-icon.png" alt="Filter" width={18} height={18} /> Filter Tasks
+        <button
+          className={styles.filterToggleButton}
+          onClick={() => setShowFilters((prev) => !prev)}
+          aria-label="Toggle Filters"
+        >
+          <Image src="/icons/filter-icon.png" alt="Filter icon" width={20} height={20} />
         </button>
       </div>
 
