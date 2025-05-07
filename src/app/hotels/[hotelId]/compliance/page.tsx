@@ -76,8 +76,8 @@ export default function CompliancePage() {
     tasks: group.tasks.filter((task) => {
       const matchesMandatory = !filters.mandatoryOnly || task.mandatory;
       const matchesType = !filters.type || task.type === filters.type;
-      const matchesFreq = !filters.frequency || task.frequency === filters.frequency;
-      const matchesCategory = !filters.category || task.category === filters.category;
+      const matchesFreq = filters.frequency.length === 0 || filters.frequency.includes(task.frequency);
+      const matchesCategory = filters.category.length === 0 || filters.category.includes(task.category);
       const matchesSearch = !filters.search || task.label.toLowerCase().includes(filters.search.toLowerCase());
       return matchesMandatory && matchesType && matchesFreq && matchesCategory && matchesSearch;
     })
