@@ -1,4 +1,3 @@
-// /src/app/hotels/[hotelId]/compliance/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -6,24 +5,23 @@ import { useParams } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
 import styles from '@/styles/CompliancePage.module.css';
 import { getDueTasks, acknowledgeTask } from '@/utils/complianceApi';
-import { Info, CheckCircle, UploadCloud, ShieldCheck } from 'lucide-react';
+import { Info, UploadCloud, ShieldCheck } from 'lucide-react';
 
 interface Task {
   task_id: string;
   label: string;
   info_popup: string;
   points: number;
-  category?: string;
 }
 
 export default function CompliancePage() {
   const { hotelId } = useParams();
+  const name = hotelNames[hotelId as keyof typeof hotelNames] || 'Current Hotel';
+
   const [dueTasks, setDueTasks] = useState<Task[]>([]);
   const [nextMonthTasks, setNextMonthTasks] = useState<Task[]>([]);
   const [acknowledged, setAcknowledged] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const name = hotelNames[hotelId as keyof typeof hotelNames] || 'Current Hotel';
 
   useEffect(() => {
     if (!hotelId) return;
@@ -58,20 +56,22 @@ export default function CompliancePage() {
       <UploadCloud size={20} className={styles.icon} />
       <div className={styles.labelArea}>
         <strong>{task.label}</strong>
-        <p className={styles.tooltipText}>{task.info_popup}</p>
+        <span className={styles.tooltip}>
+          <Info size={14} />
+          <span className={styles.tooltipText}>{task.info_popup}</span>
+        </span>
       </div>
-      {isAcknowledgeable ? (
-        acknowledged.includes(task.task_id) ? (
-          <span className={styles.acknowledged}><CheckCircle size={18} /> Acknowledged</span>
-        ) : (
-          <button onClick={() => handleAcknowledge(task.task_id)} className={styles.ackButton}>
-            Acknowledge
-          </button>
-        )
-      ) : (
-        <span title="Due now">
-          <ShieldCheck size={18} color="green" />
-        </span> />
+
+      {isAcknowledgeable && (
+        <div className={styles.ack}>
+          {acknowledged.includes(task.task_id) ? (
+            <span title="Acknowledged">
+              <ShieldCheck size={18} color="green" />
+            </span>
+          ) : (
+            <button onClick={() => handleAcknowledge(task.task_id)}>Acknowledge</button>
+          )}
+        </div>
       )}
     </li>
   );
@@ -85,23 +85,19 @@ export default function CompliancePage() {
         <span className={styles.label}>Compliance Score</span>
       </div>
 
-      <section>
-        <h2 className={styles.sectionTitle}>Tasks Due This Month</h2>
-        <ul className={styles.taskList}>
-          {dueTasks.length > 0 ? dueTasks.map((task) => renderTaskItem(task)) : (
-            <p className={styles.complete}>✅ All current uploadable tasks completed.</p>
-          )}
-        </ul>
-      </section>
+      <h2>Tasks Due This Month</h2>
+      <ul className={styles.taskList}>
+        {dueTasks.length > 0
+          ? dueTasks.map((task) => renderTaskItem(task, false))
+          : <p>✅ All current uploadable tasks completed.</p>}
+      </ul>
 
-      <section>
-        <h2 className={styles.sectionTitle}>Next Month’s Uploadable Tasks</h2>
-        <ul className={styles.taskList}>
-          {nextMonthTasks.length > 0 ? nextMonthTasks.map((task) => renderTaskItem(task, true)) : (
-            <p className={styles.complete}>✅ No upload tasks pending for next month.</p>
-          )}
-        </ul>
-      </section>
+      <h2>Next Month’s Uploadable Tasks</h2>
+      <ul className={styles.taskList}>
+        {nextMonthTasks.length > 0
+          ? nextMonthTasks.map((task) => renderTaskItem(task, true))
+          : <p>✅ No upload tasks pending for next month.</p>}
+      </ul>
     </div>
   );
 }
