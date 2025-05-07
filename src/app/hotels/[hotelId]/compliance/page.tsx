@@ -71,60 +71,52 @@ export default function CompliancePage() {
     setVisible(false);
   };
 
-  const filteredGroups = complianceGroups.map((group) => ({
-    ...group,
-    tasks: group.tasks.filter((task) => {
-      const matchesMandatory = !filters.mandatoryOnly || task.mandatory;
-      const matchesType = !filters.type || task.type === filters.type;
-      const matchesFreq = filters.frequency.length === 0 || filters.frequency.includes(task.frequency);
-      const matchesCategory = filters.category.length === 0 || filters.category.includes(task.category);
-      const matchesSearch = !filters.search || task.label.toLowerCase().includes(filters.search.toLowerCase());
-      return matchesMandatory && matchesType && matchesFreq && matchesCategory && matchesSearch;
-    })
-  })).filter(group => group.tasks.length > 0);
+  const filteredGroups = complianceGroups
+    .map((group) => ({
+      ...group,
+      tasks: group.tasks.filter((task) => {
+        const matchesMandatory = !filters.mandatoryOnly || task.mandatory;
+        const matchesType = !filters.type || task.type === filters.type;
+        const matchesFreq =
+          filters.frequency.length === 0 || filters.frequency.includes(task.frequency);
+        const matchesCategory =
+          filters.category.length === 0 || filters.category.includes(task.category);
+        const matchesSearch =
+          !filters.search || task.label.toLowerCase().includes(filters.search.toLowerCase());
+        return matchesMandatory && matchesType && matchesFreq && matchesCategory && matchesSearch;
+      }),
+    }))
+    .filter((group) => group.tasks.length > 0);
 
-  const uniqueCategories = Array.from(new Set(complianceGroups.flatMap(g => g.tasks.map(t => t.category))));
-  const uniqueFrequencies = Array.from(new Set(complianceGroups.flatMap(g => g.tasks.map(t => t.frequency))));
+  const uniqueCategories = Array.from(
+    new Set(complianceGroups.flatMap((g) => g.tasks.map((t) => t.category)))
+  );
+  const uniqueFrequencies = Array.from(
+    new Set(complianceGroups.flatMap((g) => g.tasks.map((t) => t.frequency)))
+  );
 
   return (
     <div className={styles.wrapper}>
-      <h1 className={styles.pageTitle}>Compliance Dashboard</h1>
+      {scoreData && (
+        <div className={styles.overviewBox}>
+          <div className={styles.scoreBlock}>
+            <strong>
+              {scoreData.score}/{scoreData.max_score}
+            </strong>
+            <span>Compliance Score</span>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData}>
+              <XAxis dataKey="month" />
+              <YAxis domain={[0, 100]} />
+              <Tooltip />
+              <Line type="monotone" dataKey="percent" stroke="#0070f3" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
-      <div className={styles.overviewBox}>
-  <div className={styles.scoreBlock}>
-    <strong>
-      {scoreData ? `${scoreData.score}/${scoreData.max_score}` : 'Loading...'}
-    </strong>
-    <span>Compliance Score</span>
-  </div>
-  <ResponsiveContainer width="100%" height={200}>
-    <LineChart
-      data={
-        chartData.length > 0
-          ? chartData
-          : [
-              { month: 'Jan', percent: 70 },
-              { month: 'Feb', percent: 75 },
-              { month: 'Mar', percent: 80 },
-              { month: 'Apr', percent: 85 },
-            ]
-      }
-    >
-      <XAxis dataKey="month" />
-      <YAxis domain={[0, 100]} />
-      <Tooltip />
-      <Line
-        type="monotone"
-        dataKey="percent"
-        stroke="#0070f3"
-        strokeWidth={2}
-        strokeDasharray={chartData.length === 0 ? '5 5' : undefined}
-      />
-    </LineChart>
-  </ResponsiveContainer>
-</div>
-
-
+      <h2 className={styles.sectionTitle}>Filter Tasks</h2>
       <FilterPanel
         filters={filters}
         onChange={setFilters}
@@ -159,7 +151,9 @@ export default function CompliancePage() {
         <TaskUploadBox
           visible={visible}
           hotelId={hotelId as string}
-          task={complianceGroups.flatMap((g) => g.tasks).find(t => t.task_id === selectedTask)!}
+          task={complianceGroups
+            .flatMap((g) => g.tasks)
+            .find((t) => t.task_id === selectedTask)!}
           fileInfo={null}
           onUpload={(data) => handleUpload(data?.file!, data?.reportDate!)}
           onClose={() => setVisible(false)}
