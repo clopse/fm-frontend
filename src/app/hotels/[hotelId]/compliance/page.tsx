@@ -184,7 +184,7 @@ export default function CompliancePage() {
             .flatMap((g) => g.tasks)
             .find((t) => t.task_id === selectedTask)!}
           fileInfo={null}
-          onUpload={(data) => handleUpload(data?.file!, data?.reportDate!)}
+          onUpload={() => fetchComplianceScore(hotelId as string).then(setScoreData)}
           onClose={() => setVisible(false)}
         />
       )}
