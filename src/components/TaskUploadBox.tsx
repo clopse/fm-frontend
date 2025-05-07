@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styles from '@/styles/TaskUploadBox.module.css';
 import { Document, Page, pdfjs } from 'react-pdf';
-import { deleteHistoryEntry, uploadComplianceFile } from '@/utils/complianceApi';
+import { deleteHistoryEntry } from '@/utils/complianceApi';
 import toast from 'react-hot-toast';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.js';
@@ -53,40 +53,65 @@ export default function TaskUploadBox({
   const [showHistory, setShowHistory] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  // load history
   useEffect(() => {
     if (!visible) return;
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/history/${hotelId}`)
       .then((res) => res.json())
       .then((json) => {
-        const records = json?.[task.task_id] || [];
-        setHistory(records);
-        if (records.length && !file) {
-          setFileUrl(records[0].fileUrl || null);
+        const recs = json?.[task.task_id] || [];
+        setHistory(recs);
+        if (recs.length && !file) {
+          setFileUrl(recs[0].fileUrl || null);
         }
       })
-      .catch((err) => toast.error('Failed to load history'));
-  }, [visible, hotelId, task.task_id]);
+      .catch(() => toast.error('Failed to load history'));
+  }, [visible, hotelId, task.task_id, file]);
 
+  // preview newly selected file
   useEffect(() => {
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setFileUrl(url);
-      setReportDate(new Date().toISOString().substring(0, 10));
-      return () => URL.revokeObjectURL(url);
-    }
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setFileUrl(url);
+    setReportDate(new Date().toISOString().slice(0, 10));
+    return () => URL.revokeObjectURL(url);
   }, [file]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (selected) setFile(selected);
+    const f = e.target.files?.[0] ?? null;
+    setFile(f);
   };
 
   const handleUpload = async () => {
-    if (!file || !reportDate) return;
+    if (!file || !reportDate) {
+      toast.error('Please select a file and date');
+      return;
+    }
+
     setIsUploading(true);
     try {
-      const uploaded = await uploadComplianceFile(hotelId, task.task_id, file, new Date(reportDate));
-      const record: UploadRecord = {
+      const formData = new FormData();
+      formData.append('hotel_id', hotelId);
+      formData.append('task_id', task.task_id);
+      formData.append('report_date', reportDate);
+      formData.append('file', file);
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || res.statusText);
+      }
+
+      const uploaded = await res.json();
+      // assume uploaded has { fileName, fileUrl, uploadedAt, uploadedBy, reportDate }
+      const newRecord: UploadRecord = {
         fileName: uploaded.fileName,
         fileUrl: uploaded.fileUrl,
         uploadedAt: uploaded.uploadedAt,
@@ -94,30 +119,54 @@ export default function TaskUploadBox({
         reportDate: uploaded.reportDate,
         type: 'upload',
       };
+
       toast.success('Upload successful');
+      setHistory((h) => [newRecord, ...h]);
       setFile(null);
       setFileUrl(null);
       setReportDate('');
-      setHistory((prev) => [record, ...prev]);
-      onUpload(record);
+      onUpload(newRecord);
       setShowHistory(true);
-    } catch (err) {
-      toast.error('Upload failed');
+    } catch (err: any) {
       console.error(err);
+      toast.error(`Upload failed: ${err.message}`);
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleDelete = async (timestamp: string) => {
+  const handleConfirm = async () => {
     try {
-      await deleteHistoryEntry(hotelId, task.task_id, timestamp);
-      setHistory((prev) =>
-        prev.filter((h) => h.uploadedAt !== timestamp && h.confirmedAt !== timestamp)
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirmations/`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hotel_id: hotelId,
+            task_id: task.task_id,
+            user: 'System',
+          }),
+        }
       );
+      if (!res.ok) throw new Error(await res.text());
+      const json = await res.json();
+      toast.success(json.message || 'Confirmed');
+      onUpload(null);
+      setShowHistory(true);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Confirmation failed: ${err.message}`);
+    }
+  };
+
+  const handleDelete = async (ts: string) => {
+    try {
+      await deleteHistoryEntry(hotelId, task.task_id, ts);
+      setHistory((h) => h.filter((r) => r.uploadedAt !== ts && r.confirmedAt !== ts));
       toast.success('Entry deleted');
-    } catch (err) {
-      toast.error('Failed to delete');
+    } catch {
+      toast.error('Delete failed');
     }
   };
 
@@ -130,35 +179,14 @@ export default function TaskUploadBox({
     window.open(url, '_blank');
   };
 
-  const handleConfirm = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirmations/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hotel_id: hotelId, task_id: task.task_id, user: 'System' }),
-      });
-      if (!res.ok) throw new Error('Failed to confirm task');
-      const json = await res.json();
-      toast.success(json.message || 'Task confirmed');
-      setFileUrl(null);
-      setFile(null);
-      setReportDate('');
-      onUpload(null);
-      setShowHistory(true);
-    } catch (err) {
-      toast.error('Confirmation failed');
-      console.error(err);
-    }
-  };
-
   const renderPreview = () => {
     if (!fileUrl) return null;
-    if (file?.type === 'application/pdf' || fileUrl.endsWith('.pdf')) {
+    if (fileUrl.endsWith('.pdf')) {
       return (
         <Document file={fileUrl} onLoadSuccess={({ numPages }) => setNumPages(numPages)}>
-          {Array.from(new Array(numPages), (_, i) => (
+          {Array.from({ length: numPages ?? 0 }, (_, i) => (
             <Page
-              key={`page_${i + 1}`}
+              key={i}
               pageNumber={i + 1}
               width={600}
               renderTextLayer={false}
@@ -167,11 +195,8 @@ export default function TaskUploadBox({
           ))}
         </Document>
       );
-    } else if (file?.type?.startsWith('image/') || /\.(jpg|jpeg|png)$/i.test(fileUrl)) {
-      return <img src={fileUrl} className={styles.previewFrame} alt="Preview" />;
-    } else {
-      return <p>Preview not available</p>;
     }
+    return <img src={fileUrl} className={styles.previewFrame} alt="Preview" />;
   };
 
   if (!visible) return null;
@@ -181,10 +206,16 @@ export default function TaskUploadBox({
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeaderBar}>
           <h3 className={styles.modalTitle}>
-            {task.label}
-            {task.mandatory && <span className={styles.mIcon} title="Mandatory">🅜</span>}
+            {task.label}{' '}
+            {task.mandatory && (
+              <span className={styles.mIcon} title="Mandatory">
+                🅜
+              </span>
+            )}
           </h3>
-          <button className={styles.closeBtn} onClick={onClose}>✕</button>
+          <button className={styles.closeBtn} onClick={onClose}>
+            ✕
+          </button>
         </div>
 
         <div className={styles.infoBox}>
@@ -201,7 +232,7 @@ export default function TaskUploadBox({
                   className={styles.uploadBtn}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  Upload File
+                  Choose File
                 </button>
               )}
 
@@ -211,18 +242,18 @@ export default function TaskUploadBox({
                     <strong>Report Date:</strong>
                     <input
                       type="date"
+                      className={styles.dateInput}
                       value={reportDate}
                       onChange={(e) => setReportDate(e.target.value)}
-                      className={styles.dateInput}
                     />
                   </label>
 
                   <button
                     className={styles.confirmBtn}
-                    disabled={isUploading}
                     onClick={handleUpload}
+                    disabled={isUploading}
                   >
-                    {isUploading ? 'Uploading...' : 'Submit'}
+                    {isUploading ? 'Uploading…' : 'Submit'}
                   </button>
                 </>
               )}
@@ -230,7 +261,7 @@ export default function TaskUploadBox({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                accept=".pdf,.jpg,.jpeg,.png"
                 onChange={handleFileChange}
                 className={styles.fileInput}
               />
@@ -248,27 +279,33 @@ export default function TaskUploadBox({
           <div className={styles.historyBox}>
             <button
               className={styles.uploadBtn}
-              onClick={() => setShowHistory((prev) => !prev)}
-              style={{ marginBottom: '0.5rem' }}
+              onClick={() => setShowHistory((v) => !v)}
             >
               {showHistory ? 'Hide History' : 'View History'}
             </button>
 
             {showHistory && history.length > 0 && (
               <ul className={styles.historyList}>
-                {history.map((entry, idx) => (
-                  <li key={idx} className={styles.historyItem}>
-                    <strong>{entry.fileName || 'Confirmed'}</strong><br />
-                    {entry.uploadedBy || entry.confirmedBy || 'Unknown'} —{' '}
-                    {entry.uploadedAt || entry.confirmedAt || 'Unknown Date'}
+                {history.map((h, i) => (
+                  <li key={i} className={styles.historyItem}>
+                    <strong>{h.fileName || 'Confirmed'}</strong>
+                    <br />
+                    {(h.uploadedBy || h.confirmedBy) || 'Unknown'} —{' '}
+                    {h.uploadedAt || h.confirmedAt}
                     <div style={{ marginTop: '0.25rem' }}>
-                      {entry.fileUrl && (
+                      {h.fileUrl && (
                         <>
-                          <button onClick={() => handlePreviewClick(entry.fileUrl!)}>🔍 View</button>{' '}
-                          <button onClick={() => handleDownload(entry.fileUrl!)}>⬇ Download</button>{' '}
+                          <button onClick={() => handlePreviewClick(h.fileUrl!)}>
+                            🔍 View
+                          </button>{' '}
+                          <button onClick={() => handleDownload(h.fileUrl!)}>
+                            ⬇ Download
+                          </button>{' '}
                         </>
                       )}
-                      <button onClick={() => handleDelete(entry.uploadedAt || entry.confirmedAt!)}>🗑 Delete</button>
+                      <button onClick={() => handleDelete(h.uploadedAt || h.confirmedAt!)}>
+                        🗑 Delete
+                      </button>
                     </div>
                   </li>
                 ))}
