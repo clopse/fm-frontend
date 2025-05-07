@@ -5,16 +5,25 @@ import { useParams } from 'next/navigation';
 import styles from '@/styles/CompliancePage.module.css';
 import TaskCard from '@/components/TaskCard';
 import TaskUploadBox from '@/components/TaskUploadBox';
+import FilterPanel from '@/components/FilterPanel';
 import { complianceGroups } from '@/data/complianceTasks';
 import { fetchComplianceScore } from '@/utils/complianceApi';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ReferenceLine,
+  ResponsiveContainer,
+} from 'recharts';
 
-type MonthlyEntry = {
+interface MonthlyEntry {
   score: number;
   max: number;
-};
+}
 
-type ScoreData = {
+interface ScoreData {
   score: number;
   max_score: number;
   percent: number;
@@ -31,13 +40,20 @@ type ScoreData = {
   monthly_history?: {
     [month: string]: MonthlyEntry;
   };
-};
+}
 
 export default function CompliancePage() {
   const { hotelId } = useParams();
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
   const [scoreData, setScoreData] = useState<ScoreData | null>(null);
+
+  const [filters, setFilters] = useState({
+    mandatoryOnly: false,
+    type: '',
+    frequency: '',
+    category: '',
+  });
 
   useEffect(() => {
     if (!hotelId) return;
@@ -62,6 +78,19 @@ export default function CompliancePage() {
     setVisible(false);
   };
 
+  const filteredGroups = complianceGroups
+    .map((group) => ({
+      ...group,
+      tasks: group.tasks.filter((task) => {
+        const matchesMandatory = !filters.mandatoryOnly || task.mandatory;
+        const matchesType = !filters.type || task.type === filters.type;
+        const matchesFreq = !filters.frequency || task.frequency === filters.frequency;
+        const matchesCategory = !filters.category || task.category === filters.category;
+        return matchesMandatory && matchesType && matchesFreq && matchesCategory;
+      }),
+    }))
+    .filter((group) => group.tasks.length > 0);
+
   return (
     <div className={styles.wrapper}>
       <h1 className={styles.pageTitle}>Compliance Dashboard</h1>
@@ -72,18 +101,29 @@ export default function CompliancePage() {
             <strong>{scoreData.score}/{scoreData.max_score}</strong>
             <span>Compliance Score</span>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={chartData}>
-              <XAxis dataKey="month" />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Line type="monotone" dataKey="percent" stroke="#0070f3" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+
+          <h3 className={styles.chartTitle}>Score History</h3>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={chartData}>
+                <XAxis dataKey="month" />
+                <YAxis domain={[0, 100]} />
+                <Tooltip />
+                <ReferenceLine y={85} label="KPI 85%" stroke="#00c853" strokeDasharray="5 5" />
+                <Line type="monotone" dataKey="percent" stroke="#0070f3" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className={styles.placeholderChart}>
+              No data yet. Upload reports to begin tracking compliance.
+            </div>
+          )}
         </div>
       )}
 
-      {complianceGroups.map((section) => (
+      <FilterPanel filters={filters} setFilters={setFilters} />
+
+      {filteredGroups.map((section) => (
         <div key={section.section} className={styles.groupSection}>
           <h2 className={styles.groupTitle}>{section.section}</h2>
           <div className={styles.taskList}>
