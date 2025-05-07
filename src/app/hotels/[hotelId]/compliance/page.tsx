@@ -43,10 +43,11 @@ export default function CompliancePage() {
   const [filters, setFilters] = useState({
     mandatoryOnly: false,
     type: '',
-    frequency: '',
-    category: '',
+    frequency: [] as string[],
+    category: [] as string[],
     search: '',
   });
+
 
   useEffect(() => {
     if (!hotelId) return;
