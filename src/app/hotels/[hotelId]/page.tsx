@@ -24,18 +24,22 @@ export default function HotelDashboard() {
   const [dueSoon, setDueSoon] = useState<TaskItem[]>([]);
 
   useEffect(() => {
-    fetch(`/api/compliance/score/${hotelId}`)
+    if (!hotelId) return;
+
+    // Fetch current compliance score
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`)
       .then(res => res.json())
       .then(data => {
-        setScore(data.score_percent || 0);
-        setPoints(`${data.earned_points}/${data.total_points}`);
+        setScore(data.percent || 0);
+        setPoints(`${data.score}/${data.max_score}`);
       });
 
-    fetch(`/api/compliance/due-tasks/${hotelId}`)
+    // Fetch due and upcoming tasks
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/due-tasks/${hotelId}`)
       .then(res => res.json())
       .then(data => {
-        setDueNow(data.due_now || []);
-        setDueSoon(data.due_soon || []);
+        setDueNow(data.due_this_month || []);
+        setDueSoon(data.next_month_uploadables || []);
       });
   }, [hotelId]);
 
@@ -61,7 +65,9 @@ export default function HotelDashboard() {
   return (
     <div
       className={styles.fullBackground}
-      style={{ backgroundImage: `url('/${hotelId}.jpg')` }}
+      style={{
+        backgroundImage: `url('/${hotelId}.jpg'), url('/fallback.jpg')`
+      }}
     >
       <div className={styles.overlay} />
 
