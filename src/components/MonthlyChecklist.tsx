@@ -29,6 +29,16 @@ export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const now = new Date();
+  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const endOfThisMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  const lastMonthName = lastMonth.toLocaleString('default', { month: 'long' });
+  const deadline = endOfThisMonth.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+  });
+
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly-checklist/${hotelId}`)
       .then((res) => res.json())
@@ -58,7 +68,9 @@ export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
 
   return (
     <div>
-      <h2 className={styles.title}>📋 Monthly Checklist</h2>
+      <p style={{ fontSize: '0.95rem', marginBottom: '1.5rem', color: '#444' }}>
+        Confirm that your <strong>{lastMonthName}</strong> tasks were completed — deadline is <strong>{deadline}</strong>.
+      </p>
       <ul className={styles.list}>
         {tasks.map((task) => (
           <li key={task.task_id} className={styles.taskItem}>
@@ -77,7 +89,9 @@ export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
               {task.subtasks && (
                 <ul className={styles.subtaskList}>
                   {task.subtasks.map((sub, i) => (
-                    <li key={i} className={styles.subtaskItem}>• {sub.label} ({sub.points} pts)</li>
+                    <li key={i} className={styles.subtaskItem}>
+                      • {sub.label} ({sub.points} pts)
+                    </li>
                   ))}
                 </ul>
               )}
