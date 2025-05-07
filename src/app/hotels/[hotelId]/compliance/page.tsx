@@ -9,11 +9,35 @@ import { complianceGroups } from '@/data/complianceTasks';
 import { fetchComplianceScore } from '@/utils/complianceApi';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
+type MonthlyEntry = {
+  score: number;
+  max: number;
+};
+
+type ScoreData = {
+  score: number;
+  max_score: number;
+  percent: number;
+  detailed: {
+    task_id: string;
+    scored: number;
+    max: number;
+    label: string;
+    valid_until: string | null;
+  }[];
+  task_breakdown?: {
+    [task_id: string]: number;
+  };
+  monthly_history?: {
+    [month: string]: MonthlyEntry;
+  };
+};
+
 export default function CompliancePage() {
   const { hotelId } = useParams();
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
-  const [scoreData, setScoreData] = useState<any>(null);
+  const [scoreData, setScoreData] = useState<ScoreData | null>(null);
 
   useEffect(() => {
     if (!hotelId) return;
@@ -23,10 +47,13 @@ export default function CompliancePage() {
   }, [hotelId]);
 
   const chartData = scoreData?.monthly_history
-    ? Object.entries(scoreData.monthly_history).map(([month, val]) => ({
-        month,
-        percent: Math.round((val.score / val.max) * 100),
-      }))
+    ? Object.entries(scoreData.monthly_history).map(([month, val]) => {
+        const data = val as MonthlyEntry;
+        return {
+          month,
+          percent: Math.round((data.score / data.max) * 100),
+        };
+      })
     : [];
 
   const handleUpload = async (file: File, reportDate: Date) => {
