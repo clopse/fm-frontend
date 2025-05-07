@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import styles from '@/styles/CompliancePage.module.css';
 import TaskCard from '@/components/TaskCard';
@@ -9,6 +9,7 @@ import FilterPanel from '@/components/FilterPanel';
 import { complianceGroups } from '@/data/complianceTasks';
 import { fetchComplianceScore } from '@/utils/complianceApi';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Filter } from 'lucide-react';
 
 interface MonthlyEntry {
   score: number;
@@ -39,6 +40,8 @@ export default function CompliancePage() {
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
   const [scoreData, setScoreData] = useState<ScoreData | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
 
   const [filters, setFilters] = useState({
     mandatoryOnly: false,
@@ -54,6 +57,16 @@ export default function CompliancePage() {
       .then(setScoreData)
       .catch(console.error);
   }, [hotelId]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setShowFilters(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const chartData = scoreData?.monthly_history
     ? Object.entries(scoreData.monthly_history).map(([month, val]) => {
@@ -116,13 +129,22 @@ export default function CompliancePage() {
         </div>
       )}
 
-      <h2 className={styles.sectionTitle}>Filter Tasks</h2>
-      <FilterPanel
-        filters={filters}
-        onChange={setFilters}
-        categories={uniqueCategories}
-        frequencies={uniqueFrequencies}
-      />
+      <div className={styles.filterToggleRow}>
+        <button className={styles.filterToggleButton} onClick={() => setShowFilters((prev) => !prev)}>
+          <Filter size={18} /> Filter Tasks
+        </button>
+      </div>
+
+      {showFilters && (
+        <div ref={filterRef}>
+          <FilterPanel
+            filters={filters}
+            onChange={setFilters}
+            categories={uniqueCategories}
+            frequencies={uniqueFrequencies}
+          />
+        </div>
+      )}
 
       {filteredGroups.map((section) => (
         <div key={section.section} className={styles.groupSection}>
