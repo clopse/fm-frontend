@@ -7,13 +7,6 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
 }
 
-.filterHeader {
-  font-size: 1rem;
-  font-weight: 500;
-  color: #003366;
-  margin-bottom: 1rem;
-}
-
 .filterRow {
   display: flex;
   flex-wrap: wrap;
@@ -35,7 +28,7 @@
 }
 
 .filterItem select,
-.filterItem input[type='checkbox'] {
+.filterItem input[type='text'] {
   padding: 0.4rem 0.5rem;
   font-size: 0.9rem;
   border-radius: 6px;
@@ -43,7 +36,13 @@
   background-color: #f9f9f9;
 }
 
-.filterItem select:focus {
+.filterItem input[type='checkbox'] {
+  margin-top: 0.3rem;
+  transform: scale(1.1);
+}
+
+.filterItem select:focus,
+.filterItem input[type='text']:focus {
   border-color: #0070f3;
   outline: none;
 }
