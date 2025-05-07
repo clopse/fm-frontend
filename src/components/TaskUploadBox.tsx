@@ -3,15 +3,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styles from '@/styles/TaskUploadBox.module.css';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { deleteHistoryEntry } from '@/utils/complianceApi';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.js';
 
-export interface UploadData {
-  file: File;
-  uploadedAt: Date;
-  reportDate?: Date;
-  score: number;
+interface UploadRecord {
+  fileName?: string;
+  fileUrl?: string;
+  uploadedAt?: string;
   uploadedBy?: string;
+  reportDate?: string;
+  confirmedAt?: string;
+  confirmedBy?: string;
+  type: 'upload' | 'confirmation';
 }
 
 interface ComplianceTask {
@@ -27,8 +31,8 @@ interface TaskUploadBoxProps {
   visible: boolean;
   hotelId: string;
   task: ComplianceTask;
-  fileInfo: UploadData | null;
-  onUpload: (fileInfo: UploadData | null) => void;
+  fileInfo: UploadRecord | null;
+  onUpload: (fileInfo: UploadRecord | null) => void;
   onClose: () => void;
 }
 
@@ -36,27 +40,36 @@ export default function TaskUploadBox({
   visible,
   hotelId,
   task,
-  fileInfo,
   onUpload,
   onClose,
 }: TaskUploadBoxProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [reportDate, setReportDate] = useState<string>(
-    new Date().toISOString().substring(0, 10)
-  );
+  const [reportDate, setReportDate] = useState<string>(new Date().toISOString().substring(0, 10));
   const [numPages, setNumPages] = useState<number | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [history, setHistory] = useState<UploadData[]>([]); // simulate or fetch this later
+  const [history, setHistory] = useState<UploadRecord[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  useEffect(() => {
+    if (!visible) return;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/history/${hotelId}`)
+      .then((res) => res.json())
+      .then((json) => {
+        const records = json?.[task.task_id] || [];
+        setHistory(records);
+        if (records.length && !file) {
+          setFileUrl(records[0].fileUrl || null);
+        }
+      })
+      .catch(console.error);
+  }, [visible, hotelId, task.task_id]);
 
   useEffect(() => {
     if (file) {
       const url = URL.createObjectURL(file);
       setFileUrl(url);
       return () => URL.revokeObjectURL(url);
-    } else {
-      setFileUrl(null);
     }
   }, [file]);
 
@@ -65,60 +78,47 @@ export default function TaskUploadBox({
     if (selected) setFile(selected);
   };
 
-  const handleUploadSubmit = async () => {
-    if (!file || uploading) return;
-
-    setUploading(true);
-    setTimeout(() => setUploading(false), 10000); // debounce
-
-    const formData = new FormData();
-    formData.append('hotel_id', hotelId);
-    formData.append('task_id', task.task_id);
-    formData.append('report_date', reportDate);
-    formData.append('file', file);
-
+  const handleDelete = async (timestamp: string) => {
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`,
-        {
-          method: 'POST',
-          body: formData,
-        }
+      await deleteHistoryEntry(hotelId, task.task_id, timestamp);
+      setHistory((prev) =>
+        prev.filter((h) => h.uploadedAt !== timestamp && h.confirmedAt !== timestamp)
       );
-
-      if (!res.ok) throw new Error(await res.text());
-
-      const json = await res.json();
-      alert('✅ File uploaded successfully');
-
-      const newUpload = {
-        file,
-        uploadedAt: new Date(),
-        reportDate: new Date(reportDate),
-        score: task.points,
-        uploadedBy: 'You', // Replace with actual user when auth is added
-      };
-
-      setHistory((prev) => [newUpload, ...prev.slice(0, 3)]);
-      onUpload(newUpload);
-      setFile(null);
-    } catch (err: any) {
-      alert('Upload failed: ' + (err?.message || 'Unknown error'));
-      console.error(err);
+    } catch (err) {
+      alert('Failed to delete history entry');
     }
   };
 
-  const handleConfirm = () => {
-    const newConfirm = {
-      file: new File([], 'confirmation'), // dummy file
-      uploadedAt: new Date(),
-      score: task.points,
-      uploadedBy: 'You',
-    };
-    setHistory((prev) => [newConfirm, ...prev.slice(0, 3)]);
-    onUpload(newConfirm);
-    alert('✅ Task confirmed until end of month.');
-    onClose();
+  const handlePreviewClick = (url: string) => {
+    setFile(null);
+    setFileUrl(url);
+  };
+
+  const handleDownload = (url: string) => {
+    window.open(url, '_blank');
+  };
+
+  const renderPreview = () => {
+    if (!fileUrl) return null;
+    if (file?.type === 'application/pdf' || fileUrl.endsWith('.pdf')) {
+      return (
+        <Document file={fileUrl} onLoadSuccess={({ numPages }) => setNumPages(numPages)}>
+          {Array.from(new Array(numPages), (_, i) => (
+            <Page
+              key={`page_${i + 1}`}
+              pageNumber={i + 1}
+              width={600}
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+            />
+          ))}
+        </Document>
+      );
+    } else if (file?.type?.startsWith('image/') || /\.(jpg|jpeg|png)$/i.test(fileUrl)) {
+      return <img src={fileUrl} className={styles.previewFrame} alt="Preview" />;
+    } else {
+      return <p>Preview not available</p>;
+    }
   };
 
   if (!visible) return null;
@@ -129,7 +129,7 @@ export default function TaskUploadBox({
         <div className={styles.modalHeaderBar}>
           <h3 className={styles.modalTitle}>
             {task.label}
-            {task.mandatory && <span title="Mandatory" className={styles.mIcon}>🅜</span>}
+            {task.mandatory && <span className={styles.mIcon} title="Mandatory">🅜</span>}
           </h3>
           <button className={styles.closeBtn} onClick={onClose}>✕</button>
         </div>
@@ -139,93 +139,84 @@ export default function TaskUploadBox({
         </div>
 
         <div className={styles.modalContent}>
-          <label className={styles.metaRow}>
-            <strong>Report Date:</strong>
-            <input
-              type="date"
-              value={reportDate}
-              onChange={(e) => setReportDate(e.target.value)}
-              className={styles.dateInput}
-            />
-          </label>
+          {renderPreview()}
 
           {task.type === 'upload' && (
             <>
               {!file && (
-                <>
-                  <button
-                    className={styles.uploadBtn}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    Select File
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-                    onChange={handleFileChange}
-                    className={styles.fileInput}
-                  />
-                </>
-              )}
-
-              {file && fileUrl && (
-                <div className={styles.previewCard}>
-                  {file.type === 'application/pdf' ? (
-                    <Document file={fileUrl} onLoadSuccess={({ numPages }) => setNumPages(numPages)}>
-                      {Array.from(new Array(numPages), (_, i) => (
-                        <Page
-                          key={`page_${i + 1}`}
-                          pageNumber={i + 1}
-                          width={600}
-                          renderTextLayer={false}
-                          renderAnnotationLayer={false}
-                        />
-                      ))}
-                    </Document>
-                  ) : (
-                    <img src={fileUrl} className={styles.previewFrame} alt="Preview" />
-                  )}
-                </div>
+                <button className={styles.uploadBtn} onClick={() => fileInputRef.current?.click()}>
+                  Select File
+                </button>
               )}
 
               {file && (
-                <div className={styles.previewActions}>
-                  <button
-                    className={`${styles.uploadBtn} ${uploading ? styles.disabled : ''}`}
-                    onClick={handleUploadSubmit}
-                    disabled={uploading}
-                  >
-                    {uploading ? '⏳ Uploading…' : '📤 Upload'}
-                  </button>
-                </div>
+                <>
+                  <label className={styles.metaRow}>
+                    <strong>Report Date:</strong>
+                    <input
+                      type="date"
+                      value={reportDate}
+                      onChange={(e) => setReportDate(e.target.value)}
+                      className={styles.dateInput}
+                    />
+                  </label>
+
+                  <div className={styles.previewActions}>
+                    <button className={styles.uploadBtn}>
+                      📤 Upload (stubbed – backend logic goes here)
+                    </button>
+                  </div>
+                </>
               )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                onChange={handleFileChange}
+                className={styles.fileInput}
+              />
             </>
           )}
 
           {task.type === 'confirmation' && (
             <div className={styles.confirmBox}>
-              <button className={styles.confirmBtn} onClick={handleConfirm}>
-                ✅ Confirm Task Done
+              <button className={styles.confirmBtn}>
+                ✅ Confirm Task Done (stubbed)
               </button>
             </div>
           )}
-        </div>
 
-        <div className={styles.historyBox}>
-          <h4>Recent Activity</h4>
-          {history.length === 0 ? (
-            <p>No uploads or confirmations yet.</p>
-          ) : (
-            <ul className={styles.historyList}>
-              {history.map((h, idx) => (
-                <li key={idx} className={styles.historyItem}>
-                  {h.file?.name || '✅ Confirmed'} — {h.uploadedBy || 'N/A'} on{' '}
-                  {new Date(h.uploadedAt).toLocaleDateString()}
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className={styles.historyBox}>
+            <button
+              className={styles.uploadBtn}
+              onClick={() => setShowHistory((prev) => !prev)}
+              style={{ marginBottom: '0.5rem' }}
+            >
+              {showHistory ? 'Hide History' : 'View History'}
+            </button>
+
+            {showHistory && history.length > 0 && (
+              <ul className={styles.historyList}>
+                {history.map((entry, idx) => (
+                  <li key={idx} className={styles.historyItem}>
+                    <strong>{entry.fileName || 'Confirmed'}</strong><br />
+                    {entry.uploadedBy || entry.confirmedBy || 'Unknown'} —{' '}
+                    {entry.uploadedAt || entry.confirmedAt || 'Unknown Date'}
+                    <div style={{ marginTop: '0.25rem' }}>
+                      {entry.fileUrl && (
+                        <>
+                          <button onClick={() => handlePreviewClick(entry.fileUrl)}>🔍 View</button>{' '}
+                          <button onClick={() => handleDownload(entry.fileUrl)}>⬇ Download</button>{' '}
+                        </>
+                      )}
+                      <button onClick={() => handleDelete(entry.uploadedAt || entry.confirmedAt!)}>🗑 Delete</button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     </div>
