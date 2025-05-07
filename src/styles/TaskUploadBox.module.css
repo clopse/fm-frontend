@@ -1,12 +1,149 @@
+.modalOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  max-width: 860px;
+  width: 100%;
+  max-height: 95vh;
+  overflow-y: auto;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.modalHeaderBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f1f4f8;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.modalTitle {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .mIcon {
-  margin-left: 0.5rem;
   font-size: 0.85rem;
   color: crimson;
   vertical-align: middle;
   cursor: help;
+  background: #ffeef0;
+  padding: 0.1rem 0.4rem;
+  border-radius: 6px;
+  font-weight: bold;
 }
 
-/* Confirmation box */
+.closeBtn {
+  font-size: 1.25rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #444;
+}
+
+.infoBox {
+  padding: 1rem 1.5rem;
+  background: #f9fbfd;
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.modalContent {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.metaRow {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.dateInput {
+  padding: 0.4rem 0.6rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 180px;
+}
+
+.uploadBtn {
+  background-color: #007bff;
+  color: #fff;
+  font-weight: 600;
+  padding: 0.6rem 1.1rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.uploadBtn:hover {
+  background-color: #0056b3;
+}
+
+.disabled {
+  background-color: #aaa !important;
+  cursor: not-allowed !important;
+}
+
+.fileInput {
+  display: none;
+}
+
+.previewCard {
+  position: relative;
+  padding: 1rem;
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 720px;
+  text-align: center;
+}
+
+.previewFrame {
+  width: 100%;
+  max-height: 700px;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+.previewActions {
+  margin-top: 1rem;
+  text-align: center;
+}
+
 .confirmBox {
   display: flex;
   justify-content: center;
@@ -29,17 +166,6 @@
   background-color: #218838;
 }
 
-/* Info section at top of modal */
-.infoBox {
-  padding: 1rem 1.5rem;
-  background: #f9fbfd;
-  border-top: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
-  font-size: 0.95rem;
-  color: #333;
-}
-
-/* Upload/confirmation history section */
 .historyBox {
   border-top: 1px solid #e0e0e0;
   margin-top: 1.5rem;
@@ -52,20 +178,20 @@
 .historyBox h4 {
   font-size: 1rem;
   margin-bottom: 0.75rem;
-  color: #333;
+  font-weight: 600;
+  color: #222;
 }
 
 .historyList {
   list-style: none;
   padding-left: 0;
-  margin: 0;
-  font-size: 0.9rem;
-  color: #444;
+  font-size: 0.95rem;
+  color: #333;
 }
 
 .historyItem {
-  margin-bottom: 0.4rem;
-  padding-left: 1.2rem;
+  margin: 0.4rem 0;
+  padding-left: 1rem;
   position: relative;
 }
 
@@ -74,6 +200,4 @@
   position: absolute;
   left: 0;
   color: #888;
-  font-size: 1.1rem;
-  line-height: 1;
 }
