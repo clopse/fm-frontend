@@ -1,4 +1,4 @@
-/* /src/styles/CompliancePage.module.css */
+/* src/styles/CompliancePage.module.css */
 
 .wrapper {
   padding: 2rem;
@@ -11,12 +11,12 @@
   font-size: 2rem;
   font-weight: 600;
   margin-bottom: 2rem;
-  color: #222;
+  color: #001f3f;
   text-align: center;
 }
 
 .overviewBox {
-  background: white;
+  background: #ffffff;
   border: 1px solid #e1e4e8;
   border-radius: 12px;
   padding: 1.5rem;
@@ -40,6 +40,14 @@
   color: #666;
 }
 
+.chartTitle {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  text-align: center;
+  color: #333;
+}
+
 .groupSection {
   margin-bottom: 2rem;
 }
@@ -48,7 +56,7 @@
   font-size: 1.3rem;
   font-weight: 500;
   margin-bottom: 0.75rem;
-  color: #222;
+  color: #003366;
   padding-left: 0.5rem;
 }
 
@@ -56,4 +64,42 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
+}
+
+.filterWrapper {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.filterRow label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  color: #333;
+}
+
+.filterRow select,
+.filterRow input[type="checkbox"] {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
+}
+
+.filterRow select:focus {
+  border-color: #0070f3;
+  outline: none;
 }
