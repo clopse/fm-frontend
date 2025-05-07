@@ -201,7 +201,6 @@ export default function CompliancePage() {
             onSuccess={refetchData}
             onClose={() => setVisible(false)}
   />
-)}
       )}
     </div>
   );
