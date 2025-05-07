@@ -1,51 +1,128 @@
+.fullBackground {
+  position: relative;
+  min-height: 100vh;
+  background-size: cover;
+  background-position: center;
+  padding: 2rem;
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(to bottom right, rgba(0,0,0,0.6), rgba(0,0,0,0.3));
+  z-index: 0;
+}
+
+.content {
+  position: relative;
+  z-index: 2;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
 .headerRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.heading {
+  font-size: 2.2rem;
+  color: white;
+  font-weight: 600;
+  margin: 0;
 }
 
 .safetyScoreBox {
-  padding: 1rem;
-  border-radius: 10px;
-  color: white;
-  font-weight: bold;
+  background-color: #222;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   text-align: right;
-  min-width: 120px;
+  color: white;
+  min-width: 150px;
+  position: relative;
 }
 
 .safetyScoreTitle {
   font-size: 1rem;
+  opacity: 0.85;
+  margin-bottom: 0.25rem;
+  display: block;
 }
 
 .safetyScoreContent {
-  font-size: 1.8rem;
-  line-height: 1.2;
+  font-size: 2rem;
+  font-weight: bold;
   position: relative;
 }
 
-.safetyScorePercent .tooltip {
+.tooltip {
+  display: none;
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  z-index: 100;
+}
+
+.safetyScorePercent:hover .tooltip {
   display: block;
-  font-size: 0.8rem;
-  color: rgba(255,255,255,0.8);
 }
 
 .checklistSection {
-  background: rgba(255, 255, 255, 0.85);
-  margin: 2rem 0;
-  padding: 1.25rem;
-  border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  background: white;
+  padding: 1.5rem;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
 }
 
-.ackButton {
+.checklistSection h2 {
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.taskList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.taskList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px dashed #eee;
+  padding-bottom: 0.5rem;
+}
+
+.info {
   background: none;
   border: none;
-  margin-left: auto;
+  font-size: 1.2rem;
+  color: #0070f3;
   cursor: pointer;
-  color: green;
-  transition: transform 0.2s ease;
+  padding: 0 0.5rem;
 }
 
-.ackButton:hover {
+.info:hover {
+  color: #0051a8;
   transform: scale(1.2);
+  transition: transform 0.2s ease;
 }
