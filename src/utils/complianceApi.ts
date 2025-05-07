@@ -3,7 +3,13 @@
 export interface UploadResponse {
   id: string;
   message: string;
-  score: any;
+  score: {
+    score: number;
+    max_score: number;
+    percent: number;
+    month: string;
+    task_breakdown: Record<string, any>;
+  };
 }
 
 export async function getDueTasks(hotelId: string) {
@@ -44,7 +50,11 @@ export async function uploadComplianceFile(
     body: formData,
   });
 
-  if (!res.ok) throw new Error('File upload failed');
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`File upload failed: ${errText}`);
+  }
+
   return res.json();
 }
 
@@ -58,5 +68,8 @@ export async function deleteHistoryEntry(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ hotel_id: hotelId, task_id: taskId, timestamp }),
   });
-  if (!res.ok) throw new Error('Failed to delete entry');
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Failed to delete history entry: ${errText}`);
+  }
 }
