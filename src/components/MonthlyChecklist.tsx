@@ -2,16 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import styles from '@/styles/MonthlyChecklist.module.css';
-import { ShieldAlert, Info } from 'lucide-react';
 
 interface Props {
   hotelId: string;
   userEmail: string;
-}
-
-interface Subtask {
-  label: string;
-  law?: string;
 }
 
 interface TaskItem {
@@ -21,9 +15,10 @@ interface TaskItem {
   category: string;
   points: number;
   info_popup: string;
+  legal_reference?: string;
+  subtasks?: string[];
   last_confirmed_date: string | null;
   is_confirmed_this_month: boolean;
-  subtasks?: Subtask[];
 }
 
 export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
@@ -59,31 +54,41 @@ export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
 
   return (
     <div>
-      <h2 className={styles.title}>📋 Monthly Compliance Confirmation</h2>
+      <h2 className={styles.title}>📋 Monthly Checklist (for previous month)</h2>
       <ul className={styles.list}>
         {tasks.map((task) => (
           <li key={task.task_id} className={styles.taskItem}>
             <div className={styles.taskHeader}>
               <strong>{task.label}</strong>
-              <span className={styles.iconGroup}>
+              <div className={styles.iconGroup}>
                 <button
-                  className={styles.iconBtn}
+                  className={styles.infoBtn}
                   onClick={() => alert(task.info_popup)}
                   title="Task Info"
                 >
-                  <Info size={16} />
+                  ℹ️
                 </button>
-                {task.info_popup.includes('⚖️') && (
-                  <ShieldAlert size={16} className={styles.lawIcon} title="Legal Requirement" />
+                {task.legal_reference && (
+                  <button
+                    className={styles.lawBtn}
+                    onClick={() => alert(task.legal_reference)}
+                    title="Legal Reference"
+                  >
+                    ⚖️
+                  </button>
                 )}
-              </span>
+              </div>
+              <div className={styles.meta}>
+                <span>{task.frequency} • {task.category}</span>
+              </div>
             </div>
-            <div className={styles.meta}>{task.frequency} • {task.category}</div>
 
             {task.subtasks && task.subtasks.length > 0 && (
               <ul className={styles.subtaskList}>
                 {task.subtasks.map((sub, idx) => (
-                  <li key={idx} className={styles.subtaskItem}>✔️ {sub.label}</li>
+                  <li key={idx} className={styles.subtask}>
+                    ✅ {sub}
+                  </li>
                 ))}
               </ul>
             )}
@@ -91,7 +96,10 @@ export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
             {task.is_confirmed_this_month ? (
               <span className={styles.confirmed}>✅ Confirmed</span>
             ) : (
-              <button className={styles.confirmBtn} onClick={() => confirmTask(task.task_id)}>
+              <button
+                className={styles.confirmBtn}
+                onClick={() => confirmTask(task.task_id)}
+              >
                 Confirm
               </button>
             )}
