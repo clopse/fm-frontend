@@ -129,26 +129,29 @@ export default function CompliancePage() {
         </div>
       )}
 
-      <div className={styles.filterToggleRow}>
-        <button
-          className={styles.filterToggleButton}
-          onClick={() => setShowFilters((prev) => !prev)}
-          aria-label="Toggle Filters"
-        >
-          <Image src="/icons/filter-icon.png" alt="Filter icon" width={20} height={20} />
-        </button>
-      </div>
+     <div className={styles.filterToggleRow}>
+      <button
+        className={styles.filterToggleButton}
+        onClick={() => setShowFilters((prev) => !prev)}
+        aria-label="Toggle Filters"
+      >
+        <Image
+          src="/icons/filter-icon.png"
+          alt="Filter"
+          width={20}
+          height={20}
+        />
+      </button>
+    </div>
 
-      {showFilters && (
-        <div ref={filterRef}>
-          <FilterPanel
-            filters={filters}
-            onChange={setFilters}
-            categories={uniqueCategories}
-            frequencies={uniqueFrequencies}
-          />
-        </div>
-      )}
+    {showFilters && (
+      <FilterPanel
+        filters={filters}
+        onChange={setFilters}
+        categories={uniqueCategories}
+        frequencies={uniqueFrequencies}
+      />
+    )}
 
       {filteredGroups.map((section) => (
         <div key={section.section} className={styles.groupSection}>
