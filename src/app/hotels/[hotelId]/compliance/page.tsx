@@ -1,18 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import styles from '@/styles/CompliancePage.module.css';
 import TaskCard from '@/components/TaskCard';
 import TaskUploadBox from '@/components/TaskUploadBox';
 import { complianceGroups } from '@/data/complianceTasks';
-import { fetchComplianceScore, uploadComplianceFile } from '@/utils/complianceApi';
+import { fetchComplianceScore } from '@/utils/complianceApi';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-
-type MonthlyScore = {
-  score: number;
-  max: number;
-};
 
 export default function CompliancePage() {
   const { hotelId } = useParams();
@@ -22,30 +17,27 @@ export default function CompliancePage() {
 
   useEffect(() => {
     if (!hotelId) return;
-    fetchComplianceScore(hotelId as string).then(setScoreData).catch(console.error);
+    fetchComplianceScore(hotelId as string)
+      .then(setScoreData)
+      .catch(console.error);
   }, [hotelId]);
 
-  const handleUpload = async (taskId: string, file: File, reportDate: Date) => {
-    if (!hotelId || !file || !reportDate) return;
-    await uploadComplianceFile(hotelId as string, taskId, file, reportDate);
-    const updated = await fetchComplianceScore(hotelId as string);
-    setScoreData(updated);
-  };
+  const chartData = scoreData?.monthly_history
+    ? Object.entries(scoreData.monthly_history).map(([month, val]) => ({
+        month,
+        percent: Math.round((val.score / val.max) * 100),
+      }))
+    : [];
 
-  const chartData =
-    scoreData?.monthly_history
-      ? Object.entries(scoreData.monthly_history).map(([month, val]) => {
-          const { score, max } = val as MonthlyScore;
-          return {
-            month,
-            percent: Math.round((score / max) * 100),
-          };
-        })
-      : [];
+  const handleUpload = async (file: File, reportDate: Date) => {
+    if (!hotelId || !selectedTask || !file) return;
+    await fetchComplianceScore(hotelId as string).then(setScoreData);
+    setVisible(false);
+  };
 
   return (
     <div className={styles.wrapper}>
-      <h1 className={styles.pageTitle}>Compliance Overview</h1>
+      <h1 className={styles.pageTitle}>Compliance Dashboard</h1>
 
       {scoreData && (
         <div className={styles.overviewBox}>
@@ -72,6 +64,11 @@ export default function CompliancePage() {
               <TaskCard
                 key={task.task_id}
                 task={task}
+                fileInfo={
+                  scoreData?.task_breakdown?.[task.task_id]
+                    ? { score: scoreData.task_breakdown[task.task_id] }
+                    : null
+                }
                 onClick={() => {
                   setSelectedTask(task.task_id);
                   setVisible(true);
@@ -86,8 +83,9 @@ export default function CompliancePage() {
         <TaskUploadBox
           visible={visible}
           hotelId={hotelId as string}
-          task={complianceGroups.flatMap((s) => s.tasks).find((t) => t.task_id === selectedTask)!}
-          onUpload={(file, date) => handleUpload(selectedTask, file, date)}
+          task={complianceGroups.flatMap((g) => g.tasks).find(t => t.task_id === selectedTask)!}
+          fileInfo={null}
+          onUpload={(data) => handleUpload(data?.file!, data?.reportDate!)}
           onClose={() => setVisible(false)}
         />
       )}
