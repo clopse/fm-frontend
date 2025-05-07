@@ -55,6 +55,12 @@
   border-radius: 6px;
 }
 
+.mIcon {
+  font-size: 0.75rem;
+  margin-left: 0.4rem;
+  color: #b00020;
+  cursor: help;
+}
 .mandatory {
   font-size: 0.7rem;
   font-weight: 600;
