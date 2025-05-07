@@ -180,13 +180,18 @@ export default function CompliancePage() {
         <TaskUploadBox
           visible={visible}
           hotelId={hotelId as string}
-          task={complianceGroups
-            .flatMap((g) => g.tasks)
-            .find((t) => t.task_id === selectedTask)!}
-          fileInfo={null}
-          onUpload={() => fetchComplianceScore(hotelId as string).then(setScoreData)}
+          taskId={selectedTask}
+          label={selectedTaskObj?.label || 'Task'}
+          info={selectedTaskObj?.info_popup || ''}
+          lawRef={selectedTaskObj?.lawRef}
+          isMandatory={selectedTaskObj?.mandatory}
+          canConfirm={selectedTaskObj?.type === 'confirmation'}
+          isConfirmed={selectedTaskObj?.isConfirmed || false}
+          uploads={selectedTaskUploads}
+          onSuccess={refetchData}
           onClose={() => setVisible(false)}
         />
+
       )}
     </div>
   );
