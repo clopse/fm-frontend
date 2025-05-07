@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, { useEffect, useRef, useState } from 'react';
 import styles from '@/styles/TaskUploadBox.module.css';
@@ -64,9 +64,11 @@ export default function TaskUploadBox({
   };
 
   const handleUploadSubmit = async () => {
-    if (!file) return;
+    if (!file || uploading) return;
 
     setUploading(true);
+    setTimeout(() => setUploading(false), 10000); // prevent spam clicking
+
     const formData = new FormData();
     formData.append('hotel_id', hotelId);
     formData.append('task_id', task.task_id);
@@ -89,6 +91,7 @@ export default function TaskUploadBox({
 
       const json = await res.json();
       console.log('✅ Uploaded:', json.message || json);
+      alert('✅ File uploaded successfully');
 
       onUpload({
         file,
@@ -99,8 +102,6 @@ export default function TaskUploadBox({
     } catch (err: any) {
       alert('Upload failed: ' + (err?.message || 'Unknown error'));
       console.error(err);
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -177,11 +178,11 @@ export default function TaskUploadBox({
           {file && (
             <div className={styles.previewActions}>
               <button
-                className={styles.uploadBtn}
+                className={`${styles.uploadBtn} ${uploading ? styles.disabled : ''}`}
                 onClick={handleUploadSubmit}
                 disabled={uploading}
               >
-                {uploading ? 'Uploading...' : 'Upload'}
+                {uploading ? '⏳ Uploading…' : '📤 Upload'}
               </button>
             </div>
           )}
