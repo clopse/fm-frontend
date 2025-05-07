@@ -1,13 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import styles from '@/styles/TaskUploadBox.module.css';
-
-interface UploadInfo {
-  url: string;
-  report_date: string;
-  uploaded_by: string;
-}
 
 interface Props {
   visible: boolean;
@@ -18,10 +12,14 @@ interface Props {
   info: string;
   lawRef?: string;
   isMandatory?: boolean;
+  onSuccess?: () => void;
+  uploads?: {
+    url: string;
+    report_date: string;
+    uploaded_by: string;
+  }[];
   canConfirm?: boolean;
   isConfirmed?: boolean;
-  uploads?: UploadInfo[];
-  onSuccess?: () => void;
 }
 
 export default function TaskUploadBox({
@@ -33,10 +31,10 @@ export default function TaskUploadBox({
   info,
   lawRef,
   isMandatory,
-  canConfirm,
-  isConfirmed,
-  uploads = [],
   onSuccess,
+  uploads = [],
+  canConfirm = false,
+  isConfirmed = false,
 }: Props) {
   const [reportDate, setReportDate] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -59,34 +57,36 @@ export default function TaskUploadBox({
   };
 
   const handleUpload = async () => {
-    if (!reportDate || !selectedFile) {
-      alert('Please select a file and a valid report date.');
+    if (!selectedFile || !reportDate) {
+      alert('Please select a file and valid report date.');
       return;
     }
 
+    setUploading(true);
     const formData = new FormData();
     formData.append('hotel_id', hotelId);
     formData.append('task_id', taskId);
     formData.append('report_date', reportDate);
     formData.append('file', selectedFile);
 
-    setUploading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/uploads/compliance`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`, {
         method: 'POST',
         body: formData,
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        alert('❌ Upload failed: ' + text);
-      } else {
-        alert('✅ File uploaded successfully');
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('✅ File uploaded successfully.');
         if (onSuccess) onSuccess();
         onClose();
+      } else {
+        alert(`❌ Upload failed: ${data?.detail || response.statusText}`);
       }
-    } catch (err) {
-      alert('❌ Error uploading file');
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('❌ Unexpected error during upload.');
     } finally {
       setUploading(false);
     }
@@ -94,7 +94,6 @@ export default function TaskUploadBox({
 
   const handleConfirm = async () => {
     if (isConfirmed) return;
-
     setConfirming(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`, {
@@ -102,14 +101,13 @@ export default function TaskUploadBox({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hotel_id: hotelId, task_id: taskId }),
       });
-
-      if (!res.ok) {
-        const text = await res.text();
-        alert('❌ Confirmation failed: ' + text);
-      } else {
+      if (res.ok) {
         alert('✅ Task confirmed.');
         if (onSuccess) onSuccess();
         onClose();
+      } else {
+        const text = await res.text();
+        alert('❌ Confirmation failed: ' + text);
       }
     } catch (err) {
       alert('❌ Error confirming task');
@@ -118,30 +116,36 @@ export default function TaskUploadBox({
     }
   };
 
-  const latestUpload = uploads[0];
+  const latestUpload = uploads.length > 0 ? uploads[0] : null;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h3>{label}</h3>
-          {isMandatory && <span className={styles.mandatory} title="Mandatory Task">M</span>}
+          {isMandatory && <span className={styles.mandatory}>M</span>}
           <button className={styles.closeBtn} onClick={onClose}>×</button>
         </div>
 
         <div className={styles.infoBox}>
-          <div>{info}</div>
-          {lawRef && (
-            <div className={styles.lawRef} title="Legal Reference">⚖️ {lawRef}</div>
-          )}
+          <p>{info}</p>
+          {lawRef && <div className={styles.lawRef} title="Legal Reference">⚖️ {lawRef}</div>}
         </div>
 
         {latestUpload && (
           <div className={styles.previewBox}>
-            <h4>Latest Upload</h4>
-            <iframe src={latestUpload.url} className={styles.preview} />
+            <h4>Latest File</h4>
+            {latestUpload.url.endsWith('.pdf') ? (
+              <iframe
+                src={latestUpload.url}
+                className={styles.preview}
+                title="Latest File"
+              />
+            ) : (
+              <img src={latestUpload.url} className={styles.preview} alt="Uploaded file preview" />
+            )}
             <p className={styles.meta}>
-              {latestUpload.report_date} — {latestUpload.uploaded_by}
+              Uploaded by {latestUpload.uploaded_by} on {latestUpload.report_date}
             </p>
           </div>
         )}
@@ -154,7 +158,7 @@ export default function TaskUploadBox({
           className={styles.input}
         />
 
-        <label className={styles.label}>Upload File</label>
+        <label className={styles.label}>Upload New File</label>
         <input
           type="file"
           ref={fileInputRef}
@@ -183,11 +187,11 @@ export default function TaskUploadBox({
 
         {uploads.length > 1 && (
           <div className={styles.historySection}>
-            <h4>Upload History</h4>
+            <h4>Previous Uploads</h4>
             <ul className={styles.uploadList}>
-              {uploads.slice(1).map((file, idx) => (
-                <li key={idx} className={styles.uploadItem}>
-                  <a href={file.url} target="_blank" rel="noopener noreferrer">View</a>
+              {uploads.slice(1).map((file, index) => (
+                <li key={index} className={styles.uploadItem}>
+                  <a href={file.url} target="_blank" rel="noopener noreferrer">📄 View</a>
                   <span>— {file.report_date} by {file.uploaded_by}</span>
                 </li>
               ))}
