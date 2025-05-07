@@ -8,15 +8,7 @@ import TaskUploadBox from '@/components/TaskUploadBox';
 import FilterPanel from '@/components/FilterPanel';
 import { complianceGroups } from '@/data/complianceTasks';
 import { fetchComplianceScore } from '@/utils/complianceApi';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ReferenceLine,
-  ResponsiveContainer,
-} from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface MonthlyEntry {
   score: number;
@@ -79,18 +71,20 @@ export default function CompliancePage() {
     setVisible(false);
   };
 
-  const filteredGroups = complianceGroups
-    .map((group) => ({
-      ...group,
-      tasks: group.tasks.filter((task) => {
-        const matchesMandatory = !filters.mandatoryOnly || task.mandatory;
-        const matchesType = !filters.type || task.type === filters.type;
-        const matchesFreq = !filters.frequency || task.frequency === filters.frequency;
-        const matchesCategory = !filters.category || task.category === filters.category;
-        return matchesMandatory && matchesType && matchesFreq && matchesCategory;
-      }),
-    }))
-    .filter((group) => group.tasks.length > 0);
+  const filteredGroups = complianceGroups.map((group) => ({
+    ...group,
+    tasks: group.tasks.filter((task) => {
+      const matchesMandatory = !filters.mandatoryOnly || task.mandatory;
+      const matchesType = !filters.type || task.type === filters.type;
+      const matchesFreq = !filters.frequency || task.frequency === filters.frequency;
+      const matchesCategory = !filters.category || task.category === filters.category;
+      const matchesSearch = !filters.search || task.label.toLowerCase().includes(filters.search.toLowerCase());
+      return matchesMandatory && matchesType && matchesFreq && matchesCategory && matchesSearch;
+    })
+  })).filter(group => group.tasks.length > 0);
+
+  const uniqueCategories = Array.from(new Set(complianceGroups.flatMap(g => g.tasks.map(t => t.category))));
+  const uniqueFrequencies = Array.from(new Set(complianceGroups.flatMap(g => g.tasks.map(t => t.frequency))));
 
   return (
     <div className={styles.wrapper}>
@@ -102,27 +96,23 @@ export default function CompliancePage() {
             <strong>{scoreData.score}/{scoreData.max_score}</strong>
             <span>Compliance Score</span>
           </div>
-
-          <h3 className={styles.chartTitle}>Score History</h3>
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={chartData}>
-                <XAxis dataKey="month" />
-                <YAxis domain={[0, 100]} />
-                <Tooltip />
-                <ReferenceLine y={85} label="KPI 85%" stroke="#00c853" strokeDasharray="5 5" />
-                <Line type="monotone" dataKey="percent" stroke="#0070f3" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className={styles.placeholderChart}>
-              No data yet. Upload reports to begin tracking compliance.
-            </div>
-          )}
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData}>
+              <XAxis dataKey="month" />
+              <YAxis domain={[0, 100]} />
+              <Tooltip />
+              <Line type="monotone" dataKey="percent" stroke="#0070f3" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       )}
 
-      <FilterPanel filters={filters} setFilters={setFilters} />
+      <FilterPanel
+        filters={filters}
+        onChange={setFilters}
+        categories={uniqueCategories}
+        frequencies={uniqueFrequencies}
+      />
 
       {filteredGroups.map((section) => (
         <div key={section.section} className={styles.groupSection}>
