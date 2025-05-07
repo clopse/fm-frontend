@@ -1,7 +1,14 @@
-import { useEffect, useState } from "react";
-import styles from "@/styles/Checklist.module.css";
+'use client';
 
-interface Task {
+import { useEffect, useState } from 'react';
+import styles from '@/styles/MonthlyChecklist.module.css';
+
+interface Props {
+  hotelId: string;
+  userEmail: string;
+}
+
+interface TaskItem {
   task_id: string;
   label: string;
   frequency: string;
@@ -12,73 +19,70 @@ interface Task {
   is_confirmed_this_month: boolean;
 }
 
-interface Props {
-  hotelId: string;
-  userEmail: string;
-}
-
 export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/compliance/monthly-checklist/${hotelId}`)
-      .then(res => res.json())
-      .then(setTasks)
-      .catch(() => setTasks([]));
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly-checklist/${hotelId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setTasks(data);
+        setLoading(false);
+      });
   }, [hotelId]);
 
   const confirmTask = async (taskId: string) => {
-    setLoading(true);
-    const res = await fetch(`/api/compliance/confirm-task`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hotel_id: hotelId, task_id: taskId, user_email: userEmail }),
     });
 
-    const result = await res.json();
-    if (res.ok) {
-      setMessage(`✅ ${taskId} confirmed at ${result.confirmed_at}`);
-      setTasks(prev =>
-        prev.map(t =>
-          t.task_id === taskId
-            ? { ...t, is_confirmed_this_month: true, last_confirmed_date: result.confirmed_at }
-            : t
-        )
-      );
-    } else {
-      setMessage(`❌ Error: ${result.detail}`);
-    }
-    setLoading(false);
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.task_id === taskId
+          ? { ...task, is_confirmed_this_month: true, last_confirmed_date: new Date().toISOString() }
+          : task
+      )
+    );
   };
 
+  if (loading) return <p>Loading checklist...</p>;
+
   return (
-    <div className={styles.checklist}>
-      <h2>📝 Monthly Checklist</h2>
-      {message && <p className={styles.message}>{message}</p>}
-      {tasks.map(task => (
-        <div key={task.task_id} className={styles.task}>
-          <input
-            type="checkbox"
-            disabled={task.is_confirmed_this_month || loading}
-            checked={task.is_confirmed_this_month}
-            onChange={() => confirmTask(task.task_id)}
-          />
-          <label>
-            <strong>{task.label}</strong> <em>({task.frequency})</em>
-            {task.last_confirmed_date && (
-              <span className={styles.date}>Last: {task.last_confirmed_date.split("T")[0]}</span>
+    <div>
+      <h2 className={styles.title}>📋 Monthly Checklist</h2>
+      <ul className={styles.list}>
+        {tasks.map((task) => (
+          <li key={task.task_id} className={styles.taskItem}>
+            <div>
+              <strong>{task.label}</strong>
+              <button
+                className={styles.infoBtn}
+                onClick={() => alert(task.info_popup)}
+                title="Task Info"
+              >
+                ℹ️
+              </button>
+              <div className={styles.meta}>
+                <span>{task.frequency} • {task.category}</span>
+              </div>
+            </div>
+
+            {task.is_confirmed_this_month ? (
+              <span className={styles.confirmed}>✅ Confirmed</span>
+            ) : (
+              <button
+                className={styles.confirmBtn}
+                onClick={() => confirmTask(task.task_id)}
+              >
+                Confirm
+              </button>
             )}
-          </label>
-          <button
-            className={styles.info}
-            onClick={() => alert(task.info_popup)}
-          >
-            ℹ️
-          </button>
-        </div>
-      ))}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
