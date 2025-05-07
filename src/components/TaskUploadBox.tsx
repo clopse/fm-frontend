@@ -64,7 +64,7 @@ export default function TaskUploadBox({
           setFileUrl(records[0].fileUrl || null);
         }
       })
-      .catch(console.error);
+      .catch((err) => toast.error('Failed to load history'));
   }, [visible, hotelId, task.task_id]);
 
   useEffect(() => {
@@ -86,12 +86,20 @@ export default function TaskUploadBox({
     setIsUploading(true);
     try {
       const uploaded = await uploadComplianceFile(hotelId, task.task_id, file, new Date(reportDate));
+      const record: UploadRecord = {
+        fileName: uploaded.fileName,
+        fileUrl: uploaded.fileUrl,
+        uploadedAt: uploaded.uploadedAt,
+        uploadedBy: uploaded.uploadedBy || 'System',
+        reportDate: uploaded.reportDate,
+        type: 'upload',
+      };
       toast.success('Upload successful');
       setFile(null);
       setFileUrl(null);
       setReportDate('');
-      setHistory((prev) => [uploaded, ...prev]);
-      onUpload(uploaded);
+      setHistory((prev) => [record, ...prev]);
+      onUpload(record);
       setShowHistory(true);
     } catch (err) {
       toast.error('Upload failed');
