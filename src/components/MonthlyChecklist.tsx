@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import styles from '@/styles/MonthlyChecklist.module.css';
+import { ShieldAlert, Info } from 'lucide-react';
 
 interface Props {
   hotelId: string;
   userEmail: string;
+}
+
+interface Subtask {
+  label: string;
+  law?: string;
 }
 
 interface TaskItem {
@@ -15,9 +21,9 @@ interface TaskItem {
   category: string;
   points: number;
   info_popup: string;
-  law_popup?: string;
   last_confirmed_date: string | null;
   is_confirmed_this_month: boolean;
+  subtasks?: Subtask[];
 }
 
 export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
@@ -53,43 +59,39 @@ export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
 
   return (
     <div>
-      <h2 className={styles.title}>📋 Monthly Checklist</h2>
+      <h2 className={styles.title}>📋 Monthly Compliance Confirmation</h2>
       <ul className={styles.list}>
         {tasks.map((task) => (
           <li key={task.task_id} className={styles.taskItem}>
             <div className={styles.taskHeader}>
               <strong>{task.label}</strong>
-              <div className={styles.iconGroup}>
+              <span className={styles.iconGroup}>
                 <button
-                  className={styles.infoBtn}
+                  className={styles.iconBtn}
                   onClick={() => alert(task.info_popup)}
                   title="Task Info"
                 >
-                  ℹ️
+                  <Info size={16} />
                 </button>
-                {task.law_popup && (
-                  <button
-                    className={styles.lawBtn}
-                    onClick={() => alert(task.law_popup)}
-                    title="Legal Reference"
-                  >
-                    ⚖️
-                  </button>
+                {task.info_popup.includes('⚖️') && (
+                  <ShieldAlert size={16} className={styles.lawIcon} title="Legal Requirement" />
                 )}
-              </div>
+              </span>
             </div>
+            <div className={styles.meta}>{task.frequency} • {task.category}</div>
 
-            <div className={styles.meta}>
-              <span>{task.frequency} • {task.category}</span>
-            </div>
+            {task.subtasks && task.subtasks.length > 0 && (
+              <ul className={styles.subtaskList}>
+                {task.subtasks.map((sub, idx) => (
+                  <li key={idx} className={styles.subtaskItem}>✔️ {sub.label}</li>
+                ))}
+              </ul>
+            )}
 
             {task.is_confirmed_this_month ? (
               <span className={styles.confirmed}>✅ Confirmed</span>
             ) : (
-              <button
-                className={styles.confirmBtn}
-                onClick={() => confirmTask(task.task_id)}
-              >
+              <button className={styles.confirmBtn} onClick={() => confirmTask(task.task_id)}>
                 Confirm
               </button>
             )}
