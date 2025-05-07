@@ -1,200 +1,79 @@
-.modalOverlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+.mIcon {
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  color: crimson;
+  vertical-align: middle;
+  cursor: help;
+}
+
+/* Confirmation box */
+.confirmBox {
   display: flex;
   justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal {
-  background: #fff;
-  border-radius: 12px;
-  padding: 0;
-  max-width: 860px;
-  width: 100%;
-  max-height: 95vh;
-  overflow-y: auto;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-}
-
-.modalHeaderBar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #f1f4f8;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid #ddd;
-}
-
-.modalTitle {
-  font-size: 1.15rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.closeBtn {
-  font-size: 1.25rem;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: #444;
-}
-
-.modalContent {
-  display: flex;
-  flex-direction: column;
-  padding: 1.25rem;
-  gap: 1rem;
-  align-items: center;
-}
-
-.metaRow,
-.previewMetaRow {
-  width: 100%;
-  max-width: 720px;
-  display: flex;
-  justify-content: flex-start;
-  gap: 1rem;
-  align-items: center;
-  font-size: 1rem;
-  font-weight: 500;
-  color: #333;
-}
-
-.dateInput {
-  padding: 0.35rem 0.6rem;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-}
-
-.uploadBtn {
-  background-color: #007bff;
-  color: #fff;
-  font-weight: 600;
-  padding: 0.6rem 1rem;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-}
-
-.fileInput {
-  display: none;
-}
-
-.previewCard {
-  position: relative;
-  padding: 1rem;
-  background: #fafafa;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 720px;
-  text-align: center;
-}
-
-.previewFrame {
-  width: 100%;
-  max-height: 700px;
-  object-fit: contain;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-
-.fileIcon {
-  width: 60px;
-  height: auto;
-  margin-bottom: 1rem;
-}
-
-.downloadLink {
-  color: #007bff;
-  font-weight: 500;
-  text-decoration: underline;
-}
-
-.menuWrapper {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 10;
-}
-
-.menuBtn {
-  background: transparent;
-  border: none;
-  font-size: 1.6rem;
-  cursor: pointer;
-  color: #333;
-}
-
-.menuDropdown {
-  position: absolute;
-  top: 36px;
-  right: 0;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 5;
-  min-width: 180px;
-  overflow: hidden;
-}
-
-.menuDropdown button {
-  width: 100%;
-  background: none;
-  border: none;
-  padding: 0.75rem 1rem;
-  text-align: left;
-  font-size: 0.95rem;
-  cursor: pointer;
-}
-
-.menuDropdown button:hover {
-  background-color: #f1f1f1;
-}
-
-.tooltip {
-  position: absolute;
-  left: 16px;
-  top: 12px;
-  font-size: 0.875rem;
-  color: #666;
-}
-
-.previewActions {
   margin-top: 1rem;
 }
 
-.downloadIconBtn img {
-  width: 36px;
-  height: 36px;
-  cursor: pointer;
-}
-
-.tooltip {
-  position: absolute;
-  top: 10px;
-  left: 16px;
-  font-size: 0.85rem;
-  color: #555;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 4px 8px;
+.confirmBtn {
+  background-color: #28a745;
+  color: #fff;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  border: none;
   border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-6px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  z-index: 1;
+  cursor: pointer;
+  transition: background 0.2s ease;
 }
 
-.previewCard:hover .tooltip {
-  opacity: 1;
-  transform: translateY(0);
+.confirmBtn:hover {
+  background-color: #218838;
+}
+
+/* Info section at top of modal */
+.infoBox {
+  padding: 1rem 1.5rem;
+  background: #f9fbfd;
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+/* Upload/confirmation history section */
+.historyBox {
+  border-top: 1px solid #e0e0e0;
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  background: #fafafa;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.historyBox h4 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: #333;
+}
+
+.historyList {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  font-size: 0.9rem;
+  color: #444;
+}
+
+.historyItem {
+  margin-bottom: 0.4rem;
+  padding-left: 1.2rem;
+  position: relative;
+}
+
+.historyItem::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #888;
+  font-size: 1.1rem;
+  line-height: 1;
 }
