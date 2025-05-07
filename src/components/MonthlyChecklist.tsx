@@ -22,7 +22,6 @@ interface TaskItem {
 export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [infoBox, setInfoBox] = useState<{ description: string; law: string }>({ description: '', law: '' });
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly-checklist/${hotelId}`)
@@ -49,12 +48,6 @@ export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
     );
   };
 
-  const showInfo = (info_popup: string) => {
-    const [desc, law] = info_popup.split('⚖️');
-    setInfoBox({ description: desc.trim(), law: law ? `⚖️ ${law.trim()}` : '' });
-    alert(`${desc.trim()}\n\n${law ? `⚖️ ${law.trim()}` : ''}`);
-  };
-
   if (loading) return <p>Loading checklist...</p>;
 
   return (
@@ -63,27 +56,27 @@ export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
       <ul className={styles.list}>
         {tasks.map((task) => (
           <li key={task.task_id} className={styles.taskItem}>
-            <div className={styles.taskHeader}>
+            <div>
               <strong>{task.label}</strong>
               <button
                 className={styles.infoBtn}
-                onClick={() => showInfo(task.info_popup)}
-                title="View task details"
+                onClick={() => alert(task.info_popup)}
+                title="Task Info"
               >
                 ℹ️
               </button>
-              {task.info_popup.includes('⚖️') && (
-                <span className={styles.lawIcon} title="Legal Requirement">⚖️</span>
-              )}
-            </div>
-            <div className={styles.meta}>
-              <span>{task.frequency} • {task.category}</span>
+              <div className={styles.meta}>
+                <span>{task.frequency} • {task.category}</span>
+              </div>
             </div>
 
             {task.is_confirmed_this_month ? (
               <span className={styles.confirmed}>✅ Confirmed</span>
             ) : (
-              <button className={styles.confirmBtn} onClick={() => confirmTask(task.task_id)}>
+              <button
+                className={styles.confirmBtn}
+                onClick={() => confirmTask(task.task_id)}
+              >
                 Confirm
               </button>
             )}
