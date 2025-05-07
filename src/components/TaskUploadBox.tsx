@@ -8,7 +8,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.js';
 
 export interface UploadData {
   file?: File;
-  fileUrl?: string;        // <-- URL from server/S3
+  fileUrl?: string;
   uploadedAt: Date;
   reportDate?: Date;
   score: number;
@@ -28,6 +28,8 @@ interface TaskUploadBoxProps {
   visible: boolean;
   hotelId: string;
   task: ComplianceTask;
+  /** kept for compatibility with page.tsx */
+  fileInfo?: UploadData | null;
   onUpload: (fileInfo: UploadData | null) => void;
   onClose: () => void;
 }
@@ -38,24 +40,25 @@ export default function TaskUploadBox({
   task,
   onUpload,
   onClose,
+  // we accept but don’t use fileInfo
 }: TaskUploadBoxProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [reportDate, setReportDate] = useState<string>(
-    new Date().toISOString().slice(0, 10)
+  const [reportDate, setReportDate] = useState(
+    () => new Date().toISOString().slice(0, 10)
   );
-  const [numPages, setNumPages] = useState<number>(0);
+  const [numPages, setNumPages] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [history, setHistory] = useState<UploadData[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  // 1) Load history when modal becomes visible
+  // 1) Load history when modal opens
   useEffect(() => {
     if (!visible) return;
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/history/${hotelId}`)
-      .then((r) => r.json())
-      .then((json) => {
+      .then(r => r.json())
+      .then(json => {
         const recs: UploadData[] = (json?.[task.task_id] || []).map((r: any) => ({
           fileUrl: r.fileUrl,
           uploadedAt: new Date(r.uploadedAt),
@@ -65,17 +68,15 @@ export default function TaskUploadBox({
         }));
         setHistory(recs);
         setShowHistory(true);
-        if (recs[0]?.fileUrl) {
-          setFileUrl(recs[0].fileUrl);
-        }
+        if (recs[0]?.fileUrl) setFileUrl(recs[0].fileUrl);
       })
-      .catch((e) => {
-        console.error(e);
+      .catch(err => {
+        console.error(err);
         alert('Failed to load history');
       });
   }, [visible, hotelId, task.task_id]);
 
-  // 2) Preview a newly selected file
+  // 2) Preview any newly selected file
   useEffect(() => {
     if (!file) return;
     const url = URL.createObjectURL(file);
@@ -87,26 +88,25 @@ export default function TaskUploadBox({
     setFile(e.target.files?.[0] ?? null);
   };
 
-  // 3) Upload handler
-  const handleUploadSubmit = async () => {
+  // 3) Upload
+  const handleUpload = async () => {
     if (!file || uploading) return;
     setUploading(true);
 
-    const formData = new FormData();
-    formData.append('hotel_id', hotelId);
-    formData.append('task_id', task.task_id);
-    formData.append('report_date', reportDate);
-    formData.append('file', file);
+    const form = new FormData();
+    form.append('hotel_id', hotelId);
+    form.append('task_id', task.task_id);
+    form.append('report_date', reportDate);
+    form.append('file', file);
 
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`,
-        { method: 'POST', body: formData }
+        { method: 'POST', body: form }
       );
       if (!res.ok) throw new Error(await res.text());
       const json = await res.json();
 
-      // build our UploadData
       const newRec: UploadData = {
         fileUrl: json.fileUrl,
         uploadedAt: new Date(json.uploadedAt),
@@ -115,43 +115,39 @@ export default function TaskUploadBox({
         uploadedBy: json.uploadedBy || 'You',
       };
 
-      // update state
-      setHistory((h) => [newRec, ...h]);
+      setHistory(h => [newRec, ...h]);
       setFile(null);
-      setFileUrl(newRec.fileUrl || null);
+      setFileUrl(newRec.fileUrl!);
       onUpload(newRec);
       alert('✅ File uploaded successfully');
     } catch (err: any) {
       console.error(err);
-      alert('Upload failed: ' + err.message);
+      alert('Upload failed: ' + (err.message || res.statusText));
     } finally {
       setUploading(false);
     }
   };
 
-  // 4) Confirmation-only tasks
+  // 4) Confirmation-only
   const handleConfirm = () => {
-    const confirmRec: UploadData = {
+    const rec: UploadData = {
       uploadedAt: new Date(),
       score: task.points,
       uploadedBy: 'You',
     };
-    setHistory((h) => [confirmRec, ...h]);
-    onUpload(confirmRec);
+    setHistory(h => [rec, ...h]);
+    onUpload(rec);
     alert('✅ Task confirmed');
     onClose();
   };
 
-  // 5) Delete a history entry
+  // 5) Delete history item
   const handleDelete = (idx: number) => {
-    const entry = history[idx];
-    // assume deleteHistoryEntry works server‑side
-    // deleteHistoryEntry(hotelId, task.task_id, entry.uploadedAt.toISOString())
-    setHistory((h) => h.filter((_, i) => i !== idx));
+    setHistory(h => h.filter((_, i) => i !== idx));
     alert('🗑️ Entry removed');
   };
 
-  // 6) Preview any past entry
+  // 6) Preview past entry
   const handlePreviewClick = (url?: string) => {
     if (url) setFileUrl(url);
   };
@@ -179,7 +175,7 @@ export default function TaskUploadBox({
   if (!visible) return null;
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={styles.modalHeaderBar}>
           <h3 className={styles.modalTitle}>
             {task.label}{' '}
@@ -201,7 +197,7 @@ export default function TaskUploadBox({
               type="date"
               className={styles.dateInput}
               value={reportDate}
-              onChange={(e) => setReportDate(e.target.value)}
+              onChange={e => setReportDate(e.target.value)}
             />
           </label>
 
@@ -218,7 +214,7 @@ export default function TaskUploadBox({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                    accept=".pdf,.jpg,.jpeg,.png"
                     onChange={handleFileChange}
                     className={styles.fileInput}
                   />
@@ -230,8 +226,8 @@ export default function TaskUploadBox({
               {file && (
                 <button
                   className={styles.uploadBtn}
+                  onClick={handleUpload}
                   disabled={uploading}
-                  onClick={handleUploadSubmit}
                 >
                   {uploading ? '⏳ Uploading…' : '📤 Upload'}
                 </button>
@@ -241,10 +237,7 @@ export default function TaskUploadBox({
 
           {task.type === 'confirmation' && (
             <div className={styles.confirmBox}>
-              <button
-                className={styles.confirmBtn}
-                onClick={handleConfirm}
-              >
+              <button className={styles.confirmBtn} onClick={handleConfirm}>
                 ✅ Confirm Task Done
               </button>
             </div>
@@ -254,7 +247,7 @@ export default function TaskUploadBox({
         <div className={styles.historyBox}>
           <button
             className={styles.uploadBtn}
-            onClick={() => setShowHistory((v) => !v)}
+            onClick={() => setShowHistory(v => !v)}
           >
             {showHistory ? 'Hide History' : 'View History'}
           </button>
@@ -275,12 +268,10 @@ export default function TaskUploadBox({
                       {h.uploadedAt.toLocaleDateString()}
                       <div style={{ marginTop: '0.25rem' }}>
                         {h.fileUrl && (
-                          <>
-                            <button onClick={() => handlePreviewClick(h.fileUrl!)}>
-                              🔍 View
-                            </button>{' '}
-                          </>
-                        )}
+                          <button onClick={() => handlePreviewClick(h.fileUrl)}>
+                            🔍 View
+                          </button>
+                        )}{' '}
                         <button onClick={() => handleDelete(i)}>🗑 Delete</button>
                       </div>
                     </li>
