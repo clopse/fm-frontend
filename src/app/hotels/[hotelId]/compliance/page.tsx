@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
 import styles from '@/styles/CompliancePage.module.css';
-import { getDueTasks, acknowledgeTask } from '@/utils/complianceApi';
+import { getDueTasks, acknowledgeTask, getComplianceScore } from '@/utils/complianceApi';
 import { Info, UploadCloud, ShieldCheck } from 'lucide-react';
 
 interface Task {
@@ -16,23 +16,29 @@ interface Task {
 
 export default function CompliancePage() {
   const { hotelId } = useParams();
-  const name = hotelNames[hotelId as keyof typeof hotelNames] || 'Current Hotel';
-
   const [dueTasks, setDueTasks] = useState<Task[]>([]);
   const [nextMonthTasks, setNextMonthTasks] = useState<Task[]>([]);
   const [acknowledged, setAcknowledged] = useState<string[]>([]);
+  const [score, setScore] = useState<number>(0);
+  const [maxScore, setMaxScore] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+
+  const name = hotelNames[hotelId as keyof typeof hotelNames] || 'Current Hotel';
 
   useEffect(() => {
     if (!hotelId) return;
 
     const fetchData = async () => {
       try {
-        const data = await getDueTasks(hotelId as string);
-        setDueTasks(data.due_this_month);
-        setNextMonthTasks(data.next_month_uploadables);
+        const due = await getDueTasks(hotelId as string);
+        setDueTasks(due.due_this_month);
+        setNextMonthTasks(due.next_month_uploadables);
+
+        const scoreData = await getComplianceScore(hotelId as string);
+        setScore(scoreData.score);
+        setMaxScore(scoreData.max_score);
       } catch (err) {
-        console.error('Error fetching due tasks', err);
+        console.error('Error fetching compliance data:', err);
       } finally {
         setLoading(false);
       }
@@ -56,22 +62,18 @@ export default function CompliancePage() {
       <UploadCloud size={20} className={styles.icon} />
       <div className={styles.labelArea}>
         <strong>{task.label}</strong>
-        <span className={styles.tooltip}>
-          <Info size={14} />
-          <span className={styles.tooltipText}>{task.info_popup}</span>
+        <span title={task.info_popup}>
+          <Info size={14} style={{ marginLeft: 6, cursor: 'pointer' }} />
         </span>
       </div>
-
       {isAcknowledgeable && (
-        <div className={styles.ack}>
-          {acknowledged.includes(task.task_id) ? (
-            <span title="Acknowledged">
-              <ShieldCheck size={18} color="green" />
-            </span>
-          ) : (
-            <button onClick={() => handleAcknowledge(task.task_id)}>Acknowledge</button>
-          )}
-        </div>
+        acknowledged.includes(task.task_id) ? (
+          <ShieldCheck size={18} color="green" />
+        ) : (
+          <button className={styles.acknowledgeBtn} onClick={() => handleAcknowledge(task.task_id)}>
+            Acknowledge
+          </button>
+        )
       )}
     </li>
   );
@@ -81,18 +83,18 @@ export default function CompliancePage() {
       <h1 className={styles.heading}>{name} – Compliance Overview</h1>
 
       <div className={styles.scoreBox}>
-        <span className={styles.score}>430/470</span>
+        <span className={styles.score}>{score}/{maxScore}</span>
         <span className={styles.label}>Compliance Score</span>
       </div>
 
-      <h2>Tasks Due This Month</h2>
+      <h2 className={styles.subheading}>Tasks Due This Month</h2>
       <ul className={styles.taskList}>
         {dueTasks.length > 0
-          ? dueTasks.map((task) => renderTaskItem(task, false))
+          ? dueTasks.map((task) => renderTaskItem(task))
           : <p>✅ All current uploadable tasks completed.</p>}
       </ul>
 
-      <h2>Next Month’s Uploadable Tasks</h2>
+      <h2 className={styles.subheading}>Uploadable Tasks Coming Next Month</h2>
       <ul className={styles.taskList}>
         {nextMonthTasks.length > 0
           ? nextMonthTasks.map((task) => renderTaskItem(task, true))
