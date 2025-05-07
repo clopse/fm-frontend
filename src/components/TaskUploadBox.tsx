@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import styles from '@/styles/TaskUploadBox.module.css';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { deleteHistoryEntry, uploadComplianceFile } from '@/utils/complianceApi';
+import toast from 'react-hot-toast';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.js';
 
@@ -85,7 +86,7 @@ export default function TaskUploadBox({
     setIsUploading(true);
     try {
       const uploaded = await uploadComplianceFile(hotelId, task.task_id, file, new Date(reportDate));
-      alert('Upload successful.');
+      toast.success('Upload successful');
       setFile(null);
       setFileUrl(null);
       setReportDate('');
@@ -93,7 +94,7 @@ export default function TaskUploadBox({
       onUpload(uploaded);
       setShowHistory(true);
     } catch (err) {
-      alert('Upload failed.');
+      toast.error('Upload failed');
       console.error(err);
     } finally {
       setIsUploading(false);
@@ -106,8 +107,9 @@ export default function TaskUploadBox({
       setHistory((prev) =>
         prev.filter((h) => h.uploadedAt !== timestamp && h.confirmedAt !== timestamp)
       );
+      toast.success('Entry deleted');
     } catch (err) {
-      alert('Failed to delete history entry');
+      toast.error('Failed to delete');
     }
   };
 
@@ -129,14 +131,14 @@ export default function TaskUploadBox({
       });
       if (!res.ok) throw new Error('Failed to confirm task');
       const json = await res.json();
-      alert(json.message);
+      toast.success(json.message || 'Task confirmed');
       setFileUrl(null);
       setFile(null);
       setReportDate('');
       onUpload(null);
       setShowHistory(true);
     } catch (err) {
-      alert('Confirmation failed');
+      toast.error('Confirmation failed');
       console.error(err);
     }
   };
@@ -252,10 +254,10 @@ export default function TaskUploadBox({
                     {entry.uploadedBy || entry.confirmedBy || 'Unknown'} —{' '}
                     {entry.uploadedAt || entry.confirmedAt || 'Unknown Date'}
                     <div style={{ marginTop: '0.25rem' }}>
-                      {typeof entry.fileUrl === 'string' && entry.fileUrl && (
+                      {entry.fileUrl && (
                         <>
-                          <button onClick={() => handlePreviewClick(entry.fileUrl)}>🔍 View</button>{' '}
-                          <button onClick={() => handleDownload(entry.fileUrl)}>⬇ Download</button>{' '}
+                          <button onClick={() => handlePreviewClick(entry.fileUrl!)}>🔍 View</button>{' '}
+                          <button onClick={() => handleDownload(entry.fileUrl!)}>⬇ Download</button>{' '}
                         </>
                       )}
                       <button onClick={() => handleDelete(entry.uploadedAt || entry.confirmedAt!)}>🗑 Delete</button>
