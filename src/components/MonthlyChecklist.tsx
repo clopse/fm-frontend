@@ -15,8 +15,6 @@ interface TaskItem {
   category: string;
   points: number;
   info_popup: string;
-  legal_reference?: string;
-  subtasks?: string[];
   last_confirmed_date: string | null;
   is_confirmed_this_month: boolean;
 }
@@ -24,6 +22,7 @@ interface TaskItem {
 export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [infoBox, setInfoBox] = useState<{ description: string; law: string }>({ description: '', law: '' });
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly-checklist/${hotelId}`)
@@ -50,56 +49,41 @@ export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
     );
   };
 
+  const showInfo = (info_popup: string) => {
+    const [desc, law] = info_popup.split('⚖️');
+    setInfoBox({ description: desc.trim(), law: law ? `⚖️ ${law.trim()}` : '' });
+    alert(`${desc.trim()}\n\n${law ? `⚖️ ${law.trim()}` : ''}`);
+  };
+
   if (loading) return <p>Loading checklist...</p>;
 
   return (
     <div>
-      <h2 className={styles.title}>📋 Monthly Checklist (for previous month)</h2>
+      <h2 className={styles.title}>📋 Monthly Checklist</h2>
       <ul className={styles.list}>
         {tasks.map((task) => (
           <li key={task.task_id} className={styles.taskItem}>
             <div className={styles.taskHeader}>
               <strong>{task.label}</strong>
-              <div className={styles.iconGroup}>
-                <button
-                  className={styles.infoBtn}
-                  onClick={() => alert(task.info_popup)}
-                  title="Task Info"
-                >
-                  ℹ️
-                </button>
-                {task.legal_reference && (
-                  <button
-                    className={styles.lawBtn}
-                    onClick={() => alert(task.legal_reference)}
-                    title="Legal Reference"
-                  >
-                    ⚖️
-                  </button>
-                )}
-              </div>
-              <div className={styles.meta}>
-                <span>{task.frequency} • {task.category}</span>
-              </div>
+              <button
+                className={styles.infoBtn}
+                onClick={() => showInfo(task.info_popup)}
+                title="View task details"
+              >
+                ℹ️
+              </button>
+              {task.info_popup.includes('⚖️') && (
+                <span className={styles.lawIcon} title="Legal Requirement">⚖️</span>
+              )}
             </div>
-
-            {task.subtasks && task.subtasks.length > 0 && (
-              <ul className={styles.subtaskList}>
-                {task.subtasks.map((sub, idx) => (
-                  <li key={idx} className={styles.subtask}>
-                    ✅ {sub}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className={styles.meta}>
+              <span>{task.frequency} • {task.category}</span>
+            </div>
 
             {task.is_confirmed_this_month ? (
               <span className={styles.confirmed}>✅ Confirmed</span>
             ) : (
-              <button
-                className={styles.confirmBtn}
-                onClick={() => confirmTask(task.task_id)}
-              >
+              <button className={styles.confirmBtn} onClick={() => confirmTask(task.task_id)}>
                 Confirm
               </button>
             )}
