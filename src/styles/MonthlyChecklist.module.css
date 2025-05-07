@@ -29,6 +29,17 @@
 .taskHeader {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.lawIcon {
+  font-size: 1rem;
+  color: #555;
+  cursor: help;
+}
+.taskHeader {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
