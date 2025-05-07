@@ -48,7 +48,6 @@ export default function CompliancePage() {
     search: '',
   });
 
-
   useEffect(() => {
     if (!hotelId) return;
     fetchComplianceScore(hotelId as string)
