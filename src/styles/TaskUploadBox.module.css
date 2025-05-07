@@ -1,203 +1,170 @@
 .modalOverlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 1000;
+  justify-content: center;
+  z-index: 2000;
 }
 
 .modal {
   background: #fff;
+  padding: 1.5rem;
   border-radius: 12px;
-  max-width: 860px;
-  width: 100%;
-  max-height: 95vh;
+  max-width: 900px;
+  width: 90%;
+  max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  position: relative;
 }
 
 .modalHeaderBar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: #f1f4f8;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid #ddd;
+  justify-content: space-between;
+  margin-bottom: 1rem;
 }
 
 .modalTitle {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 600;
+  color: #222;
   margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .mIcon {
+  margin-left: 0.5rem;
   font-size: 0.85rem;
-  color: crimson;
+  color: #e63946;
   vertical-align: middle;
-  cursor: help;
-  background: #ffeef0;
-  padding: 0.1rem 0.4rem;
-  border-radius: 6px;
-  font-weight: bold;
 }
 
 .closeBtn {
-  font-size: 1.25rem;
-  background: transparent;
+  background: none;
   border: none;
+  font-size: 1.25rem;
   cursor: pointer;
-  color: #444;
+  color: #888;
+}
+
+.closeBtn:hover {
+  color: #000;
 }
 
 .infoBox {
-  padding: 1rem 1.5rem;
-  background: #f9fbfd;
-  border-top: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
+  background: #f0f4f8;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid #0070f3;
+  border-radius: 6px;
   font-size: 0.95rem;
   color: #333;
+  margin-bottom: 1rem;
 }
 
 .modalContent {
   display: flex;
   flex-direction: column;
-  padding: 1.5rem;
-  gap: 1.25rem;
   align-items: center;
 }
 
+.previewFrame {
+  max-width: 100%;
+  max-height: 60vh;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
 .metaRow {
-  width: 100%;
-  max-width: 720px;
   display: flex;
-  justify-content: flex-start;
   align-items: center;
   gap: 1rem;
-  font-size: 1rem;
-  font-weight: 500;
-  color: #333;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
 }
 
 .dateInput {
   padding: 0.4rem 0.6rem;
-  font-size: 1rem;
   border: 1px solid #ccc;
   border-radius: 6px;
-  width: 180px;
+  font-size: 0.95rem;
 }
 
 .uploadBtn {
-  background-color: #007bff;
-  color: #fff;
-  font-weight: 600;
-  padding: 0.6rem 1.1rem;
+  background-color: #0070f3;
+  color: white;
+  padding: 0.5rem 1rem;
   border-radius: 6px;
   border: none;
+  font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background-color 0.2s ease-in-out;
 }
 
 .uploadBtn:hover {
-  background-color: #0056b3;
-}
-
-.disabled {
-  background-color: #aaa !important;
-  cursor: not-allowed !important;
+  background-color: #0059c1;
 }
 
 .fileInput {
   display: none;
 }
 
-.previewCard {
-  position: relative;
-  padding: 1rem;
-  background: #fafafa;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 720px;
-  text-align: center;
-}
-
-.previewFrame {
-  width: 100%;
-  max-height: 700px;
-  object-fit: contain;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-
-.previewActions {
-  margin-top: 1rem;
-  text-align: center;
-}
-
 .confirmBox {
-  display: flex;
-  justify-content: center;
   margin-top: 1rem;
 }
 
 .confirmBtn {
-  background-color: #28a745;
-  color: #fff;
-  font-weight: 600;
+  background-color: #00a676;
+  color: white;
   padding: 0.6rem 1.2rem;
-  font-size: 1rem;
-  border: none;
   border-radius: 6px;
+  border: none;
+  font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: background-color 0.2s ease-in-out;
 }
 
 .confirmBtn:hover {
-  background-color: #218838;
+  background-color: #008c64;
 }
 
 .historyBox {
-  border-top: 1px solid #e0e0e0;
-  margin-top: 1.5rem;
-  padding: 1.25rem 1.5rem;
-  background: #fafafa;
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
-}
-
-.historyBox h4 {
-  font-size: 1rem;
-  margin-bottom: 0.75rem;
-  font-weight: 600;
-  color: #222;
+  margin-top: 2rem;
+  width: 100%;
 }
 
 .historyList {
   list-style: none;
-  padding-left: 0;
-  font-size: 0.95rem;
-  color: #333;
+  padding: 0;
+  margin: 0.5rem 0 0 0;
 }
 
 .historyItem {
-  margin: 0.4rem 0;
-  padding-left: 1rem;
-  position: relative;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
 }
 
-.historyItem::before {
-  content: '•';
-  position: absolute;
-  left: 0;
-  color: #888;
+.historyItem button {
+  margin-right: 0.4rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #0070f3;
+}
+
+.historyItem button:hover {
+  text-decoration: underline;
 }
