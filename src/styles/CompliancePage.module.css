@@ -1,8 +1,6 @@
-/* src/styles/CompliancePage.module.css */
-
 .wrapper {
   padding: 2rem;
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
   background-color: #f9fbfd;
 }
@@ -10,8 +8,8 @@
 .pageTitle {
   font-size: 2rem;
   font-weight: 600;
-  margin-bottom: 2rem;
-  color: #001f3f;
+  margin-bottom: 1.5rem;
+  color: #003366;
   text-align: center;
 }
 
@@ -40,12 +38,13 @@
   color: #666;
 }
 
-.chartTitle {
-  font-size: 1rem;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-  text-align: center;
-  color: #333;
+.filterWrapper {
+  margin-bottom: 2rem;
+  padding: 1rem 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e1e4e8;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
 }
 
 .groupSection {
@@ -63,43 +62,16 @@
 .taskList {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
-.filterWrapper {
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
+/* Optional: Chart wrapper fallback for small devices */
+@media (max-width: 768px) {
+  .overviewBox {
+    padding: 1rem;
+  }
 
-.filterRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.filterRow label {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.85rem;
-  color: #333;
-}
-
-.filterRow select,
-.filterRow input[type="checkbox"] {
-  padding: 0.3rem 0.5rem;
-  font-size: 0.85rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  background-color: #f9f9f9;
-}
-
-.filterRow select:focus {
-  border-color: #0070f3;
-  outline: none;
+  .taskList {
+    grid-template-columns: 1fr;
+  }
 }
