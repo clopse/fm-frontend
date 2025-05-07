@@ -1,204 +1,207 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
-import styles from '@/styles/TaskUploadBox.module.css';
+import React, { useEffect, useState, useRef } from 'react';
+import { useParams } from 'next/navigation';
+import styles from '@/styles/CompliancePage.module.css';
+import TaskCard from '@/components/TaskCard';
+import TaskUploadBox from '@/components/TaskUploadBox';
+import FilterPanel from '@/components/FilterPanel';
+import { complianceGroups } from '@/data/complianceTasks';
+import { fetchComplianceScore } from '@/utils/complianceApi';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import Image from 'next/image';
 
-interface Props {
-  visible: boolean;
-  onClose: () => void;
-  hotelId: string;
-  taskId: string;
-  label: string;
-  info: string;
-  lawRef?: string;
-  isMandatory?: boolean;
-  onSuccess?: () => void;
-  uploads?: {
-    url: string;
-    report_date: string;
-    uploaded_by: string;
-  }[];
-  canConfirm?: boolean;
-  isConfirmed?: boolean;
+interface MonthlyEntry {
+  score: number;
+  max: number;
 }
 
-export default function TaskUploadBox({
-  visible,
-  onClose,
-  hotelId,
-  taskId,
-  label,
-  info,
-  lawRef,
-  isMandatory,
-  onSuccess,
-  uploads = [],
-  canConfirm = false,
-  isConfirmed = false,
-}: Props) {
-  const [reportDate, setReportDate] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+interface ScoreData {
+  score: number;
+  max_score: number;
+  percent: number;
+  detailed: {
+    task_id: string;
+    scored: number;
+    max: number;
+    label: string;
+    valid_until: string | null;
+  }[];
+  task_breakdown?: {
+    [task_id: string]: number;
+  };
+  monthly_history?: {
+    [month: string]: MonthlyEntry;
+  };
+}
+
+export default function CompliancePage() {
+  const { hotelId } = useParams();
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [visible, setVisible] = useState(false);
+  const [scoreData, setScoreData] = useState<ScoreData | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  const [filters, setFilters] = useState({
+    mandatoryOnly: false,
+    type: '',
+    frequency: [] as string[],
+    category: [] as string[],
+    search: '',
+  });
 
   useEffect(() => {
-    if (!visible) {
-      setReportDate('');
-      setSelectedFile(null);
-    }
-  }, [visible]);
+    if (!hotelId) return;
+    fetchComplianceScore(hotelId as string)
+      .then(setScoreData)
+      .catch(console.error);
+  }, [hotelId]);
 
-  if (!visible) return null;
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+        setShowFilters(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setSelectedFile(file);
-  };
+  const chartData = scoreData?.monthly_history
+    ? Object.entries(scoreData.monthly_history).map(([month, val]) => {
+        const data = val as MonthlyEntry;
+        return {
+          month,
+          percent: Math.round((data.score / data.max) * 100),
+        };
+      })
+    : [];
 
   const handleUpload = async () => {
-    if (!selectedFile || !reportDate) {
-      alert('Please select a file and valid report date.');
-      return;
-    }
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('hotel_id', hotelId);
-    formData.append('task_id', taskId);
-    formData.append('report_date', reportDate);
-    formData.append('file', selectedFile);
-
-    try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert('✅ File uploaded successfully.');
-        if (onSuccess) onSuccess();
-        onClose();
-      } else {
-        alert(`❌ Upload failed: ${data?.detail || response.statusText}`);
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      alert('❌ Unexpected error during upload.');
-    } finally {
-      setUploading(false);
-    }
+    if (!hotelId) return;
+    await fetchComplianceScore(hotelId as string).then(setScoreData);
+    setVisible(false);
   };
 
-  const handleConfirm = async () => {
-    if (isConfirmed) return;
-    setConfirming(true);
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hotel_id: hotelId, task_id: taskId }),
-      });
-      if (res.ok) {
-        alert('✅ Task confirmed.');
-        if (onSuccess) onSuccess();
-        onClose();
-      } else {
-        const text = await res.text();
-        alert('❌ Confirmation failed: ' + text);
-      }
-    } catch (err) {
-      alert('❌ Error confirming task');
-    } finally {
-      setConfirming(false);
-    }
-  };
+  const filteredGroups = complianceGroups
+    .map((group) => ({
+      ...group,
+      tasks: group.tasks.filter((task) => {
+        const matchesMandatory = !filters.mandatoryOnly || task.mandatory;
+        const matchesType = !filters.type || task.type === filters.type;
+        const matchesFreq =
+          filters.frequency.length === 0 || filters.frequency.includes(task.frequency);
+        const matchesCategory =
+          filters.category.length === 0 || filters.category.includes(task.category);
+        const matchesSearch =
+          !filters.search || task.label.toLowerCase().includes(filters.search.toLowerCase());
+        return matchesMandatory && matchesType && matchesFreq && matchesCategory && matchesSearch;
+      }),
+    }))
+    .filter((group) => group.tasks.length > 0);
 
-  const latestUpload = uploads.length > 0 ? uploads[0] : null;
+  const uniqueCategories = Array.from(
+    new Set(complianceGroups.flatMap((g) => g.tasks.map((t) => t.category)))
+  );
+  const uniqueFrequencies = Array.from(
+    new Set(complianceGroups.flatMap((g) => g.tasks.map((t) => t.frequency)))
+  );
+
+  const selectedTaskObj = complianceGroups
+    .flatMap((g) => g.tasks)
+    .find((t) => t.task_id === selectedTask);
+
+  const selectedTaskUploads = scoreData?.detailed
+    ?.filter((t) => t.task_id === selectedTask)
+    .map((t) => ({
+      url: `${process.env.NEXT_PUBLIC_API_URL}/files/${hotelId}/compliance/${t.task_id}/${t.valid_until}.pdf`,
+      report_date: t.valid_until || '',
+      uploaded_by: 'System',
+    })) || [];
+
+  const refetchData = () => {
+    fetchComplianceScore(hotelId as string).then(setScoreData);
+  };
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <div className={styles.header}>
-          <h3>{label}</h3>
-          {isMandatory && <span className={styles.mandatory}>M</span>}
-          <button className={styles.closeBtn} onClick={onClose}>×</button>
-        </div>
-
-        <div className={styles.infoBox}>
-          <p>{info}</p>
-          {lawRef && <div className={styles.lawRef} title="Legal Reference">⚖️ {lawRef}</div>}
-        </div>
-
-        {latestUpload && (
-          <div className={styles.previewBox}>
-            <h4>Latest File</h4>
-            {latestUpload.url.endsWith('.pdf') ? (
-              <iframe
-                src={latestUpload.url}
-                className={styles.preview}
-                title="Latest File"
-              />
-            ) : (
-              <img src={latestUpload.url} className={styles.preview} alt="Uploaded file preview" />
-            )}
-            <p className={styles.meta}>
-              Uploaded by {latestUpload.uploaded_by} on {latestUpload.report_date}
-            </p>
+    <div className={styles.wrapper}>
+      {scoreData && (
+        <div className={styles.overviewBox}>
+          <div className={styles.scoreBlock}>
+            <strong>
+              {scoreData.score}/{scoreData.max_score}
+            </strong>
+            <span>Compliance Score</span>
           </div>
-        )}
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={chartData}>
+              <XAxis dataKey="month" />
+              <YAxis domain={[0, 100]} />
+              <Tooltip />
+              <Line type="monotone" dataKey="percent" stroke="#0070f3" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
-        <label className={styles.label}>Report Date</label>
-        <input
-          type="date"
-          value={reportDate}
-          onChange={(e) => setReportDate(e.target.value)}
-          className={styles.input}
-        />
-
-        <label className={styles.label}>Upload New File</label>
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          className={styles.input}
-          accept=".pdf,.jpg,.jpeg,.png"
-        />
-
+      <div className={styles.filterToggleRow}>
         <button
-          className={styles.submitBtn}
-          onClick={handleUpload}
-          disabled={uploading}
+          className={styles.filterToggleButton}
+          onClick={() => setShowFilters((prev) => !prev)}
+          aria-label="Toggle Filters"
         >
-          {uploading ? 'Uploading...' : 'Submit File'}
+          <Image src="/icons/filter-icon.png" alt="Filter" width={25} height={25} />
         </button>
-
-        {canConfirm && !isMandatory && (
-          <button
-            className={styles.confirmBtn}
-            onClick={handleConfirm}
-            disabled={confirming || isConfirmed}
-          >
-            {isConfirmed ? '✅ Confirmed' : confirming ? 'Confirming...' : 'Confirm Task'}
-          </button>
-        )}
-
-        {uploads.length > 1 && (
-          <div className={styles.historySection}>
-            <h4>Previous Uploads</h4>
-            <ul className={styles.uploadList}>
-              {uploads.slice(1).map((file, index) => (
-                <li key={index} className={styles.uploadItem}>
-                  <a href={file.url} target="_blank" rel="noopener noreferrer">📄 View</a>
-                  <span>— {file.report_date} by {file.uploaded_by}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
+
+      {showFilters && (
+        <FilterPanel
+          filters={filters}
+          onChange={setFilters}
+          categories={uniqueCategories}
+          frequencies={uniqueFrequencies}
+        />
+      )}
+
+      {filteredGroups.map((section) => (
+        <div key={section.section} className={styles.groupSection}>
+          <h2 className={styles.groupTitle}>{section.section}</h2>
+          <div className={styles.taskList}>
+            {section.tasks.map((task) => (
+              <TaskCard
+                key={task.task_id}
+                task={task}
+                fileInfo={
+                  scoreData?.task_breakdown?.[task.task_id]
+                    ? { score: scoreData.task_breakdown[task.task_id] }
+                    : null
+                }
+                onClick={() => {
+                  setSelectedTask(task.task_id);
+                  setVisible(true);
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {selectedTask && selectedTaskObj && (
+        <TaskUploadBox
+          visible={visible}
+          hotelId={hotelId as string}
+          taskId={selectedTask}
+          label={selectedTaskObj.label || 'Task'}
+          info={selectedTaskObj.info_popup || ''}
+          isMandatory={selectedTaskObj.mandatory}
+          canConfirm={selectedTaskObj.type === 'confirmation'}
+          isConfirmed={false}
+          uploads={selectedTaskUploads}
+          onSuccess={refetchData}
+          onClose={() => setVisible(false)}
+        />
+      )}
     </div>
   );
 }
