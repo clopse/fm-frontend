@@ -8,6 +8,11 @@ interface Props {
   userEmail: string;
 }
 
+interface SubtaskItem {
+  label: string;
+  points: number;
+}
+
 interface TaskItem {
   task_id: string;
   label: string;
@@ -17,6 +22,7 @@ interface TaskItem {
   info_popup: string;
   last_confirmed_date: string | null;
   is_confirmed_this_month: boolean;
+  subtasks?: SubtaskItem[];
 }
 
 export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
@@ -68,6 +74,13 @@ export default function MonthlyChecklist({ hotelId, userEmail }: Props) {
               <div className={styles.meta}>
                 <span>{task.frequency} • {task.category}</span>
               </div>
+              {task.subtasks && (
+                <ul className={styles.subtaskList}>
+                  {task.subtasks.map((sub, i) => (
+                    <li key={i} className={styles.subtaskItem}>• {sub.label} ({sub.points} pts)</li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {task.is_confirmed_this_month ? (
