@@ -1,15 +1,9 @@
-// src/utils/complianceApi.ts
-
 export interface UploadResponse {
-  id: string;
-  message: string;
-  score: {
-    score: number;
-    max_score: number;
-    percent: number;
-    month: string;
-    task_breakdown: Record<string, any>;
-  };
+  fileName: string;
+  fileUrl: string;
+  uploadedAt: string;
+  uploadedBy?: string;
+  reportDate: string;
 }
 
 export async function getDueTasks(hotelId: string) {
@@ -18,19 +12,19 @@ export async function getDueTasks(hotelId: string) {
   return res.json();
 }
 
+export async function acknowledgeTask(hotelId: string, task_id: string) {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/acknowledge-task`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ hotel_id: hotelId, task_id }),
+  });
+  if (!res.ok) throw new Error('Failed to acknowledge task');
+}
+
 export async function fetchComplianceScore(hotelId: string) {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
   if (!res.ok) throw new Error('Failed to fetch compliance score');
   return res.json();
-}
-
-export async function acknowledgeTask(hotelId: string, taskId: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/acknowledge-task`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hotel_id: hotelId, task_id: taskId }),
-  });
-  if (!res.ok) throw new Error('Failed to acknowledge task');
 }
 
 export async function uploadComplianceFile(
@@ -51,8 +45,8 @@ export async function uploadComplianceFile(
   });
 
   if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`File upload failed: ${errText}`);
+    const errorText = await res.text();
+    throw new Error(`Upload failed: ${errorText}`);
   }
 
   return res.json();
@@ -68,8 +62,5 @@ export async function deleteHistoryEntry(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ hotel_id: hotelId, task_id: taskId, timestamp }),
   });
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Failed to delete history entry: ${errText}`);
-  }
+  if (!res.ok) throw new Error('Failed to delete entry');
 }
