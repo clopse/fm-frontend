@@ -27,18 +27,21 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .cardFooter {
-  margin-top: 0.75rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: auto;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .scoreBadge {
   font-weight: 600;
-  padding: 0.35rem 0.65rem;
+  padding: 0.4rem 0.75rem;
   border-radius: 8px;
   font-size: 0.85rem;
   white-space: nowrap;
@@ -57,7 +60,7 @@
   font-weight: 600;
   color: white;
   background: #dc3545;
-  padding: 0.2rem 0.5rem;
+  padding: 0.25rem 0.6rem;
   border-radius: 5px;
 }
 
