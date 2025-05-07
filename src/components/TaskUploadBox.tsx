@@ -224,7 +224,7 @@ export default function TaskUploadBox({
                     {entry.uploadedBy || entry.confirmedBy || 'Unknown'} —{' '}
                     {entry.uploadedAt || entry.confirmedAt || 'Unknown Date'}
                     <div style={{ marginTop: '0.25rem' }}>
-                      {entry.fileUrl && (
+                      {typeof entry.fileUrl === 'string' && (
                         <>
                           <button onClick={() => handlePreviewClick(entry.fileUrl)}>🔍 View</button>{' '}
                           <button onClick={() => handleDownload(entry.fileUrl)}>⬇ Download</button>{' '}
