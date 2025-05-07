@@ -69,7 +69,9 @@ export default function CompliancePage() {
           </button>
         )
       ) : (
-        <ShieldCheck size={18} color="green" title="Due now" />
+        <span title="Due now">
+          <ShieldCheck size={18} color="green" />
+        </span> />
       )}
     </li>
   );
