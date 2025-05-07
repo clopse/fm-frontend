@@ -1,4 +1,3 @@
-// /src/app/hotels/[hotelId]/compliance/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,6 +8,11 @@ import TaskUploadBox from '@/components/TaskUploadBox';
 import { complianceGroups } from '@/data/complianceTasks';
 import { fetchComplianceScore, uploadComplianceFile } from '@/utils/complianceApi';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
+type MonthlyScore = {
+  score: number;
+  max: number;
+};
 
 export default function CompliancePage() {
   const { hotelId } = useParams();
@@ -30,10 +34,13 @@ export default function CompliancePage() {
 
   const chartData =
     scoreData?.monthly_history
-      ? Object.entries(scoreData.monthly_history).map(([month, val]) => ({
-          month,
-          percent: Math.round((val.score / val.max) * 100),
-        }))
+      ? Object.entries(scoreData.monthly_history).map(([month, val]) => {
+          const { score, max } = val as MonthlyScore;
+          return {
+            month,
+            percent: Math.round((score / max) * 100),
+          };
+        })
       : [];
 
   return (
