@@ -188,20 +188,20 @@ export default function CompliancePage() {
       ))}
 
       {selectedTask && selectedTaskObj && (
-        <TaskUploadBox
-          visible={visible}
-          hotelId={hotelId as string}
-          taskId={selectedTask}
-          label={selectedTaskObj.label || 'Task'}
-          info={selectedTaskObj.info_popup || ''}
-          lawRef={selectedTaskObj.lawRef}
-          isMandatory={selectedTaskObj.mandatory}
-          canConfirm={selectedTaskObj.type === 'confirmation'}
-          isConfirmed={false}
-          uploads={selectedTaskUploads}
-          onSuccess={refetchData}
-          onClose={() => setVisible(false)}
-        />
+          <TaskUploadBox
+            visible={visible}
+            hotelId={hotelId as string}
+            taskId={selectedTask}
+            label={selectedTaskObj.label || 'Task'}
+            info={selectedTaskObj.info_popup || ''}
+            isMandatory={selectedTaskObj.mandatory}
+            canConfirm={selectedTaskObj.type === 'confirmation'}
+            isConfirmed={false}
+            uploads={selectedTaskUploads}
+            onSuccess={refetchData}
+            onClose={() => setVisible(false)}
+  />
+)}
       )}
     </div>
   );
