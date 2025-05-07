@@ -53,6 +53,7 @@ export default function CompliancePage() {
     type: '',
     frequency: '',
     category: '',
+    search: '',
   });
 
   useEffect(() => {
