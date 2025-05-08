@@ -1,131 +1,55 @@
-.wrapper {
-  padding: 2rem;
-  max-width: 1440px;
-  margin: 0 auto;
-  background-color: #f9fbfd;
-}
-
-.pageTitle {
-  font-size: 2rem;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-  color: #003366;
-  text-align: center;
-}
-
-.overviewBox {
-  background: #ffffff;
-  border: 1px solid #e1e4e8;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-}
-
 .container {
   padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.cardGrid {
+h1 {
+  font-size: 26px;
+  margin-bottom: 20px;
+}
+
+.loading,
+.error,
+.success {
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.error {
+  color: #d32f2f;
+}
+
+.success {
+  color: #388e3c;
+}
+
+.filterToggle {
+  background: none;
+  border: none;
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+
+.filters {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.group {
+  margin-bottom: 32px;
+}
+
+.group h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.grid {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  justify-content: flex-start;
-}
-
-.loading, .error, .success {
-  margin-bottom: 16px;
-  font-size: 0.95rem;
-}
-
-.sectionTitle {
-  font-size: 1.25rem;
-  font-weight: 500;
-  color: #003366;
-  margin: 2rem 0 1rem 0;
-}
-
-.scoreBlock {
-  text-align: center;
-  margin-bottom: 1rem;
-}
-
-.scoreBlock strong {
-  font-size: 2rem;
-  color: #0070f3;
-}
-
-.scoreBlock span {
-  display: block;
-  font-size: 0.9rem;
-  color: #666;
-}
-
-.filterWrapper {
-  margin-bottom: 2rem;
-  padding: 1rem 1.5rem;
-  background: #ffffff;
-  border: 1px solid #e1e4e8;
-  border-radius: 10px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
-}
-
-.groupSection {
-  margin-bottom: 2rem;
-}
-
-.groupTitle {
-  font-size: 1.3rem;
-  font-weight: 500;
-  margin-bottom: 0.75rem;
-  color: #003366;
-  padding-left: 0.5rem;
-}
-
-.taskList {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.25rem;
-}
-
-/* Filter toggle button row */
-.filterToggleRow {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 1rem;
-}
-
-.filterToggleButton {
-  background-color: white;
-  border: 1px solid #ccc;
-  padding: 6px;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s ease, border-color 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-
-.filterToggleButton:hover {
-  background-color: #f0f0f0;
-  border-color: #999;
-}
-
-/* Optional: Chart wrapper fallback for small devices */
-@media (max-width: 768px) {
-  .overviewBox {
-    padding: 1rem;
-  }
-
-  .taskList {
-    grid-template-columns: 1fr;
-  }
-
-  .filterToggleRow {
-    justify-content: center;
-  }
 }
