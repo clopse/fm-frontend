@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import styles from '@/styles/ComplianceLeaderboard.module.css';
-import { hotelNames } from '@/lib/hotels';
+import { hotels } from '@/lib/hotels';
 
 type LeaderboardEntry = {
-  hotel: string; // This is the hotel ID (e.g., "hiex")
+  hotel: string; // This is the hotelId
   score: number;
 };
 
@@ -25,7 +25,7 @@ export default function ComplianceLeaderboard({ data }: Props) {
     if (saved) {
       setSelectedHotels(JSON.parse(saved));
     } else {
-      setSelectedHotels(Object.keys(hotelNames)); // default: all hotels shown
+      setSelectedHotels(hotels.map((h) => h.id));
     }
   }, []);
 
@@ -39,34 +39,37 @@ export default function ComplianceLeaderboard({ data }: Props) {
 
   const toggleHotel = (id: string) => {
     const updated = selectedHotels.includes(id)
-      ? selectedHotels.filter(h => h !== id)
+      ? selectedHotels.filter((h) => h !== id)
       : [...selectedHotels, id];
     setSelectedHotels(updated);
     localStorage.setItem('selectedHotels', JSON.stringify(updated));
   };
 
-  const getHotelName = (id: string): string => hotelNames[id] || id;
-
-  const filteredData = sortedData.filter(entry => selectedHotels.includes(entry.hotel));
+  const filteredData = sortedData.filter((entry) =>
+    selectedHotels.includes(entry.hotel)
+  );
 
   return (
     <div className={styles.container}>
       <div className={styles.boxHeader}>
         <h2 className={styles.header}>Compliance Leaderboard</h2>
         <div className={styles.dropdownWrapper}>
-          <button onClick={() => setDropdownOpen(!dropdownOpen)} className={styles.dropdownButton}>
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className={styles.dropdownButton}
+          >
             ▼
           </button>
           {dropdownOpen && (
             <div className={styles.dropdownMenu}>
-              {Object.entries(hotelNames).map(([id, name]) => (
-                <label key={id} className={styles.dropdownItem}>
+              {hotels.map((hotel) => (
+                <label key={hotel.id} className={styles.dropdownItem}>
                   <input
                     type="checkbox"
-                    checked={selectedHotels.includes(id)}
-                    onChange={() => toggleHotel(id)}
+                    checked={selectedHotels.includes(hotel.id)}
+                    onChange={() => toggleHotel(hotel.id)}
                   />
-                  {name}
+                  {hotel.name}
                 </label>
               ))}
             </div>
@@ -75,41 +78,48 @@ export default function ComplianceLeaderboard({ data }: Props) {
       </div>
 
       <div className={styles.leaderboard}>
-        {filteredData.map((entry) => (
-          <div key={entry.hotel} className={styles.row}>
-            <div className={styles.logoCell}>
-              <Link href={`/hotels/${entry.hotel}`}>
-                <Image
-                  src={`/icons/${entry.hotel}-icon.png`}
-                  alt={getHotelName(entry.hotel)}
-                  width={150}
-                  height={90}
+        {filteredData.map((entry) => {
+          const hotel = hotels.find((h) => h.id === entry.hotel);
+          const hotelName = hotel?.name || entry.hotel;
+
+          return (
+            <div key={entry.hotel} className={styles.row}>
+              <div className={styles.logoCell}>
+                <Link href={`/hotels/${entry.hotel}`}>
+                  <Image
+                    src={`/icons/${entry.hotel}-icon.png`}
+                    alt={hotelName}
+                    width={150}
+                    height={90}
+                    style={{
+                      height: '90px',
+                      width: 'auto',
+                      maxWidth: '100%',
+                      objectFit: 'contain',
+                      cursor: 'pointer',
+                    }}
+                  />
+                </Link>
+              </div>
+
+              <div className={styles.barWrapper}>
+                <div
+                  className={styles.bar}
                   style={{
-                    height: '90px',
-                    width: 'auto',
-                    maxWidth: '100%',
-                    objectFit: 'contain',
-                    cursor: 'pointer',
+                    width: `${entry.score}%`,
+                    backgroundColor:
+                      entry.score >= 85
+                        ? '#28a745'
+                        : entry.score >= 70
+                        ? '#ffc107'
+                        : '#dc3545',
                   }}
                 />
-              </Link>
+                <span className={styles.score}>{entry.score}%</span>
+              </div>
             </div>
-
-            <div className={styles.barWrapper}>
-              <div
-                className={styles.bar}
-                style={{
-                  width: `${entry.score}%`,
-                  backgroundColor:
-                    entry.score >= 85 ? '#28a745' : entry.score >= 70 ? '#ffc107' : '#dc3545',
-                }}
-              />
-              <span className={styles.score}>
-                {entry.score}%
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
