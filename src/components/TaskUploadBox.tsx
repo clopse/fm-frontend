@@ -18,6 +18,7 @@ interface TaskUploadBoxProps {
   isMandatory: boolean;
   canConfirm: boolean;
   isConfirmed: boolean;
+  lastConfirmedDate: string | null;
   uploads: Upload[];
   onSuccess: () => void;
   onClose: () => void;
@@ -32,14 +33,17 @@ export default function TaskUploadBox({
   isMandatory,
   canConfirm,
   isConfirmed,
+  lastConfirmedDate,
   uploads,
   onSuccess,
   onClose,
 }: TaskUploadBoxProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [reportDate, setReportDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   if (!visible) return null;
@@ -49,16 +53,22 @@ export default function TaskUploadBox({
     setFile(selected);
 
     if (selected) {
-      const modifiedDate = new Date(selected.lastModified);
-      const now = new Date();
-      const parsed = modifiedDate > now ? now : modifiedDate;
-      setReportDate(parsed.toISOString().split('T')[0]);
+      const objectUrl = URL.createObjectURL(selected);
+      setPreviewUrl(objectUrl);
+
+      if (isMandatory) {
+        const modifiedDate = new Date(selected.lastModified);
+        const now = new Date();
+        const safeDate = modifiedDate > now ? now : modifiedDate;
+        setReportDate(safeDate.toISOString().split('T')[0]);
+      }
     } else {
+      setPreviewUrl(null);
       setReportDate('');
     }
   };
 
-  const handleUpload = async () => {
+  const handleSubmit = async () => {
     if (isMandatory && (!file || !reportDate)) {
       alert('Please select a file and report date.');
       return;
@@ -72,8 +82,15 @@ export default function TaskUploadBox({
     const formData = new FormData();
     formData.append('hotel_id', hotelId);
     formData.append('task_id', taskId);
-    formData.append('report_date', reportDate);
     formData.append('file', file);
+
+    if (isMandatory) {
+      formData.append('report_date', reportDate);
+    } else if (lastConfirmedDate) {
+      formData.append('report_date', lastConfirmedDate);
+    } else {
+      formData.append('report_date', today); // fallback
+    }
 
     try {
       setSubmitting(true);
@@ -90,29 +107,6 @@ export default function TaskUploadBox({
     } catch (err) {
       console.error(err);
       alert('Error uploading file.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleConfirmOnly = async () => {
-    if (!reportDate) return alert('Select date');
-    try {
-      setSubmitting(true);
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/confirm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          hotel_id: hotelId,
-          task_id: taskId,
-          report_date: reportDate,
-        }),
-      });
-      onSuccess();
-      onClose();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to confirm task.');
     } finally {
       setSubmitting(false);
     }
@@ -135,71 +129,82 @@ export default function TaskUploadBox({
         <p className={styles.description}>{info}</p>
 
         <div className={styles.body}>
-          {canConfirm && !isMandatory && (
-            <>
-              <label className={styles.dateLabel}>
-                Report Date
-                <input
-                  type="date"
-                  value={reportDate}
-                  onChange={(e) => setReportDate(e.target.value)}
-                  max={today}
-                />
-              </label>
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".pdf,.jpg,.jpeg,.png"
+            onChange={handleFileChange}
+            className={styles.fileInput}
+          />
 
-              <button className={styles.confirmButton} onClick={handleConfirmOnly}>
-                <svg
-                  className={styles.buttonIcon}
-                  viewBox="0 0 16 16"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M6 10.8L3.2 8l-.9.9L6 12.6 13.7 4.9l-.9-.9z" />
-                </svg>
-                Confirm Task
-              </button>
-            </>
+          <label className={styles.uploadButton}>
+            <svg
+              className={styles.buttonIcon}
+              viewBox="0 0 16 16"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M8 12V4m0 0L4 8m4-4l4 4M2 14h12"
+                stroke="currentColor"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Upload File
+            <input type="file" onChange={handleFileChange} className={styles.fileInput} />
+          </label>
+
+          {/* Optional upload message */}
+          {!isMandatory && (
+            <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>
+              This is an optional upload for proof or documentation.
+            </div>
           )}
 
-          {/* File Upload: always visible */}
-          <>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={handleFileChange}
-              className={styles.fileInput}
-            />
-
-            {file && (
-              <label className={styles.dateLabel}>
-                Report Date
-                <input
-                  type="date"
-                  value={reportDate}
-                  onChange={(e) => setReportDate(e.target.value)}
-                  max={today}
+          {/* Preview */}
+          {previewUrl && (
+            <div className={styles.previewCard}>
+              {file?.type.includes('pdf') ? (
+                <iframe
+                  className={styles.previewFrame}
+                  src={previewUrl}
+                  title="PDF Preview"
                 />
-              </label>
-            )}
-
-            <button className={styles.uploadButton} onClick={handleUpload}>
-              <svg
-                className={styles.buttonIcon}
-                viewBox="0 0 16 16"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M8 12V4m0 0L4 8m4-4l4 4M2 14h12"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+              ) : (
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className={styles.previewFrame}
                 />
-              </svg>
-              Upload File
-            </button>
-          </>
+              )}
+            </div>
+          )}
+
+          {/* Mandatory = show editable date */}
+          {isMandatory && file && (
+            <label className={styles.dateLabel}>
+              Report Date
+              <input
+                type="date"
+                value={reportDate}
+                onChange={(e) => setReportDate(e.target.value)}
+                max={today}
+              />
+            </label>
+          )}
+
+          <button className={styles.confirmButton} onClick={handleSubmit}>
+            <svg
+              className={styles.buttonIcon}
+              viewBox="0 0 16 16"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M6 10.8L3.2 8l-.9.9L6 12.6 13.7 4.9l-.9-.9z" />
+            </svg>
+            Submit
+          </button>
 
           {uploads.length > 0 && (
             <div className={styles.history}>
