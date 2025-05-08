@@ -130,9 +130,16 @@ export default function TaskUploadBox({
             <button
               className={styles.confirmButton}
               onClick={handleConfirmOnly}
-              disabled={submitting}
             >
-              ✅ Confirm Task
+              {/* Simple checkmark icon */}
+              <svg
+                className={styles.buttonIcon}
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M6 10.8L3.2 8l-.9.9L6 12.6 13.7 4.9l-.9-.9z" />
+              </svg>
+              Confirm Task
             </button>
           )}
 
@@ -148,9 +155,16 @@ export default function TaskUploadBox({
               <button
                 className={styles.uploadButton}
                 onClick={handleUpload}
-                disabled={!file || !reportDate || submitting}
               >
-                📎 Upload File
+                {/* Up‑arrow “upload” icon */}
+                <svg
+                  className={styles.buttonIcon}
+                  viewBox="0 0 16 16"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M8 12V4m0 0L4 8m4-4l4 4M2 14h12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Upload File
               </button>
             </>
           )}
