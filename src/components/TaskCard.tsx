@@ -1,60 +1,67 @@
-'use client';
-
-import React from 'react';
-import styles from '@/styles/TaskCard.module.css';
-
-interface SubTask {
-  label: string;
-  points: number;
+.card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  padding: 16px;
+  margin: 12px;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease-in-out;
 }
 
-interface Task {
-  task_id: string;
-  label: string;
-  type: 'upload' | 'confirmation';
-  points: number;
-  mandatory: boolean;
-  subtasks?: SubTask[];
+.card:hover {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
 }
 
-interface FileInfo {
-  score: number;
+.cardHeader {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #1a1a1a;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
 }
 
-interface TaskCardProps {
-  task: Task;
-  fileInfo: FileInfo | null;
-  onClick: () => void;
+.mIcon {
+  background-color: #0053a6;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, fileInfo, onClick }) => {
-  const score = fileInfo?.score ?? 0;
-  const max = task.points ?? 10;
+.cardFooter {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
 
-  const getColorClass = () => {
-    if (score === max) return styles.green;
-    if (score > 0) return styles.yellow;
-    return styles.red;
-  };
+.scoreBadge {
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  background-color: #eee;
+  color: #333;
+}
 
-  return (
-    <div className={styles.card} onClick={onClick}>
-      <div className={styles.cardHeader}>
-        {task.label}
-        {task.mandatory && (
-          <span className={styles.mIcon} title="Mandatory">
-            🅜
-          </span>
-        )}
-      </div>
+.green {
+  background-color: #28a745;
+  color: white;
+}
 
-      <div className={styles.cardFooter}>
-        <span className={`${styles.scoreBadge} ${getColorClass()}`}>
-          {score}/{max} pts
-        </span>
-      </div>
-    </div>
-  );
-};
+.yellow {
+  background-color: #ffc107;
+  color: #212529;
+}
 
-export default TaskCard;
+.red {
+  background-color: #dc3545;
+  color: white;
+}
