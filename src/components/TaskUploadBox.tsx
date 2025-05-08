@@ -9,6 +9,17 @@ interface Upload {
   uploaded_by: string;
 }
 
+interface HistoryEntry {
+  type: 'upload' | 'confirmation';
+  fileName?: string;
+  fileUrl?: string;
+  reportDate?: string;
+  uploadedAt?: string;
+  uploadedBy?: string;
+  confirmedAt?: string;
+  confirmedBy?: string;
+}
+
 interface TaskUploadBoxProps {
   visible: boolean;
   hotelId: string;
@@ -20,6 +31,7 @@ interface TaskUploadBoxProps {
   isConfirmed: boolean;
   lastConfirmedDate: string | null;
   uploads: Upload[];
+  history: HistoryEntry[];
   onSuccess: () => void;
   onClose: () => void;
 }
@@ -35,6 +47,7 @@ export default function TaskUploadBox({
   isConfirmed,
   lastConfirmedDate,
   uploads,
+  history,
   onSuccess,
   onClose,
 }: TaskUploadBoxProps) {
@@ -117,11 +130,7 @@ export default function TaskUploadBox({
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h2 className={styles.title}>{label}</h2>
-          <button
-            className={styles.closeButton}
-            onClick={onClose}
-            aria-label="Close modal"
-          >
+          <button className={styles.closeButton} onClick={onClose}>
             ✕
           </button>
         </div>
@@ -129,6 +138,13 @@ export default function TaskUploadBox({
         <p className={styles.description}>{info}</p>
 
         <div className={styles.body}>
+          <button
+            type="button"
+            className={styles.uploadButton}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            📁 Upload File
+          </button>
           <input
             type="file"
             ref={fileInputRef}
@@ -137,33 +153,12 @@ export default function TaskUploadBox({
             className={styles.fileInput}
           />
 
-          <label className={styles.uploadButton}>
-            <svg
-              className={styles.buttonIcon}
-              viewBox="0 0 16 16"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M8 12V4m0 0L4 8m4-4l4 4M2 14h12"
-                stroke="currentColor"
-                strokeWidth="2"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            Upload File
-            <input type="file" onChange={handleFileChange} className={styles.fileInput} />
-          </label>
-
-          {/* Optional upload message */}
           {!isMandatory && (
-            <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>
-              This is an optional upload for proof or documentation.
+            <div className={styles.optionalNote}>
+              Optional upload — not required to earn points.
             </div>
           )}
 
-          {/* Preview */}
           {previewUrl && (
             <div className={styles.previewCard}>
               {file?.type.includes('pdf') ? (
@@ -182,7 +177,6 @@ export default function TaskUploadBox({
             </div>
           )}
 
-          {/* Mandatory = show editable date */}
           {isMandatory && file && (
             <label className={styles.dateLabel}>
               Report Date
@@ -195,26 +189,32 @@ export default function TaskUploadBox({
             </label>
           )}
 
-          <button className={styles.confirmButton} onClick={handleSubmit}>
-            <svg
-              className={styles.buttonIcon}
-              viewBox="0 0 16 16"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M6 10.8L3.2 8l-.9.9L6 12.6 13.7 4.9l-.9-.9z" />
-            </svg>
-            Submit
+          <button
+            className={styles.confirmButton}
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
+            {submitting ? 'Submitting...' : 'Submit'}
           </button>
 
-          {uploads.length > 0 && (
+          {history.length > 0 && (
             <div className={styles.history}>
-              <h4>📁 Previous Uploads</h4>
-              {uploads.map((u, i) => (
+              <h4>🕓 Task History</h4>
+              {history.map((entry, i) => (
                 <div key={i} className={styles.uploadEntry}>
-                  <a href={u.url} target="_blank" rel="noopener noreferrer">
-                    {u.report_date}
-                  </a>
-                  <span>Uploaded by: {u.uploaded_by}</span>
+                  {entry.type === 'upload' ? (
+                    <>
+                      <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">
+                        {entry.reportDate}
+                      </a>
+                      <span>Uploaded by: {entry.uploadedBy}</span>
+                    </>
+                  ) : (
+                    <span>
+                      ✅ Confirmed by {entry.confirmedBy} on{' '}
+                      {new Date(entry.confirmedAt || '').toLocaleDateString('en-GB')}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
