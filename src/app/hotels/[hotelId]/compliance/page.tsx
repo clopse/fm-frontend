@@ -30,11 +30,23 @@ const CompliancePage = ({ params }: Props) => {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [visible, setVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`)
-      .then((res) => res.json())
-      .then((data) => setTasks(data));
+      .then((res) => {
+        if (!res.ok) throw new Error(`Failed to load tasks: ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (!Array.isArray(data)) throw new Error('Invalid task data format');
+        setTasks(data);
+        setError(null);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError('Unable to load compliance tasks. Please try again later.');
+      });
   }, [hotelId]);
 
   const openUploadModal = (taskId: string) => {
@@ -44,8 +56,19 @@ const CompliancePage = ({ params }: Props) => {
 
   const handleUploadSuccess = () => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`)
-      .then((res) => res.json())
-      .then((data) => setTasks(data));
+      .then((res) => {
+        if (!res.ok) throw new Error(`Failed to reload tasks: ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (!Array.isArray(data)) throw new Error('Invalid task data format');
+        setTasks(data);
+        setError(null);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError('Unable to refresh task list after upload.');
+      });
   };
 
   const selectedTaskObj = useMemo(
@@ -53,13 +76,12 @@ const CompliancePage = ({ params }: Props) => {
     [tasks, selectedTask]
   );
 
-  useEffect(() => {
-    console.log('Loaded tasks:', tasks);
-  }, [tasks]);
-
   return (
     <div className={styles.container}>
       <h1>Compliance Tasks</h1>
+
+      {error && <p className={styles.error}>{error}</p>}
+
       <ul className={styles.taskList}>
         {tasks.map((task) => (
           <li key={task.task_id} className={styles.taskItem}>
