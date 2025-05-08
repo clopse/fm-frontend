@@ -89,6 +89,9 @@
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .uploadButton {
@@ -96,7 +99,7 @@
   color: #fff;
 }
 
-.uploadButton:hover:not(:disabled) {
+.uploadButton:hover {
   background: #0056b3;
 }
 
@@ -105,14 +108,16 @@
   color: #fff;
 }
 
-.confirmButton:hover:not(:disabled) {
+.confirmButton:hover {
   background: #218838;
 }
 
-.uploadButton:disabled,
-.confirmButton:disabled {
-  background: #aaa;
-  cursor: not-allowed;
+/* Icon sizing */
+.buttonIcon {
+  width: 1em;
+  height: 1em;
+  margin-right: 0.5em;
+  fill: currentColor;
 }
 
 .fileInput {
