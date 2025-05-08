@@ -53,3 +53,30 @@
   flex-wrap: wrap;
   gap: 16px;
 }
+
+.overviewBox {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.scoreBlock {
+  text-align: center;
+}
+
+.scoreBlock strong {
+  font-size: 28px;
+  color: #0070f3;
+  display: block;
+}
+
+.scoreBlock span {
+  font-size: 14px;
+  color: #444;
+}
+
