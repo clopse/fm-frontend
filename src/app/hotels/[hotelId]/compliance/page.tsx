@@ -25,16 +25,20 @@ interface HistoryEntry {
 interface TaskItem {
   task_id: string;
   label: string;
-  type: 'upload' | 'confirmation';
+  info_popup: string;
   frequency: string;
   category: string;
-  points: number;
   mandatory: boolean;
+  type: 'upload' | 'confirmation';
   can_confirm: boolean;
   is_confirmed_this_month: boolean;
   last_confirmed_date: string | null;
-  info_popup: string;
+  points: number;
   uploads: Upload[];
+}
+
+interface ScoreBreakdown {
+  [taskId: string]: number;
 }
 
 interface Props {
@@ -45,18 +49,29 @@ const CompliancePage = ({ params }: Props) => {
   const hotelId = params.hotelId;
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [history, setHistory] = useState<Record<string, HistoryEntry[]>>({});
+  const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown>({});
   const [visible, setVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Filters
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedFrequencies, setSelectedFrequencies] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([loadTasks(), loadHistory(), loadScores()]).finally(() => setLoading(false));
+  }, [hotelId]);
+
   const loadTasks = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
       const data = await res.json();
-      if (!Array.isArray(data.tasks)) throw new Error('Invalid task format');
-      setTasks(data.tasks);
+      setTasks(Array.isArray(data.tasks) ? data.tasks : []);
     } catch (err) {
       console.error(err);
       setError('Unable to load compliance tasks.');
@@ -74,21 +89,21 @@ const CompliancePage = ({ params }: Props) => {
     }
   };
 
-  useEffect(() => {
-    setLoading(true);
-    Promise.all([loadTasks(), loadHistory()]).finally(() => setLoading(false));
-  }, [hotelId]);
-
-  const openUploadModal = (taskId: string) => {
-    setSelectedTask(taskId);
-    setVisible(true);
-    setSuccessMessage(null);
+  const loadScores = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
+      const data = await res.json();
+      setScoreBreakdown(data.task_breakdown || {});
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleUploadSuccess = async () => {
     setSuccessMessage('✅ Upload successful!');
     await loadTasks();
     await loadHistory();
+    await loadScores();
   };
 
   const selectedTaskObj = useMemo(
@@ -96,29 +111,96 @@ const CompliancePage = ({ params }: Props) => {
     [tasks, selectedTask]
   );
 
+  const categories = Array.from(new Set(tasks.map((t) => t.category)));
+  const frequencies = Array.from(new Set(tasks.map((t) => t.frequency)));
+
+  const grouped = useMemo(() => {
+    const filtered = tasks.filter((task) => {
+      const categoryMatch = selectedCategories.length === 0 || selectedCategories.includes(task.category);
+      const freqMatch = selectedFrequencies.length === 0 || selectedFrequencies.includes(task.frequency);
+      const searchMatch = task.label.toLowerCase().includes(searchTerm.toLowerCase());
+      return categoryMatch && freqMatch && searchMatch;
+    });
+
+    return filtered.reduce((acc, task) => {
+      const group = acc[task.category] || [];
+      group.push(task);
+      acc[task.category] = group;
+      return acc;
+    }, {} as Record<string, TaskItem[]>);
+  }, [tasks, selectedCategories, selectedFrequencies, searchTerm]);
+
   return (
     <div className={styles.container}>
       <h1>Compliance Tasks</h1>
-
       {loading && <p className={styles.loading}>Loading...</p>}
       {error && <p className={styles.error}>{error}</p>}
       {successMessage && <p className={styles.success}>{successMessage}</p>}
 
-      <div className={styles.cardGrid}>
-        {tasks.map((task) => {
-          const taskHistory = history[task.task_id] || [];
-          const score = taskHistory.length > 0 ? { score: taskHistory[0].type === 'confirmation' ? task.points : 0 } : null;
+      <button
+        className={styles.filterToggle}
+        onClick={() => setFiltersOpen((prev) => !prev)}
+        title="Toggle filters"
+      >
+        <img src="/icons/filter-icon.png" width={25} height={25} alt="Filter" />
+      </button>
 
-          return (
-            <TaskCard
-              key={task.task_id}
-              task={task}
-              fileInfo={score}
-              onClick={() => openUploadModal(task.task_id)}
+      {filtersOpen && (
+        <div className={styles.filters}>
+          <div>
+            <label>Category</label>
+            <select multiple value={selectedCategories} onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
+              setSelectedCategories(selected);
+            }}>
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label>Frequency</label>
+            <select multiple value={selectedFrequencies} onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
+              setSelectedFrequencies(selected);
+            }}>
+              {frequencies.map((f) => (
+                <option key={f} value={f}>{f}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label>Search</label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search tasks..."
             />
-          );
-        })}
-      </div>
+          </div>
+        </div>
+      )}
+
+      {Object.keys(grouped).map((category) => (
+        <div key={category} className={styles.group}>
+          <h2>{category}</h2>
+          <div className={styles.grid}>
+            {grouped[category].map((task) => (
+              <TaskCard
+                key={task.task_id}
+                task={task}
+                fileInfo={{ score: scoreBreakdown[task.task_id] ?? 0 }}
+                onClick={() => {
+                  setSelectedTask(task.task_id);
+                  setVisible(true);
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
 
       {visible && selectedTask && selectedTaskObj && (
         <TaskUploadBox
