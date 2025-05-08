@@ -68,15 +68,13 @@ export default function CompliancePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const chartData = scoreData?.monthly_history
-    ? Object.entries(scoreData.monthly_history).map(([month, val]) => {
-        const data = val as MonthlyEntry;
-        return {
+  const chartData =
+    scoreData?.monthly_history
+      ? Object.entries(scoreData.monthly_history).map(([month, val]) => ({
           month,
-          percent: Math.round((data.score / data.max) * 100),
-        };
-      })
-    : [];
+          percent: Math.round((val.score / val.max) * 100),
+        }))
+      : [];
 
   const handleUpload = async () => {
     if (!hotelId) return;
@@ -108,9 +106,9 @@ export default function CompliancePage() {
     new Set(complianceGroups.flatMap((g) => g.tasks.map((t) => t.frequency)))
   );
 
-  const selectedTaskObj = complianceGroups
-    .flatMap((g) => g.tasks)
-    .find((t) => t.task_id === selectedTask);
+  const selectedTaskObj = selectedTask
+    ? complianceGroups.flatMap((g) => g.tasks).find((t) => t.task_id === selectedTask)
+    : null;
 
   const selectedTaskUploads = scoreData?.detailed
     ?.filter((t) => t.task_id === selectedTask)
@@ -187,20 +185,20 @@ export default function CompliancePage() {
         </div>
       ))}
 
-      {selectedTask && selectedTaskObj && (
-          <TaskUploadBox
-            visible={visible}
-            hotelId={hotelId as string}
-            taskId={selectedTask}
-            label={selectedTaskObj.label || 'Task'}
-            info={selectedTaskObj.info_popup || ''}
-            isMandatory={selectedTaskObj.mandatory}
-            canConfirm={selectedTaskObj.type === 'confirmation'}
-            isConfirmed={false}
-            uploads={selectedTaskUploads}
-            onSuccess={refetchData}
-            onClose={() => setVisible(false)}
-  />
+      {visible && selectedTask && selectedTaskObj && (
+        <TaskUploadBox
+          visible={visible}
+          hotelId={hotelId as string}
+          taskId={selectedTask}
+          label={selectedTaskObj.label}
+          info={selectedTaskObj.info_popup || ''}
+          isMandatory={selectedTaskObj.mandatory}
+          canConfirm={selectedTaskObj.type === 'confirmation'}
+          isConfirmed={false}
+          uploads={selectedTaskUploads}
+          onSuccess={refetchData}
+          onClose={() => setVisible(false)}
+        />
       )}
     </div>
   );
