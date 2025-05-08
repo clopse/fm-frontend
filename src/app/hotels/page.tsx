@@ -9,7 +9,7 @@ import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
 import { RecentUploads } from '@/components/RecentUploads';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
 import UserPanel from '@/components/UserPanel';
-import { hotels } from '@/lib/hotels';
+import { hotels, hotelNames } from '@/lib/hotels';
 
 import styles from '@/styles/AdminDashboard.module.css';
 import headerStyles from '@/styles/HeaderBar.module.css';
@@ -40,26 +40,33 @@ export default function HotelsPage() {
       })
       .catch((err) => {
         console.error('Error loading leaderboard:', err);
-        // fallback if API fails
         setLeaderboardData(hotels.map((hotel) => ({
           hotel: hotel.name,
           score: 0,
         })));
       });
 
-    // Simulated uploads (replace with backend later)
-    setRecentUploads([
-      {
-        hotel: 'Holiday Inn Express',
-        report: 'Fire Extinguisher Report 2025',
-        date: '2025-04-01',
-      },
-      {
-        hotel: 'Moxy Cork',
-        report: 'Electrical Inspection',
-        date: '2025-03-25',
-      },
-    ]);
+    // Fetch latest unapproved audit entries
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/all`)
+      .then((res) => res.json())
+      .then((data) => {
+        const entries = (data.entries || [])
+          .filter((e: any) => !e.approved)
+          .sort((a: any, b: any) =>
+            new Date(b.uploadedAt || b.confirmedAt).getTime() -
+            new Date(a.uploadedAt || a.confirmedAt).getTime()
+          )
+          .slice(0, 10)
+          .map((entry: any) => ({
+            hotel: hotelNames[entry.hotel_id] || entry.hotel_id,
+            report: `${entry.task_id} (${entry.type})`,
+            date: entry.uploadedAt || entry.confirmedAt || '',
+          }));
+        setRecentUploads(entries);
+      })
+      .catch((err) => {
+        console.error('Error loading audit entries:', err);
+      });
   }, []);
 
   const handleHotelSelect = (hotelName: string) => {
@@ -109,17 +116,20 @@ export default function HotelsPage() {
         onSelectHotel={handleHotelSelect}
       />
 
+      {/* Leaderboard */}
       <div className={`${styles.section} ${styles.topSection}`}>
         <ComplianceLeaderboard data={leaderboardData} />
       </div>
 
+      {/* Utilities Chart */}
       <div className={`${styles.section} ${styles.middleSection}`}>
         <h2 className={styles.header}>Hotel Utilities Comparison</h2>
         <UtilitiesGraphs />
       </div>
 
+      {/* Recent Uploads (from global audit log) */}
       <div className={`${styles.section} ${styles.recentUploadsSection}`}>
-        <h2 className={styles.header}>Recent Uploads</h2>
+        <h2 className={styles.header}>Recent Uploads Awaiting Approval</h2>
         <RecentUploads uploads={recentUploads} />
       </div>
     </div>
