@@ -48,21 +48,21 @@ const CompliancePage = ({ params }: Props) => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Load task list
+  // Fetch full task list
   const loadTasks = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
       if (!res.ok) throw new Error('Failed to load task list');
       const data = await res.json();
-      if (!Array.isArray(data)) throw new Error('Invalid task list format');
-      setTasks(data);
+      if (!Array.isArray(data.tasks)) throw new Error('Invalid task list format');
+      setTasks(data.tasks); // ✅ CORRECTED
     } catch (err) {
       console.error(err);
       setError('Unable to load compliance tasks.');
     }
   };
 
-  // Load full history
+  // Fetch history entries
   const loadHistory = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/${hotelId}`);
@@ -74,11 +74,9 @@ const CompliancePage = ({ params }: Props) => {
     }
   };
 
-  // Load both
   useEffect(() => {
     setLoading(true);
-    Promise.all([loadTasks(), loadHistory()])
-      .finally(() => setLoading(false));
+    Promise.all([loadTasks(), loadHistory()]).finally(() => setLoading(false));
   }, [hotelId]);
 
   const openUploadModal = (taskId: string) => {
@@ -146,7 +144,7 @@ const CompliancePage = ({ params }: Props) => {
           isConfirmed={selectedTaskObj.is_confirmed_this_month}
           lastConfirmedDate={selectedTaskObj.last_confirmed_date}
           uploads={selectedTaskObj.uploads || []}
-          history={history[selectedTask] || []}  // NEW ✅
+          history={history[selectedTask] || []}
           onSuccess={handleUploadSuccess}
           onClose={() => setVisible(false)}
         />
