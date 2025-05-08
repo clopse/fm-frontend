@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import styles from '@/styles/AuditDashboard.module.css';
-import { hotelNames } from '@/lib/hotelNames';
+import { hotelNames } from '@/lib/hotels';
 
 interface AuditEntry {
   hotel_id: string;
