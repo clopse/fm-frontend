@@ -30,9 +30,12 @@ const CompliancePage = ({ params }: Props) => {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [visible, setVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoading(true);
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to load tasks: ${res.status}`);
@@ -46,15 +49,18 @@ const CompliancePage = ({ params }: Props) => {
       .catch((err) => {
         console.error(err);
         setError('Unable to load compliance tasks. Please try again later.');
-      });
+      })
+      .finally(() => setLoading(false));
   }, [hotelId]);
 
   const openUploadModal = (taskId: string) => {
     setSelectedTask(taskId);
     setVisible(true);
+    setSuccessMessage(null); // clear previous success
   };
 
   const handleUploadSuccess = () => {
+    setSuccessMessage('✅ Upload successful!');
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to reload tasks: ${res.status}`);
@@ -80,7 +86,9 @@ const CompliancePage = ({ params }: Props) => {
     <div className={styles.container}>
       <h1>Compliance Tasks</h1>
 
+      {loading && <p className={styles.loading}>Loading tasks...</p>}
       {error && <p className={styles.error}>{error}</p>}
+      {successMessage && <p className={styles.success}>{successMessage}</p>}
 
       <ul className={styles.taskList}>
         {tasks.map((task) => (
