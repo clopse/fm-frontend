@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import TaskUploadBox from '@/components/TaskUploadBox';
 import styles from '@/styles/CompliancePage.module.css';
 
@@ -43,13 +43,19 @@ const CompliancePage = ({ params }: Props) => {
   };
 
   const handleUploadSuccess = () => {
-    // Re-fetch tasks to update upload history and status
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`)
       .then((res) => res.json())
       .then((data) => setTasks(data));
   };
 
-  const selectedTaskObj = tasks.find((t) => t.task_id === selectedTask);
+  const selectedTaskObj = useMemo(
+    () => tasks.find((t) => t.task_id === selectedTask) || null,
+    [tasks, selectedTask]
+  );
+
+  useEffect(() => {
+    console.log('Loaded tasks:', tasks);
+  }, [tasks]);
 
   return (
     <div className={styles.container}>
@@ -82,7 +88,7 @@ const CompliancePage = ({ params }: Props) => {
         ))}
       </ul>
 
-      {visible && selectedTask && selectedTaskObj && (
+      {visible && selectedTask && selectedTaskObj ? (
         <TaskUploadBox
           visible={visible}
           hotelId={hotelId}
@@ -92,12 +98,12 @@ const CompliancePage = ({ params }: Props) => {
           isMandatory={selectedTaskObj.mandatory}
           canConfirm={selectedTaskObj.can_confirm}
           isConfirmed={selectedTaskObj.is_confirmed_this_month}
-          lastConfirmedDate={selectedTaskObj.last_confirmed_date} // ✅ Required
+          lastConfirmedDate={selectedTaskObj.last_confirmed_date}
           uploads={selectedTaskObj.uploads || []}
           onSuccess={handleUploadSuccess}
           onClose={() => setVisible(false)}
         />
-      )}
+      ) : null}
     </div>
   );
 };
