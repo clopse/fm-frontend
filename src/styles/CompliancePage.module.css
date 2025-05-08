@@ -22,6 +22,22 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
+.container {
+  padding: 24px;
+}
+
+.cardGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: flex-start;
+}
+
+.loading, .error, .success {
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+}
+
 .sectionTitle {
   font-size: 1.25rem;
   font-weight: 500;
