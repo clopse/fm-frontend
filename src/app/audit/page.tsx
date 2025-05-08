@@ -2,80 +2,86 @@
 
 import { useEffect, useState } from 'react';
 import styles from '@/styles/AuditDashboard.module.css';
-import { hotelNames } from '@/lib/hotels';
+import { hotels } from '@/lib/hotels';
 
 interface AuditEntry {
   hotel_id: string;
   task_id: string;
-  fileUrl?: string;
+  fileName: string;
   reportDate?: string;
-  filename?: string;
-  uploadedAt?: string;
   confirmedAt?: string;
-  uploaded_by?: string;
-  user?: string;
+  uploadedAt?: string;
+  uploadedBy?: string;
+  fileUrl: string;
   type: 'upload' | 'confirmation';
-  approved?: boolean;
 }
 
 export default function AuditPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/audit/all`)
-      .then(res => res.json())
-      .then(data => {
-        setEntries(data.entries || []);
-        setLoading(false);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/compliance-history`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`Failed to fetch history: ${res.status}`);
+        return res.json();
       })
-      .catch(err => {
-        console.error('Audit fetch failed', err);
-        setLoading(false);
-      });
+      .then((data: AuditEntry[]) => {
+        setEntries(data);
+        setError(null);
+      })
+      .catch((err) => {
+        console.error(err);
+        setError('Failed to load compliance history.');
+      })
+      .finally(() => setLoading(false));
   }, []);
-
-  const unapproved = entries.filter(e => !e.approved);
-  const approved = entries.filter(e => e.approved);
 
   return (
     <div className={styles.container}>
       <h1>📋 Compliance Audit Log</h1>
-      {loading && <p>Loading...</p>}
 
-      <h2>🆕 Unapproved Entries</h2>
-      {unapproved.length === 0 ? <p>No pending items</p> : (
-        <ul className={styles.entryList}>
-          {unapproved.map((entry, i) => (
-            <li key={i} className={styles.entry}>
-              <strong>{hotelNames[entry.hotel_id] || entry.hotel_id}</strong> – Task: {entry.task_id} ({entry.type})
-              <div>
-                {entry.uploadedAt && <>Uploaded: {entry.uploadedAt}<br /></>}
-                {entry.confirmedAt && <>Confirmed: {entry.confirmedAt}<br /></>}
-                {entry.fileUrl && <a href={entry.fileUrl} target="_blank">📎 View File</a>}
-              </div>
-              <button className={styles.approveBtn}>✅ Mark Approved</button>
-            </li>
-          ))}
-        </ul>
+      {loading && <p>Loading entries...</p>}
+      {error && <p className={styles.error}>{error}</p>}
+
+      {!loading && !error && (
+        <table className={styles.auditTable}>
+          <thead>
+            <tr>
+              <th>Hotel</th>
+              <th>Task</th>
+              <th>Type</th>
+              <th>Date</th>
+              <th>By</th>
+              <th>File</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((entry, i) => {
+              const hotelName =
+                hotels.find((h) => h.id === entry.hotel_id)?.name || entry.hotel_id;
+              const date = entry.reportDate || entry.confirmedAt || entry.uploadedAt || '—';
+              const by = entry.uploadedBy || '—';
+
+              return (
+                <tr key={i}>
+                  <td>{hotelName}</td>
+                  <td>{entry.task_id}</td>
+                  <td>{entry.type}</td>
+                  <td>{date.slice(0, 10)}</td>
+                  <td>{by}</td>
+                  <td>
+                    <a href={entry.fileUrl} target="_blank" rel="noreferrer">
+                      View
+                    </a>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       )}
-
-      <details>
-        <summary>✅ View All Approved</summary>
-        <ul className={styles.entryList}>
-          {approved.map((entry, i) => (
-            <li key={i} className={styles.entry}>
-              <strong>{hotelNames[entry.hotel_id] || entry.hotel_id}</strong> – Task: {entry.task_id} ({entry.type})
-              <div>
-                {entry.uploadedAt && <>Uploaded: {entry.uploadedAt}<br /></>}
-                {entry.confirmedAt && <>Confirmed: {entry.confirmedAt}<br /></>}
-                {entry.fileUrl && <a href={entry.fileUrl} target="_blank">📎 View File</a>}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </details>
     </div>
   );
 }
-
