@@ -1,160 +1,179 @@
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+'use client';
+
+import React, { useRef, useState } from 'react';
+import styles from '@/styles/TaskUploadBox.module.css';
+
+interface Upload {
+  url: string;
+  report_date: string;
+  uploaded_by: string;
 }
 
-.modal {
-  background: #fff;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 860px;
-  max-height: 95vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-  overflow: hidden;
+interface TaskUploadBoxProps {
+  visible: boolean;
+  hotelId: string;
+  taskId: string;
+  label: string;
+  info: string;
+  isMandatory: boolean;
+  canConfirm: boolean;
+  isConfirmed: boolean;
+  uploads: Upload[];
+  onSuccess: () => void;
+  onClose: () => void;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #f1f4f8;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #ddd;
-}
+export default function TaskUploadBox({
+  visible,
+  hotelId,
+  taskId,
+  label,
+  info,
+  isMandatory,
+  canConfirm,
+  isConfirmed,
+  uploads,
+  onSuccess,
+  onClose,
+}: TaskUploadBoxProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [reportDate, setReportDate] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-.title {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #333;
-}
+  if (!visible) return null;
 
-.closeButton {
-  background: transparent;
-  border: none;
-  font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-  color: #666;
-}
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFile(e.target.files?.[0] || null);
+  };
 
-.description {
-  padding: 1rem 1.5rem;
-  background: #fafafa;
-  font-size: 0.95rem;
-  color: #555;
-}
+  const handleUpload = async () => {
+    if (!file || !reportDate) return alert('Please select a file and date.');
 
-.body {
-  padding: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  align-items: center;
-}
+    const formData = new FormData();
+    formData.append('hotel_id', hotelId);
+    formData.append('task_id', taskId);
+    formData.append('report_date', reportDate);
+    formData.append('file', file);
 
-.dateLabel {
-  width: 100%;
-  max-width: 720px;
-  display: flex;
-  flex-direction: column;
-  font-weight: 500;
-  color: #333;
-}
+    try {
+      setSubmitting(true);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+      if (!res.ok) throw new Error('Upload failed');
+      onSuccess();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert('Error uploading file.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-.dateLabel input {
-  margin-top: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  width: 200px;
-}
+  const handleConfirmOnly = async () => {
+    if (!reportDate) return alert('Select date');
 
-.uploadButton,
-.confirmButton {
-  width: 100%;
-  max-width: 300px;
-  padding: 0.75rem 1.25rem;
-  font-size: 1rem;
-  font-weight: 600;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
+    try {
+      setSubmitting(true);
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hotel_id: hotelId,
+          task_id: taskId,
+          report_date: reportDate,
+        }),
+      });
+      onSuccess();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert('Failed to confirm task.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-.uploadButton {
-  background: #007bff;
-  color: #fff;
-}
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.header}>
+          <h2 className={styles.title}>{label}</h2>
+          <button
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label="Close modal"
+          >
+            ✕
+          </button>
+        </div>
 
-.uploadButton:hover:not(:disabled) {
-  background: #0056b3;
-}
+        <p className={styles.description}>{info}</p>
 
-.confirmButton {
-  background: #28a745;
-  color: #fff;
-}
+        <div className={styles.body}>
+          <label className={styles.dateLabel}>
+            Report Date
+            <input
+              type="date"
+              value={reportDate}
+              onChange={(e) => setReportDate(e.target.value)}
+            />
+          </label>
 
-.confirmButton:hover:not(:disabled) {
-  background: #218838;
-}
+          {canConfirm && !isMandatory && (
+            <button
+              className={styles.confirmButton}
+              onClick={handleConfirmOnly}
+              disabled={submitting}
+            >
+              ✅ Confirm Task
+            </button>
+          )}
 
-.uploadButton:disabled,
-.confirmButton:disabled {
-  background: #aaa;
-  cursor: not-allowed;
-}
+          {isMandatory && (
+            <>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleFileChange}
+                className={styles.fileInput}
+              />
+              <button
+                className={styles.uploadButton}
+                onClick={handleUpload}
+                disabled={!file || !reportDate || submitting}
+              >
+                📎 Upload File
+              </button>
+            </>
+          )}
 
-.fileInput {
-  display: none;
-}
-
-.history {
-  width: 100%;
-  max-width: 720px;
-  margin-top: 1.5rem;
-  padding: 1rem 1.5rem;
-  background: #f9fbfd;
-  border-top: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
-  border-radius: 0 0 12px 12px;
-}
-
-.history h4 {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #222;
-}
-
-.uploadEntry {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-  color: #333;
-}
-
-.uploadEntry a {
-  color: #007bff;
-  text-decoration: none;
-}
-
-.uploadEntry a:hover {
-  text-decoration: underline;
-}
-
-.uploadEntry span {
-  font-size: 0.9rem;
-  color: #555;
+          {uploads.length > 0 && (
+            <div className={styles.history}>
+              <h4>📁 Previous Uploads</h4>
+              {uploads.map((u, i) => (
+                <div key={i} className={styles.uploadEntry}>
+                  <a
+                    href={u.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {u.report_date}
+                  </a>
+                  <span>Uploaded by: {u.uploaded_by}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
