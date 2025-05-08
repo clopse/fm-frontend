@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import styles from '@/styles/TaskUploadBox.module.css';
 
 interface Upload {
@@ -37,14 +37,28 @@ export default function TaskUploadBox({
   onClose,
 }: TaskUploadBoxProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [reportDate, setReportDate] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [reportDate, setReportDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   if (!visible) return null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFile(e.target.files?.[0] || null);
+    const selected = e.target.files?.[0] || null;
+    setFile(selected);
+
+    if (selected) {
+      const modifiedDate = new Date(selected.lastModified);
+      const now = new Date();
+      const parsedDate =
+        modifiedDate > now ? now : modifiedDate;
+      const formatted = parsedDate.toISOString().split('T')[0];
+      setReportDate(formatted);
+    } else {
+      setReportDate('');
+    }
   };
 
   const handleUpload = async () => {
@@ -78,7 +92,6 @@ export default function TaskUploadBox({
 
   const handleConfirmOnly = async () => {
     if (!reportDate) return alert('Select date');
-
     try {
       setSubmitting(true);
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/confirm`, {
@@ -117,32 +130,33 @@ export default function TaskUploadBox({
         <p className={styles.description}>{info}</p>
 
         <div className={styles.body}>
-          <label className={styles.dateLabel}>
-            Report Date
-            <input
-              type="date"
-              value={reportDate}
-              onChange={(e) => setReportDate(e.target.value)}
-            />
-          </label>
-
+          {/* Confirm-only tasks show date field immediately */}
           {canConfirm && !isMandatory && (
-            <button
-              className={styles.confirmButton}
-              onClick={handleConfirmOnly}
-            >
-              {/* Simple checkmark icon */}
-              <svg
-                className={styles.buttonIcon}
-                viewBox="0 0 16 16"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M6 10.8L3.2 8l-.9.9L6 12.6 13.7 4.9l-.9-.9z" />
-              </svg>
-              Confirm Task
-            </button>
+            <>
+              <label className={styles.dateLabel}>
+                Report Date
+                <input
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  max={today}
+                />
+              </label>
+
+              <button className={styles.confirmButton} onClick={handleConfirmOnly}>
+                <svg
+                  className={styles.buttonIcon}
+                  viewBox="0 0 16 16"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M6 10.8L3.2 8l-.9.9L6 12.6 13.7 4.9l-.9-.9z" />
+                </svg>
+                Confirm Task
+              </button>
+            </>
           )}
 
+          {/* Upload task */}
           {isMandatory && (
             <>
               <input
@@ -152,20 +166,38 @@ export default function TaskUploadBox({
                 onChange={handleFileChange}
                 className={styles.fileInput}
               />
-              <button
-                className={styles.uploadButton}
-                onClick={handleUpload}
-              >
-                {/* Up‑arrow “upload” icon */}
-                <svg
-                  className={styles.buttonIcon}
-                  viewBox="0 0 16 16"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M8 12V4m0 0L4 8m4-4l4 4M2 14h12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Upload File
-              </button>
+
+              {file && (
+                <>
+                  <label className={styles.dateLabel}>
+                    Report Date
+                    <input
+                      type="date"
+                      value={reportDate}
+                      onChange={(e) => setReportDate(e.target.value)}
+                      max={today}
+                    />
+                  </label>
+
+                  <button className={styles.uploadButton} onClick={handleUpload}>
+                    <svg
+                      className={styles.buttonIcon}
+                      viewBox="0 0 16 16"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M8 12V4m0 0L4 8m4-4l4 4M2 14h12"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    Upload File
+                  </button>
+                </>
+              )}
             </>
           )}
 
@@ -174,11 +206,7 @@ export default function TaskUploadBox({
               <h4>📁 Previous Uploads</h4>
               {uploads.map((u, i) => (
                 <div key={i} className={styles.uploadEntry}>
-                  <a
-                    href={u.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a href={u.url} target="_blank" rel="noopener noreferrer">
                     {u.report_date}
                   </a>
                   <span>Uploaded by: {u.uploaded_by}</span>
