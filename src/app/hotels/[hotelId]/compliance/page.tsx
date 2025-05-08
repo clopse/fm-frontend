@@ -63,8 +63,9 @@ const CompliancePage = ({ params }: Props) => {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([loadTasks(), loadHistory(), loadScores()])
-      .finally(() => setLoading(false));
+    Promise.all([loadTasks(), loadHistory(), loadScores()]).finally(() =>
+      setLoading(false)
+    );
   }, [hotelId]);
 
   const loadTasks = async () => {
@@ -112,11 +113,11 @@ const CompliancePage = ({ params }: Props) => {
     [tasks, selectedTask]
   );
 
-  const categories = Array.from(new Set(tasks.map(t => t.category)));
-  const frequencies = Array.from(new Set(tasks.map(t => t.frequency)));
+  const categories = Array.from(new Set(tasks.map((t) => t.category)));
+  const frequencies = Array.from(new Set(tasks.map((t) => t.frequency)));
 
   const grouped = useMemo(() => {
-    const filtered = tasks.filter(task => {
+    const filtered = tasks.filter((task) => {
       const categoryMatch = selectedCategories.length === 0 || selectedCategories.includes(task.category);
       const freqMatch = selectedFrequencies.length === 0 || selectedFrequencies.includes(task.frequency);
       const searchMatch = task.label.toLowerCase().includes(searchTerm.toLowerCase());
@@ -131,6 +132,9 @@ const CompliancePage = ({ params }: Props) => {
     }, {} as Record<string, TaskItem[]>);
   }, [tasks, selectedCategories, selectedFrequencies, searchTerm]);
 
+  const totalPoints = tasks.reduce((sum, task) => sum + (task.points ?? 0), 0);
+  const earnedPoints = Object.values(scoreBreakdown).reduce((sum, score) => sum + score, 0);
+
   return (
     <div className={styles.container}>
       <h1 className={styles.heading}>Compliance Tasks</h1>
@@ -138,6 +142,15 @@ const CompliancePage = ({ params }: Props) => {
       {error && <p className={styles.error}>{error}</p>}
       {successMessage && <p className={styles.success}>{successMessage}</p>}
 
+      {/* Leaderboard summary */}
+      <div className={styles.overviewBox}>
+        <div className={styles.scoreBlock}>
+          <strong>{earnedPoints} / {totalPoints}</strong>
+          <span>Compliance Score</span>
+        </div>
+      </div>
+
+      {/* Filters */}
       <button
         className={styles.filterToggle}
         onClick={() => setFiltersOpen(!filtersOpen)}
@@ -151,10 +164,10 @@ const CompliancePage = ({ params }: Props) => {
           <div>
             <label>Category</label>
             <select multiple value={selectedCategories} onChange={(e) => {
-              const options = Array.from(e.target.selectedOptions).map(opt => opt.value);
+              const options = Array.from(e.target.selectedOptions).map((opt) => opt.value);
               setSelectedCategories(options);
             }}>
-              {categories.map(cat => (
+              {categories.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
@@ -163,10 +176,10 @@ const CompliancePage = ({ params }: Props) => {
           <div>
             <label>Frequency</label>
             <select multiple value={selectedFrequencies} onChange={(e) => {
-              const options = Array.from(e.target.selectedOptions).map(opt => opt.value);
+              const options = Array.from(e.target.selectedOptions).map((opt) => opt.value);
               setSelectedFrequencies(options);
             }}>
-              {frequencies.map(freq => (
+              {frequencies.map((freq) => (
                 <option key={freq} value={freq}>{freq}</option>
               ))}
             </select>
@@ -177,7 +190,7 @@ const CompliancePage = ({ params }: Props) => {
             <input
               type="text"
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search tasks..."
             />
           </div>
@@ -188,7 +201,7 @@ const CompliancePage = ({ params }: Props) => {
         <div key={category} className={styles.group}>
           <h2 className={styles.groupTitle}>{category}</h2>
           <div className={styles.grid}>
-            {grouped[category].map(task => (
+            {grouped[category].map((task) => (
               <TaskCard
                 key={task.task_id}
                 task={task}
