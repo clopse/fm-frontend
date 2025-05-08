@@ -4,6 +4,23 @@ import React, { useEffect, useState, useMemo } from 'react';
 import TaskUploadBox from '@/components/TaskUploadBox';
 import styles from '@/styles/CompliancePage.module.css';
 
+interface Upload {
+  url: string;
+  report_date: string;
+  uploaded_by: string;
+}
+
+interface HistoryEntry {
+  type: 'upload' | 'confirmation';
+  fileName?: string;
+  fileUrl?: string;
+  reportDate?: string;
+  uploadedAt?: string;
+  uploadedBy?: string;
+  confirmedAt?: string;
+  confirmedBy?: string;
+}
+
 interface TaskItem {
   task_id: string;
   label: string;
@@ -14,11 +31,7 @@ interface TaskItem {
   can_confirm: boolean;
   is_confirmed_this_month: boolean;
   last_confirmed_date: string | null;
-  uploads: {
-    url: string;
-    report_date: string;
-    uploaded_by: string;
-  }[];
+  uploads: Upload[];
 }
 
 interface Props {
@@ -28,53 +41,56 @@ interface Props {
 const CompliancePage = ({ params }: Props) => {
   const hotelId = params.hotelId;
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [history, setHistory] = useState<Record<string, HistoryEntry[]>>({});
   const [visible, setVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Load task list
+  const loadTasks = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
+      if (!res.ok) throw new Error('Failed to load task list');
+      const data = await res.json();
+      if (!Array.isArray(data)) throw new Error('Invalid task list format');
+      setTasks(data);
+    } catch (err) {
+      console.error(err);
+      setError('Unable to load compliance tasks.');
+    }
+  };
+
+  // Load full history
+  const loadHistory = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/${hotelId}`);
+      const data = await res.json();
+      setHistory(data.history || {});
+    } catch (err) {
+      console.error(err);
+      setError('Unable to load compliance history.');
+    }
+  };
+
+  // Load both
   useEffect(() => {
     setLoading(true);
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Failed to load tasks: ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
-        if (!Array.isArray(data)) throw new Error('Invalid task data format');
-        setTasks(data);
-        setError(null);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError('Unable to load compliance tasks. Please try again later.');
-      })
+    Promise.all([loadTasks(), loadHistory()])
       .finally(() => setLoading(false));
   }, [hotelId]);
 
   const openUploadModal = (taskId: string) => {
     setSelectedTask(taskId);
     setVisible(true);
-    setSuccessMessage(null); // clear previous success
+    setSuccessMessage(null);
   };
 
-  const handleUploadSuccess = () => {
+  const handleUploadSuccess = async () => {
     setSuccessMessage('✅ Upload successful!');
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Failed to reload tasks: ${res.status}`);
-        return res.json();
-      })
-      .then((data) => {
-        if (!Array.isArray(data)) throw new Error('Invalid task data format');
-        setTasks(data);
-        setError(null);
-      })
-      .catch((err) => {
-        console.error(err);
-        setError('Unable to refresh task list after upload.');
-      });
+    await loadTasks();
+    await loadHistory();
   };
 
   const selectedTaskObj = useMemo(
@@ -86,7 +102,7 @@ const CompliancePage = ({ params }: Props) => {
     <div className={styles.container}>
       <h1>Compliance Tasks</h1>
 
-      {loading && <p className={styles.loading}>Loading tasks...</p>}
+      {loading && <p className={styles.loading}>Loading...</p>}
       {error && <p className={styles.error}>{error}</p>}
       {successMessage && <p className={styles.success}>{successMessage}</p>}
 
@@ -118,7 +134,7 @@ const CompliancePage = ({ params }: Props) => {
         ))}
       </ul>
 
-      {visible && selectedTask && selectedTaskObj ? (
+      {visible && selectedTask && selectedTaskObj && (
         <TaskUploadBox
           visible={visible}
           hotelId={hotelId}
@@ -130,10 +146,11 @@ const CompliancePage = ({ params }: Props) => {
           isConfirmed={selectedTaskObj.is_confirmed_this_month}
           lastConfirmedDate={selectedTaskObj.last_confirmed_date}
           uploads={selectedTaskObj.uploads || []}
+          history={history[selectedTask] || []}  // NEW ✅
           onSuccess={handleUploadSuccess}
           onClose={() => setVisible(false)}
         />
-      ) : null}
+      )}
     </div>
   );
 };
