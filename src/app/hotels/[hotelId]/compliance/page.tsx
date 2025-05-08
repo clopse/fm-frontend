@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import TaskUploadBox from '@/components/TaskUploadBox';
+import TaskCard from '@/components/TaskCard';
 import styles from '@/styles/CompliancePage.module.css';
 
 interface Upload {
@@ -24,13 +25,15 @@ interface HistoryEntry {
 interface TaskItem {
   task_id: string;
   label: string;
-  info_popup: string;
+  type: 'upload' | 'confirmation';
   frequency: string;
   category: string;
+  points: number;
   mandatory: boolean;
   can_confirm: boolean;
   is_confirmed_this_month: boolean;
   last_confirmed_date: string | null;
+  info_popup: string;
   uploads: Upload[];
 }
 
@@ -48,21 +51,18 @@ const CompliancePage = ({ params }: Props) => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Fetch full task list
   const loadTasks = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
-      if (!res.ok) throw new Error('Failed to load task list');
       const data = await res.json();
-      if (!Array.isArray(data.tasks)) throw new Error('Invalid task list format');
-      setTasks(data.tasks); // ✅ CORRECTED
+      if (!Array.isArray(data.tasks)) throw new Error('Invalid task format');
+      setTasks(data.tasks);
     } catch (err) {
       console.error(err);
       setError('Unable to load compliance tasks.');
     }
   };
 
-  // Fetch history entries
   const loadHistory = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/${hotelId}`);
@@ -104,33 +104,21 @@ const CompliancePage = ({ params }: Props) => {
       {error && <p className={styles.error}>{error}</p>}
       {successMessage && <p className={styles.success}>{successMessage}</p>}
 
-      <ul className={styles.taskList}>
-        {tasks.map((task) => (
-          <li key={task.task_id} className={styles.taskItem}>
-            <div className={styles.taskInfo}>
-              <strong>{task.label}</strong>
-              <span>{task.frequency} • {task.category}</span>
-              <button
-                className={styles.infoBtn}
-                onClick={() => alert(task.info_popup)}
-              >
-                ℹ️
-              </button>
-            </div>
-            <div className={styles.taskActions}>
-              <button
-                className={styles.uploadBtn}
-                onClick={() => openUploadModal(task.task_id)}
-              >
-                Upload / Confirm
-              </button>
-              {task.is_confirmed_this_month && (
-                <span className={styles.confirmed}>✅ Confirmed</span>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div className={styles.cardGrid}>
+        {tasks.map((task) => {
+          const taskHistory = history[task.task_id] || [];
+          const score = taskHistory.length > 0 ? { score: taskHistory[0].type === 'confirmation' ? task.points : 0 } : null;
+
+          return (
+            <TaskCard
+              key={task.task_id}
+              task={task}
+              fileInfo={score}
+              onClick={() => openUploadModal(task.task_id)}
+            />
+          );
+        })}
+      </div>
 
       {visible && selectedTask && selectedTaskObj && (
         <TaskUploadBox
