@@ -1,203 +1,160 @@
 .modalOverlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.6);
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   z-index: 1000;
 }
 
 .modal {
   background: #fff;
   border-radius: 12px;
-  max-width: 860px;
   width: 100%;
+  max-width: 860px;
   max-height: 95vh;
-  overflow-y: auto;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
 }
 
-.modalHeaderBar {
+.header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   background: #f1f4f8;
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
-  padding: 1rem 1.25rem;
+  padding: 1rem 1.5rem;
   border-bottom: 1px solid #ddd;
 }
 
-.modalTitle {
-  font-size: 1.15rem;
-  font-weight: 600;
+.title {
   margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.mIcon {
-  font-size: 0.85rem;
-  color: crimson;
-  vertical-align: middle;
-  cursor: help;
-  background: #ffeef0;
-  padding: 0.1rem 0.4rem;
-  border-radius: 6px;
-  font-weight: bold;
-}
-
-.closeBtn {
   font-size: 1.25rem;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: #444;
-}
-
-.infoBox {
-  padding: 1rem 1.5rem;
-  background: #f9fbfd;
-  border-top: 1px solid #e0e0e0;
-  border-bottom: 1px solid #e0e0e0;
-  font-size: 0.95rem;
+  font-weight: 600;
   color: #333;
 }
 
-.modalContent {
+.closeButton {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #666;
+}
+
+.description {
+  padding: 1rem 1.5rem;
+  background: #fafafa;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.body {
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  padding: 1.5rem;
   gap: 1.25rem;
   align-items: center;
 }
 
-.metaRow {
+.dateLabel {
   width: 100%;
   max-width: 720px;
   display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 1rem;
-  font-size: 1rem;
+  flex-direction: column;
   font-weight: 500;
   color: #333;
 }
 
-.dateInput {
-  padding: 0.4rem 0.6rem;
+.dateLabel input {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
   font-size: 1rem;
   border: 1px solid #ccc;
   border-radius: 6px;
-  width: 180px;
+  width: 200px;
 }
 
-.uploadBtn {
-  background-color: #007bff;
-  color: #fff;
+.uploadButton,
+.confirmButton {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
   font-weight: 600;
-  padding: 0.6rem 1.1rem;
-  border-radius: 6px;
   border: none;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
-.uploadBtn:hover {
-  background-color: #0056b3;
+.uploadButton {
+  background: #007bff;
+  color: #fff;
 }
 
-.disabled {
-  background-color: #aaa !important;
-  cursor: not-allowed !important;
+.uploadButton:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.confirmButton {
+  background: #28a745;
+  color: #fff;
+}
+
+.confirmButton:hover:not(:disabled) {
+  background: #218838;
+}
+
+.uploadButton:disabled,
+.confirmButton:disabled {
+  background: #aaa;
+  cursor: not-allowed;
 }
 
 .fileInput {
   display: none;
 }
 
-.previewCard {
-  position: relative;
-  padding: 1rem;
-  background: #fafafa;
-  border: 1px solid #ddd;
-  border-radius: 12px;
+.history {
   width: 100%;
   max-width: 720px;
-  text-align: center;
-}
-
-.previewFrame {
-  width: 100%;
-  max-height: 700px;
-  object-fit: contain;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-
-.previewActions {
-  margin-top: 1rem;
-  text-align: center;
-}
-
-.confirmBox {
-  display: flex;
-  justify-content: center;
-  margin-top: 1rem;
-}
-
-.confirmBtn {
-  background-color: #28a745;
-  color: #fff;
-  font-weight: 600;
-  padding: 0.6rem 1.2rem;
-  font-size: 1rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.confirmBtn:hover {
-  background-color: #218838;
-}
-
-.historyBox {
-  border-top: 1px solid #e0e0e0;
   margin-top: 1.5rem;
-  padding: 1.25rem 1.5rem;
-  background: #fafafa;
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
+  padding: 1rem 1.5rem;
+  background: #f9fbfd;
+  border-top: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
+  border-radius: 0 0 12px 12px;
 }
 
-.historyBox h4 {
+.history h4 {
+  margin: 0 0 0.75rem;
   font-size: 1rem;
-  margin-bottom: 0.75rem;
   font-weight: 600;
   color: #222;
 }
 
-.historyList {
-  list-style: none;
-  padding-left: 0;
-  font-size: 0.95rem;
+.uploadEntry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
   color: #333;
 }
 
-.historyItem {
-  margin: 0.4rem 0;
-  padding-left: 1rem;
-  position: relative;
+.uploadEntry a {
+  color: #007bff;
+  text-decoration: none;
 }
 
-.historyItem::before {
-  content: '•';
-  position: absolute;
-  left: 0;
-  color: #888;
+.uploadEntry a:hover {
+  text-decoration: underline;
+}
+
+.uploadEntry span {
+  font-size: 0.9rem;
+  color: #555;
 }
