@@ -1,205 +1,241 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'next/navigation';
-import styles from '@/styles/CompliancePage.module.css';
-import TaskCard from '@/components/TaskCard';
-import TaskUploadBox from '@/components/TaskUploadBox';
-import FilterPanel from '@/components/FilterPanel';
-import { complianceGroups } from '@/data/complianceTasks';
-import { fetchComplianceScore } from '@/utils/complianceApi';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import Image from 'next/image';
+import React, { useRef, useState, useMemo } from 'react';
+import styles from '@/styles/TaskUploadBox.module.css';
 
-interface MonthlyEntry {
-  score: number;
-  max: number;
+interface Upload {
+  url: string;
+  report_date: string;
+  uploaded_by: string;
 }
 
-interface ScoreData {
-  score: number;
-  max_score: number;
-  percent: number;
-  detailed: {
-    task_id: string;
-    scored: number;
-    max: number;
-    label: string;
-    valid_until: string | null;
-  }[];
-  task_breakdown?: {
-    [task_id: string]: number;
-  };
-  monthly_history?: {
-    [month: string]: MonthlyEntry;
-  };
+interface TaskUploadBoxProps {
+  visible: boolean;
+  hotelId: string;
+  taskId: string;
+  label: string;
+  info: string;
+  isMandatory: boolean;
+  canConfirm: boolean;
+  isConfirmed: boolean;
+  lastConfirmedDate: string | null;
+  uploads: Upload[];
+  onSuccess: () => void;
+  onClose: () => void;
 }
 
-export default function CompliancePage() {
-  const { hotelId } = useParams();
-  const [selectedTask, setSelectedTask] = useState<string | null>(null);
-  const [visible, setVisible] = useState(false);
-  const [scoreData, setScoreData] = useState<ScoreData | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const filterRef = useRef<HTMLDivElement>(null);
+export default function TaskUploadBox({
+  visible,
+  hotelId,
+  taskId,
+  label,
+  info,
+  isMandatory,
+  canConfirm,
+  isConfirmed,
+  lastConfirmedDate,
+  uploads,
+  onSuccess,
+  onClose,
+}: TaskUploadBoxProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [reportDate, setReportDate] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const [filters, setFilters] = useState({
-    mandatoryOnly: false,
-    type: '',
-    frequency: [] as string[],
-    category: [] as string[],
-    search: '',
-  });
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  useEffect(() => {
-    if (!hotelId) return;
-    fetchComplianceScore(hotelId as string)
-      .then(setScoreData)
-      .catch(console.error);
-  }, [hotelId]);
+  if (!visible) return null;
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
-        setShowFilters(false);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0] || null;
+    setFile(selected);
+
+    if (selected) {
+      const objectUrl = URL.createObjectURL(selected);
+      setPreviewUrl(objectUrl);
+
+      if (isMandatory) {
+        const modifiedDate = new Date(selected.lastModified);
+        const now = new Date();
+        const safeDate = modifiedDate > now ? now : modifiedDate;
+        setReportDate(safeDate.toISOString().split('T')[0]);
       }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const chartData =
-    scoreData?.monthly_history
-      ? Object.entries(scoreData.monthly_history).map(([month, val]) => ({
-          month,
-          percent: Math.round((val.score / val.max) * 100),
-        }))
-      : [];
-
-  const handleUpload = async () => {
-    if (!hotelId) return;
-    await fetchComplianceScore(hotelId as string).then(setScoreData);
-    setVisible(false);
+    } else {
+      setPreviewUrl(null);
+      setReportDate('');
+    }
   };
 
-  const filteredGroups = complianceGroups
-    .map((group) => ({
-      ...group,
-      tasks: group.tasks.filter((task) => {
-        const matchesMandatory = !filters.mandatoryOnly || task.mandatory;
-        const matchesType = !filters.type || task.type === filters.type;
-        const matchesFreq =
-          filters.frequency.length === 0 || filters.frequency.includes(task.frequency);
-        const matchesCategory =
-          filters.category.length === 0 || filters.category.includes(task.category);
-        const matchesSearch =
-          !filters.search || task.label.toLowerCase().includes(filters.search.toLowerCase());
-        return matchesMandatory && matchesType && matchesFreq && matchesCategory && matchesSearch;
-      }),
-    }))
-    .filter((group) => group.tasks.length > 0);
+  const handleSubmit = async () => {
+    if (isMandatory && (!file || !reportDate)) {
+      alert('Please select a file and report date.');
+      return;
+    }
 
-  const uniqueCategories = Array.from(
-    new Set(complianceGroups.flatMap((g) => g.tasks.map((t) => t.category)))
-  );
-  const uniqueFrequencies = Array.from(
-    new Set(complianceGroups.flatMap((g) => g.tasks.map((t) => t.frequency)))
-  );
+    if (!file) {
+      alert('No file selected.');
+      return;
+    }
 
-  const selectedTaskObj = selectedTask
-    ? complianceGroups.flatMap((g) => g.tasks).find((t) => t.task_id === selectedTask)
-    : null;
+    const formData = new FormData();
+    formData.append('hotel_id', hotelId);
+    formData.append('task_id', taskId);
+    formData.append('file', file);
 
-  const selectedTaskUploads = scoreData?.detailed
-    ?.filter((t) => t.task_id === selectedTask)
-    .map((t) => ({
-      url: `${process.env.NEXT_PUBLIC_API_URL}/files/${hotelId}/compliance/${t.task_id}/${t.valid_until}.pdf`,
-      report_date: t.valid_until || '',
-      uploaded_by: 'System',
-    })) || [];
+    if (isMandatory) {
+      formData.append('report_date', reportDate);
+    } else if (lastConfirmedDate) {
+      formData.append('report_date', lastConfirmedDate);
+    } else {
+      formData.append('report_date', today); // fallback
+    }
 
-  const refetchData = () => {
-    fetchComplianceScore(hotelId as string).then(setScoreData);
+    try {
+      setSubmitting(true);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+      if (!res.ok) throw new Error('Upload failed');
+      onSuccess();
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert('Error uploading file.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className={styles.wrapper}>
-      {scoreData && (
-        <div className={styles.overviewBox}>
-          <div className={styles.scoreBlock}>
-            <strong>
-              {scoreData.score}/{scoreData.max_score}
-            </strong>
-            <span>Compliance Score</span>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={chartData}>
-              <XAxis dataKey="month" />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Line type="monotone" dataKey="percent" stroke="#0070f3" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.header}>
+          <h2 className={styles.title}>{label}</h2>
+          <button
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label="Close modal"
+          >
+            ✕
+          </button>
         </div>
-      )}
 
-      <div className={styles.filterToggleRow}>
-        <button
-          className={styles.filterToggleButton}
-          onClick={() => setShowFilters((prev) => !prev)}
-          aria-label="Toggle Filters"
-        >
-          <Image src="/icons/filter-icon.png" alt="Filter" width={25} height={25} />
-        </button>
-      </div>
+        <p className={styles.description}>{info}</p>
 
-      {showFilters && (
-        <FilterPanel
-          filters={filters}
-          onChange={setFilters}
-          categories={uniqueCategories}
-          frequencies={uniqueFrequencies}
-        />
-      )}
+        <div className={styles.body}>
+          {/* Upload Trigger */}
+          <div>
+            <button
+              type="button"
+              className={styles.uploadButton}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <svg
+                className={styles.buttonIcon}
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M8 12V4m0 0L4 8m4-4l4 4M2 14h12"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Upload File
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={handleFileChange}
+              className={styles.fileInput}
+            />
+          </div>
 
-      {filteredGroups.map((section) => (
-        <div key={section.section} className={styles.groupSection}>
-          <h2 className={styles.groupTitle}>{section.section}</h2>
-          <div className={styles.taskList}>
-            {section.tasks.map((task) => (
-              <TaskCard
-                key={task.task_id}
-                task={task}
-                fileInfo={
-                  scoreData?.task_breakdown?.[task.task_id]
-                    ? { score: scoreData.task_breakdown[task.task_id] }
-                    : null
-                }
-                onClick={() => {
-                  setSelectedTask(task.task_id);
-                  setVisible(true);
-                }}
+          {/* Optional upload message */}
+          {!isMandatory && (
+            <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.5rem' }}>
+              Optional upload — add evidence if needed.
+            </div>
+          )}
+
+          {/* Preview */}
+          {previewUrl && (
+            <>
+              <div className={styles.previewCard}>
+                {file?.type.includes('pdf') ? (
+                  <iframe
+                    className={styles.previewFrame}
+                    src={previewUrl}
+                    title="PDF Preview"
+                  />
+                ) : (
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className={styles.previewFrame}
+                  />
+                )}
+              </div>
+
+              <div className={styles.filename}>
+                <strong>Selected file:</strong> {file?.name}
+              </div>
+            </>
+          )}
+
+          {/* Date only for mandatory */}
+          {isMandatory && file && (
+            <label className={styles.dateLabel}>
+              Report Date
+              <input
+                type="date"
+                value={reportDate}
+                onChange={(e) => setReportDate(e.target.value)}
+                max={today}
               />
-            ))}
-          </div>
-        </div>
-      ))}
+            </label>
+          )}
 
-      {visible && selectedTask && selectedTaskObj && (
-        <TaskUploadBox
-          visible={visible}
-          hotelId={hotelId as string}
-          taskId={selectedTask}
-          label={selectedTaskObj.label}
-          info={selectedTaskObj.info_popup || ''}
-          isMandatory={selectedTaskObj.mandatory}
-          canConfirm={selectedTaskObj.type === 'confirmation'}
-          isConfirmed={false}
-          uploads={selectedTaskUploads}
-          onSuccess={refetchData}
-          onClose={() => setVisible(false)}
-        />
-      )}
+          <button
+            className={styles.confirmButton}
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
+            <svg
+              className={styles.buttonIcon}
+              viewBox="0 0 16 16"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M6 10.8L3.2 8l-.9.9L6 12.6 13.7 4.9l-.9-.9z" />
+            </svg>
+            {submitting ? 'Submitting...' : 'Submit'}
+          </button>
+
+          {uploads.length > 0 && (
+            <div className={styles.history}>
+              <h4>📁 Previous Uploads</h4>
+              {uploads.map((u, i) => (
+                <div key={i} className={styles.uploadEntry}>
+                  <a href={u.url} target="_blank" rel="noopener noreferrer">
+                    {u.report_date}
+                  </a>
+                  <span>Uploaded by: {u.uploaded_by}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
