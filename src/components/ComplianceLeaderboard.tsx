@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import styles from '@/styles/ComplianceLeaderboard.module.css';
-import { hotelNames } from '@/lib/hotelNames'; // ✅ your map: { hiex: "Holiday Inn Express", ... }
+import { hotelNames } from '@/lib/hotels';
 
 type LeaderboardEntry = {
   hotel: string; // This is the hotel ID (e.g., "hiex")
