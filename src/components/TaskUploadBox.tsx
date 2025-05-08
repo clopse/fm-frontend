@@ -40,7 +40,6 @@ export default function TaskUploadBox({
   const [file, setFile] = useState<File | null>(null);
   const [reportDate, setReportDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   if (!visible) return null;
@@ -52,17 +51,23 @@ export default function TaskUploadBox({
     if (selected) {
       const modifiedDate = new Date(selected.lastModified);
       const now = new Date();
-      const parsedDate =
-        modifiedDate > now ? now : modifiedDate;
-      const formatted = parsedDate.toISOString().split('T')[0];
-      setReportDate(formatted);
+      const parsed = modifiedDate > now ? now : modifiedDate;
+      setReportDate(parsed.toISOString().split('T')[0]);
     } else {
       setReportDate('');
     }
   };
 
   const handleUpload = async () => {
-    if (!file || !reportDate) return alert('Please select a file and date.');
+    if (isMandatory && (!file || !reportDate)) {
+      alert('Please select a file and report date.');
+      return;
+    }
+
+    if (!file) {
+      alert('No file selected.');
+      return;
+    }
 
     const formData = new FormData();
     formData.append('hotel_id', hotelId);
@@ -130,7 +135,6 @@ export default function TaskUploadBox({
         <p className={styles.description}>{info}</p>
 
         <div className={styles.body}>
-          {/* Confirm-only tasks show date field immediately */}
           {canConfirm && !isMandatory && (
             <>
               <label className={styles.dateLabel}>
@@ -156,50 +160,46 @@ export default function TaskUploadBox({
             </>
           )}
 
-          {/* Upload task */}
-          {isMandatory && (
-            <>
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={handleFileChange}
-                className={styles.fileInput}
-              />
+          {/* File Upload: always visible */}
+          <>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={handleFileChange}
+              className={styles.fileInput}
+            />
 
-              {file && (
-                <>
-                  <label className={styles.dateLabel}>
-                    Report Date
-                    <input
-                      type="date"
-                      value={reportDate}
-                      onChange={(e) => setReportDate(e.target.value)}
-                      max={today}
-                    />
-                  </label>
+            {file && (
+              <label className={styles.dateLabel}>
+                Report Date
+                <input
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  max={today}
+                />
+              </label>
+            )}
 
-                  <button className={styles.uploadButton} onClick={handleUpload}>
-                    <svg
-                      className={styles.buttonIcon}
-                      viewBox="0 0 16 16"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M8 12V4m0 0L4 8m4-4l4 4M2 14h12"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    Upload File
-                  </button>
-                </>
-              )}
-            </>
-          )}
+            <button className={styles.uploadButton} onClick={handleUpload}>
+              <svg
+                className={styles.buttonIcon}
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M8 12V4m0 0L4 8m4-4l4 4M2 14h12"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  fill="none"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Upload File
+            </button>
+          </>
 
           {uploads.length > 0 && (
             <div className={styles.history}>
