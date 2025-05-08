@@ -4,7 +4,7 @@
   margin: 0 auto;
 }
 
-h1 {
+.heading {
   font-size: 26px;
   margin-bottom: 20px;
 }
@@ -42,7 +42,7 @@ h1 {
   margin-bottom: 32px;
 }
 
-.group h2 {
+.groupTitle {
   font-size: 20px;
   font-weight: 600;
   margin-bottom: 12px;
