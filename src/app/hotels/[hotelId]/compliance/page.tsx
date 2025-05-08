@@ -56,7 +56,6 @@ const CompliancePage = ({ params }: Props) => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Filters
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedFrequencies, setSelectedFrequencies] = useState<string[]>([]);
@@ -64,14 +63,16 @@ const CompliancePage = ({ params }: Props) => {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([loadTasks(), loadHistory(), loadScores()]).finally(() => setLoading(false));
+    Promise.all([loadTasks(), loadHistory(), loadScores()])
+      .finally(() => setLoading(false));
   }, [hotelId]);
 
   const loadTasks = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
       const data = await res.json();
-      setTasks(Array.isArray(data.tasks) ? data.tasks : []);
+      if (!Array.isArray(data.tasks)) throw new Error('Invalid task list format');
+      setTasks(data.tasks);
     } catch (err) {
       console.error(err);
       setError('Unable to load compliance tasks.');
@@ -111,11 +112,11 @@ const CompliancePage = ({ params }: Props) => {
     [tasks, selectedTask]
   );
 
-  const categories = Array.from(new Set(tasks.map((t) => t.category)));
-  const frequencies = Array.from(new Set(tasks.map((t) => t.frequency)));
+  const categories = Array.from(new Set(tasks.map(t => t.category)));
+  const frequencies = Array.from(new Set(tasks.map(t => t.frequency)));
 
   const grouped = useMemo(() => {
-    const filtered = tasks.filter((task) => {
+    const filtered = tasks.filter(task => {
       const categoryMatch = selectedCategories.length === 0 || selectedCategories.includes(task.category);
       const freqMatch = selectedFrequencies.length === 0 || selectedFrequencies.includes(task.frequency);
       const searchMatch = task.label.toLowerCase().includes(searchTerm.toLowerCase());
@@ -132,15 +133,15 @@ const CompliancePage = ({ params }: Props) => {
 
   return (
     <div className={styles.container}>
-      <h1>Compliance Tasks</h1>
+      <h1 className={styles.heading}>Compliance Tasks</h1>
       {loading && <p className={styles.loading}>Loading...</p>}
       {error && <p className={styles.error}>{error}</p>}
       {successMessage && <p className={styles.success}>{successMessage}</p>}
 
       <button
         className={styles.filterToggle}
-        onClick={() => setFiltersOpen((prev) => !prev)}
-        title="Toggle filters"
+        onClick={() => setFiltersOpen(!filtersOpen)}
+        title="Show filters"
       >
         <img src="/icons/filter-icon.png" width={25} height={25} alt="Filter" />
       </button>
@@ -150,11 +151,11 @@ const CompliancePage = ({ params }: Props) => {
           <div>
             <label>Category</label>
             <select multiple value={selectedCategories} onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
-              setSelectedCategories(selected);
+              const options = Array.from(e.target.selectedOptions).map(opt => opt.value);
+              setSelectedCategories(options);
             }}>
-              {categories.map((c) => (
-                <option key={c} value={c}>{c}</option>
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
@@ -162,11 +163,11 @@ const CompliancePage = ({ params }: Props) => {
           <div>
             <label>Frequency</label>
             <select multiple value={selectedFrequencies} onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions).map((o) => o.value);
-              setSelectedFrequencies(selected);
+              const options = Array.from(e.target.selectedOptions).map(opt => opt.value);
+              setSelectedFrequencies(options);
             }}>
-              {frequencies.map((f) => (
-                <option key={f} value={f}>{f}</option>
+              {frequencies.map(freq => (
+                <option key={freq} value={freq}>{freq}</option>
               ))}
             </select>
           </div>
@@ -176,7 +177,7 @@ const CompliancePage = ({ params }: Props) => {
             <input
               type="text"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               placeholder="Search tasks..."
             />
           </div>
@@ -185,9 +186,9 @@ const CompliancePage = ({ params }: Props) => {
 
       {Object.keys(grouped).map((category) => (
         <div key={category} className={styles.group}>
-          <h2>{category}</h2>
+          <h2 className={styles.groupTitle}>{category}</h2>
           <div className={styles.grid}>
-            {grouped[category].map((task) => (
+            {grouped[category].map(task => (
               <TaskCard
                 key={task.task_id}
                 task={task}
