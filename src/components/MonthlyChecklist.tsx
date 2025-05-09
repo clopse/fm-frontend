@@ -6,7 +6,7 @@ import styles from '@/styles/MonthlyChecklist.module.css';
 interface Props {
   hotelId: string;
   userEmail: string;
-  onConfirm?: () => void; // ✅ new optional callback
+  onConfirm?: () => void; // ✅ added prop
 }
 
 interface SubtaskItem {
@@ -41,37 +41,26 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
   });
 
   useEffect(() => {
-    fetchChecklist();
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly-checklist/${hotelId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const unconfirmed = data.filter((task: TaskItem) => !task.is_confirmed_this_month);
+        setTasks(unconfirmed);
+        setLoading(false);
+      });
   }, [hotelId]);
 
-  const fetchChecklist = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly-checklist/${hotelId}`);
-      const data = await res.json();
-      const unconfirmed = data.filter((task: TaskItem) => !task.is_confirmed_this_month);
-      setTasks(unconfirmed);
-    } catch (e) {
-      console.error("Error fetching checklist:", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const confirmTask = async (taskId: string) => {
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hotel_id: hotelId, task_id: taskId, user_email: userEmail }),
-      });
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotel_id: hotelId, task_id: taskId, user_email: userEmail }),
+    });
 
-      setTasks((prev) => prev.filter((task) => task.task_id !== taskId));
+    setTasks((prev) => prev.filter((task) => task.task_id !== taskId));
 
-      // ✅ Callback to parent to refresh compliance score/due list
-      if (onConfirm) onConfirm();
-    } catch (e) {
-      console.error("Error confirming task:", e);
-    }
+    // ✅ trigger parent refresh
+    if (onConfirm) onConfirm();
   };
 
   if (loading) return <p>Loading checklist...</p>;
