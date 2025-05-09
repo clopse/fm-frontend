@@ -22,26 +22,41 @@ export default function HotelDashboard() {
   const [points, setPoints] = useState<string>("0/0");
   const [dueNow, setDueNow] = useState<TaskItem[]>([]);
   const [dueSoon, setDueSoon] = useState<TaskItem[]>([]);
+  const [refreshToggle, setRefreshToggle] = useState(false); // ✅ For manual refresh trigger
 
   useEffect(() => {
     if (!hotelId) return;
 
-    // Fetch current compliance score
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`)
-      .then(res => res.json())
-      .then(data => {
-        setScore(data.percent || 0);
-        setPoints(`${data.score}/${data.max_score}`);
-      });
+    fetchScore();
+    fetchDueTasks();
+  }, [hotelId, refreshToggle]); // ✅ Re-run on refreshToggle toggle
 
-    // Fetch due and upcoming tasks
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/due-tasks/${hotelId}`)
-      .then(res => res.json())
-      .then(data => {
-        setDueNow(data.due_this_month || []);
-        setDueSoon(data.next_month_uploadables || []);
-      });
-  }, [hotelId]);
+  const fetchScore = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
+      const data = await res.json();
+      setScore(data.percent || 0);
+      setPoints(`${data.score}/${data.max_score}`);
+    } catch (e) {
+      console.error("Error loading score:", e);
+    }
+  };
+
+  const fetchDueTasks = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/due-tasks/${hotelId}`);
+      const data = await res.json();
+      setDueNow(data.due_this_month || []);
+      setDueSoon(data.next_month_uploadables || []);
+    } catch (e) {
+      console.error("Error loading due tasks:", e);
+    }
+  };
+
+  // ✅ Triggered after monthly task confirmed
+  const handleChecklistUpdate = () => {
+    setRefreshToggle(prev => !prev);
+  };
 
   const scoreColor =
     score < 60 ? '#e74c3c' : score < 80 ? '#f39c12' : '#27ae60';
@@ -90,7 +105,11 @@ export default function HotelDashboard() {
 
         <div className={styles.checklistSection}>
           <h2>✅ Monthly Checklist</h2>
-          <MonthlyChecklist hotelId={hotelId} userEmail="admin@jmk.ie" />
+          <MonthlyChecklist
+            hotelId={hotelId}
+            userEmail="admin@jmk.ie"
+            onConfirm={() => handleChecklistUpdate()} // ✅ Refresh trigger
+          />
         </div>
 
         <div className={styles.checklistSection}>
