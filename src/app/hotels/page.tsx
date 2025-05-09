@@ -17,10 +17,10 @@ import headerStyles from '@/styles/HeaderBar.module.css';
 type Upload = { hotel: string; report: string; date: string };
 type LeaderboardEntry = { hotel: string; score: number };
 interface MonthlyTask {
+  hotel_id: string;
   task_id: string;
   frequency: string;
   confirmed: boolean;
-  [key: string]: any;
 }
 
 export default function HotelsPage() {
@@ -29,35 +29,31 @@ export default function HotelsPage() {
   const [monthlyTasks, setMonthlyTasks] = useState<MonthlyTask[]>([]);
   const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
-  const [currentHotel, setCurrentHotel] = useState(hotels[0].name); // default to first
+  const [currentHotel, setCurrentHotel] = useState(hotels[0].name);
 
   useEffect(() => {
-    // Leaderboard
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`)
-      .then((res) => res.json())
-      .then((apiData: LeaderboardEntry[]) => {
-        const mapped = hotels.map((hotel) => {
-          const match = apiData.find((entry) => entry.hotel === hotel.name);
+    const fetchData = async () => {
+      try {
+        const [leaderboardRes, historyRes, monthlyRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/all`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`)
+        ]);
+
+        const leaderboardJson = await leaderboardRes.json();
+        const auditJson = await historyRes.json();
+        const monthlyJson = await monthlyRes.json();
+
+        const mappedLeaderboard = hotels.map((hotel) => {
+          const match = leaderboardJson.find((entry: any) => entry.hotel === hotel.name);
           return {
             hotel: hotel.name,
-            score: match?.score ?? 0,
+            score: match?.score ?? 0
           };
         });
-        setLeaderboardData(mapped);
-      })
-      .catch((err) => {
-        console.error('Error loading leaderboard:', err);
-        setLeaderboardData(hotels.map((hotel) => ({
-          hotel: hotel.name,
-          score: 0,
-        })));
-      });
+        setLeaderboardData(mappedLeaderboard);
 
-    // Recent unapproved uploads
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/all`)
-      .then((res) => res.json())
-      .then((data) => {
-        const entries = (data.entries || [])
+        const recent = (auditJson.entries || [])
           .filter((e: any) => !e.approved)
           .sort((a: any, b: any) =>
             new Date(b.uploadedAt || b.confirmedAt).getTime() -
@@ -67,27 +63,20 @@ export default function HotelsPage() {
           .map((entry: any) => ({
             hotel: entry.hotel_id,
             report: `${entry.task_id} (${entry.type})`,
-            date: entry.uploadedAt || entry.confirmedAt || '',
+            date: entry.uploadedAt || entry.confirmedAt || ''
           }));
-        setRecentUploads(entries);
-      })
-      .catch((err) => {
-        console.error('Error loading audit entries:', err);
-      });
+        setRecentUploads(recent);
 
-    // Monthly checklist - unconfirmed only
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`)
-      .then((res) => res.json())
-      .then((data: MonthlyTask[]) => {
-        const monthlyOnly = data.filter(
-          (t: MonthlyTask) => t.frequency?.toLowerCase() === 'monthly'
+        const pending = monthlyJson.filter(
+          (task: MonthlyTask) => task.frequency?.toLowerCase() === 'monthly' && !task.confirmed
         );
-        const unconfirmed = monthlyOnly.filter((t: MonthlyTask) => !t.confirmed);
-        setMonthlyTasks(unconfirmed);
-      })
-      .catch((err) => {
-        console.error('Error loading monthly checklist:', err);
-      });
+        setMonthlyTasks(pending);
+      } catch (err) {
+        console.error('Error loading dashboard data:', err);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const handleHotelSelect = (hotelName: string) => {
@@ -99,23 +88,13 @@ export default function HotelsPage() {
     <div className={styles.container}>
       <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
 
-      {/* Header */}
       <header className={headerStyles.header}>
         <div className={headerStyles.left}>
-          <Image
-            src="/jmk-logo.png"
-            alt="JMK Hotels"
-            width={228}
-            height={60}
-            style={{ objectFit: 'contain' }}
-          />
+          <Image src="/jmk-logo.png" alt="JMK Hotels" width={228} height={60} style={{ objectFit: 'contain' }} />
         </div>
 
         <div className={headerStyles.center}>
-          <button
-            className={headerStyles.selector}
-            onClick={() => setIsHotelModalOpen(true)}
-          >
+          <button className={headerStyles.selector} onClick={() => setIsHotelModalOpen(true)}>
             {currentHotel} <span className={headerStyles.arrow}>⌄</span>
           </button>
         </div>
@@ -142,19 +121,21 @@ export default function HotelsPage() {
         <ComplianceLeaderboard data={leaderboardData} />
       </div>
 
-      {/* Utilities Chart */}
+      {/* Utilities */}
       <div className={`${styles.section} ${styles.middleSection}`}>
         <h2 className={styles.header}>Hotel Utilities Comparison</h2>
         <UtilitiesGraphs />
       </div>
 
-      {/* Monthly Checklist Tasks */}
+      {/* Monthly Tasks */}
       {monthlyTasks.length > 0 && (
         <div className={`${styles.section} ${styles.middleSection}`}>
           <h2 className={styles.header}>Monthly Tasks Needing Confirmation</h2>
           <ul>
             {monthlyTasks.map((task) => (
-              <li key={task.task_id}>🔲 {task.task_id}</li>
+              <li key={`${task.hotel_id}-${task.task_id}`}>
+                🔲 {task.hotel_id} • {task.task_id}
+              </li>
             ))}
           </ul>
         </div>
