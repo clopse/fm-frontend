@@ -1,113 +1,152 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { hotelNames } from '@/data/hotelMetadata';
-import styles from '@/styles/HotelDashboard.module.css';
-import MonthlyChecklist from '@/components/MonthlyChecklist';
+import Image from 'next/image';
+import { User2 } from 'lucide-react';
 
-interface TaskItem {
-  task_id: string;
-  label: string;
-  frequency: string;
-  category: string;
-  info_popup: string;
+import ComplianceLeaderboard from '@/components/ComplianceLeaderboard';
+import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
+import { RecentUploads } from '@/components/RecentUploads';
+import HotelSelectorModal from '@/components/HotelSelectorModal';
+import UserPanel from '@/components/UserPanel';
+import { hotels } from '@/lib/hotels';
+
+import styles from '@/styles/AdminDashboard.module.css';
+import headerStyles from '@/styles/HeaderBar.module.css';
+
+interface Upload {
+  hotel: string;
+  report: string;
+  date: string;
 }
 
-export default function HotelDashboard() {
-  const { hotelId } = useParams<{ hotelId: string }>();
-  const hotelName = hotelNames[hotelId as keyof typeof hotelNames] || 'Unknown Hotel';
+interface LeaderboardEntry {
+  hotel: string;
+  score: number;
+}
 
-  const [score, setScore] = useState<number>(0);
-  const [points, setPoints] = useState<string>("0/0");
-  const [dueNow, setDueNow] = useState<TaskItem[]>([]);
-  const [dueSoon, setDueSoon] = useState<TaskItem[]>([]);
+interface MonthlyTask {
+  task_id: string;
+  frequency: string;
+  confirmed: boolean;
+  label?: string;
+}
 
-  const fetchScoreAndTasks = () => {
-    if (!hotelId) return;
-
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`)
-      .then(res => res.json())
-      .then(data => {
-        setScore(data.percent || 0);
-        setPoints(`${data.score}/${data.max_score}`);
-      });
-
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/due-tasks/${hotelId}`)
-      .then(res => res.json())
-      .then(data => {
-        setDueNow(data.due_this_month || []);
-        setDueSoon(data.next_month_uploadables || []);
-      });
-  };
+export default function HotelsPage() {
+  const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+  const [monthlyTasks, setMonthlyTasks] = useState<MonthlyTask[]>([]);
+  const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
+  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
+  const [currentHotel, setCurrentHotel] = useState(hotels[0].name);
 
   useEffect(() => {
-    fetchScoreAndTasks();
-  }, [hotelId]);
+    fetchLeaderboard();
+    fetchRecentUploads();
+    fetchMonthlyChecklist();
+  }, []);
 
-  const scoreColor =
-    score < 60 ? '#e74c3c' : score < 80 ? '#f39c12' : '#27ae60';
+  const fetchLeaderboard = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`);
+      const data: LeaderboardEntry[] = await res.json();
+      const combined = hotels.map(h => ({
+        hotel: h.name,
+        score: data.find(d => d.hotel === h.name)?.score ?? 0,
+      }));
+      setLeaderboardData(combined);
+    } catch (err) {
+      console.error('Error loading leaderboard:', err);
+    }
+  };
 
-  const renderTasks = (tasks: TaskItem[]) => (
-    <ul className={styles.taskList}>
-      {tasks.map(task => (
-        <li key={task.task_id}>
-          <strong>{task.label}</strong>
-          <button
-            className={styles.info}
-            onClick={() => alert(task.info_popup)}
-          >
-            ℹ️
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
+  const fetchRecentUploads = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/all`);
+      const data = await res.json();
+      const entries = (data.entries || [])
+        .filter((e: any) => !e.approved)
+        .sort((a: any, b: any) =>
+          new Date(b.uploadedAt || b.confirmedAt).getTime() -
+          new Date(a.uploadedAt || a.confirmedAt).getTime()
+        )
+        .slice(0, 10)
+        .map((e: any) => ({
+          hotel: e.hotel_id,
+          report: `${e.task_id} (${e.type})`,
+          date: e.uploadedAt || e.confirmedAt || '',
+        }));
+      setRecentUploads(entries);
+    } catch (err) {
+      console.error('Error loading uploads:', err);
+    }
+  };
+
+  const fetchMonthlyChecklist = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`);
+      const data: MonthlyTask[] = await res.json();
+      const filtered = data.filter(t => t.frequency?.toLowerCase() === 'monthly' && !t.confirmed);
+      setMonthlyTasks(filtered);
+    } catch (err) {
+      console.error('Error loading checklist:', err);
+    }
+  };
+
+  const handleHotelSelect = (hotelName: string) => {
+    setCurrentHotel(hotelName);
+    setIsHotelModalOpen(false);
+  };
 
   return (
-    <div
-      className={styles.fullBackground}
-      style={{
-        backgroundImage: `url('/${hotelId}.jpg'), url('/fallback.jpg')`
-      }}
-    >
-      <div className={styles.overlay} />
+    <div className={styles.container}>
+      <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
 
-      <div className={styles.content}>
-        <div className={styles.headerRow}>
-          <h1 className={styles.heading}>{hotelName}</h1>
-          <div
-            className={styles.safetyScoreBox}
-            style={{ backgroundColor: scoreColor }}
-          >
-            <span className={styles.safetyScoreTitle}>Compliance Score</span>
-            <div className={styles.safetyScoreContent}>
-              <span className={styles.safetyScorePercent}>
-                {score}%
-                <span className={styles.tooltip}>{points} Points</span>
-              </span>
-            </div>
-          </div>
+      <header className={headerStyles.header}>
+        <div className={headerStyles.left}>
+          <Image src="/jmk-logo.png" alt="JMK Hotels" width={228} height={60} style={{ objectFit: 'contain' }} />
         </div>
+        <div className={headerStyles.center}>
+          <button className={headerStyles.selector} onClick={() => setIsHotelModalOpen(true)}>
+            {currentHotel} <span className={headerStyles.arrow}>⌄</span>
+          </button>
+        </div>
+        <div className={headerStyles.right}>
+          <button onClick={() => setIsUserPanelOpen(true)} className={headerStyles.userBtn} title="Account">
+            <User2 size={20} />
+          </button>
+        </div>
+      </header>
 
-        <div className={styles.checklistSection}>
-          <h2>✅ Monthly Checklist</h2>
-          <MonthlyChecklist
-            hotelId={hotelId}
-            userEmail="admin@jmk.ie"
-            onConfirm={fetchScoreAndTasks} // ✅ refresh on confirm
-          />
-        </div>
+      <HotelSelectorModal
+        isOpen={isHotelModalOpen}
+        setIsOpen={setIsHotelModalOpen}
+        onSelectHotel={handleHotelSelect}
+      />
 
-        <div className={styles.checklistSection}>
-          <h2>📌 Tasks Due This Month</h2>
-          {dueNow.length > 0 ? renderTasks(dueNow) : <p>No report-based tasks due this month.</p>}
-        </div>
+      <div className={styles.section}>
+        <ComplianceLeaderboard data={leaderboardData} />
+      </div>
 
-        <div className={styles.checklistSection}>
-          <h2>🔜 Next Month's Uploadable Tasks</h2>
-          {dueSoon.length > 0 ? renderTasks(dueSoon) : <p>No tasks forecasted for next month.</p>}
+      <div className={styles.section}>
+        <h2 className={styles.header}>Hotel Utilities Comparison</h2>
+        <UtilitiesGraphs />
+      </div>
+
+      {monthlyTasks.length > 0 && (
+        <div className={styles.section}>
+          <h2 className={styles.header}>Monthly Tasks Needing Confirmation</h2>
+          <ul>
+            {monthlyTasks.map((task) => (
+              <li key={task.task_id}>🔲 {task.label || task.task_id}</li>
+            ))}
+          </ul>
         </div>
+      )}
+
+      <div className={styles.section}>
+        <h2 className={styles.header}>Recent Uploads Awaiting Approval</h2>
+        <RecentUploads uploads={recentUploads} />
       </div>
     </div>
   );
