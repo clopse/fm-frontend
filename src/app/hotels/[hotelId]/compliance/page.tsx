@@ -113,12 +113,29 @@ const CompliancePage = ({ params }: Props) => {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
       const data = await res.json();
       setScoreBreakdown(data.task_breakdown || {});
-      setScoreHistory(
-        Object.entries(data.monthly_history || {}).map(([month, entry]) => {
-          const e = entry as { score: number; max: number };
-          return { month, score: e.score, max: e.max };
-        })
-      );
+      const now = new Date();
+const monthsBack = 12;
+const allMonths: ScoreHistoryEntry[] = [];
+
+for (let i = monthsBack - 1; i >= 0; i--) {
+  const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+  const label = d.toISOString().slice(0, 7); // YYYY-MM
+  allMonths.push({ month: label, score: 0, max: totalPoints });
+}
+
+const existing = Object.entries(data.monthly_history || {});
+const actualScores: Record<string, number> = {};
+existing.forEach(([month, entry]) => {
+  const e = entry as { score: number };
+  actualScores[month] = Math.min(e.score, data.score);
+});
+
+setScoreHistory(
+  allMonths.map((m) => ({
+    ...m,
+    score: actualScores[m.month] ?? null, // null for missing data to show with dot or skip line
+  }))
+);
     } catch (err) {
       console.error(err);
     }
@@ -156,20 +173,21 @@ const CompliancePage = ({ params }: Props) => {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.heading}>Compliance Tasks</h1>
-      {loading && <p className={styles.loading}>Loading...</p>}
-      {error && <p className={styles.error}>{error}</p>}
-      {successMessage && <p className={styles.success}>{successMessage}</p>}
-
-      <div className={styles.overviewBox}>
-        <div className={styles.scoreBlock}>
-          <strong>{earnedPoints} / {totalPoints}</strong>
-          <span>Compliance Score</span>
-        </div>
+      
       </div>
 
-      {scoreHistory.length > 0 && (
+<h1 className={styles.heading}>Compliance Tasks</h1>
+
+{scoreHistory.length > 0 && (
         <div className={styles.graphBox}>
+  <div className={styles.graphHeader}>
+    <h2 className={styles.graphTitle}>Compliance Score (Last 12 Months)</h2>
+    <div className={styles.scoreBadge}>{earnedPoints} / {totalPoints}</div>
+  </div>
+          <div className={styles.scoreBlockInline}>
+            <strong>{earnedPoints} / {totalPoints}</strong>
+            <span>Compliance Score</span>
+          </div>
           <ResponsiveContainer>
             <LineChart data={scoreHistory}>
               <CartesianGrid strokeDasharray="3 3" />
