@@ -21,7 +21,7 @@ interface Upload {
 }
 
 interface LeaderboardEntry {
-  hotel: string;
+  hotel: string; // hotel ID
   score: number;
 }
 
@@ -50,13 +50,12 @@ export default function HotelsPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`);
       const data: LeaderboardEntry[] = await res.json();
-      const combined = hotels.map(h => ({
-        hotel: h.name,
-        score: data.find(d => d.hotel === h.name)?.score ?? 0,
-      }));
-      setLeaderboardData(combined);
+
+      const sorted = [...data].sort((a, b) => b.score - a.score);
+      setLeaderboardData(sorted);
     } catch (err) {
       console.error('Error loading leaderboard:', err);
+      setLeaderboardData([]);
     }
   };
 
@@ -64,6 +63,7 @@ export default function HotelsPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/all`);
       const data = await res.json();
+
       const entries = (data.entries || [])
         .filter((e: any) => !e.approved)
         .sort((a: any, b: any) =>
@@ -76,6 +76,7 @@ export default function HotelsPage() {
           report: `${e.task_id} (${e.type})`,
           date: e.uploadedAt || e.confirmedAt || '',
         }));
+
       setRecentUploads(entries);
     } catch (err) {
       console.error('Error loading uploads:', err);
@@ -86,7 +87,10 @@ export default function HotelsPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`);
       const data: MonthlyTask[] = await res.json();
-      const filtered = data.filter(t => t.frequency?.toLowerCase() === 'monthly' && !t.confirmed);
+
+      const filtered = data.filter(t =>
+        t.frequency?.toLowerCase() === 'monthly' && !t.confirmed
+      );
       setMonthlyTasks(filtered);
     } catch (err) {
       console.error('Error loading checklist:', err);
