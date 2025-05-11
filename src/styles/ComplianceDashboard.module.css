@@ -4,57 +4,107 @@
   margin: 0 auto;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-h1 {
-  font-size: 2rem;
+.boxHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
 }
 
-h2 {
-  margin-top: 2rem;
-  font-size: 1.4rem;
-  color: #333;
+.header {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #222;
 }
 
-.taskList {
-  list-style: none;
-  padding: 0;
-  margin: 1rem 0;
+.dropdownWrapper {
+  position: relative;
 }
 
-.taskList li {
+.dropdownButton {
+  background: #e9ecef;
+  border: none;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.dropdownMenu {
+  position: absolute;
+  right: 0;
+  top: 2.2rem;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  z-index: 1000;
+  min-width: 200px;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.row {
   display: flex;
   align-items: center;
   background: #f8f9fa;
-  border-radius: 8px;
   padding: 0.75rem 1rem;
-  margin-bottom: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.taskList span {
-  flex: 1;
+.rank {
+  font-weight: bold;
+  width: 30px;
+  text-align: center;
+  color: #666;
 }
 
-.infoBtn {
-  background: none;
-  border: none;
-  font-size: 1rem;
-  cursor: pointer;
+.logoCell {
   margin-right: 1rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
-.ackBtn {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 0.4rem 0.8rem;
+.barWrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: 1rem;
+}
+
+.bar {
+  height: 22px;
   border-radius: 4px;
-  cursor: pointer;
+  transition: width 0.6s ease;
+  flex-grow: 1;
+  background-color: #ccc; /* Fallback color */
 }
 
-.ackBtn:disabled {
-  background-color: #28a745;
+.score {
+  font-weight: bold;
+  min-width: 50px;
+  text-align: right;
+  color: #333;
 }
