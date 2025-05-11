@@ -7,7 +7,7 @@ import styles from '@/styles/ComplianceLeaderboard.module.css';
 import { hotels } from '@/lib/hotels';
 
 type LeaderboardEntry = {
-  hotel: string; // This is the hotelId
+  hotel: string; // This should be hotelId
   score: number;
 };
 
@@ -58,7 +58,7 @@ export default function ComplianceLeaderboard({ data }: Props) {
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className={styles.dropdownButton}
           >
-            ▼
+            {dropdownOpen ? '▲' : '▼'}
           </button>
           {dropdownOpen && (
             <div className={styles.dropdownMenu}>
@@ -78,48 +78,59 @@ export default function ComplianceLeaderboard({ data }: Props) {
       </div>
 
       <div className={styles.leaderboard}>
-        {filteredData.map((entry) => {
-          const hotel = hotels.find((h) => h.id === entry.hotel);
-          const hotelName = hotel?.name || entry.hotel;
+        {filteredData.length === 0 ? (
+          <p style={{ textAlign: 'center', color: '#777', padding: '1rem' }}>
+            ⚠️ No hotels selected or no data available.
+          </p>
+        ) : (
+          filteredData.map((entry, index) => {
+            const hotel = hotels.find((h) => h.id === entry.hotel);
+            const hotelName = hotel?.name || entry.hotel;
 
-          return (
-            <div key={entry.hotel} className={styles.row}>
-              <div className={styles.logoCell}>
-                <Link href={`/hotels/${entry.hotel}`}>
-                  <Image
-                    src={`/icons/${entry.hotel}-icon.png`}
-                    alt={hotelName}
-                    width={150}
-                    height={90}
+            return (
+              <div key={entry.hotel} className={styles.row}>
+                <span className={styles.rank}>#{index + 1}</span>
+                <div className={styles.logoCell}>
+                  <Link href={`/hotels/${entry.hotel}`}>
+                    <Image
+                      src={`/icons/${entry.hotel}-icon.png`}
+                      alt={hotelName}
+                      width={150}
+                      height={90}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/icons/default.png';
+                      }}
+                      style={{
+                        height: '90px',
+                        width: 'auto',
+                        maxWidth: '100%',
+                        objectFit: 'contain',
+                        cursor: 'pointer',
+                      }}
+                    />
+                  </Link>
+                </div>
+
+                <div className={styles.barWrapper}>
+                  <div
+                    className={styles.bar}
                     style={{
-                      height: '90px',
-                      width: 'auto',
-                      maxWidth: '100%',
-                      objectFit: 'contain',
-                      cursor: 'pointer',
+                      width: `${entry.score}%`,
+                      backgroundColor:
+                        entry.score >= 85
+                          ? '#007e33' // green
+                          : entry.score >= 70
+                          ? '#ffa500' // orange
+                          : '#cc0000', // red
+                      transition: 'width 0.6s ease',
                     }}
                   />
-                </Link>
+                  <span className={styles.score}>{entry.score}%</span>
+                </div>
               </div>
-
-              <div className={styles.barWrapper}>
-                <div
-                  className={styles.bar}
-                  style={{
-                    width: `${entry.score}%`,
-                    backgroundColor:
-                      entry.score >= 85
-                        ? '#28a745'
-                        : entry.score >= 70
-                        ? '#ffc107'
-                        : '#dc3545',
-                  }}
-                />
-                <span className={styles.score}>{entry.score}%</span>
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </div>
   );
