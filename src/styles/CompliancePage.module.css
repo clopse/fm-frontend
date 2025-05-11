@@ -8,7 +8,7 @@
 
 .heading {
   font-size: 26px;
-  margin-bottom: 20px;
+  margin: 32px 0 20px;
   font-weight: 600;
   color: #222;
 }
@@ -73,36 +73,38 @@
   font-size: 14px;
 }
 
-.overviewBox {
+.graphBox {
+  width: 100%;
+  height: 350px;
+  margin-bottom: 32px;
   background: #f9f9f9;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 24px;
+  padding: 24px;
+  position: relative;
+}
+
+.graphHeader {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
+  margin-bottom: 12px;
 }
 
-.scoreBlock {
-  text-align: center;
+.graphTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #222;
 }
 
-.scoreBlock strong {
-  font-size: 28px;
-  color: #0070f3;
-  display: block;
-}
-
-.scoreBlock span {
+.scoreBadge {
+  background-color: #0070f3;
+  color: white;
+  padding: 6px 12px;
+  font-weight: 600;
+  border-radius: 20px;
   font-size: 14px;
-  color: #444;
-}
-
-.graphBox {
-  width: 100%;
-  height: 300px;
-  margin-bottom: 24px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .group {
