@@ -1,9 +1,19 @@
+// CompliancePage.tsx
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
 import TaskUploadBox from '@/components/TaskUploadBox';
 import TaskCard from '@/components/TaskCard';
 import styles from '@/styles/CompliancePage.module.css';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
 interface Upload {
   url: string;
@@ -106,11 +116,7 @@ const CompliancePage = ({ params }: Props) => {
       setScoreHistory(
         Object.entries(data.monthly_history || {}).map(([month, entry]) => {
           const e = entry as { score: number; max: number };
-          return {
-            month,
-            score: e.score,
-            max: e.max,
-          };
+          return { month, score: e.score, max: e.max };
         })
       );
     } catch (err) {
@@ -125,10 +131,7 @@ const CompliancePage = ({ params }: Props) => {
     await loadScores();
   };
 
-  const selectedTaskObj = useMemo(
-    () => tasks.find((t) => t.task_id === selectedTask) || null,
-    [tasks, selectedTask]
-  );
+  const selectedTaskObj = useMemo(() => tasks.find((t) => t.task_id === selectedTask) || null, [tasks, selectedTask]);
 
   const categories = Array.from(new Set(tasks.map((t) => t.category)));
   const frequencies = Array.from(new Set(tasks.map((t) => t.frequency)));
@@ -140,7 +143,6 @@ const CompliancePage = ({ params }: Props) => {
       const searchMatch = task.label.toLowerCase().includes(searchTerm.toLowerCase());
       return categoryMatch && freqMatch && searchMatch;
     });
-
     return filtered.reduce((acc, task) => {
       const group = acc[task.category] || [];
       group.push(task);
@@ -166,12 +168,22 @@ const CompliancePage = ({ params }: Props) => {
         </div>
       </div>
 
-      <button
-        className={styles.filterToggle}
-        onClick={() => setFiltersOpen(!filtersOpen)}
-        title="Show filters"
-      >
-        <img src="/icons/filter-icon.png" width={25} height={25} alt="Filter" />
+      {scoreHistory.length > 0 && (
+        <div className={styles.graphBox}>
+          <ResponsiveContainer>
+            <LineChart data={scoreHistory}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis domain={[0, totalPoints]} />
+              <Tooltip />
+              <Line type="monotone" dataKey="score" stroke="#0070f3" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      <button className={styles.filterToggle} onClick={() => setFiltersOpen(!filtersOpen)} title="Show filters">
+        <img src="/icons/filter-icon.png" width={25} height={25} alt="Filter" /> Filters
       </button>
 
       {filtersOpen && (
@@ -202,12 +214,7 @@ const CompliancePage = ({ params }: Props) => {
 
           <div>
             <label>Search</label>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search tasks..."
-            />
+            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search tasks..." />
           </div>
         </div>
       )}
