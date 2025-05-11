@@ -173,8 +173,6 @@ setScoreHistory(
 
   return (
     <div className={styles.container}>
-      
-      </div>
 
 <h1 className={styles.heading}>Compliance Tasks</h1>
 
@@ -184,10 +182,7 @@ setScoreHistory(
     <h2 className={styles.graphTitle}>Compliance Score (Last 12 Months)</h2>
     <div className={styles.scoreBadge}>{earnedPoints} / {totalPoints}</div>
   </div>
-          <div className={styles.scoreBlockInline}>
-            <strong>{earnedPoints} / {totalPoints}</strong>
-            <span>Compliance Score</span>
-          </div>
+          
           <ResponsiveContainer>
             <LineChart data={scoreHistory}>
               <CartesianGrid strokeDasharray="3 3" />
