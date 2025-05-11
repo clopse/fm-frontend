@@ -7,7 +7,7 @@ import styles from '@/styles/ComplianceLeaderboard.module.css';
 import { hotels } from '@/lib/hotels';
 
 type LeaderboardEntry = {
-  hotel: string; // This should be hotelId
+  hotel: string; // Hotel ID
   score: number;
 };
 
@@ -20,15 +20,19 @@ export default function ComplianceLeaderboard({ data }: Props) {
   const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+  // On first load, pull hotel filters from localStorage or default to all
   useEffect(() => {
     const saved = localStorage.getItem('selectedHotels');
     if (saved) {
       setSelectedHotels(JSON.parse(saved));
     } else {
-      setSelectedHotels(hotels.map((h) => h.id));
+      const allHotelIds = hotels.map((h) => h.id);
+      setSelectedHotels(allHotelIds);
+      localStorage.setItem('selectedHotels', JSON.stringify(allHotelIds));
     }
   }, []);
 
+  // Sort data by score (descending) and name (asc)
   useEffect(() => {
     const sorted = [...data].sort((a, b) => {
       if (b.score === a.score) return a.hotel.localeCompare(b.hotel);
@@ -57,8 +61,9 @@ export default function ComplianceLeaderboard({ data }: Props) {
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className={styles.dropdownButton}
+            title="Filter hotels"
           >
-            {dropdownOpen ? '▲' : '▼'}
+            ▼
           </button>
           {dropdownOpen && (
             <div className={styles.dropdownMenu}>
@@ -77,19 +82,18 @@ export default function ComplianceLeaderboard({ data }: Props) {
         </div>
       </div>
 
-      <div className={styles.leaderboard}>
-        {filteredData.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#777', padding: '1rem' }}>
-            ⚠️ No hotels selected or no data available.
-          </p>
-        ) : (
-          filteredData.map((entry, index) => {
+      {filteredData.length === 0 ? (
+        <div className={styles.emptyState}>
+          ⚠️ No hotels selected or no data available.
+        </div>
+      ) : (
+        <div className={styles.leaderboard}>
+          {filteredData.map((entry) => {
             const hotel = hotels.find((h) => h.id === entry.hotel);
             const hotelName = hotel?.name || entry.hotel;
 
             return (
               <div key={entry.hotel} className={styles.row}>
-                <span className={styles.rank}>#{index + 1}</span>
                 <div className={styles.logoCell}>
                   <Link href={`/hotels/${entry.hotel}`}>
                     <Image
@@ -97,9 +101,6 @@ export default function ComplianceLeaderboard({ data }: Props) {
                       alt={hotelName}
                       width={150}
                       height={90}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/icons/default.png';
-                      }}
                       style={{
                         height: '90px',
                         width: 'auto',
@@ -118,20 +119,19 @@ export default function ComplianceLeaderboard({ data }: Props) {
                       width: `${entry.score}%`,
                       backgroundColor:
                         entry.score >= 85
-                          ? '#007e33' // green
+                          ? '#28a745'
                           : entry.score >= 70
-                          ? '#ffa500' // orange
-                          : '#cc0000', // red
-                      transition: 'width 0.6s ease',
+                          ? '#ffc107'
+                          : '#dc3545',
                     }}
                   />
                   <span className={styles.score}>{entry.score}%</span>
                 </div>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 }
