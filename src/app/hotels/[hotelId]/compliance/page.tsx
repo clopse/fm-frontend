@@ -1,18 +1,9 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import TaskUploadBox from '@/components/TaskUploadBox';
 import TaskCard from '@/components/TaskCard';
 import styles from '@/styles/CompliancePage.module.css';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine
-} from 'recharts';
 
 interface Upload {
   url: string;
@@ -50,7 +41,7 @@ interface ScoreBreakdown {
   [taskId: string]: number;
 }
 
-interface ScoreHistoryPoint {
+interface ScoreHistoryEntry {
   month: string;
   score: number;
   max: number;
@@ -65,7 +56,7 @@ const CompliancePage = ({ params }: Props) => {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [history, setHistory] = useState<Record<string, HistoryEntry[]>>({});
   const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown>({});
-  const [scoreHistory, setScoreHistory] = useState<ScoreHistoryPoint[]>([]);
+  const [scoreHistory, setScoreHistory] = useState<ScoreHistoryEntry[]>([]);
   const [visible, setVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,8 +70,9 @@ const CompliancePage = ({ params }: Props) => {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([loadTasks(), loadHistory(), loadScores()])
-      .finally(() => setLoading(false));
+    Promise.all([loadTasks(), loadHistory(), loadScores()]).finally(() =>
+      setLoading(false)
+    );
   }, [hotelId]);
 
   const loadTasks = async () => {
@@ -111,11 +103,16 @@ const CompliancePage = ({ params }: Props) => {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
       const data = await res.json();
       setScoreBreakdown(data.task_breakdown || {});
-      setScoreHistory(Object.entries(data.monthly_history || {}).map(([month, entry]) => ({
-        month,
-        score: entry.score,
-        max: entry.max
-      })));
+      setScoreHistory(
+        Object.entries(data.monthly_history || {}).map(([month, entry]) => {
+          const e = entry as { score: number; max: number };
+          return {
+            month,
+            score: e.score,
+            max: e.max,
+          };
+        })
+      );
     } catch (err) {
       console.error(err);
     }
@@ -168,21 +165,6 @@ const CompliancePage = ({ params }: Props) => {
           <span>Compliance Score</span>
         </div>
       </div>
-
-      {scoreHistory.length > 0 && (
-        <div style={{ width: '100%', height: 250, marginBottom: '2rem' }}>
-          <ResponsiveContainer>
-            <LineChart data={scoreHistory}>
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <ReferenceLine y={100} label="Target" stroke="green" strokeDasharray="3 3" />
-              <Line type="monotone" dataKey="score" stroke="#8884d8" />
-              <Line type="monotone" dataKey="max" stroke="#ccc" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
 
       <button
         className={styles.filterToggle}
