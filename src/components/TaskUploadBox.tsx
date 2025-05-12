@@ -83,7 +83,7 @@ export default function TaskUploadBox({
 
   // Group uploads by year for proper counting
   const groupedUploads = useMemo(() => {
-    const uploadsByYear = {};
+    const uploadsByYear: Record<number, HistoryEntry[]> = {};
     
     normalizedHistory
       .filter(entry => entry.type === 'upload' && entry.reportDate)
@@ -194,7 +194,7 @@ export default function TaskUploadBox({
       const year = date.getFullYear();
       
       // Get all uploads for this year
-      const yearUploads = groupedUploads[year] || [];
+      const yearUploads = groupedUploads[year as keyof typeof groupedUploads] || [];
       
       // Sort uploads by date
       yearUploads.sort((a, b) => {
