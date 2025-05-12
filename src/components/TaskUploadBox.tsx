@@ -31,6 +31,7 @@ interface TaskUploadBoxProps {
   isConfirmed: boolean;
   lastConfirmedDate: string | null;
   history: HistoryEntry[];
+  frequency: string; // Add frequency prop
   onSuccess: () => void;
   onClose: () => void;
 }
@@ -46,6 +47,7 @@ export default function TaskUploadBox({
   isConfirmed,
   lastConfirmedDate,
   history,
+  frequency,
   onSuccess,
   onClose,
 }: TaskUploadBoxProps) {
@@ -72,12 +74,15 @@ export default function TaskUploadBox({
     });
   }, [history]);
 
-  // Get frequency number based on task ID
+  // Get frequency number based on frequency prop
   const getFrequencyNumber = () => {
-    if (taskId.includes('quarterly')) return 4;
-    if (taskId.includes('monthly')) return 12;
-    if (taskId.includes('weekly')) return 52;
-    if (taskId.includes('daily')) return 365;
+    // Convert frequency string to expected number of uploads per year
+    const frequencyLower = frequency.toLowerCase();
+    if (frequencyLower.includes('quarterly')) return 4;
+    if (frequencyLower.includes('monthly')) return 12;
+    if (frequencyLower.includes('weekly')) return 52;
+    if (frequencyLower.includes('daily')) return 365;
+    if (frequencyLower.includes('bi-annual') || frequencyLower.includes('semi-annual')) return 2;
     return 1; // Default to annual
   };
 
