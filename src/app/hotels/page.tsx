@@ -1,277 +1,157 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
-import TaskUploadBox from '@/components/TaskUploadBox';
-import TaskCard from '@/components/TaskCard';
-import FilterPanel from '@/components/FilterPanel';
-import styles from '@/styles/CompliancePage.module.css';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { User2 } from 'lucide-react';
+
+import ComplianceLeaderboard from '@/components/ComplianceLeaderboard';
+import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
+import { RecentUploads } from '@/components/RecentUploads';
+import HotelSelectorModal from '@/components/HotelSelectorModal';
+import UserPanel from '@/components/UserPanel';
+import { hotels } from '@/lib/hotels';
+
+import styles from '@/styles/AdminDashboard.module.css';
+import headerStyles from '@/styles/HeaderBar.module.css';
 
 interface Upload {
-  url: string;
-  report_date: string;
-  uploaded_by: string;
+  hotel: string;
+  report: string;
+  date: string;
 }
 
-interface HistoryEntry {
-  type: 'upload' | 'confirmation';
-  fileName?: string;
-  fileUrl?: string;
-  reportDate?: string;
-  uploadedAt?: string;
-  uploadedBy?: string;
-  confirmedAt?: string;
-  confirmedBy?: string;
-}
-
-interface TaskItem {
-  task_id: string;
-  label: string;
-  info_popup: string;
-  frequency: string;
-  category: string;
-  mandatory: boolean;
-  type: 'upload' | 'confirmation';
-  can_confirm: boolean;
-  is_confirmed_this_month: boolean;
-  last_confirmed_date: string | null;
-  points: number;
-  uploads: Upload[];
-}
-
-interface ScoreBreakdown {
-  [taskId: string]: number;
-}
-
-interface ScoreHistoryEntry {
-  month: string;
+interface LeaderboardEntry {
+  hotel: string; // hotel ID
   score: number;
-  max: number;
 }
 
-interface Props {
-  params: { hotelId: string };
+interface MonthlyTask {
+  task_id: string;
+  frequency: string;
+  confirmed: boolean;
+  label?: string;
 }
 
-const CompliancePage = ({ params }: Props) => {
-  const hotelId = params.hotelId;
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [history, setHistory] = useState<Record<string, HistoryEntry[]>>({});
-  const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown>({});
-  const [scoreHistory, setScoreHistory] = useState<ScoreHistoryEntry[]>([]);
-  const [visible, setVisible] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    category: [] as string[],
-    frequency: [] as string[],
-    mandatoryOnly: false,
-    search: '',
-    type: '',
-  });
+export default function HotelsPage() {
+  const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+  const [monthlyTasks, setMonthlyTasks] = useState<MonthlyTask[]>([]);
+  const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
+  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
+  const [currentHotel, setCurrentHotel] = useState(hotels[0].name);
 
   useEffect(() => {
-    setLoading(true);
-    Promise.all([loadTasks(), loadHistory(), loadScores()]).finally(() =>
-      setLoading(false)
-    );
-  }, [hotelId]);
+    fetchLeaderboard();
+    fetchRecentUploads();
+    fetchMonthlyChecklist();
+  }, []);
 
-  const loadTasks = async () => {
+  const fetchLeaderboard = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
-      const data = await res.json();
-      if (!Array.isArray(data.tasks)) throw new Error('Invalid task list format');
-      setTasks(data.tasks);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`);
+      const data: LeaderboardEntry[] = await res.json();
+
+      const sorted = [...data].sort((a, b) => b.score - a.score);
+      setLeaderboardData(sorted);
     } catch (err) {
-      console.error(err);
-      setError('Unable to load compliance tasks.');
+      console.error('Error loading leaderboard:', err);
+      setLeaderboardData([]);
     }
   };
 
-  const loadHistory = async () => {
+  const fetchRecentUploads = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/${hotelId}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/all`);
       const data = await res.json();
-      setHistory(data.history || {});
+
+      const entries = (data.entries || [])
+        .filter((e: any) => !e.approved)
+        .sort((a: any, b: any) =>
+          new Date(b.uploadedAt || b.confirmedAt).getTime() -
+          new Date(a.uploadedAt || a.confirmedAt).getTime()
+        )
+        .slice(0, 10)
+        .map((e: any) => ({
+          hotel: e.hotel_id,
+          report: `${e.task_id} (${e.type})`,
+          date: e.uploadedAt || e.confirmedAt || '',
+        }));
+
+      setRecentUploads(entries);
     } catch (err) {
-      console.error(err);
-      setError('Unable to load compliance history.');
+      console.error('Error loading uploads:', err);
     }
   };
 
-  const loadScores = async () => {
+  const fetchMonthlyChecklist = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
-      const data = await res.json();
-      setScoreBreakdown(data.task_breakdown || {});
-      setScoreHistory(
-        Object.entries(data.monthly_history || {}).map(([month, entry]) => {
-          const e = entry as { score: number; max: number };
-          return {
-            month,
-            score: e.score,
-            max: e.max,
-          };
-        })
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`);
+      const data: MonthlyTask[] = await res.json();
+
+      const filtered = data.filter(t =>
+        t.frequency?.toLowerCase() === 'monthly' && !t.confirmed
       );
+      setMonthlyTasks(filtered);
     } catch (err) {
-      console.error(err);
+      console.error('Error loading checklist:', err);
     }
   };
 
-  const handleUploadSuccess = async () => {
-    setSuccessMessage('✅ Upload successful!');
-    await loadTasks();
-    await loadHistory();
-    await loadScores();
+  const handleHotelSelect = (hotelName: string) => {
+    setCurrentHotel(hotelName);
+    setIsHotelModalOpen(false);
   };
-
-  const selectedTaskObj = useMemo(
-    () => tasks.find((t) => t.task_id === selectedTask) || null,
-    [tasks, selectedTask]
-  );
-
-  const categories = Array.from(new Set(tasks.map((t) => t.category)));
-  const frequencies = Array.from(new Set(tasks.map((t) => t.frequency)));
-
-  const grouped = useMemo(() => {
-    const filtered = tasks.filter((task) => {
-      const categoryMatch = filters.category.length === 0 || filters.category.includes(task.category);
-      const freqMatch = filters.frequency.length === 0 || filters.frequency.includes(task.frequency);
-      const searchMatch = task.label.toLowerCase().includes(filters.search.toLowerCase());
-      return categoryMatch && freqMatch && searchMatch;
-    });
-
-    return filtered.reduce((acc, task) => {
-      const group = acc[task.category] || [];
-      group.push(task);
-      acc[task.category] = group;
-      return acc;
-    }, {} as Record<string, TaskItem[]>);
-  }, [tasks, filters]);
-
-  const totalPoints = tasks.reduce((sum, task) => sum + (task.points ?? 0), 0);
-  const earnedPoints = Object.values(scoreBreakdown).reduce((sum, score) => sum + score, 0);
-
-  const now = new Date();
-  const months: string[] = [];
-  for (let i = -6; i <= 5; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    months.push(monthStr);
-  }
-
-  const processedScoreHistory = months.map((month) => {
-    const entry = scoreHistory.find((s) => s.month === month);
-    return {
-      month,
-      score: entry?.score ?? null,
-      max: entry?.max ?? totalPoints,
-    };
-  });
 
   return (
     <div className={styles.container}>
-      {loading && <p className={styles.loading}>Loading...</p>}
-      {error && <p className={styles.error}>{error}</p>}
-      {successMessage && <p className={styles.success}>{successMessage}</p>}
+      <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
 
-      {scoreHistory.length > 0 && (
-        <div className={styles.graphBox}>
-          <div className={styles.graphHeader}>
-            <div className={styles.graphTitle}>Compliance Score (Last 12 Months)</div>
-            <div className={styles.scoreBadge}>{earnedPoints} / {totalPoints}</div>
-          </div>
-          <ResponsiveContainer>
-            <LineChart
-              data={processedScoreHistory}
-              margin={{ top: 10, right: 30, left: 0, bottom: 40 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis domain={[0, totalPoints]} />
-              <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="score"
-                stroke="#0070f3"
-                strokeWidth={2}
-                dot
-              />
-            </LineChart>
-          </ResponsiveContainer>
+      <header className={headerStyles.header}>
+        <div className={headerStyles.left}>
+          <Image src="/jmk-logo.png" alt="JMK Hotels" width={228} height={60} style={{ objectFit: 'contain' }} />
         </div>
-      )}
+        <div className={headerStyles.center}>
+          <button className={headerStyles.selector} onClick={() => setIsHotelModalOpen(true)}>
+            {currentHotel} <span className={headerStyles.arrow}>⌄</span>
+          </button>
+        </div>
+        <div className={headerStyles.right}>
+          <button onClick={() => setIsUserPanelOpen(true)} className={headerStyles.userBtn} title="Account">
+            <User2 size={20} />
+          </button>
+        </div>
+      </header>
 
-      <h1 className={styles.heading}>Compliance Tasks</h1>
+      <HotelSelectorModal
+        isOpen={isHotelModalOpen}
+        setIsOpen={setIsHotelModalOpen}
+        onSelectHotel={handleHotelSelect}
+      />
 
-      <button
-        className={styles.filterToggle}
-        onClick={() => setFiltersOpen(!filtersOpen)}
-        title="Show filters"
-      >
-        <img src="/icons/filter-icon.png" width={27} height={27} alt="Filter" />
-      </button>
+      <div className={styles.section}>
+        <ComplianceLeaderboard data={leaderboardData} />
+      </div>
 
-      {filtersOpen && (
-        <FilterPanel
-          filters={filters}
-          onChange={setFilters}
-          categories={categories}
-          frequencies={frequencies}
-        />
-      )}
+      <div className={styles.section}>
+        <h2 className={styles.header}>Hotel Utilities Comparison</h2>
+        <UtilitiesGraphs />
+      </div>
 
-      {Object.keys(grouped).map((category) => (
-        <div key={category} className={styles.group}>
-          <h2 className={styles.groupTitle}>{category}</h2>
-          <div className={styles.grid}>
-            {grouped[category].map((task) => (
-              <TaskCard
-                key={task.task_id}
-                task={task}
-                fileInfo={{ score: scoreBreakdown[task.task_id] ?? 0 }}
-                onClick={() => {
-                  setSelectedTask(task.task_id);
-                  setVisible(true);
-                }}
-              />
+      {monthlyTasks.length > 0 && (
+        <div className={styles.section}>
+          <h2 className={styles.header}>Monthly Tasks Needing Confirmation</h2>
+          <ul>
+            {monthlyTasks.map((task) => (
+              <li key={task.task_id}>🔲 {task.label || task.task_id}</li>
             ))}
-          </div>
+          </ul>
         </div>
-      ))}
-
-      {visible && selectedTask && selectedTaskObj && (
-       <TaskUploadBox
-          visible={visible}
-          hotelId={hotelId}
-          taskId={selectedTask}
-          label={selectedTaskObj.label}
-          info={selectedTaskObj.info_popup}
-          isMandatory={selectedTaskObj.mandatory}
-          canConfirm={selectedTaskObj.can_confirm}
-          isConfirmed={selectedTaskObj.is_confirmed_this_month}
-          lastConfirmedDate={selectedTaskObj.last_confirmed_date}
-          history={history[selectedTask] || []}
-          onSuccess={handleUploadSuccess}
-          onClose={() => setVisible(false)}
-        />
       )}
+
+      <div className={styles.section}>
+        <h2 className={styles.header}>Recent Uploads Awaiting Approval</h2>
+        <RecentUploads uploads={recentUploads} />
+      </div>
     </div>
   );
-};
-
-export default CompliancePage;
+}
