@@ -254,7 +254,7 @@ export default function TaskUploadBox({
       const date = new Date(dateString);
       return isNaN(date.getTime()) 
         ? '' 
-        : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'MMM', year: 'numeric' });
+        : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     } catch (error) {
       return '';
     }
