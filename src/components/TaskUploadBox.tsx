@@ -123,25 +123,31 @@ export default function TaskUploadBox({
   }, [history]);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') onClose();
+  };
+
+  if (visible) {
     window.addEventListener('keydown', handleKeyDown);
-      const sortedUploads = [...normalizedHistory]
-        .filter(h => h.type === 'upload' && h.fileUrl)
-        .sort((a, b) => new Date(b.uploadedAt || '').getTime() - new Date(a.uploadedAt || '').getTime());
 
-      if (sortedUploads[0]?.fileUrl && !isMobile().any) {
-        setSelectedFile(sortedUploads[0].fileUrl);
-      }
+    const sortedUploads = [...normalizedHistory]
+      .filter(h => h.type === 'upload' && h.fileUrl)
+      .sort((a, b) => new Date(b.uploadedAt || '').getTime() - new Date(a.uploadedAt || '').getTime());
 
-      setFile(null);
-      setReportDate('');
-    } else {
-      setSelectedFile(null);
+    if (sortedUploads[0]?.fileUrl && !isMobile().any) {
+      setSelectedFile(sortedUploads[0].fileUrl);
     }
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [visible, normalizedHistory]);
+
+    setFile(null);
+    setReportDate('');
+  } else {
+    setSelectedFile(null);
+  }
+
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown);
+  };
+}, [visible, normalizedHistory]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
