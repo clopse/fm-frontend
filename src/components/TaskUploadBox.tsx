@@ -61,6 +61,19 @@ export default function TaskUploadBox({
 
   if (!visible) return null;
 
+  // Split legal reference from info
+  const [mainText, legalText] = useMemo(() => {
+    const symbol = '🔍';
+    const splitIndex = info.indexOf(symbol);
+    if (splitIndex !== -1) {
+      return [
+        info.slice(0, splitIndex).trim(),
+        info.slice(splitIndex).replace(symbol, '').trim(),
+      ];
+    }
+    return [info, ''];
+  }, [info]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     setFile(selected);
@@ -102,7 +115,7 @@ export default function TaskUploadBox({
     } else if (lastConfirmedDate) {
       formData.append('report_date', lastConfirmedDate);
     } else {
-      formData.append('report_date', today); // fallback
+      formData.append('report_date', today);
     }
 
     try {
@@ -130,12 +143,13 @@ export default function TaskUploadBox({
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h2 className={styles.title}>{label}</h2>
-          <button className={styles.closeButton} onClick={onClose}>
-            ✕
-          </button>
+          <button className={styles.closeButton} onClick={onClose}>✕</button>
         </div>
 
-        <p className={styles.description}>{info}</p>
+        <div className={styles.description}>
+          <p>{mainText}</p>
+          {legalText && <p style={{ color: '#777', fontStyle: 'italic' }}>{legalText}</p>}
+        </div>
 
         <div className={styles.body}>
           <button
@@ -153,25 +167,19 @@ export default function TaskUploadBox({
             className={styles.fileInput}
           />
 
-          {!isMandatory && (
-            <div className={styles.optionalNote}>
-              Optional upload — not required to earn points.
-            </div>
-          )}
-
           {previewUrl && (
-            <div className={styles.previewCard}>
+            <div style={{ width: '100%', maxWidth: '720px', height: '480px', border: '1px solid #ccc' }}>
               {file?.type.includes('pdf') ? (
                 <iframe
-                  className={styles.previewFrame}
                   src={previewUrl}
                   title="PDF Preview"
+                  style={{ width: '100%', height: '100%', border: 'none' }}
                 />
               ) : (
                 <img
                   src={previewUrl}
                   alt="Preview"
-                  className={styles.previewFrame}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                 />
               )}
             </div>
