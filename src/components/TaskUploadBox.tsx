@@ -61,19 +61,7 @@ export default function TaskUploadBox({
 
   if (!visible) return null;
 
-  // Split legal reference from info
-  const [mainText, legalText] = useMemo(() => {
-    const symbol = '🔍';
-    const splitIndex = info.indexOf(symbol);
-    if (splitIndex !== -1) {
-      return [
-        info.slice(0, splitIndex).trim(),
-        info.slice(splitIndex).replace(symbol, '').trim(),
-      ];
-    }
-    return [info, ''];
-  }, [info]);
-
+  // Handle file preview
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     setFile(selected);
@@ -115,7 +103,7 @@ export default function TaskUploadBox({
     } else if (lastConfirmedDate) {
       formData.append('report_date', lastConfirmedDate);
     } else {
-      formData.append('report_date', today);
+      formData.append('report_date', today); // fallback
     }
 
     try {
@@ -138,9 +126,19 @@ export default function TaskUploadBox({
     }
   };
 
+  // Extract legal section dynamically (optional future improvement)
+  const splitInfo = info.split(/(🧑‍⚖️|🔍|📜)/i);
+  const mainText = splitInfo[0]?.trim();
+  const legalRef = splitInfo.slice(1).join('').trim();
+
+  // Best available preview: file > uploaded > latest history
+  const lastUploaded = uploads[uploads.length - 1];
+  const latestRemoteUrl = lastUploaded?.url || history.find(h => h.type === 'upload')?.fileUrl;
+  const activePreview = previewUrl || latestRemoteUrl;
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+      <div className={`${styles.modal} ${styles.fadeIn}`} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h2 className={styles.title}>{label}</h2>
           <button className={styles.closeButton} onClick={onClose}>✕</button>
@@ -148,7 +146,9 @@ export default function TaskUploadBox({
 
         <div className={styles.description}>
           <p>{mainText}</p>
-          {legalText && <p style={{ color: '#777', fontStyle: 'italic' }}>{legalText}</p>}
+          {legalRef && (
+            <p style={{ color: '#666', fontStyle: 'italic' }}>{legalRef}</p>
+          )}
         </div>
 
         <div className={styles.body}>
@@ -168,18 +168,58 @@ export default function TaskUploadBox({
           />
 
           {previewUrl && (
-            <div style={{ width: '100%', maxWidth: '720px', height: '480px', border: '1px solid #ccc' }}>
+            <div style={{ width: '100%', maxWidth: '720px', height: '480px' }}>
               {file?.type.includes('pdf') ? (
                 <iframe
                   src={previewUrl}
                   title="PDF Preview"
-                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: '1px solid #ccc',
+                    borderRadius: '8px'
+                  }}
                 />
               ) : (
                 <img
                   src={previewUrl}
                   alt="Preview"
-                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  style={{
+                    width: '100%',
+                    maxHeight: '480px',
+                    objectFit: 'contain',
+                    borderRadius: '8px',
+                    border: '1px solid #ccc'
+                  }}
+                />
+              )}
+            </div>
+          )}
+
+          {!previewUrl && activePreview && (
+            <div style={{ width: '100%', maxWidth: '720px', height: '480px' }}>
+              {activePreview.includes('.pdf') ? (
+                <iframe
+                  src={activePreview}
+                  title="PDF Preview"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: '1px solid #ccc',
+                    borderRadius: '8px'
+                  }}
+                />
+              ) : (
+                <img
+                  src={activePreview}
+                  alt="Previous Upload"
+                  style={{
+                    width: '100%',
+                    maxHeight: '480px',
+                    objectFit: 'contain',
+                    borderRadius: '8px',
+                    border: '1px solid #ccc'
+                  }}
                 />
               )}
             </div>
