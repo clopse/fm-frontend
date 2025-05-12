@@ -123,7 +123,10 @@ export default function TaskUploadBox({
   }, [history]);
 
   useEffect(() => {
-    if (visible) {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
       const sortedUploads = [...normalizedHistory]
         .filter(h => h.type === 'upload' && h.fileUrl)
         .sort((a, b) => new Date(b.uploadedAt || '').getTime() - new Date(a.uploadedAt || '').getTime());
@@ -137,6 +140,7 @@ export default function TaskUploadBox({
     } else {
       setSelectedFile(null);
     }
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [visible, normalizedHistory]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -200,7 +204,7 @@ export default function TaskUploadBox({
   if (!visible) return null;
 
   return (
-    <div className={styles.modalOverlay} onClick={onClose}>
+    <div className={styles.modalOverlay}>
       <div
         className={`${styles.modal} ${styles.fadeIn}`}
         onClick={(e) => e.stopPropagation()}
