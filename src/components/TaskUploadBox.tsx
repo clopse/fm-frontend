@@ -133,7 +133,7 @@ export default function TaskUploadBox({
           <p>{mainText}</p>
           {legalRef && (
             <p className={styles.legalRef}>
-              📜 <em>{legalRef}</em>
+              <em>{legalRef}</em>
             </p>
           )}
         </div>
