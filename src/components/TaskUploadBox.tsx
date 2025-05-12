@@ -3,7 +3,6 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import isMobile from 'ismobilejs';
 import styles from '@/styles/TaskUploadBox.module.css';
-import { Eye, Download } from 'lucide-react';
 
 interface HistoryEntry {
   type: 'upload' | 'confirmation';
@@ -57,28 +56,11 @@ export default function TaskUploadBox({
   const [reportDate, setReportDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [dimensions, setDimensions] = useState(() => {
-    const saved = localStorage.getItem('taskModalSize');
-    return saved ? JSON.parse(saved) : { width: 900, height: 600 };
-  });
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  const isPDF = useMemo(() => {
-    return (
-      file?.type === 'application/pdf' ||
-      file?.name?.toLowerCase().endsWith('.pdf') ||
-      selectedFile?.includes('.pdf')
-    );
-  }, [file, selectedFile]);
-
-  const isImage = useMemo(() => {
-    return (
-      file?.type?.startsWith('image/') ||
-      /\.(jpg|jpeg|png|gif)$/i.test(file?.name || '') ||
-      /\.(jpg|jpeg|png|gif)$/i.test(selectedFile || '')
-    );
-  }, [file, selectedFile]);
+  const isPDF = useMemo(() => selectedFile?.toLowerCase().endsWith('.pdf'), [selectedFile]);
+  const isImage = useMemo(() => /\.(jpg|jpeg|png|gif)$/i.test(selectedFile || ''), [selectedFile]);
 
   const handlePreviewFile = (filePath: string) => {
     if (isMobile().any) {
@@ -87,28 +69,6 @@ export default function TaskUploadBox({
       setSelectedFile(filePath);
       setFile(null);
     }
-  };
-
-  const startResizing = (e: React.MouseEvent) => {
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startWidth = dimensions.width;
-    const startHeight = dimensions.height;
-
-    const handleMouseMove = (moveEvent: MouseEvent) => {
-      const newWidth = Math.max(700, Math.min(1200, startWidth + (moveEvent.clientX - startX)));
-      const newHeight = Math.max(400, Math.min(900, startHeight + (moveEvent.clientY - startY)));
-      setDimensions({ width: newWidth, height: newHeight });
-    };
-
-    const stopResizing = () => {
-      localStorage.setItem('taskModalSize', JSON.stringify(dimensions));
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', stopResizing);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', stopResizing);
   };
 
   const normalizedHistory = useMemo(() => {
@@ -250,11 +210,7 @@ export default function TaskUploadBox({
 
   return (
     <div className={styles.modalOverlay}>
-      <div
-        className={`${styles.modal} ${styles.fadeIn}`}
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: dimensions.width, height: dimensions.height }}
-      >
+      <div className={`${styles.modal} ${styles.fadeIn}`} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h2 className={styles.title}>{label}</h2>
           <button className={styles.closeButton} onClick={onClose}>✕</button>
@@ -280,22 +236,17 @@ export default function TaskUploadBox({
               />
             </div>
 
-            <div className={styles.dateAndSubmit}>
-              {isMandatory && (
-                <div className={styles.reportDate}>
-                  <label>Report Date</label>
-                  <input
-                    type="date"
-                    value={reportDate}
-                    onChange={(e) => setReportDate(e.target.value)}
-                    max={today}
-                  />
-                </div>
-              )}
-              <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
-                {submitting ? 'Submitting...' : 'Submit'}
-              </button>
-            </div>
+            {isMandatory && (
+              <div className={styles.reportDate}>
+                <label>Report Date</label>
+                <input
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  max={today}
+                />
+              </div>
+            )}
 
             {normalizedHistory.length > 0 && (
               <div className={styles.taskHistory}>
@@ -303,17 +254,17 @@ export default function TaskUploadBox({
                 <div className={styles.historyList}>
                   {normalizedHistory.filter(h => h.type === 'upload').map((entry, i) => (
                     <div key={i} className={`${styles.historyItem} ${selectedFile === entry.fileUrl ? styles.activeHistoryItem : ''}`}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                         <div>
                           {formatTaskName(entry)}
                           <div className={styles.historyDate}>{entry.reportDate}</div>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button onClick={(e) => { e.preventDefault(); handlePreviewFile(entry.fileUrl); }} title="Preview">
-                            <Eye size={16} />
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button onClick={() => handlePreviewFile(entry.fileUrl)} title="Preview">
+                            <img src="/icons/pdf-icon.png" width={18} height={18} alt="Preview" />
                           </button>
                           <a href={entry.fileUrl} download title="Download">
-                            <Download size={16} />
+                            <img src="/icons/download-icon.png" width={18} height={18} alt="Download" />
                           </a>
                         </div>
                       </div>
@@ -335,7 +286,7 @@ export default function TaskUploadBox({
                 </div>
               </div>
             ) : isPDF ? (
-              <iframe src={selectedFile} className={styles.viewer} title="PDF Viewer" style={{ border: 'none' }} />
+              <iframe src={selectedFile} className={styles.viewer} title="PDF Viewer" />
             ) : isImage ? (
               <img src={selectedFile} alt="Preview" className={styles.viewer} />
             ) : (
@@ -343,20 +294,13 @@ export default function TaskUploadBox({
                 Download this file
               </a>
             )}
-          </div>
-        </div>
 
-        <div
-          className={styles.resizeHandle}
-          onMouseDown={startResizing}
-        >
-          <span style={{
-            width: '100%',
-            height: '100%',
-            display: 'block',
-            background: 'repeating-linear-gradient(135deg, #cbd5e1, #cbd5e1 2px, transparent 2px, transparent 4px)',
-            borderBottomRightRadius: '4px'
-          }} />
+            {file && (
+              <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
+                {submitting ? 'Submitting...' : 'Submit'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
