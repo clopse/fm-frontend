@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import TaskUploadBox from '@/components/TaskUploadBox';
 import TaskCard from '@/components/TaskCard';
+import FilterPanel from '@/components/FilterPanel';
 import styles from '@/styles/CompliancePage.module.css';
 import {
   LineChart,
@@ -72,10 +73,13 @@ const CompliancePage = ({ params }: Props) => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedFrequencies, setSelectedFrequencies] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    category: [] as string[],
+    frequency: [] as string[],
+    mandatoryOnly: false,
+    search: '',
+    type: '',
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -144,9 +148,9 @@ const CompliancePage = ({ params }: Props) => {
 
   const grouped = useMemo(() => {
     const filtered = tasks.filter((task) => {
-      const categoryMatch = selectedCategories.length === 0 || selectedCategories.includes(task.category);
-      const freqMatch = selectedFrequencies.length === 0 || selectedFrequencies.includes(task.frequency);
-      const searchMatch = task.label.toLowerCase().includes(searchTerm.toLowerCase());
+      const categoryMatch = filters.category.length === 0 || filters.category.includes(task.category);
+      const freqMatch = filters.frequency.length === 0 || filters.frequency.includes(task.frequency);
+      const searchMatch = task.label.toLowerCase().includes(filters.search.toLowerCase());
       return categoryMatch && freqMatch && searchMatch;
     });
 
@@ -156,12 +160,11 @@ const CompliancePage = ({ params }: Props) => {
       acc[task.category] = group;
       return acc;
     }, {} as Record<string, TaskItem[]>);
-  }, [tasks, selectedCategories, selectedFrequencies, searchTerm]);
+  }, [tasks, filters]);
 
   const totalPoints = tasks.reduce((sum, task) => sum + (task.points ?? 0), 0);
   const earnedPoints = Object.values(scoreBreakdown).reduce((sum, score) => sum + score, 0);
 
-  // Center current month in graph: 6 before, 5 after
   const now = new Date();
   const months: string[] = [];
   for (let i = -6; i <= 5; i++) {
@@ -188,7 +191,7 @@ const CompliancePage = ({ params }: Props) => {
       {scoreHistory.length > 0 && (
         <div className={styles.graphBox}>
           <div className={styles.graphHeader}>
-            <div className={styles.graphTitle}>Compliance Score</div>
+            <div className={styles.graphTitle}>Compliance Score (Last 12 Months)</div>
             <div className={styles.scoreBadge}>{earnedPoints} / {totalPoints}</div>
           </div>
           <ResponsiveContainer>
@@ -214,51 +217,12 @@ const CompliancePage = ({ params }: Props) => {
 
       <h1 className={styles.heading}>Compliance Tasks</h1>
 
-      <button
-        className={styles.filterToggle}
-        onClick={() => setFiltersOpen(!filtersOpen)}
-        title="Show filters"
-      >
-        <img src="/icons/filter-icon.png" width={27} height={27} alt="Filter" />
-      </button>
-
-      {filtersOpen && (
-        <div className={styles.filters}>
-          <div>
-            <label>Category</label>
-            <select multiple value={selectedCategories} onChange={(e) => {
-              const options = Array.from(e.target.selectedOptions).map((opt) => opt.value);
-              setSelectedCategories(options);
-            }}>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label>Frequency</label>
-            <select multiple value={selectedFrequencies} onChange={(e) => {
-              const options = Array.from(e.target.selectedOptions).map((opt) => opt.value);
-              setSelectedFrequencies(options);
-            }}>
-              {frequencies.map((freq) => (
-                <option key={freq} value={freq}>{freq}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label>Search</label>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search tasks..."
-            />
-          </div>
-        </div>
-      )}
+      <FilterPanel
+        filters={filters}
+        onChange={setFilters}
+        categories={categories}
+        frequencies={frequencies}
+      />
 
       {Object.keys(grouped).map((category) => (
         <div key={category} className={styles.group}>
