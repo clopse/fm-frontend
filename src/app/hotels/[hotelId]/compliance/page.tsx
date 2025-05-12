@@ -223,7 +223,7 @@ const CompliancePage = ({ params }: Props) => {
         onClick={() => setFiltersOpen(!filtersOpen)}
         title="Show filters"
       >
-        <img src="/icons/filter-icon.png" width={20} height={20} alt="Filter" />
+        <img src="/icons/filter-icon.png" width={27} height={27} alt="Filter" />
       </button>
 
       {filtersOpen && (
