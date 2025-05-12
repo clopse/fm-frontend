@@ -51,7 +51,7 @@ export default function TaskUploadBox({
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   // Split info into description and legal reference
-  const splitInfo = info.split(/(🧑‍⚖️|🔍|📜)/i);
+  const splitInfo = info.split(/(🧑‍⚖️|⚖️|📜)/i);
   const mainText = splitInfo[0]?.trim();
   const legalRef = splitInfo.slice(1).join('').trim();
 
