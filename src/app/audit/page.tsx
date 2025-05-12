@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import styles from '@/styles/AuditDashboard.module.css';
 import { hotelNames } from '@/lib/hotels';
@@ -21,15 +20,26 @@ interface AuditEntry {
 export default function AuditPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/all`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`Error fetching audit data: ${res.status} ${res.statusText}`);
+        }
+        return res.json();
+      })
       .then(data => {
+        if (!data.entries) {
+          throw new Error('API response missing entries array');
+        }
         setEntries(data.entries || []);
+        setError(null);
       })
       .catch(err => {
         console.error('Audit fetch failed', err);
+        setError(`Failed to load audit data: ${err.message}`);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -39,10 +49,18 @@ export default function AuditPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hotel_id: entry.hotel_id, task_id: entry.task_id, timestamp: entry.uploadedAt || entry.confirmedAt }),
+        body: JSON.stringify({ 
+          hotel_id: entry.hotel_id, 
+          task_id: entry.task_id, 
+          timestamp: entry.uploadedAt || entry.confirmedAt 
+        }),
       });
-
-      if (!res.ok) throw new Error('Approval failed');
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.detail || `Approval failed with status ${res.status}`);
+      }
+      
       setEntries(prev => prev.map(e =>
         e.hotel_id === entry.hotel_id && e.task_id === entry.task_id &&
         (e.uploadedAt === entry.uploadedAt || e.confirmedAt === entry.confirmedAt)
@@ -51,6 +69,7 @@ export default function AuditPage() {
       ));
     } catch (err) {
       console.error('Approval error', err);
+      alert(`Error approving entry: ${err.message}`);
     }
   };
 
@@ -60,18 +79,22 @@ export default function AuditPage() {
   return (
     <div className={styles.container}>
       <h1>📋 Compliance Audit Log</h1>
+      
       {loading ? <p>Loading...</p> : null}
-
-      <h2>🆕 Unapproved Entries</h2>
+      {error ? <p className={styles.errorMessage}>Error: {error}</p> : null}
+      
+      <h2>🆕 Unapproved Entries ({unapproved.length})</h2>
       {unapproved.length === 0 ? <p>No pending items</p> : (
         <ul className={styles.entryList}>
           {unapproved.map((entry, i) => (
             <li key={i} className={styles.entry}>
               <strong>{hotelNames[entry.hotel_id] || entry.hotel_id}</strong> – Task: {entry.task_id} ({entry.type})
               <div>
-                {entry.uploadedAt && <>Uploaded: {entry.uploadedAt}<br /></>}
-                {entry.confirmedAt && <>Confirmed: {entry.confirmedAt}<br /></>}
-                {entry.fileUrl && <a href={entry.fileUrl} target="_blank">📎 View File</a>}
+                {entry.reportDate && <>Report Date: {entry.reportDate}<br /></>}
+                {entry.uploadedAt && <>Uploaded: {new Date(entry.uploadedAt).toLocaleString()}<br /></>}
+                {entry.confirmedAt && <>Confirmed: {new Date(entry.confirmedAt).toLocaleString()}<br /></>}
+                {entry.uploaded_by && <>By: {entry.uploaded_by}<br /></>}
+                {entry.fileUrl && <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">📎 View File</a>}
               </div>
               <button className={styles.approveBtn} onClick={() => markApproved(entry)}>
                 ✅ Mark Approved
@@ -80,17 +103,19 @@ export default function AuditPage() {
           ))}
         </ul>
       )}
-
+      
       <details>
-        <summary>✅ View All Approved</summary>
+        <summary>✅ View All Approved ({approved.length})</summary>
         <ul className={styles.entryList}>
           {approved.map((entry, i) => (
             <li key={i} className={styles.entry}>
               <strong>{hotelNames[entry.hotel_id] || entry.hotel_id}</strong> – Task: {entry.task_id} ({entry.type})
               <div>
-                {entry.uploadedAt && <>Uploaded: {entry.uploadedAt}<br /></>}
-                {entry.confirmedAt && <>Confirmed: {entry.confirmedAt}<br /></>}
-                {entry.fileUrl && <a href={entry.fileUrl} target="_blank">📎 View File</a>}
+                {entry.reportDate && <>Report Date: {entry.reportDate}<br /></>}
+                {entry.uploadedAt && <>Uploaded: {new Date(entry.uploadedAt).toLocaleString()}<br /></>}
+                {entry.confirmedAt && <>Confirmed: {new Date(entry.confirmedAt).toLocaleString()}<br /></>}
+                {entry.uploaded_by && <>By: {entry.uploaded_by}<br /></>}
+                {entry.fileUrl && <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">📎 View File</a>}
               </div>
             </li>
           ))}
