@@ -52,19 +52,15 @@ export default function TaskUploadBox({
 }: TaskUploadBoxProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [reportDate, setReportDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
-
-  // Determine if the selected file is a PDF or image
   const isPDF = selectedFile?.toLowerCase().endsWith('.pdf');
   const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif)$/i);
 
-  // Handle file preview just like in ServiceReportsPage
   const handlePreviewFile = (filePath: string) => {
     if (isMobile().any) {
       window.open(filePath, '_blank');
@@ -73,86 +69,31 @@ export default function TaskUploadBox({
     }
   };
 
-  // Normalize history entries to handle different field naming conventions
   const normalizedHistory = useMemo(() => {
-    return history.map(entry => {
-      return {
-        ...entry,
-        reportDate: entry.report_date || entry.reportDate || '',
-        uploadedAt: entry.uploaded_at || entry.uploadedAt || '',
-        uploadedBy: entry.uploaded_by || entry.uploadedBy || '',
-        fileUrl: entry.fileUrl || '',
-        fileName: entry.filename || entry.fileName || ''
-      };
-    });
+    return history.map(entry => ({
+      ...entry,
+      reportDate: entry.report_date || entry.reportDate || '',
+      uploadedAt: entry.uploaded_at || entry.uploadedAt || '',
+      uploadedBy: entry.uploaded_by || entry.uploadedBy || '',
+      fileUrl: entry.fileUrl || '',
+      fileName: entry.filename || entry.fileName || ''
+    }));
   }, [history]);
 
-  // Get frequency number based on task ID pattern or label
-  const getFrequencyNumber = () => {
-    // Check task ID for frequency hints
-    const taskIdLower = taskId.toLowerCase();
-    if (taskIdLower.includes('quarterly')) return 4;
-    if (taskIdLower.includes('monthly')) return 12;
-    if (taskIdLower.includes('weekly')) return 52;
-    if (taskIdLower.includes('daily')) return 365;
-    
-    // Check label for frequency hints
-    const labelLower = label.toLowerCase();
-    if (labelLower.includes('quarterly')) return 4;
-    if (labelLower.includes('monthly')) return 12;
-    if (labelLower.includes('weekly')) return 52;
-    if (labelLower.includes('daily')) return 365;
-    if (labelLower.includes('bi-annual') || labelLower.includes('semi-annual')) return 2;
-    
-    return 1; // Default to annual
-  };
-
-  // Group uploads by year for proper counting
-  const groupedUploads = useMemo(() => {
-    const uploadsByYear: Record<number, HistoryEntry[]> = {};
-    
-    normalizedHistory
-      .filter(entry => entry.type === 'upload' && entry.reportDate)
-      .forEach(entry => {
-        try {
-          const date = new Date(entry.reportDate || '');
-          if (!isNaN(date.getTime())) {
-            const year = date.getFullYear();
-            if (!uploadsByYear[year]) {
-              uploadsByYear[year] = [];
-            }
-            uploadsByYear[year].push(entry);
-          }
-        } catch (error) {
-          // Skip invalid dates
-        }
-      });
-      
-    return uploadsByYear;
-  }, [normalizedHistory]);
-
-  // Initialize with the latest upload when modal opens
   useEffect(() => {
     if (visible) {
-      // Find the latest upload by sorting dates
       const sortedUploads = [...normalizedHistory]
         .filter(h => h.type === 'upload' && h.fileUrl)
-        .sort((a, b) => {
-          const dateA = new Date(a.uploadedAt || '');
-          const dateB = new Date(b.uploadedAt || '');
-          return dateB.getTime() - dateA.getTime();
-        });
+        .sort((a, b) => new Date(b.uploadedAt || '').getTime() - new Date(a.uploadedAt || '').getTime());
 
-      const latestUpload = sortedUploads[0];
-      if (latestUpload && latestUpload.fileUrl) {
-        // Use the same preview handling as in your BuildingPage
-        handlePreviewFile(latestUpload.fileUrl);
+      if (sortedUploads[0]?.fileUrl) {
+        handlePreviewFile(sortedUploads[0].fileUrl);
       }
-      
-      // Reset form values
+
       setFile(null);
-      setPreviewUrl(null);
       setReportDate('');
+    } else {
+      setSelectedFile(null);
     }
   }, [visible, normalizedHistory]);
 
@@ -161,11 +102,7 @@ export default function TaskUploadBox({
     setFile(selected);
     if (selected) {
       const objectUrl = URL.createObjectURL(selected);
-      setPreviewUrl(objectUrl);
-      
-      // Handle preview using the same method as other pages
       handlePreviewFile(objectUrl);
-      
       if (isMandatory) {
         const modifiedDate = new Date(selected.lastModified);
         const now = new Date();
@@ -173,7 +110,6 @@ export default function TaskUploadBox({
         setReportDate(safeDate.toISOString().split('T')[0]);
       }
     } else {
-      setPreviewUrl(null);
       setReportDate('');
     }
   };
@@ -183,7 +119,6 @@ export default function TaskUploadBox({
       alert('Please select a file and report date.');
       return;
     }
-
     if (!file) {
       alert('No file selected.');
       return;
@@ -202,23 +137,12 @@ export default function TaskUploadBox({
         body: formData,
       });
       if (!res.ok) throw new Error('Upload failed');
-      
-      // Call onSuccess but don't close the modal
+
       onSuccess();
-      
-      // Reset form state
-      setFile(null);
-      setPreviewUrl(null);
-      setReportDate('');
-      
-      // Display success message
+      const uploadedUrl = URL.createObjectURL(file);
+      handlePreviewFile(uploadedUrl);
       setSuccessMessage('Upload successful!');
-      
-      // Reload the history after a short delay
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 3000);
-      
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
       console.error(err);
       alert('Error uploading file.');
@@ -227,69 +151,9 @@ export default function TaskUploadBox({
     }
   };
 
-  // Handle clicking on a history item
   const handleHistoryItemClick = (entry: HistoryEntry, e: React.MouseEvent) => {
     e.preventDefault();
-    if (entry.fileUrl) {
-      // Handle the file preview in the same way your other pages do
-      handlePreviewFile(entry.fileUrl);
-      
-      // Reset the upload form state when viewing a history item
-      setPreviewUrl(null);
-      setFile(null);
-    }
-  };
-
-  // Format history entries for display
-  const formatTaskName = (entry: HistoryEntry) => {
-    try {
-      const entryDate = entry.reportDate || '';
-      if (!entryDate) return `${label}`;
-      
-      const date = new Date(entryDate);
-      if (isNaN(date.getTime())) return `${label}`;
-      
-      const year = date.getFullYear();
-      
-      // Get all uploads for this year
-      const yearUploads = groupedUploads[year as keyof typeof groupedUploads] || [];
-      
-      // Sort uploads by date
-      yearUploads.sort((a, b) => {
-        const dateA = new Date(a.reportDate || '');
-        const dateB = new Date(b.reportDate || '');
-        return dateA.getTime() - dateB.getTime();
-      });
-      
-      // Find the index of this entry
-      const index = yearUploads.findIndex(e => 
-        e.fileUrl === entry.fileUrl && 
-        e.reportDate === entry.reportDate
-      );
-      
-      // Determine count based on upload position
-      const count = index + 1;
-      
-      // Get expected total based on frequency
-      const expectedTotal = getFrequencyNumber();
-      
-      return `${year} ${label} ${count}/${expectedTotal}`;
-    } catch (error) {
-      return `${label}`;
-    }
-  };
-
-  // Format dates for display
-  const formatDate = (dateString: string | undefined) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return isNaN(date.getTime()) 
-        ? '' 
-        : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    } catch (error) {
-      return '';
-    }
+    if (entry.fileUrl) handlePreviewFile(entry.fileUrl);
   };
 
   const splitInfo = info.split(/(⚖️|📜|🔍|🧑‍⚖️)/i);
@@ -312,11 +176,7 @@ export default function TaskUploadBox({
         </div>
 
         <div className={styles.uploadSection}>
-          <button
-            type="button"
-            className={styles.uploadButton}
-            onClick={() => fileInputRef.current?.click()}
-          >
+          <button type="button" className={styles.uploadButton} onClick={() => fileInputRef.current?.click()}>
             <span className={styles.fileIcon}>📁</span> Upload File
           </button>
           <input
@@ -337,48 +197,34 @@ export default function TaskUploadBox({
                 value={reportDate}
                 onChange={(e) => setReportDate(e.target.value)}
                 max={today}
-                placeholder="dd/mm/yyyy"
               />
             </div>
           )}
-          <button 
-            className={styles.submitButton}
-            onClick={handleSubmit}
-            disabled={submitting}
-          >
+          <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
             {submitting ? 'Submitting...' : 'Submit'}
           </button>
         </div>
 
-        {normalizedHistory.length > 0 && (
+        {history.length > 0 && (
           <div className={styles.taskHistory}>
-            <h4>
-              <span className={styles.clockIcon}>🕓</span> Task History
-            </h4>
+            <h4><span className={styles.clockIcon}>🕓</span> Task History</h4>
             <div className={styles.historyList}>
-              {normalizedHistory
-                .filter(entry => entry.type === 'upload')
-                .map((entry, i) => (
-                  <button 
-                    key={i}
-                    className={`${styles.historyItem} ${selectedFile === entry.fileUrl ? styles.activeHistoryItem : ''}`}
-                    onClick={(e) => handleHistoryItemClick(entry, e)}
-                  >
-                    {formatTaskName(entry)}
-                    <span className={styles.historyDate}>{formatDate(entry.reportDate)}</span>
-                  </button>
-                ))}
+              {normalizedHistory.filter(h => h.type === 'upload').map((entry, i) => (
+                <button
+                  key={i}
+                  className={`${styles.historyItem} ${selectedFile === entry.fileUrl ? styles.activeHistoryItem : ''}`}
+                  onClick={(e) => handleHistoryItemClick(entry, e)}
+                >
+                  {entry.fileName || 'Unnamed'}
+                  <span className={styles.historyDate}>{entry.reportDate}</span>
+                </button>
+              ))}
             </div>
           </div>
         )}
 
         <div className={styles.previewContainer}>
-          {successMessage && (
-            <div className={styles.successMessage}>
-              ✅ {successMessage}
-            </div>
-          )}
-          
+          {successMessage && <div className={styles.successMessage}>✅ {successMessage}</div>}
           {!selectedFile ? (
             <div className={styles.viewerPlaceholder}>
               <div style={{ textAlign: 'center' }}>
@@ -387,26 +233,11 @@ export default function TaskUploadBox({
               </div>
             </div>
           ) : isPDF ? (
-            // For PDF files, use embed which has better inline preview support than iframe
-            <embed
-              src={selectedFile}
-              type="application/pdf"
-              className={styles.viewer}
-              style={{ width: '100%', height: '100%' }}
-            />
+            <iframe src={selectedFile} className={styles.viewer} title="PDF Viewer" style={{ border: 'none' }} />
           ) : isImage ? (
-            <img
-              src={selectedFile}
-              alt="Preview"
-              className={styles.viewer}
-            />
+            <img src={selectedFile} alt="Preview" className={styles.viewer} />
           ) : (
-            <a
-              href={selectedFile}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.viewerPlaceholder}
-            >
+            <a href={selectedFile} target="_blank" rel="noopener noreferrer" className={styles.viewerPlaceholder}>
               Download this file
             </a>
           )}
