@@ -53,12 +53,12 @@ export default function TaskUploadBox({
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [reportDate, setReportDate] = useState('');
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
-
-  // Normalize history entries to handle different field naming conventions
   const normalizedHistory = useMemo(() => {
     return history.map(entry => {
       return {
@@ -183,8 +183,23 @@ export default function TaskUploadBox({
         body: formData,
       });
       if (!res.ok) throw new Error('Upload failed');
+      
+      // Call onSuccess but don't close the modal
       onSuccess();
-      onClose();
+      
+      // Reset form state
+      setFile(null);
+      setPreviewUrl(null);
+      setReportDate('');
+      
+      // Display success message
+      setSuccessMessage('Upload successful!');
+      
+      // Reload the history after a short delay
+      setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+      
     } catch (err) {
       console.error(err);
       alert('Error uploading file.');
@@ -340,13 +355,19 @@ export default function TaskUploadBox({
         )}
 
         <div className={styles.previewContainer}>
+          {successMessage && (
+            <div className={styles.successMessage}>
+              ✅ {successMessage}
+            </div>
+          )}
+          
           {!selectedFile ? (
             <div className={styles.noPreview}>
               <p>No document selected for preview</p>
             </div>
           ) : isPDF ? (
             <iframe
-              src={selectedFile}
+              src={`${selectedFile}#toolbar=0&view=FitH`}
               className={styles.viewer}
               title="PDF Viewer"
               style={{ border: 'none' }}
