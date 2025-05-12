@@ -48,26 +48,20 @@ export default function TaskUploadBox({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [reportDate, setReportDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [activeUrl, setActiveUrl] = useState<string | null>(null);
+
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  // Split info into description and legal reference
-  const splitInfo = info.split(/(🧑‍⚖️|⚖️|📜)/i);
-  const mainText = splitInfo[0]?.trim();
-  const legalRef = splitInfo.slice(1).join('').trim();
-
-  const latestUpload = [...history].reverse().find(h => h.type === 'upload' && h.fileUrl);
-  const activePreview = previewUrl || latestUpload?.fileUrl || null;
-
-  if (!visible) return null;
+  const latestUpload = [...history].find((h) => h.type === 'upload' && h.fileUrl);
+  const defaultPreview = previewUrl || latestUpload?.fileUrl || null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     setFile(selected);
-
     if (selected) {
       const objectUrl = URL.createObjectURL(selected);
       setPreviewUrl(objectUrl);
-
+      setActiveUrl(objectUrl);
       if (isMandatory) {
         const modifiedDate = new Date(selected.lastModified);
         const now = new Date();
@@ -95,14 +89,7 @@ export default function TaskUploadBox({
     formData.append('hotel_id', hotelId);
     formData.append('task_id', taskId);
     formData.append('file', file);
-
-    if (isMandatory) {
-      formData.append('report_date', reportDate);
-    } else if (lastConfirmedDate) {
-      formData.append('report_date', lastConfirmedDate);
-    } else {
-      formData.append('report_date', today);
-    }
+    formData.append('report_date', reportDate || lastConfirmedDate || today);
 
     try {
       setSubmitting(true);
@@ -121,6 +108,12 @@ export default function TaskUploadBox({
     }
   };
 
+  const splitInfo = info.split(/(⚖️|📜|🔍|🧑‍⚖️)/i);
+  const mainText = splitInfo[0]?.trim();
+  const legalRef = splitInfo.slice(1).join('').trim();
+
+  if (!visible) return null;
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={`${styles.modal} ${styles.fadeIn}`} onClick={(e) => e.stopPropagation()}>
@@ -131,100 +124,90 @@ export default function TaskUploadBox({
 
         <div className={styles.description}>
           <p>{mainText}</p>
-          {legalRef && (
-            <p className={styles.legalRef}>
-              <em>{legalRef}</em>
-            </p>
-          )}
+          {legalRef && <p className={styles.legalRef}>{legalRef}</p>}
         </div>
 
-        <div className={styles.body}>
-          <button
-            type="button"
-            className={styles.uploadButton}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            📁 Upload File
-          </button>
-          <input
-            type="file"
-            ref={fileInputRef}
-            accept=".pdf,.jpg,.jpeg,.png"
-            onChange={handleFileChange}
-            className={styles.fileInput}
-          />
+        <div className={styles.bodyRow}>
+          <div className={styles.leftSide}>
+            <button
+              type="button"
+              className={styles.uploadButton}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              📁 Upload File
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={handleFileChange}
+              className={styles.fileInput}
+            />
 
-          {activePreview && (
-            <div style={{ width: '100%', maxWidth: '720px', height: '480px' }}>
-              {activePreview.includes('.pdf') ? (
+            {isMandatory && file && (
+              <label className={styles.dateLabel}>
+                Report Date
+                <input
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  max={today}
+                />
+              </label>
+            )}
+
+            <button
+              className={styles.confirmButton}
+              onClick={handleSubmit}
+              disabled={submitting}
+            >
+              {submitting ? 'Submitting...' : 'Submit'}
+            </button>
+
+            {history.length > 0 && (
+              <div className={styles.history}>
+                <h4>🕓 Task History</h4>
+                {history.map((entry, i) => (
+                  <div key={i} className={styles.uploadEntry}>
+                    {entry.type === 'upload' ? (
+                      <a
+                        href="#"
+                        onClick={() => setActiveUrl(entry.fileUrl || '')}
+                      >
+                        {entry.reportDate || 'Unknown date'}
+                      </a>
+                    ) : (
+                      <span>
+                        ✅ Confirmed by {entry.confirmedBy} on{' '}
+                        {new Date(entry.confirmedAt || '').toLocaleDateString('en-GB')}
+                      </span>
+                    )}
+                    {entry.uploadedBy && (
+                      <span>Uploaded by: {entry.uploadedBy}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className={styles.rightSide}>
+            {activeUrl && (
+              activeUrl.endsWith('.pdf') ? (
                 <iframe
-                  src={activePreview}
+                  className={styles.previewFrame}
+                  src={activeUrl}
                   title="PDF Preview"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    border: '1px solid #ccc',
-                    borderRadius: '8px',
-                  }}
                 />
               ) : (
                 <img
-                  src={activePreview}
+                  src={activeUrl}
                   alt="Preview"
-                  style={{
-                    width: '100%',
-                    maxHeight: '480px',
-                    objectFit: 'contain',
-                    borderRadius: '8px',
-                    border: '1px solid #ccc',
-                  }}
+                  className={styles.previewFrame}
                 />
-              )}
-            </div>
-          )}
-
-          {isMandatory && file && (
-            <label className={styles.dateLabel}>
-              Report Date
-              <input
-                type="date"
-                value={reportDate}
-                onChange={(e) => setReportDate(e.target.value)}
-                max={today}
-              />
-            </label>
-          )}
-
-          <button
-            className={styles.confirmButton}
-            onClick={handleSubmit}
-            disabled={submitting}
-          >
-            {submitting ? 'Submitting...' : 'Submit'}
-          </button>
-
-          {history.length > 0 && (
-            <div className={styles.history}>
-              <h4>🕓 Task History</h4>
-              {history.map((entry, i) => (
-                <div key={i} className={styles.uploadEntry}>
-                  {entry.type === 'upload' ? (
-                    <>
-                      <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">
-                        {entry.reportDate}
-                      </a>
-                      <span>Uploaded by: {entry.uploadedBy}</span>
-                    </>
-                  ) : (
-                    <span>
-                      ✅ Confirmed by {entry.confirmedBy} on{' '}
-                      {new Date(entry.confirmedAt || '').toLocaleDateString('en-GB')}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+              )
+            )}
+          </div>
         </div>
       </div>
     </div>
