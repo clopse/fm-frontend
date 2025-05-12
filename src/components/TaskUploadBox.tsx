@@ -212,7 +212,89 @@ export default function TaskUploadBox({
         </div>
 
         <div className={styles.modalBody}>
-          {/* ... existing content stays unchanged ... */}
+          <div className={styles.leftPanel}>
+            <div className={styles.description}>
+              <p>{mainText}</p>
+              {legalRef && <p className={styles.legalRef}>{legalRef}</p>}
+            </div>
+
+            <div className={styles.uploadSection}>
+              <button type="button" className={styles.uploadButton} onClick={() => fileInputRef.current?.click()}>
+                <span className={styles.fileIcon}>📁</span> Upload File
+              </button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleFileChange}
+                className={styles.fileInput}
+              />
+            </div>
+
+            <div className={styles.dateAndSubmit}>
+              {isMandatory && (
+                <div className={styles.reportDate}>
+                  <label>Report Date</label>
+                  <input
+                    type="date"
+                    value={reportDate}
+                    onChange={(e) => setReportDate(e.target.value)}
+                    max={today}
+                  />
+                </div>
+              )}
+              <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
+                {submitting ? 'Submitting...' : 'Submit'}
+              </button>
+            </div>
+
+            {history.length > 0 && (
+              <div className={styles.taskHistory}>
+                <h4><span className={styles.clockIcon}>🕓</span> Task History</h4>
+                <div className={styles.historyList}>
+                  {normalizedHistory.filter(h => h.type === 'upload').map((entry, i) => (
+                    <div key={i} className={`${styles.historyItem} ${selectedFile === entry.fileUrl ? styles.activeHistoryItem : ''}`}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <div>
+                          {entry.fileName || 'Unnamed'}
+                          <div className={styles.historyDate}>{entry.reportDate}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={(e) => { e.preventDefault(); handlePreviewFile(entry.fileUrl); }} title="Preview">
+                            <Eye size={16} />
+                          </button>
+                          <a href={entry.fileUrl} download title="Download">
+                            <Download size={16} />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className={styles.rightPanel}>
+            {successMessage && <div className={styles.successMessage}>✅ {successMessage}</div>}
+
+            {!selectedFile ? (
+              <div className={styles.viewerPlaceholder}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
+                  <strong>Select a file to preview</strong>
+                </div>
+              </div>
+            ) : isPDF ? (
+              <iframe src={selectedFile} className={styles.viewer} title="PDF Viewer" style={{ border: 'none' }} />
+            ) : isImage ? (
+              <img src={selectedFile} alt="Preview" className={styles.viewer} />
+            ) : (
+              <a href={selectedFile} target="_blank" rel="noopener noreferrer" className={styles.viewerPlaceholder}>
+                Download this file
+              </a>
+            )}
+          </div>
         </div>
 
         <div
