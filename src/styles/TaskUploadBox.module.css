@@ -27,37 +27,6 @@
   animation: fadeIn 0.3s ease;
 }
 
-.historyItem {
-  text-align: left;
-  padding: 8px 12px;
-  background-color: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  color: #334155;
-  transition: all 0.2s;
-  font-size: 0.9rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.historyItem:hover {
-  background-color: #e2e8f0;
-}
-
-.activeHistoryItem {
-  background-color: #dbeafe;
-  border-color: #93c5fd;
-  color: #1e40af;
-  font-weight: 500;
-}
-
-.historyDate {
-  font-size: 0.8rem;
-  color: #64748b;
-  margin-top: 3px;
-}
-
 .historyItemIcons {
   display: flex;
   gap: 6px;
@@ -113,7 +82,6 @@
   );
   border-bottom-right-radius: 4px;
 }
-
 
 .header {
   display: flex;
