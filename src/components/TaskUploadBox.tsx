@@ -366,27 +366,60 @@ export default function TaskUploadBox({
               <p>No document selected for preview</p>
             </div>
           ) : isPDF ? (
-            <iframe
-              src={`${selectedFile}#toolbar=0&view=FitH`}
-              className={styles.viewer}
-              title="PDF Viewer"
-              style={{ border: 'none' }}
-            />
+            <div className={styles.pdfContainer}>
+              <iframe
+                src={`${selectedFile}#toolbar=0&view=FitH`}
+                className={styles.viewer}
+                title="PDF Viewer"
+                onError={(e) => {
+                  console.error("PDF iframe load error:", e);
+                }}
+              />
+              <div className={styles.fallbackOverlay}>
+                <a 
+                  href={selectedFile} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={styles.fallbackLink}
+                >
+                  Open Document
+                </a>
+              </div>
+            </div>
           ) : isImage ? (
-            <img
-              src={selectedFile}
-              alt="Preview"
-              className={styles.viewer}
-            />
+            <div className={styles.imageContainer}>
+              <img
+                src={selectedFile}
+                alt="Preview"
+                className={styles.viewer}
+                onError={(e) => {
+                  console.error("Image load error:", e.currentTarget.src);
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling?.classList.add(styles.visible);
+                }}
+              />
+              <div className={styles.fallbackOverlay}>
+                <a 
+                  href={selectedFile} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={styles.fallbackLink}
+                >
+                  Open Image
+                </a>
+              </div>
+            </div>
           ) : (
-            <a
-              href={selectedFile}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.noPreview}
-            >
-              Download this file
-            </a>
+            <div className={styles.noPreview}>
+              <a
+                href={selectedFile}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.downloadLink}
+              >
+                Download File
+              </a>
+            </div>
           )}
         </div>
       </div>
