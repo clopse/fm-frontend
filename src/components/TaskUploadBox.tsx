@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import isMobile from 'ismobilejs';
 import styles from '@/styles/TaskUploadBox.module.css';
 
@@ -62,15 +62,6 @@ export default function TaskUploadBox({
   const isPDF = useMemo(() => selectedFile?.toLowerCase().endsWith('.pdf'), [selectedFile]);
   const isImage = useMemo(() => /\.(jpg|jpeg|png|gif)$/i.test(selectedFile || ''), [selectedFile]);
 
-  const handlePreviewFile = (filePath: string) => {
-    if (isMobile().any) {
-      window.open(filePath, '_blank');
-    } else {
-      setSelectedFile(filePath);
-      setFile(null);
-    }
-  };
-
   const normalizedHistory = useMemo(() => {
     return history.map(entry => ({
       ...entry,
@@ -124,30 +115,6 @@ export default function TaskUploadBox({
     }
   };
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-
-    if (visible) {
-      window.addEventListener('keydown', handleKeyDown);
-      const sortedUploads = [...normalizedHistory]
-        .filter(h => h.type === 'upload' && h.fileUrl)
-        .sort((a, b) => new Date(b.uploadedAt || '').getTime() - new Date(a.uploadedAt || '').getTime());
-
-      if (sortedUploads[0]?.fileUrl && !isMobile().any) {
-        setSelectedFile(sortedUploads[0].fileUrl);
-      }
-
-      setFile(null);
-      setReportDate('');
-    } else {
-      setSelectedFile(null);
-    }
-
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [visible, normalizedHistory]);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     setFile(selected);
@@ -162,6 +129,15 @@ export default function TaskUploadBox({
       }
     } else {
       setReportDate('');
+    }
+  };
+
+  const handlePreviewFile = (filePath: string) => {
+    if (isMobile().any) {
+      window.open(filePath, '_blank');
+    } else {
+      setSelectedFile(filePath);
+      setFile(null);
     }
   };
 
@@ -254,19 +230,17 @@ export default function TaskUploadBox({
                 <div className={styles.historyList}>
                   {normalizedHistory.filter(h => h.type === 'upload').map((entry, i) => (
                     <div key={i} className={`${styles.historyItem} ${selectedFile === entry.fileUrl ? styles.activeHistoryItem : ''}`}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                        <div>
-                          {formatTaskName(entry)}
-                          <div className={styles.historyDate}>{entry.reportDate}</div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button onClick={() => handlePreviewFile(entry.fileUrl)} title="Preview">
-                            <img src="/icons/pdf-icon.png" width={18} height={18} alt="Preview" />
-                          </button>
-                          <a href={entry.fileUrl} download title="Download">
-                            <img src="/icons/download-icon.png" width={18} height={18} alt="Download" />
-                          </a>
-                        </div>
+                      <div>
+                        {formatTaskName(entry)}
+                        <div className={styles.historyDate}>{entry.reportDate}</div>
+                      </div>
+                      <div className={styles.historyItemIcons}>
+                        <button onClick={() => handlePreviewFile(entry.fileUrl)} title="Preview">
+                          <img src="/icons/pdf-icon.png" alt="Preview" />
+                        </button>
+                        <a href={entry.fileUrl} download title="Download">
+                          <img src="/icons/download-icon.png" alt="Download" />
+                        </a>
                       </div>
                     </div>
                   ))}
