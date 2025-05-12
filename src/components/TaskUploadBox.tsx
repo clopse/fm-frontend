@@ -58,8 +58,22 @@ export default function TaskUploadBox({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const isPDF = selectedFile?.toLowerCase().endsWith('.pdf');
-  const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif)$/i);
+
+  const isPDF = useMemo(() => {
+    return (
+      file?.type === 'application/pdf' ||
+      file?.name?.toLowerCase().endsWith('.pdf') ||
+      selectedFile?.includes('.pdf')
+    );
+  }, [file, selectedFile]);
+
+  const isImage = useMemo(() => {
+    return (
+      file?.type?.startsWith('image/') ||
+      /\.(jpg|jpeg|png|gif)$/i.test(file?.name || '') ||
+      /\.(jpg|jpeg|png|gif)$/i.test(selectedFile || '')
+    );
+  }, [file, selectedFile]);
 
   const handlePreviewFile = (filePath: string) => {
     if (isMobile().any) {
@@ -225,6 +239,7 @@ export default function TaskUploadBox({
 
         <div className={styles.previewContainer}>
           {successMessage && <div className={styles.successMessage}>✅ {successMessage}</div>}
+
           {!selectedFile ? (
             <div className={styles.viewerPlaceholder}>
               <div style={{ textAlign: 'center' }}>
