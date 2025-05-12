@@ -95,6 +95,15 @@ export default function TaskUploadBox({
     }
   };
 
+  const handlePreviewFile = (url: string) => {
+    if (isMobile().any) {
+      window.open(url, '_blank');
+    } else {
+      setSelectedFile(url);
+      setFile(null);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!file || !reportDate) {
       alert('Please select a file and report date.');
@@ -128,6 +137,56 @@ export default function TaskUploadBox({
     }
   };
 
+  const splitInfo = info.split(/(⚖️|📜|🔍|🧑‍⚖️)/i);
+  const mainText = splitInfo[0]?.trim();
+  const legalRef = splitInfo.slice(1).join('').trim();
+
+  const normalizedHistory = useMemo(() => {
+    return history.map(entry => ({
+      ...entry,
+      reportDate: entry.report_date || entry.reportDate || '',
+      uploadedAt: entry.uploaded_at || entry.uploadedAt || '',
+      uploadedBy: entry.uploaded_by || entry.uploadedBy || '',
+      fileUrl: entry.fileUrl || '',
+      fileName: entry.filename || entry.fileName || ''
+    }));
+  }, [history]);
+
+  const groupedUploads = useMemo(() => {
+    const uploadsByYear: Record<number, HistoryEntry[]> = {};
+    normalizedHistory.forEach(entry => {
+      const date = new Date(entry.reportDate || '');
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        if (!uploadsByYear[year]) uploadsByYear[year] = [];
+        uploadsByYear[year].push(entry);
+      }
+    });
+    return uploadsByYear;
+  }, [normalizedHistory]);
+
+  const getFrequencyNumber = () => {
+    const id = taskId.toLowerCase();
+    const lbl = label.toLowerCase();
+    if (id.includes('quarterly') || lbl.includes('quarterly')) return 4;
+    if (id.includes('monthly') || lbl.includes('monthly')) return 12;
+    if (id.includes('weekly') || lbl.includes('weekly')) return 52;
+    if (id.includes('daily') || lbl.includes('daily')) return 365;
+    if (lbl.includes('bi-annual') || lbl.includes('semi-annual')) return 2;
+    return 1;
+  };
+
+  const formatTaskName = (entry: HistoryEntry) => {
+    const entryDate = entry.reportDate || '';
+    if (!entryDate) return label;
+    const date = new Date(entryDate);
+    const year = date.getFullYear();
+    const yearUploads = groupedUploads[year] || [];
+    yearUploads.sort((a, b) => new Date(a.reportDate || '').getTime() - new Date(b.reportDate || '').getTime());
+    const index = yearUploads.findIndex(e => e.fileUrl === entry.fileUrl && e.reportDate === entry.reportDate);
+    return `${year} ${label} ${index + 1}/${getFrequencyNumber()}`;
+  };
+
   if (!visible) return null;
 
   return (
@@ -141,7 +200,8 @@ export default function TaskUploadBox({
         <div className={styles.modalBody}>
           <div className={styles.leftPanel}>
             <div className={styles.description}>
-              <p>{info}</p>
+              <p>{mainText}</p>
+              {legalRef && <p className={styles.legalRef}>{legalRef}</p>}
             </div>
 
             <div className={styles.uploadSection}>
@@ -166,6 +226,30 @@ export default function TaskUploadBox({
                 max={today}
               />
             </div>
+
+            {normalizedHistory.length > 0 && (
+              <div className={styles.taskHistory}>
+                <h4><span className={styles.clockIcon}>🕓</span> Task History</h4>
+                <div className={styles.historyList}>
+                  {normalizedHistory.filter(h => h.type === 'upload').map((entry, i) => (
+                    <div key={i} className={`${styles.historyItem} ${selectedFile === entry.fileUrl ? styles.activeHistoryItem : ''}`}>
+                      <div>
+                        {formatTaskName(entry)}
+                        <div className={styles.historyDate}>{entry.reportDate}</div>
+                      </div>
+                      <div className={styles.historyItemIcons}>
+                        <button onClick={() => handlePreviewFile(entry.fileUrl)} title="Preview">
+                          <img src="/icons/pdf-icon.png" alt="Preview" />
+                        </button>
+                        <a href={entry.fileUrl} download title="Download">
+                          <img src="/icons/download-icon.png" alt="Download" />
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className={styles.rightPanel}>
