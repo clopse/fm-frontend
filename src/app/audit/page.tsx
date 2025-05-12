@@ -39,7 +39,7 @@ export default function AuditPage() {
       })
       .catch(err => {
         console.error('Audit fetch failed', err);
-        setError(`Failed to load audit data: ${err.message}`);
+        setError(`Failed to load audit data: ${err instanceof Error ? err.message : 'Unknown error'}`);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -69,7 +69,8 @@ export default function AuditPage() {
       ));
     } catch (err) {
       console.error('Approval error', err);
-      alert(`Error approving entry: ${err.message}`);
+      // Fix the TypeScript error by checking if err is an instance of Error
+      alert(`Error approving entry: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
