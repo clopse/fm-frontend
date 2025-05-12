@@ -3,12 +3,6 @@
 import React, { useRef, useState, useMemo } from 'react';
 import styles from '@/styles/TaskUploadBox.module.css';
 
-interface Upload {
-  url: string;
-  report_date: string;
-  uploaded_by: string;
-}
-
 interface HistoryEntry {
   type: 'upload' | 'confirmation';
   fileName?: string;
@@ -30,7 +24,6 @@ interface TaskUploadBoxProps {
   canConfirm: boolean;
   isConfirmed: boolean;
   lastConfirmedDate: string | null;
-  uploads: Upload[];
   history: HistoryEntry[];
   onSuccess: () => void;
   onClose: () => void;
@@ -46,7 +39,6 @@ export default function TaskUploadBox({
   canConfirm,
   isConfirmed,
   lastConfirmedDate,
-  uploads,
   history,
   onSuccess,
   onClose,
@@ -61,7 +53,6 @@ export default function TaskUploadBox({
 
   if (!visible) return null;
 
-  // Handle file preview
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     setFile(selected);
@@ -126,15 +117,14 @@ export default function TaskUploadBox({
     }
   };
 
-  // Extract legal section dynamically (optional future improvement)
+  // Use latest fileUrl from history (reverse to get latest first)
+  const latestUpload = [...history].reverse().find((h) => h.type === 'upload' && h.fileUrl);
+  const activePreview = previewUrl || latestUpload?.fileUrl || null;
+
+  // TEMP: Hardcoded info split
   const splitInfo = info.split(/(🧑‍⚖️|🔍|📜)/i);
   const mainText = splitInfo[0]?.trim();
   const legalRef = splitInfo.slice(1).join('').trim();
-
-  // Best available preview: file > uploaded > latest history
-  const lastUploaded = uploads[uploads.length - 1];
-  const latestRemoteUrl = lastUploaded?.url || history.find(h => h.type === 'upload')?.fileUrl;
-  const activePreview = previewUrl || latestRemoteUrl;
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -147,7 +137,7 @@ export default function TaskUploadBox({
         <div className={styles.description}>
           <p>{mainText}</p>
           {legalRef && (
-            <p style={{ color: '#666', fontStyle: 'italic' }}>{legalRef}</p>
+            <p className={styles.legalRef}>🔍 <em>{legalRef}</em></p>
           )}
         </div>
 
@@ -167,36 +157,7 @@ export default function TaskUploadBox({
             className={styles.fileInput}
           />
 
-          {previewUrl && (
-            <div style={{ width: '100%', maxWidth: '720px', height: '480px' }}>
-              {file?.type.includes('pdf') ? (
-                <iframe
-                  src={previewUrl}
-                  title="PDF Preview"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    border: '1px solid #ccc',
-                    borderRadius: '8px'
-                  }}
-                />
-              ) : (
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  style={{
-                    width: '100%',
-                    maxHeight: '480px',
-                    objectFit: 'contain',
-                    borderRadius: '8px',
-                    border: '1px solid #ccc'
-                  }}
-                />
-              )}
-            </div>
-          )}
-
-          {!previewUrl && activePreview && (
+          {activePreview && (
             <div style={{ width: '100%', maxWidth: '720px', height: '480px' }}>
               {activePreview.includes('.pdf') ? (
                 <iframe
@@ -212,7 +173,7 @@ export default function TaskUploadBox({
               ) : (
                 <img
                   src={activePreview}
-                  alt="Previous Upload"
+                  alt="Preview"
                   style={{
                     width: '100%',
                     maxHeight: '480px',
