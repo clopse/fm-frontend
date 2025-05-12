@@ -122,32 +122,71 @@ export default function TaskUploadBox({
     }));
   }, [history]);
 
-  useEffect(() => {
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') onClose();
+  const groupedUploads = useMemo(() => {
+    const uploadsByYear: Record<number, HistoryEntry[]> = {};
+    normalizedHistory.forEach(entry => {
+      const date = new Date(entry.reportDate || '');
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        if (!uploadsByYear[year]) uploadsByYear[year] = [];
+        uploadsByYear[year].push(entry);
+      }
+    });
+    return uploadsByYear;
+  }, [normalizedHistory]);
+
+  const getFrequencyNumber = () => {
+    const taskIdLower = taskId.toLowerCase();
+    const labelLower = label.toLowerCase();
+    if (taskIdLower.includes('quarterly') || labelLower.includes('quarterly')) return 4;
+    if (taskIdLower.includes('monthly') || labelLower.includes('monthly')) return 12;
+    if (taskIdLower.includes('weekly') || labelLower.includes('weekly')) return 52;
+    if (taskIdLower.includes('daily') || labelLower.includes('daily')) return 365;
+    if (labelLower.includes('bi-annual') || labelLower.includes('semi-annual')) return 2;
+    return 1;
   };
 
-  if (visible) {
-    window.addEventListener('keydown', handleKeyDown);
+  const formatTaskName = (entry: HistoryEntry) => {
+    try {
+      const entryDate = entry.reportDate || '';
+      if (!entryDate) return label;
+      const date = new Date(entryDate);
+      if (isNaN(date.getTime())) return label;
+      const year = date.getFullYear();
+      const yearUploads = groupedUploads[year] || [];
+      yearUploads.sort((a, b) => new Date(a.reportDate || '').getTime() - new Date(b.reportDate || '').getTime());
+      const index = yearUploads.findIndex(e => e.fileUrl === entry.fileUrl && e.reportDate === entry.reportDate);
+      const count = index + 1;
+      const expectedTotal = getFrequencyNumber();
+      return `${year} ${label} ${count}/${expectedTotal}`;
+    } catch {
+      return label;
+    }
+  };
 
-    const sortedUploads = [...normalizedHistory]
-      .filter(h => h.type === 'upload' && h.fileUrl)
-      .sort((a, b) => new Date(b.uploadedAt || '').getTime() - new Date(a.uploadedAt || '').getTime());
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
 
-    if (sortedUploads[0]?.fileUrl && !isMobile().any) {
-      setSelectedFile(sortedUploads[0].fileUrl);
+    if (visible) {
+      window.addEventListener('keydown', handleKeyDown);
+      const sortedUploads = [...normalizedHistory]
+        .filter(h => h.type === 'upload' && h.fileUrl)
+        .sort((a, b) => new Date(b.uploadedAt || '').getTime() - new Date(a.uploadedAt || '').getTime());
+
+      if (sortedUploads[0]?.fileUrl && !isMobile().any) {
+        setSelectedFile(sortedUploads[0].fileUrl);
+      }
+
+      setFile(null);
+      setReportDate('');
+    } else {
+      setSelectedFile(null);
     }
 
-    setFile(null);
-    setReportDate('');
-  } else {
-    setSelectedFile(null);
-  }
-
-  return () => {
-    window.removeEventListener('keydown', handleKeyDown);
-  };
-}, [visible, normalizedHistory]);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [visible, normalizedHistory]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
@@ -258,7 +297,7 @@ export default function TaskUploadBox({
               </button>
             </div>
 
-            {history.length > 0 && (
+            {normalizedHistory.length > 0 && (
               <div className={styles.taskHistory}>
                 <h4><span className={styles.clockIcon}>🕓</span> Task History</h4>
                 <div className={styles.historyList}>
@@ -266,7 +305,7 @@ export default function TaskUploadBox({
                     <div key={i} className={`${styles.historyItem} ${selectedFile === entry.fileUrl ? styles.activeHistoryItem : ''}`}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                         <div>
-                          {entry.fileName || 'Unnamed'}
+                          {formatTaskName(entry)}
                           <div className={styles.historyDate}>{entry.reportDate}</div>
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -310,7 +349,15 @@ export default function TaskUploadBox({
         <div
           className={styles.resizeHandle}
           onMouseDown={startResizing}
-        />
+        >
+          <span style={{
+            width: '100%',
+            height: '100%',
+            display: 'block',
+            background: 'repeating-linear-gradient(135deg, #cbd5e1, #cbd5e1 2px, transparent 2px, transparent 4px)',
+            borderBottomRightRadius: '4px'
+          }} />
+        </div>
       </div>
     </div>
   );
