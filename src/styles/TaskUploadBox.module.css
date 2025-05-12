@@ -1,4 +1,14 @@
-/* TaskUploadBox.module.css */
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .dateAndSubmit {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .reportDate, .submitButton {
+    max-width: 100%;
+  }
+}/* TaskUploadBox.module.css */
 .modalOverlay {
   position: fixed;
   top: 0;
@@ -263,14 +273,22 @@
   object-fit: contain;
 }
 
-/* Responsive adjustments */
-@media (max-width: 640px) {
-  .dateAndSubmit {
-    flex-direction: column;
-    align-items: center;
-  }
+.successMessage {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #10b981;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  z-index: 10;
+  animation: fadeInOut 3s ease;
+}
 
-  .reportDate, .submitButton {
-    max-width: 100%;
-  }
+@keyframes fadeInOut {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
 }
