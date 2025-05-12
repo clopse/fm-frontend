@@ -3,6 +3,7 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import isMobile from 'ismobilejs';
 import styles from '@/styles/TaskUploadBox.module.css';
+import { Eye, Download } from 'lucide-react';
 
 interface HistoryEntry {
   type: 'upload' | 'confirmation';
@@ -80,6 +81,7 @@ export default function TaskUploadBox({
       window.open(filePath, '_blank');
     } else {
       setSelectedFile(filePath);
+      setFile(null);
     }
   };
 
@@ -165,11 +167,6 @@ export default function TaskUploadBox({
     }
   };
 
-  const handleHistoryItemClick = (entry: HistoryEntry, e: React.MouseEvent) => {
-    e.preventDefault();
-    if (entry.fileUrl) setSelectedFile(entry.fileUrl);
-  };
-
   const splitInfo = info.split(/(⚖️|📜|🔍|🧑‍⚖️)/i);
   const mainText = splitInfo[0]?.trim();
   const legalRef = splitInfo.slice(1).join('').trim();
@@ -226,14 +223,22 @@ export default function TaskUploadBox({
                 <h4><span className={styles.clockIcon}>🕓</span> Task History</h4>
                 <div className={styles.historyList}>
                   {normalizedHistory.filter(h => h.type === 'upload').map((entry, i) => (
-                    <button
-                      key={i}
-                      className={`${styles.historyItem} ${selectedFile === entry.fileUrl ? styles.activeHistoryItem : ''}`}
-                      onClick={(e) => handleHistoryItemClick(entry, e)}
-                    >
-                      {entry.fileName || 'Unnamed'}
-                      <span className={styles.historyDate}>{entry.reportDate}</span>
-                    </button>
+                    <div key={i} className={`${styles.historyItem} ${selectedFile === entry.fileUrl ? styles.activeHistoryItem : ''}`}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                        <div>
+                          {entry.fileName || 'Unnamed'}
+                          <div className={styles.historyDate}>{entry.reportDate}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button onClick={(e) => { e.preventDefault(); handlePreviewFile(entry.fileUrl); }} title="Preview">
+                            <Eye size={16} />
+                          </button>
+                          <a href={entry.fileUrl} download title="Download">
+                            <Download size={16} />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
