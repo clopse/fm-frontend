@@ -161,11 +161,11 @@ const CompliancePage = ({ params }: Props) => {
   const totalPoints = tasks.reduce((sum, task) => sum + (task.points ?? 0), 0);
   const earnedPoints = Object.values(scoreBreakdown).reduce((sum, score) => sum + score, 0);
 
-  // Build last 12 months timeline for graph
+  // Center current month in graph: 6 before, 5 after
   const now = new Date();
   const months: string[] = [];
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+  for (let i = -6; i <= 5; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     months.push(monthStr);
   }
@@ -192,12 +192,21 @@ const CompliancePage = ({ params }: Props) => {
             <div className={styles.scoreBadge}>{earnedPoints} / {totalPoints}</div>
           </div>
           <ResponsiveContainer>
-            <LineChart data={processedScoreHistory}>
+            <LineChart
+              data={processedScoreHistory}
+              margin={{ top: 10, right: 30, left: 0, bottom: 40 }}
+            >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis domain={[0, totalPoints]} />
               <Tooltip />
-              <Line type="monotone" dataKey="score" stroke="#0070f3" strokeWidth={2} dot />
+              <Line
+                type="monotone"
+                dataKey="score"
+                stroke="#0070f3"
+                strokeWidth={2}
+                dot
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
