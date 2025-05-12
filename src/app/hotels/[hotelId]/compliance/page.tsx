@@ -255,7 +255,7 @@ const CompliancePage = ({ params }: Props) => {
       ))}
 
       {visible && selectedTask && selectedTaskObj && (
-        <TaskUploadBox
+       <TaskUploadBox
           visible={visible}
           hotelId={hotelId}
           taskId={selectedTask}
@@ -265,7 +265,6 @@ const CompliancePage = ({ params }: Props) => {
           canConfirm={selectedTaskObj.can_confirm}
           isConfirmed={selectedTaskObj.is_confirmed_this_month}
           lastConfirmedDate={selectedTaskObj.last_confirmed_date}
-          uploads={selectedTaskObj.uploads || []}
           history={history[selectedTask] || []}
           onSuccess={handleUploadSuccess}
           onClose={() => setVisible(false)}
