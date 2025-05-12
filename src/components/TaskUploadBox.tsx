@@ -31,7 +31,6 @@ interface TaskUploadBoxProps {
   isConfirmed: boolean;
   lastConfirmedDate: string | null;
   history: HistoryEntry[];
-  frequency?: string; // Make frequency optional
   onSuccess: () => void;
   onClose: () => void;
 }
@@ -47,7 +46,6 @@ export default function TaskUploadBox({
   isConfirmed,
   lastConfirmedDate,
   history,
-  frequency,
   onSuccess,
   onClose,
 }: TaskUploadBoxProps) {
@@ -74,24 +72,22 @@ export default function TaskUploadBox({
     });
   }, [history]);
 
-  // Get frequency number based on frequency prop or fallback to task ID
+  // Get frequency number based on task ID pattern
   const getFrequencyNumber = () => {
-    // First check if frequency prop is provided
-    if (frequency) {
-      // Convert frequency string to expected number of uploads per year
-      const frequencyLower = frequency.toLowerCase();
-      if (frequencyLower.includes('quarterly')) return 4;
-      if (frequencyLower.includes('monthly')) return 12;
-      if (frequencyLower.includes('weekly')) return 52;
-      if (frequencyLower.includes('daily')) return 365;
-      if (frequencyLower.includes('bi-annual') || frequencyLower.includes('semi-annual')) return 2;
-    }
+    // Check task ID for frequency hints
+    const taskIdLower = taskId.toLowerCase();
+    if (taskIdLower.includes('quarterly')) return 4;
+    if (taskIdLower.includes('monthly')) return 12;
+    if (taskIdLower.includes('weekly')) return 52;
+    if (taskIdLower.includes('daily')) return 365;
     
-    // Fallback to checking task ID if frequency not provided
-    if (taskId.includes('quarterly')) return 4;
-    if (taskId.includes('monthly')) return 12;
-    if (taskId.includes('weekly')) return 52;
-    if (taskId.includes('daily')) return 365;
+    // Check label for frequency hints
+    const labelLower = label.toLowerCase();
+    if (labelLower.includes('quarterly')) return 4;
+    if (labelLower.includes('monthly')) return 12;
+    if (labelLower.includes('weekly')) return 52;
+    if (labelLower.includes('daily')) return 365;
+    if (labelLower.includes('bi-annual') || labelLower.includes('semi-annual')) return 2;
     
     return 1; // Default to annual
   };
