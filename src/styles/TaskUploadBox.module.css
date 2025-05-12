@@ -291,39 +291,24 @@
   object-fit: contain;
 }
 
-.pdfContainer,
-.imageContainer {
-  position: relative;
+.pdfViewer {
   width: 100%;
   height: 100%;
-  min-height: 300px;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 400px;
+  border: none;
   background-color: white;
-  overflow: hidden;
 }
 
-.fallbackOverlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+.fallbackMessage {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  background-color: rgba(241, 245, 249, 0.9);
-  z-index: 5;
-  opacity: 0;
-  transition: opacity 0.3s;
+  justify-content: center;
+  height: 100%;
+  padding: 20px;
+  text-align: center;
 }
 
-.pdfContainer:hover .fallbackOverlay,
-.imageContainer:hover .fallbackOverlay {
-  opacity: 1;
-}
-
-.fallbackLink,
 .downloadLink {
   padding: 10px 20px;
   background-color: #3b82f6;
@@ -332,20 +317,12 @@
   text-decoration: none;
   font-weight: 500;
   transition: background-color 0.2s;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  margin-top: 12px;
 }
 
-.fallbackLink:before {
-  content: '📄';
-}
-
-.downloadLink {
-  background-color: #3b82f6;
-}
-
-.fallbackLink:hover,
 .downloadLink:hover {
   background-color: #2563eb;
 }
