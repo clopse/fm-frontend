@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useMemo, useEffect } from 'react';
+import isMobile from 'ismobilejs';
 import styles from '@/styles/TaskUploadBox.module.css';
 
 interface HistoryEntry {
@@ -53,12 +54,26 @@ export default function TaskUploadBox({
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [reportDate, setReportDate] = useState('');
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  // Determine if the selected file is a PDF or image
+  const isPDF = selectedFile?.toLowerCase().endsWith('.pdf');
+  const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif)$/i);
+
+  // Handle file preview just like in ServiceReportsPage
+  const handlePreviewFile = (filePath: string) => {
+    if (isMobile().any) {
+      window.open(filePath, '_blank');
+    } else {
+      setSelectedFile(filePath);
+    }
+  };
+
+  // Normalize history entries to handle different field naming conventions
   const normalizedHistory = useMemo(() => {
     return history.map(entry => {
       return {
@@ -72,7 +87,7 @@ export default function TaskUploadBox({
     });
   }, [history]);
 
-  // Get frequency number based on task ID pattern
+  // Get frequency number based on task ID pattern or label
   const getFrequencyNumber = () => {
     // Check task ID for frequency hints
     const taskIdLower = taskId.toLowerCase();
@@ -130,7 +145,8 @@ export default function TaskUploadBox({
 
       const latestUpload = sortedUploads[0];
       if (latestUpload && latestUpload.fileUrl) {
-        setSelectedFile(latestUpload.fileUrl);
+        // Use the same preview handling as in your BuildingPage
+        handlePreviewFile(latestUpload.fileUrl);
       }
       
       // Reset form values
@@ -146,7 +162,10 @@ export default function TaskUploadBox({
     if (selected) {
       const objectUrl = URL.createObjectURL(selected);
       setPreviewUrl(objectUrl);
-      setSelectedFile(objectUrl);
+      
+      // Handle preview using the same method as other pages
+      handlePreviewFile(objectUrl);
+      
       if (isMandatory) {
         const modifiedDate = new Date(selected.lastModified);
         const now = new Date();
@@ -208,6 +227,19 @@ export default function TaskUploadBox({
     }
   };
 
+  // Handle clicking on a history item
+  const handleHistoryItemClick = (entry: HistoryEntry, e: React.MouseEvent) => {
+    e.preventDefault();
+    if (entry.fileUrl) {
+      // Handle the file preview in the same way your other pages do
+      handlePreviewFile(entry.fileUrl);
+      
+      // Reset the upload form state when viewing a history item
+      setPreviewUrl(null);
+      setFile(null);
+    }
+  };
+
   // Format history entries for display
   const formatTaskName = (entry: HistoryEntry) => {
     try {
@@ -247,17 +279,6 @@ export default function TaskUploadBox({
     }
   };
 
-  // Handle clicking on a history item
-  const handleHistoryItemClick = (entry: HistoryEntry, e: React.MouseEvent) => {
-    e.preventDefault();
-    if (entry.fileUrl) {
-      setSelectedFile(entry.fileUrl);
-      // Reset the upload form state when viewing a history item
-      setPreviewUrl(null);
-      setFile(null);
-    }
-  };
-
   // Format dates for display
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return '';
@@ -274,9 +295,6 @@ export default function TaskUploadBox({
   const splitInfo = info.split(/(⚖️|📜|🔍|🧑‍⚖️)/i);
   const mainText = splitInfo[0]?.trim();
   const legalRef = splitInfo.slice(1).join('').trim();
-  
-  const isPDF = selectedFile?.toLowerCase().endsWith('.pdf');
-  const isImage = selectedFile?.match(/\.(jpg|jpeg|png|gif)$/i);
 
   if (!visible) return null;
 
@@ -362,48 +380,34 @@ export default function TaskUploadBox({
           )}
           
           {!selectedFile ? (
-            <div className={styles.noPreview}>
-              <p>No document selected for preview</p>
+            <div className={styles.viewerPlaceholder}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
+                <strong>Select a file to preview</strong>
+              </div>
             </div>
           ) : isPDF ? (
-            <object 
-              data={selectedFile}
-              type="application/pdf"
-              className={styles.pdfViewer}
-            >
-              <div className={styles.fallbackMessage}>
-                <p>Unable to display PDF directly.</p>
-                <a 
-                  href={selectedFile} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className={styles.downloadLink}
-                >
-                  Open Document
-                </a>
-              </div>
-            </object>
+            <iframe
+              src={selectedFile}
+              className={styles.viewer}
+              title="PDF Viewer"
+              style={{ border: 'none' }}
+            />
           ) : isImage ? (
             <img
               src={selectedFile}
               alt="Preview"
               className={styles.viewer}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling?.classList.add(styles.visible);
-              }}
             />
           ) : (
-            <div className={styles.noPreview}>
-              <a
-                href={selectedFile}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.downloadLink}
-              >
-                Download File
-              </a>
-            </div>
+            <a
+              href={selectedFile}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.viewerPlaceholder}
+            >
+              Download this file
+            </a>
           )}
         </div>
       </div>
