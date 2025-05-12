@@ -163,3 +163,18 @@
   font-size: 0.9rem;
   color: #555;
 }
+
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fadeIn {
+  animation: fadeInModal 300ms ease-out;
+}
