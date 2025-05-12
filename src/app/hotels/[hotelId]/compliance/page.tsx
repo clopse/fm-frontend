@@ -1,4 +1,3 @@
-// CompliancePage.tsx
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -113,29 +112,16 @@ const CompliancePage = ({ params }: Props) => {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
       const data = await res.json();
       setScoreBreakdown(data.task_breakdown || {});
-      const now = new Date();
-const monthsBack = 12;
-const allMonths: ScoreHistoryEntry[] = [];
-
-for (let i = monthsBack - 1; i >= 0; i--) {
-  const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-  const label = d.toISOString().slice(0, 7); // YYYY-MM
-  allMonths.push({ month: label, score: 0, max: totalPoints });
-}
-
-const existing = Object.entries(data.monthly_history || {});
-const actualScores: Record<string, number> = {};
-existing.forEach(([month, entry]) => {
-  const e = entry as { score: number };
-  actualScores[month] = Math.min(e.score, data.score);
-});
-
-setScoreHistory(
-  allMonths.map((m) => ({
-    ...m,
-    score: actualScores[m.month] ?? null, // null for missing data to show with dot or skip line
-  }))
-);
+      setScoreHistory(
+        Object.entries(data.monthly_history || {}).map(([month, entry]) => {
+          const e = entry as { score: number; max: number };
+          return {
+            month,
+            score: e.score,
+            max: e.max,
+          };
+        })
+      );
     } catch (err) {
       console.error(err);
     }
@@ -148,7 +134,10 @@ setScoreHistory(
     await loadScores();
   };
 
-  const selectedTaskObj = useMemo(() => tasks.find((t) => t.task_id === selectedTask) || null, [tasks, selectedTask]);
+  const selectedTaskObj = useMemo(
+    () => tasks.find((t) => t.task_id === selectedTask) || null,
+    [tasks, selectedTask]
+  );
 
   const categories = Array.from(new Set(tasks.map((t) => t.category)));
   const frequencies = Array.from(new Set(tasks.map((t) => t.frequency)));
@@ -160,6 +149,7 @@ setScoreHistory(
       const searchMatch = task.label.toLowerCase().includes(searchTerm.toLowerCase());
       return categoryMatch && freqMatch && searchMatch;
     });
+
     return filtered.reduce((acc, task) => {
       const group = acc[task.category] || [];
       group.push(task);
@@ -171,32 +161,57 @@ setScoreHistory(
   const totalPoints = tasks.reduce((sum, task) => sum + (task.points ?? 0), 0);
   const earnedPoints = Object.values(scoreBreakdown).reduce((sum, score) => sum + score, 0);
 
+  // Build last 12 months timeline for graph
+  const now = new Date();
+  const months: string[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    months.push(monthStr);
+  }
+
+  const processedScoreHistory = months.map((month) => {
+    const entry = scoreHistory.find((s) => s.month === month);
+    return {
+      month,
+      score: entry?.score ?? null,
+      max: entry?.max ?? totalPoints,
+    };
+  });
+
   return (
     <div className={styles.container}>
+      {loading && <p className={styles.loading}>Loading...</p>}
+      {error && <p className={styles.error}>{error}</p>}
+      {successMessage && <p className={styles.success}>{successMessage}</p>}
 
-<h1 className={styles.heading}>Compliance Tasks</h1>
-
-{scoreHistory.length > 0 && (
+      {scoreHistory.length > 0 && (
         <div className={styles.graphBox}>
-  <div className={styles.graphHeader}>
-    <h2 className={styles.graphTitle}>Compliance Score (Last 12 Months)</h2>
-    <div className={styles.scoreBadge}>{earnedPoints} / {totalPoints}</div>
-  </div>
-          
+          <div className={styles.graphHeader}>
+            <div className={styles.graphTitle}>Compliance Score (Last 12 Months)</div>
+            <div className={styles.scoreBadge}>{earnedPoints} / {totalPoints}</div>
+          </div>
           <ResponsiveContainer>
-            <LineChart data={scoreHistory}>
+            <LineChart data={processedScoreHistory}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis domain={[0, totalPoints]} />
               <Tooltip />
-              <Line type="monotone" dataKey="score" stroke="#0070f3" strokeWidth={2} />
+              <Line type="monotone" dataKey="score" stroke="#0070f3" strokeWidth={2} dot />
             </LineChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      <button className={styles.filterToggle} onClick={() => setFiltersOpen(!filtersOpen)} title="Show filters">
-        <img src="/icons/filter-icon.png" width={25} height={25} alt="Filter" /> Filters
+      <h1 className={styles.heading}>Compliance Tasks</h1>
+
+      <button
+        className={styles.filterToggle}
+        onClick={() => setFiltersOpen(!filtersOpen)}
+        title="Show filters"
+      >
+        <img src="/icons/filter-icon.png" width={20} height={20} alt="Filter" />
+        Filters
       </button>
 
       {filtersOpen && (
@@ -227,7 +242,12 @@ setScoreHistory(
 
           <div>
             <label>Search</label>
-            <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search tasks..." />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search tasks..."
+            />
           </div>
         </div>
       )}
