@@ -20,6 +20,13 @@
   overflow: hidden;
 }
 
+.legalRef {
+  color: #666;
+  font-style: italic;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
 .header {
   display: flex;
   align-items: center;
