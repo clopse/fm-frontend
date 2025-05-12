@@ -27,6 +27,11 @@
   justify-content: space-between;
   align-items: center;
   font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.dropdownButton:hover {
+  background-color: #f1f1f1;
 }
 
 .dropdownMenu {
@@ -42,25 +47,13 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   max-height: 200px;
   overflow-y: auto;
+
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
-.optionItem {
-  display: flex;
-  align-items: center;
-  font-size: 13px;
-  margin-bottom: 8px;
-}
-
-.optionItem input {
-  margin-right: 8px;
-}
-
-.filterItem input {
-  padding: 8px 12px;
-  font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  width: 220px;
+.dropdownEnter {
+  animation: fadeSlideIn 200ms ease-out forwards;
 }
 
 @keyframes fadeSlideIn {
@@ -74,23 +67,30 @@
   }
 }
 
-.dropdownMenu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  background-color: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 10px;
-  margin-top: 6px;
-  z-index: 10;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  max-height: 200px;
-  overflow-y: auto;
-  opacity: 0;
-  transform: translateY(-8px);
+.optionItem {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  margin-bottom: 8px;
+  cursor: pointer;
 }
 
-.dropdownEnter {
-  animation: fadeSlideIn 200ms ease-out forwards;
+.optionItem input {
+  margin-right: 8px;
+}
+
+.filterItem input {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 50px;
+  width: 220px;
+  background-color: white;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filterItem input:focus {
+  outline: none;
+  border-color: #0070f3;
+  box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.1);
 }
