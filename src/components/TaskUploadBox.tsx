@@ -366,49 +366,33 @@ export default function TaskUploadBox({
               <p>No document selected for preview</p>
             </div>
           ) : isPDF ? (
-            <div className={styles.pdfContainer}>
-              <iframe
-                src={`${selectedFile}#toolbar=0&view=FitH`}
-                className={styles.viewer}
-                title="PDF Viewer"
-                onError={(e) => {
-                  console.error("PDF iframe load error:", e);
-                }}
-              />
-              <div className={styles.fallbackOverlay}>
+            <object 
+              data={selectedFile}
+              type="application/pdf"
+              className={styles.pdfViewer}
+            >
+              <div className={styles.fallbackMessage}>
+                <p>Unable to display PDF directly.</p>
                 <a 
                   href={selectedFile} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className={styles.fallbackLink}
+                  className={styles.downloadLink}
                 >
                   Open Document
                 </a>
               </div>
-            </div>
+            </object>
           ) : isImage ? (
-            <div className={styles.imageContainer}>
-              <img
-                src={selectedFile}
-                alt="Preview"
-                className={styles.viewer}
-                onError={(e) => {
-                  console.error("Image load error:", e.currentTarget.src);
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextElementSibling?.classList.add(styles.visible);
-                }}
-              />
-              <div className={styles.fallbackOverlay}>
-                <a 
-                  href={selectedFile} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className={styles.fallbackLink}
-                >
-                  Open Image
-                </a>
-              </div>
-            </div>
+            <img
+              src={selectedFile}
+              alt="Preview"
+              className={styles.viewer}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.nextElementSibling?.classList.add(styles.visible);
+              }}
+            />
           ) : (
             <div className={styles.noPreview}>
               <a
