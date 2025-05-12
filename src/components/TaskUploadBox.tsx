@@ -58,61 +58,26 @@ export default function TaskUploadBox({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
-
   const isPDF = useMemo(() => selectedFile?.toLowerCase().endsWith('.pdf'), [selectedFile]);
   const isImage = useMemo(() => /\.(jpg|jpeg|png|gif)$/i.test(selectedFile || ''), [selectedFile]);
 
-  const normalizedHistory = useMemo(() => {
-    return history.map(entry => ({
-      ...entry,
-      reportDate: entry.report_date || entry.reportDate || '',
-      uploadedAt: entry.uploaded_at || entry.uploadedAt || '',
-      uploadedBy: entry.uploaded_by || entry.uploadedBy || '',
-      fileUrl: entry.fileUrl || '',
-      fileName: entry.filename || entry.fileName || ''
-    }));
-  }, [history]);
-
-  const groupedUploads = useMemo(() => {
-    const uploadsByYear: Record<number, HistoryEntry[]> = {};
-    normalizedHistory.forEach(entry => {
-      const date = new Date(entry.reportDate || '');
-      if (!isNaN(date.getTime())) {
-        const year = date.getFullYear();
-        if (!uploadsByYear[year]) uploadsByYear[year] = [];
-        uploadsByYear[year].push(entry);
+  useEffect(() => {
+    const confirmOnClose = (e: BeforeUnloadEvent) => {
+      if (file && !submitting) {
+        e.preventDefault();
+        e.returnValue = '';
       }
-    });
-    return uploadsByYear;
-  }, [normalizedHistory]);
+    };
+    window.addEventListener('beforeunload', confirmOnClose);
+    return () => window.removeEventListener('beforeunload', confirmOnClose);
+  }, [file, submitting]);
 
-  const getFrequencyNumber = () => {
-    const taskIdLower = taskId.toLowerCase();
-    const labelLower = label.toLowerCase();
-    if (taskIdLower.includes('quarterly') || labelLower.includes('quarterly')) return 4;
-    if (taskIdLower.includes('monthly') || labelLower.includes('monthly')) return 12;
-    if (taskIdLower.includes('weekly') || labelLower.includes('weekly')) return 52;
-    if (taskIdLower.includes('daily') || labelLower.includes('daily')) return 365;
-    if (labelLower.includes('bi-annual') || labelLower.includes('semi-annual')) return 2;
-    return 1;
-  };
-
-  const formatTaskName = (entry: HistoryEntry) => {
-    try {
-      const entryDate = entry.reportDate || '';
-      if (!entryDate) return label;
-      const date = new Date(entryDate);
-      if (isNaN(date.getTime())) return label;
-      const year = date.getFullYear();
-      const yearUploads = groupedUploads[year] || [];
-      yearUploads.sort((a, b) => new Date(a.reportDate || '').getTime() - new Date(b.reportDate || '').getTime());
-      const index = yearUploads.findIndex(e => e.fileUrl === entry.fileUrl && e.reportDate === entry.reportDate);
-      const count = index + 1;
-      const expectedTotal = getFrequencyNumber();
-      return `${year} ${label} ${count}/${expectedTotal}`;
-    } catch {
-      return label;
+  const handleClose = () => {
+    if (file && !submitting) {
+      const confirmLeave = confirm('⚠️ You have uploaded a file but not submitted it. Are you sure you want to close?');
+      if (!confirmLeave) return;
     }
+    onClose();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,33 +86,18 @@ export default function TaskUploadBox({
     if (selected) {
       const objectUrl = URL.createObjectURL(selected);
       setSelectedFile(objectUrl);
-      if (isMandatory) {
-        const modifiedDate = new Date(selected.lastModified);
-        const now = new Date();
-        const safeDate = modifiedDate > now ? now : modifiedDate;
-        setReportDate(safeDate.toISOString().split('T')[0]);
-      }
+      const modifiedDate = new Date(selected.lastModified);
+      const now = new Date();
+      const safeDate = modifiedDate > now ? now : modifiedDate;
+      setReportDate(safeDate.toISOString().split('T')[0]);
     } else {
       setReportDate('');
     }
   };
 
-  const handlePreviewFile = (filePath: string) => {
-    if (isMobile().any) {
-      window.open(filePath, '_blank');
-    } else {
-      setSelectedFile(filePath);
-      setFile(null);
-    }
-  };
-
   const handleSubmit = async () => {
-    if (isMandatory && (!file || !reportDate)) {
+    if (!file || !reportDate) {
       alert('Please select a file and report date.');
-      return;
-    }
-    if (!file) {
-      alert('No file selected.');
       return;
     }
 
@@ -155,7 +105,7 @@ export default function TaskUploadBox({
     formData.append('hotel_id', hotelId);
     formData.append('task_id', taskId);
     formData.append('file', file);
-    formData.append('report_date', reportDate || lastConfirmedDate || today);
+    formData.append('report_date', reportDate);
 
     try {
       setSubmitting(true);
@@ -166,8 +116,8 @@ export default function TaskUploadBox({
       if (!res.ok) throw new Error('Upload failed');
 
       onSuccess();
-      const uploadedUrl = URL.createObjectURL(file);
-      setSelectedFile(uploadedUrl);
+      setFile(null);
+      setSelectedFile(null);
       setSuccessMessage('Upload successful!');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
@@ -178,10 +128,6 @@ export default function TaskUploadBox({
     }
   };
 
-  const splitInfo = info.split(/(⚖️|📜|🔍|🧑‍⚖️)/i);
-  const mainText = splitInfo[0]?.trim();
-  const legalRef = splitInfo.slice(1).join('').trim();
-
   if (!visible) return null;
 
   return (
@@ -189,19 +135,18 @@ export default function TaskUploadBox({
       <div className={`${styles.modal} ${styles.fadeIn}`} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
           <h2 className={styles.title}>{label}</h2>
-          <button className={styles.closeButton} onClick={onClose}>✕</button>
+          <button className={styles.closeButton} onClick={handleClose}>✕</button>
         </div>
 
         <div className={styles.modalBody}>
           <div className={styles.leftPanel}>
             <div className={styles.description}>
-              <p>{mainText}</p>
-              {legalRef && <p className={styles.legalRef}>{legalRef}</p>}
+              <p>{info}</p>
             </div>
 
             <div className={styles.uploadSection}>
               <button type="button" className={styles.uploadButton} onClick={() => fileInputRef.current?.click()}>
-                <span className={styles.fileIcon}>📁</span> Upload File
+                <span className={styles.fileIcon}>📁</span> Upload & Preview Report
               </button>
               <input
                 type="file"
@@ -212,68 +157,60 @@ export default function TaskUploadBox({
               />
             </div>
 
-            {isMandatory && (
-              <div className={styles.reportDate}>
-                <label>Report Date</label>
-                <input
-                  type="date"
-                  value={reportDate}
-                  onChange={(e) => setReportDate(e.target.value)}
-                  max={today}
-                />
-              </div>
-            )}
-
-            {normalizedHistory.length > 0 && (
-              <div className={styles.taskHistory}>
-                <h4><span className={styles.clockIcon}>🕓</span> Task History</h4>
-                <div className={styles.historyList}>
-                  {normalizedHistory.filter(h => h.type === 'upload').map((entry, i) => (
-                    <div key={i} className={`${styles.historyItem} ${selectedFile === entry.fileUrl ? styles.activeHistoryItem : ''}`}>
-                      <div>
-                        {formatTaskName(entry)}
-                        <div className={styles.historyDate}>{entry.reportDate}</div>
-                      </div>
-                      <div className={styles.historyItemIcons}>
-                        <button onClick={() => handlePreviewFile(entry.fileUrl)} title="Preview">
-                          <img src="/icons/pdf-icon.png" alt="Preview" />
-                        </button>
-                        <a href={entry.fileUrl} download title="Download">
-                          <img src="/icons/download-icon.png" alt="Download" />
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className={styles.reportDate}>
+              <label>Report Date</label>
+              <input
+                type="date"
+                value={reportDate}
+                onChange={(e) => setReportDate(e.target.value)}
+                max={today}
+              />
+            </div>
           </div>
 
           <div className={styles.rightPanel}>
-            {successMessage && <div className={styles.successMessage}>✅ {successMessage}</div>}
+            <div className={styles.previewContainer}>
+              {successMessage && (
+                <div className={styles.successMessage}>✅ {successMessage}</div>
+              )}
 
-            {!selectedFile ? (
-              <div className={styles.viewerPlaceholder}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
-                  <strong>Select a file to preview</strong>
+              {!selectedFile ? (
+                <div className={styles.viewerPlaceholder}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
+                    <strong>Select a file to preview</strong>
+                  </div>
                 </div>
-              </div>
-            ) : isPDF ? (
-              <iframe src={selectedFile} className={styles.viewer} title="PDF Viewer" />
-            ) : isImage ? (
-              <img src={selectedFile} alt="Preview" className={styles.viewer} />
-            ) : (
-              <a href={selectedFile} target="_blank" rel="noopener noreferrer" className={styles.viewerPlaceholder}>
-                Download this file
-              </a>
-            )}
+              ) : isPDF ? (
+                <iframe
+                  src={selectedFile}
+                  className={styles.viewer}
+                  title="PDF Viewer"
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                />
+              ) : isImage ? (
+                <img
+                  src={selectedFile}
+                  alt="Preview"
+                  className={styles.viewer}
+                />
+              ) : (
+                <a
+                  href={selectedFile}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.viewerPlaceholder}
+                >
+                  Download this file
+                </a>
+              )}
 
-            {file && (
-              <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
-                {submitting ? 'Submitting...' : 'Submit'}
-              </button>
-            )}
+              {file && (
+                <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
+                  {submitting ? 'Submitting...' : 'Submit'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
