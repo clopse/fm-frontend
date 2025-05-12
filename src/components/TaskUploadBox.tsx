@@ -7,12 +7,17 @@ interface HistoryEntry {
   type: 'upload' | 'confirmation';
   fileName?: string;
   fileUrl?: string;
+  report_date?: string;
   reportDate?: string;
+  uploaded_at?: string;
   uploadedAt?: string;
+  uploaded_by?: string;
   uploadedBy?: string;
   confirmedAt?: string;
   confirmedBy?: string;
-  taskName?: string; // Added for custom naming
+  filename?: string; // Added to support the backend response format
+  approved?: boolean;
+  loggedAt?: string;
 }
 
 interface TaskUploadBoxProps {
@@ -53,13 +58,43 @@ export default function TaskUploadBox({
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  // Reset modal state when opened
+  // Normalize history entries to handle different field naming conventions
+  const normalizedHistory = useMemo(() => {
+    return history.map(entry => {
+      return {
+        ...entry,
+        reportDate: entry.report_date || entry.reportDate || '',
+        uploadedAt: entry.uploaded_at || entry.uploadedAt || '',
+        uploadedBy: entry.uploaded_by || entry.uploadedBy || '',
+        fileUrl: entry.fileUrl || '',
+        fileName: entry.filename || entry.fileName || ''
+      };
+    });
+  }, [history]);
+
+  // Initialize with the latest upload when modal opens
   useEffect(() => {
     if (visible) {
-      const latestUpload = [...history].find((h) => h.type === 'upload' && h.fileUrl);
-      setActiveUrl(latestUpload?.fileUrl || null);
+      // Find the latest upload by sorting dates
+      const sortedUploads = [...normalizedHistory]
+        .filter(h => h.type === 'upload' && h.fileUrl)
+        .sort((a, b) => {
+          const dateA = new Date(a.uploadedAt || '');
+          const dateB = new Date(b.uploadedAt || '');
+          return dateB.getTime() - dateA.getTime();
+        });
+
+      const latestUpload = sortedUploads[0];
+      if (latestUpload) {
+        setActiveUrl(latestUpload.fileUrl);
+      }
+      
+      // Reset form values
+      setFile(null);
+      setPreviewUrl(null);
+      setReportDate('');
     }
-  }, [visible, history]);
+  }, [visible, normalizedHistory]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
@@ -116,14 +151,41 @@ export default function TaskUploadBox({
 
   // Format history entries for display
   const formatTaskName = (entry: HistoryEntry) => {
-    if (entry.taskName) return entry.taskName;
+    const entryDate = entry.reportDate || '';
+    if (!entryDate) return `${label} (Unknown date)`;
     
-    const year = entry.reportDate ? new Date(entry.reportDate).getFullYear() : new Date().getFullYear();
-    const quarter = entry.reportDate 
-      ? Math.floor(new Date(entry.reportDate).getMonth() / 3) + 1 
-      : Math.floor(new Date().getMonth() / 3) + 1;
-    
-    return `${year} ${label} ${quarter}/4`;
+    try {
+      const date = new Date(entryDate);
+      if (isNaN(date.getTime())) return `${label} (Unknown date)`;
+      
+      const year = date.getFullYear();
+      const quarter = Math.floor(date.getMonth() / 3) + 1;
+      
+      return `${year} ${label} ${quarter}/4`;
+    } catch (error) {
+      return `${label} (Unknown date)`;
+    }
+  };
+
+  // Handle clicking on a history item
+  const handleHistoryItemClick = (entry: HistoryEntry, e: React.MouseEvent) => {
+    e.preventDefault();
+    if (entry.fileUrl) {
+      setActiveUrl(entry.fileUrl);
+    }
+  };
+
+  // Format dates for display
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'Unknown date';
+    try {
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) 
+        ? 'Unknown date' 
+        : date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (error) {
+      return 'Unknown date';
+    }
   };
 
   const splitInfo = info.split(/(⚖️|📜|🔍|🧑‍⚖️)/i);
@@ -147,6 +209,28 @@ export default function TaskUploadBox({
           </div>
 
           <div className={styles.bodyContainer}>
+            <div className={styles.previewContainer}>
+              {activeUrl ? (
+                activeUrl.endsWith('.pdf') ? (
+                  <iframe
+                    className={styles.previewFrame}
+                    src={`${activeUrl}#toolbar=0&navpanes=0`}
+                    title="PDF Preview"
+                  />
+                ) : (
+                  <img
+                    src={activeUrl}
+                    alt="Preview"
+                    className={styles.previewFrame}
+                  />
+                )
+              ) : (
+                <div className={styles.noPreview}>
+                  <p>No document selected for preview</p>
+                </div>
+              )}
+            </div>
+
             <div className={styles.controlPanel}>
               <div className={styles.uploadSection}>
                 <button
@@ -164,78 +248,83 @@ export default function TaskUploadBox({
                   className={styles.fileInput}
                 />
 
-                {isMandatory && (
-                  <label className={styles.dateLabel}>
-                    Report Date
-                    <input
-                      type="date"
-                      value={reportDate}
-                      onChange={(e) => setReportDate(e.target.value)}
-                      max={today}
-                      className={styles.dateInput}
-                    />
-                  </label>
-                )}
+                <div className={styles.dateAndSubmitRow}>
+                  {isMandatory && (
+                    <div className={styles.dateContainer}>
+                      <label className={styles.dateLabel}>
+                        Report Date
+                        <input
+                          type="date"
+                          value={reportDate}
+                          onChange={(e) => setReportDate(e.target.value)}
+                          max={today}
+                          className={styles.dateInput}
+                        />
+                      </label>
+                    </div>
+                  )}
 
-                <button
-                  className={styles.confirmButton}
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                >
-                  {submitting ? 'Submitting...' : 'Submit'}
-                </button>
+                  <button
+                    className={styles.confirmButton}
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Submitting...' : 'Submit'}
+                  </button>
+                </div>
               </div>
 
-              {history.length > 0 && (
+              {normalizedHistory.length > 0 && (
                 <div className={styles.history}>
                   <h4>🕓 Task History</h4>
                   <div className={styles.historyList}>
-                    {history.map((entry, i) => (
-                      <div key={i} className={styles.historyItem}>
-                        {entry.type === 'upload' ? (
-                          <button
+                    {normalizedHistory
+                      .filter(entry => entry.type === 'upload')
+                      .map((entry, i) => (
+                        <div key={i} className={styles.historyItem}>
+                          <a
+                            href="#"
                             className={`${styles.historyButton} ${activeUrl === entry.fileUrl ? styles.active : ''}`}
-                            onClick={() => setActiveUrl(entry.fileUrl || null)}
+                            onClick={(e) => handleHistoryItemClick(entry, e)}
+                            title={entry.fileName || ''}
                           >
                             {formatTaskName(entry)}
-                          </button>
-                        ) : (
-                          <div className={styles.confirmationEntry}>
+                          </a>
+                          <span className={styles.uploadInfo}>
+                            {formatDate(entry.reportDate)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                  
+                  {normalizedHistory.some(entry => entry.type === 'confirmation') && (
+                    <div className={styles.confirmations}>
+                      <h5>Confirmations</h5>
+                      {normalizedHistory
+                        .filter(entry => entry.type === 'confirmation')
+                        .map((entry, i) => (
+                          <div key={i} className={styles.confirmationEntry}>
                             <span className={styles.confirmIcon}>✅</span>
                             <span>
                               Confirmed by {entry.confirmedBy || 'Admin'} on{' '}
-                              {entry.confirmedAt 
-                                ? new Date(entry.confirmedAt).toLocaleDateString('en-GB') 
-                                : 'Unknown date'}
+                              {formatDate(entry.confirmedAt)}
                             </span>
                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                        ))}
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-
-            <div className={styles.previewContainer}>
-              {activeUrl ? (
-                activeUrl.endsWith('.pdf') ? (
-                  <iframe
-                    className={styles.previewFrame}
-                    src={activeUrl}
-                    title="PDF Preview"
-                  />
-                ) : (
-                  <img
-                    src={activeUrl}
-                    alt="Preview"
-                    className={styles.previewFrame}
-                  />
-                )
-              ) : (
-                <div className={styles.noPreview}>
-                  <p>No document selected for preview</p>
-                </div>
+              
+              {activeUrl && activeUrl.startsWith('http') && (
+                <a 
+                  href={activeUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className={styles.downloadButton}
+                >
+                  📥 Download Document
+                </a>
               )}
             </div>
           </div>
