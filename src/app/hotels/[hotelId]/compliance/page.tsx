@@ -188,7 +188,7 @@ const CompliancePage = ({ params }: Props) => {
       {scoreHistory.length > 0 && (
         <div className={styles.graphBox}>
           <div className={styles.graphHeader}>
-            <div className={styles.graphTitle}>Compliance Score (Last 12 Months)</div>
+            <div className={styles.graphTitle}>Compliance Score</div>
             <div className={styles.scoreBadge}>{earnedPoints} / {totalPoints}</div>
           </div>
           <ResponsiveContainer>
@@ -220,7 +220,6 @@ const CompliancePage = ({ params }: Props) => {
         title="Show filters"
       >
         <img src="/icons/filter-icon.png" width={20} height={20} alt="Filter" />
-        Filters
       </button>
 
       {filtersOpen && (
