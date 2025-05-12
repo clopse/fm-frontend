@@ -59,7 +59,10 @@ export default function FilterPanel({ filters, onChange, categories, frequencies
             {filters.category.length ? filters.category.join(', ') : 'Select Categories'} <ChevronDown size={16} />
           </div>
           {categoryOpen && (
-            <div className={styles.dropdownMenu}>
+            <div
+              className={`${styles.dropdownMenu} ${styles.dropdownEnter}`}
+              style={{ animation: 'fadeSlideIn 200ms ease-out forwards' }}
+            >
               <div
                 className={styles.optionItem}
                 onClick={() => toggleAll('category', categories)}
@@ -91,7 +94,10 @@ export default function FilterPanel({ filters, onChange, categories, frequencies
             {filters.frequency.length ? filters.frequency.join(', ') : 'Select Frequencies'} <ChevronDown size={16} />
           </div>
           {frequencyOpen && (
-            <div className={styles.dropdownMenu}>
+            <div
+              className={`${styles.dropdownMenu} ${styles.dropdownEnter}`}
+              style={{ animation: 'fadeSlideIn 200ms ease-out forwards' }}
+            >
               <div
                 className={styles.optionItem}
                 onClick={() => toggleAll('frequency', frequencies)}
