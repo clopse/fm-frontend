@@ -73,6 +73,7 @@ const CompliancePage = ({ params }: Props) => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({
     category: [] as string[],
     frequency: [] as string[],
@@ -217,12 +218,22 @@ const CompliancePage = ({ params }: Props) => {
 
       <h1 className={styles.heading}>Compliance Tasks</h1>
 
-      <FilterPanel
-        filters={filters}
-        onChange={setFilters}
-        categories={categories}
-        frequencies={frequencies}
-      />
+      <button
+        className={styles.filterToggle}
+        onClick={() => setFiltersOpen(!filtersOpen)}
+        title="Show filters"
+      >
+        <img src="/icons/filter-icon.png" width={20} height={20} alt="Filter" />
+      </button>
+
+      {filtersOpen && (
+        <FilterPanel
+          filters={filters}
+          onChange={setFilters}
+          categories={categories}
+          frequencies={frequencies}
+        />
+      )}
 
       {Object.keys(grouped).map((category) => (
         <div key={category} className={styles.group}>
