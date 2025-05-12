@@ -48,8 +48,15 @@ export default function TaskUploadBox({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [reportDate, setReportDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
-
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  // Split info into description and legal reference
+  const splitInfo = info.split(/(🧑‍⚖️|🔍|📜)/i);
+  const mainText = splitInfo[0]?.trim();
+  const legalRef = splitInfo.slice(1).join('').trim();
+
+  const latestUpload = [...history].reverse().find(h => h.type === 'upload' && h.fileUrl);
+  const activePreview = previewUrl || latestUpload?.fileUrl || null;
 
   if (!visible) return null;
 
@@ -94,18 +101,15 @@ export default function TaskUploadBox({
     } else if (lastConfirmedDate) {
       formData.append('report_date', lastConfirmedDate);
     } else {
-      formData.append('report_date', today); // fallback
+      formData.append('report_date', today);
     }
 
     try {
       setSubmitting(true);
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`, {
+        method: 'POST',
+        body: formData,
+      });
       if (!res.ok) throw new Error('Upload failed');
       onSuccess();
       onClose();
@@ -116,15 +120,6 @@ export default function TaskUploadBox({
       setSubmitting(false);
     }
   };
-
-  // Use latest fileUrl from history (reverse to get latest first)
-  const latestUpload = [...history].reverse().find((h) => h.type === 'upload' && h.fileUrl);
-  const activePreview = previewUrl || latestUpload?.fileUrl || null;
-
-  // TEMP: Hardcoded info split
-  const splitInfo = info.split(/(🧑‍⚖️|🔍|📜)/i);
-  const mainText = splitInfo[0]?.trim();
-  const legalRef = splitInfo.slice(1).join('').trim();
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -137,7 +132,9 @@ export default function TaskUploadBox({
         <div className={styles.description}>
           <p>{mainText}</p>
           {legalRef && (
-            <p className={styles.legalRef}>🔍 <em>{legalRef}</em></p>
+            <p className={styles.legalRef}>
+              📜 <em>{legalRef}</em>
+            </p>
           )}
         </div>
 
@@ -167,7 +164,7 @@ export default function TaskUploadBox({
                     width: '100%',
                     height: '100%',
                     border: '1px solid #ccc',
-                    borderRadius: '8px'
+                    borderRadius: '8px',
                   }}
                 />
               ) : (
@@ -179,7 +176,7 @@ export default function TaskUploadBox({
                     maxHeight: '480px',
                     objectFit: 'contain',
                     borderRadius: '8px',
-                    border: '1px solid #ccc'
+                    border: '1px solid #ccc',
                   }}
                 />
               )}
