@@ -32,6 +32,18 @@
   to { opacity: 1; }
 }
 
+.resizeHandle {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  cursor: se-resize;
+  background: rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  border-bottom-right-radius: 8px;
+}
+
 .header {
   display: flex;
   justify-content: space-between;
