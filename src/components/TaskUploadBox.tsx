@@ -387,11 +387,12 @@ export default function TaskUploadBox({
               </div>
             </div>
           ) : isPDF ? (
-            <iframe
+            // For PDF files, use embed which has better inline preview support than iframe
+            <embed
               src={selectedFile}
+              type="application/pdf"
               className={styles.viewer}
-              title="PDF Viewer"
-              style={{ border: 'none' }}
+              style={{ width: '100%', height: '100%' }}
             />
           ) : isImage ? (
             <img
