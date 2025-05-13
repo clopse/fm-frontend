@@ -183,16 +183,19 @@ export default function TaskUploadBox({
               />
             </div>
 
-            <div className={styles.reportDate}>
-              <label>Report Date</label>
-              <input
-                type="date"
-                value={reportDate}
-                onChange={(e) => setReportDate(e.target.value)}
-                max={today}
-              />
-            </div>
-
+            {file && (
+              <div className={styles.reportDate} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '1rem' }}>
+                <label style={{ fontWeight: 500, marginBottom: '0.25rem' }}>Report Date</label>
+                <input
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  max={today}
+                  style={{ width: '160px', padding: '4px' }}
+                />
+              </div>
+            )}
+            
             {normalizedHistory.length > 0 && (
               <div className={styles.taskHistory}>
                 <h4><span className={styles.clockIcon}></span>History</h4>
