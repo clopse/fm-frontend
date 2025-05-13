@@ -228,16 +228,18 @@ export default function TaskUploadBox({
                   </div>
                 </div>
               ) : (
-                <iframe
-                  src={selectedFile}
-                  className={styles.viewer}
-                  title="File Preview"
-                  style={{ width: '100%', height: '90vh', border: 'none' }}
-                />
+                 <div style={{ position: 'relative', height: 'calc(100vh - 220px)' }}>
+                  <iframe
+                    src={selectedFile + '#page=1'}
+                    className={styles.viewer}
+                    title="File Preview"
+                    style={{ width: '100%', height: '100%', border: 'none' }}
+                  />
+                </div>
               )}
 
               {file && (
-                <div className={styles.rightPanelFooter} style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
+                <div className={styles.rightPanelFooter} style={{ position: 'sticky', bottom: 0, background: '#fff', paddingTop: '1rem', display: 'flex', justifyContent: 'center' }}>
                   <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
                     {submitting ? 'Submitting...' : 'Submit'}
                   </button>
