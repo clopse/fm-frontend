@@ -170,31 +170,33 @@ export default function TaskUploadBox({
               <p><em style={{ color: '#666' }}>{info}</em></p>
             </div>
 
-            <div className={styles.uploadSection}>
-              <button type="button" className={styles.uploadButton} onClick={() => fileInputRef.current?.click()}>
-                <span className={styles.fileIcon}>📁</span> Upload & Preview Report
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={handleFileChange}
-                className={styles.fileInput}
-              />
-            </div>
-
-            {file && (
-              <div className={styles.reportDate} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '1rem' }}>
-                <label style={{ fontWeight: 500, marginBottom: '0.25rem' }}>Report Date</label>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+              <div className={styles.uploadSection}>
+                <button type="button" className={styles.uploadButton} onClick={() => fileInputRef.current?.click()}>
+                  <span className={styles.fileIcon}>📁</span> Upload & Preview Report
+                </button>
                 <input
-                  type="date"
-                  value={reportDate}
-                  onChange={(e) => setReportDate(e.target.value)}
-                  max={today}
-                  style={{ width: '160px', padding: '4px' }}
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleFileChange}
+                  className={styles.fileInput}
                 />
               </div>
-            )}
+            
+              {file && (
+                <div className={styles.reportDate} style={{ marginTop: '1rem', textAlign: 'center' }}>
+                  <label style={{ fontWeight: 500, marginBottom: '0.25rem' }}>Report Date</label>
+                  <input
+                    type="date"
+                    value={reportDate}
+                    onChange={(e) => setReportDate(e.target.value)}
+                    max={today}
+                    style={{ width: '160px', padding: '4px' }}
+                  />
+                </div>
+              )}
+            </div>
             
             {normalizedHistory.length > 0 && (
               <div className={styles.taskHistory}>
