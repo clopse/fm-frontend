@@ -126,3 +126,31 @@
   transform: scale(1.2);
   transition: transform 0.2s ease;
 }
+
+.uploadBtnBlue {
+  background-color: #0070f3;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.uploadBtnBlue:hover {
+  background-color: #0059c1;
+}
+
+.taskRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.taskLabelWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
