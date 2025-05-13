@@ -42,15 +42,15 @@ interface HotelTotals {
 const hotelOptions = ["hiex", "moxy", "hida", "hbhdcc", "hbhe", "sera", "marina"];
 
 const sampleElectricity2025: ElectricityEntry[] = [
-  { month: "Jan", day_kwh: 48000, night_kwh: 29500, total_kwh: 77500, total_eur: 20500, per_room_kwh: 392 },
-  { month: "Feb", day_kwh: 41000, night_kwh: 26000, total_kwh: 67000, total_eur: 16500, per_room_kwh: 339 },
-  { month: "Mar", day_kwh: 50000, night_kwh: 30500, total_kwh: 80500, total_eur: 19000, per_room_kwh: 410 },
+  { month: "Jan", day_kwh: 48343, night_kwh: 29554, total_kwh: 77346, total_eur: 20509, per_room_kwh: 392 },
+  { month: "Feb", day_kwh: 41453, night_kwh: 26019, total_kwh: 67055, total_eur: 16508, per_room_kwh: 339 },
+  { month: "Mar", day_kwh: 50000, night_kwh: 30500, total_kwh: 80500, total_eur: 19234, per_room_kwh: 410 },
 ];
 
 const sampleGas2025: GasEntry[] = [
-  { period: "Jan", total_kwh: 42000, total_eur: 4600, per_room_kwh: 212 },
-  { period: "Feb", total_kwh: 40000, total_eur: 4300, per_room_kwh: 202 },
-  { period: "Mar", total_kwh: 45000, total_eur: 4700, per_room_kwh: 225 },
+  { period: "Jan", total_kwh: 42435, total_eur: 4600, per_room_kwh: 212 },
+  { period: "Feb", total_kwh: 40453, total_eur: 4300, per_room_kwh: 202 },
+  { period: "Mar", total_kwh: 45223, total_eur: 4700, per_room_kwh: 225 },
 ];
 
 const sampleWater2025: WaterEntry[] = [
