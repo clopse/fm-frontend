@@ -191,6 +191,26 @@
 .submitButton:disabled {
   background-color: #9ca3af;
   cursor: not-allowed;
+  
+}
+.centeredReportDate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.centeredReportDate label {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+
+.centeredReportDate input {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.9rem;
 }
 
 .confirmationEntry {
