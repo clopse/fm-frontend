@@ -196,7 +196,7 @@ export default function TaskUploadBox({
 
             {normalizedHistory.length > 0 && (
               <div className={styles.taskHistory}>
-                <h4><span className={styles.clockIcon}>🕓</span> Task History</h4>
+                <h4><span className={styles.clockIcon}></span>History</h4>
                 <div className={styles.historyList}>
                   {normalizedHistory.filter(entry => entry.type === 'upload').map((entry, i) => (
                     <div key={i} className={styles.historyItem}>
