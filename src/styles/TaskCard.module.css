@@ -18,22 +18,30 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+.mandatoryCard {
+  border-left: 5px solid #e11d48;
+}
+
 .cardHeader {
   font-weight: 600;
   font-size: 15px;
   margin-bottom: 12px;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.mandatory {
-  background-color: #e53935;
-  color: #fff;
+.mandatoryBadge {
+  background-color: #e11d48;
+  color: white;
   font-size: 10px;
-  padding: 2px 6px;
+  font-weight: 600;
+  padding: 2px 8px;
   border-radius: 12px;
-  position: absolute;
-  top: 0;
-  right: 0;
+  margin-left: 8px;
+  line-height: 1;
+  display: inline-block;
 }
 
 .cardFooter {
