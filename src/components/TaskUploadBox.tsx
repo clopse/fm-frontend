@@ -243,7 +243,6 @@ export default function TaskUploadBox({
                   </button>
                 </div>
               )}
-              )}
             </div>
           </div>
         </div>
