@@ -233,7 +233,7 @@ export default function TaskUploadBox({
                   src={selectedFile}
                   className={styles.viewer}
                   title="File Preview"
-                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  style={{ width: '100%', height: '1100px', border: 'none' }}
                 />
               )}
 
