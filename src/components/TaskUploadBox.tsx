@@ -160,7 +160,27 @@ export default function TaskUploadBox({
     <div className={styles.modalOverlay}>
       <div className={`${styles.modal} ${styles.fadeIn}`} onClick={(e) => e.stopPropagation()}>
         <div className={styles.header}>
-          <h2 className={styles.title}>{label}</h2>
+          <div style={{ flex: 1 }}>
+            <h2 className={styles.title}>{label}</h2>
+            {mainInfo && lawInfo && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                borderLeft: '3px solid #ccc',
+                paddingLeft: '0.75rem',
+                marginTop: '0.5rem',
+                fontSize: '0.9rem',
+                lineHeight: 1.4,
+                color: '#222'
+              }}>
+                <div>
+                  {mainInfo}<br />
+                  <em style={{ color: '#888' }}>⚖️ {lawInfo}</em>
+                </div>
+              </div>
+            )}
+          </div>
           <button className={styles.closeButton} onClick={handleClose}>✕</button>
         </div>
 
