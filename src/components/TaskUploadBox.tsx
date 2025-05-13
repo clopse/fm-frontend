@@ -77,10 +77,10 @@ export default function TaskUploadBox({
   }, [normalizedHistory]);
 
   useEffect(() => {
-    if (visible && latestUpload?.fileUrl) {
+    if (visible && !selectedFile && latestUpload?.fileUrl) {
       setSelectedFile(latestUpload.fileUrl);
     }
-  }, [visible, latestUpload]);
+  }, [visible, latestUpload, selectedFile]);
 
   useEffect(() => {
     const confirmOnClose = (e: BeforeUnloadEvent) => {
@@ -201,9 +201,6 @@ export default function TaskUploadBox({
                     <div key={i} className={styles.historyItem}>
                       <div>{entry.reportDate?.split('T')[0]}</div>
                       <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={() => handlePreviewFile(entry.fileUrl!)}>
-                          <img src="/icons/pdf-icon.png" alt="Preview" width={20} height={20} />
-                        </button>
                         <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">
                           <img src="/icons/download-icon.png" alt="Download" width={20} height={20} />
                         </a>
