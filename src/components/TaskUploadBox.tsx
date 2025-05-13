@@ -108,7 +108,6 @@ export default function TaskUploadBox({
       const tempUrl = URL.createObjectURL(selected);
       setSelectedFile(tempUrl);
 
-      // Use file creation date if available or fallback
       try {
         const modifiedDate = new Date(selected.lastModified);
         const now = new Date();
@@ -197,16 +196,24 @@ export default function TaskUploadBox({
             {normalizedHistory.length > 0 && (
               <div className={styles.taskHistory}>
                 <h4><span className={styles.clockIcon}></span>History</h4>
-                <div className={styles.historyList}>
+                <div className={styles.historyList} style={{ maxHeight: '280px', overflowY: 'auto' }}>
                   {normalizedHistory.filter(entry => entry.type === 'upload').map((entry, i) => (
-                    <div key={i} className={styles.historyItem}>
+                    <div
+                      key={i}
+                      className={styles.historyItem}
+                      onClick={() => setSelectedFile(entry.fileUrl)}
+                      style={{
+                        cursor: 'pointer',
+                        padding: '8px',
+                        marginBottom: '6px',
+                        background: selectedFile === entry.fileUrl ? '#eef3ff' : '#fff',
+                        borderRadius: '6px',
+                        transition: 'background 0.2s',
+                        boxShadow: selectedFile === entry.fileUrl ? 'inset 0 0 0 2px #3b82f6' : 'none'
+                      }}
+                    >
                       <div>{entry.reportDate?.split('T')[0] || 'No date'}</div>
                       <div style={{ fontSize: '0.85rem', color: '#666' }}>{entry.fileName || 'Untitled'}</div>
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">
-                          <img src="/icons/download-icon.png" alt="Download" width={20} height={20} />
-                        </a>
-                      </div>
                     </div>
                   ))}
                 </div>
@@ -228,7 +235,7 @@ export default function TaskUploadBox({
                   </div>
                 </div>
               ) : (
-                 <div style={{ position: 'relative', height: 'calc(100vh - 220px)' }}>
+                <div style={{ position: 'relative', height: 'calc(100vh - 220px)' }}>
                   <iframe
                     src={selectedFile + '#page=1'}
                     className={styles.viewer}
