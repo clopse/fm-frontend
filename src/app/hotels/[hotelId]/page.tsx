@@ -33,7 +33,6 @@ export default function HotelDashboard() {
   const [score, setScore] = useState<number>(0);
   const [points, setPoints] = useState<string>("0/0");
   const [dueNow, setDueNow] = useState<TaskItem[]>([]);
-  const [dueSoon, setDueSoon] = useState<TaskItem[]>([]);
   const [refreshToggle, setRefreshToggle] = useState(false);
 
   const [allHistoryEntries, setAllHistoryEntries] = useState<HistoryEntry[]>([]);
@@ -63,7 +62,6 @@ export default function HotelDashboard() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/due-tasks/${hotelId}`);
       const data = await res.json();
       setDueNow(data.due_this_month || []);
-      setDueSoon(data.next_month_uploadables || []);
     } catch (e) {
       console.error("Error loading due tasks:", e);
     }
@@ -94,16 +92,18 @@ export default function HotelDashboard() {
   const renderTasks = (tasks: TaskItem[]) => (
     <ul className={styles.taskList}>
       {tasks.map(task => (
-        <li key={task.task_id}>
-          <strong>{task.label}</strong>
+        <li key={task.task_id} className={styles.taskRow}>
+          <div className={styles.taskLabelWrapper}>
+            <strong>{task.label}</strong>
+            <button
+              className={styles.info}
+              onClick={() => alert(task.info_popup)}
+            >
+              ℹ️
+            </button>
+          </div>
           <button
-            className={styles.info}
-            onClick={() => alert(task.info_popup)}
-          >
-            ℹ️
-          </button>
-          <button
-            className={styles.upload}
+            className={styles.uploadBtnBlue}
             onClick={() => handleUploadOpen(task)}
           >
             Upload
@@ -149,11 +149,6 @@ export default function HotelDashboard() {
         <div className={styles.checklistSection}>
           <h2>📌 Tasks Due This Month</h2>
           {dueNow.length > 0 ? renderTasks(dueNow) : <p>No report-based tasks due this month.</p>}
-        </div>
-
-        <div className={styles.checklistSection}>
-          <h2>🔜 Next Month's Uploadable Tasks</h2>
-          {dueSoon.length > 0 ? renderTasks(dueSoon) : <p>No tasks forecasted for next month.</p>}
         </div>
       </div>
 
