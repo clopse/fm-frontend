@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import isMobile from 'ismobilejs';
 import styles from '@/styles/TaskUploadBox.module.css';
 
 interface HistoryEntry {
@@ -59,17 +58,6 @@ export default function TaskUploadBox({
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  const normalizedHistory = useMemo(() => {
-    return history.map(entry => ({
-      ...entry,
-      reportDate: entry.report_date || entry.reportDate || '',
-      uploadedAt: entry.uploaded_at || entry.uploadedAt || '',
-      uploadedBy: entry.uploaded_by || entry.uploadedBy || '',
-      fileUrl: entry.fileUrl || '',
-      fileName: entry.filename || entry.fileName || '',
-    }));
-  }, [history]);
-
   useEffect(() => {
     const confirmOnClose = (e: BeforeUnloadEvent) => {
       if (file && !submitting) {
@@ -89,12 +77,12 @@ export default function TaskUploadBox({
     onClose();
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     setFile(selected);
     if (selected) {
-      const tempUrl = URL.createObjectURL(selected);
-      setSelectedFile(tempUrl);
+      const objectUrl = URL.createObjectURL(selected);
+      setSelectedFile(objectUrl);
       const modifiedDate = new Date(selected.lastModified);
       const now = new Date();
       const safeDate = modifiedDate > now ? now : modifiedDate;
@@ -102,11 +90,6 @@ export default function TaskUploadBox({
     } else {
       setReportDate('');
     }
-  };
-
-  const handlePreviewFile = (url: string) => {
-    setSelectedFile(url);
-    setFile(null);
   };
 
   const handleSubmit = async () => {
@@ -142,24 +125,6 @@ export default function TaskUploadBox({
     }
   };
 
-  const handleConfirm = async () => {
-    try {
-      setSubmitting(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/confirm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hotel_id: hotelId, task_id: taskId }),
-      });
-      if (!res.ok) throw new Error('Confirmation failed');
-      onSuccess();
-    } catch (err) {
-      console.error(err);
-      alert('Error confirming task.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   if (!visible) return null;
 
   return (
@@ -176,12 +141,6 @@ export default function TaskUploadBox({
               <p>{info}</p>
             </div>
 
-            {!isMandatory && canConfirm && !isConfirmed && (
-              <button className={styles.submitButton} onClick={handleConfirm} disabled={submitting}>
-                {submitting ? 'Confirming...' : 'Mark as Completed'}
-              </button>
-            )}
-
             <div className={styles.uploadSection}>
               <button type="button" className={styles.uploadButton} onClick={() => fileInputRef.current?.click()}>
                 <span className={styles.fileIcon}>📁</span> Upload & Preview Report
@@ -195,36 +154,15 @@ export default function TaskUploadBox({
               />
             </div>
 
-            <div className={styles.reportDate}>
-              <label>Report Date</label>
-              <input
-                type="date"
-                value={reportDate}
-                onChange={(e) => setReportDate(e.target.value)}
-                max={today}
-              />
-            </div>
-
-            {normalizedHistory.length > 0 && (
-              <div className={styles.taskHistory}>
-                <h4><span className={styles.clockIcon}>🕓</span> Task History</h4>
-                <div className={styles.historyList}>
-                  {normalizedHistory.map((entry, i) => (
-                    <div key={i} className={styles.historyItem}>
-                      <div>
-                        {entry.type === 'upload' && entry.reportDate?.split('T')[0]}
-                        {entry.type === 'confirmation' && `✅ Confirmed by ${entry.confirmedBy || 'unknown'} at ${new Date(entry.confirmedAt || '').toLocaleString()}`}
-                      </div>
-                      {entry.type === 'upload' && (
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                          <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">
-                            <img src="/icons/download-icon.png" alt="Download" width={20} height={20} />
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+            {!selectedFile && (
+              <div className={styles.centeredReportDate}>
+                <label>Report Date</label>
+                <input
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  max={today}
+                />
               </div>
             )}
           </div>
@@ -247,16 +185,18 @@ export default function TaskUploadBox({
                   src={selectedFile}
                   className={styles.viewer}
                   title="File Preview"
-                  style={{ width: '100%', height: '1100px', border: 'none' }}
+                  style={{ width: '100%', height: '650px', border: 'none' }}
                 />
               )}
+            </div>
 
-              {file && (
+            {file && (
+              <div className={styles.rightPanelFooter}>
                 <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
                   {submitting ? 'Submitting...' : 'Submit'}
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
