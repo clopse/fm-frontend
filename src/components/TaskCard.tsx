@@ -38,12 +38,15 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, fileInfo, onClick }) => {
   };
 
   return (
-    <div className={styles.card} onClick={onClick}>
+    <div
+      className={`${styles.card} ${task.mandatory ? styles.mandatoryCard : ''}`}
+      onClick={onClick}
+    >
       <div className={styles.cardHeader}>
         {task.label}
         {task.mandatory && (
-          <span className={styles.mIcon} title="Mandatory">
-            🅜
+          <span className={styles.mandatoryBadge} title="Mandatory">
+            MANDATORY
           </span>
         )}
       </div>
