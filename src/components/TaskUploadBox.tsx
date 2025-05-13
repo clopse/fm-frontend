@@ -59,6 +59,11 @@ export default function TaskUploadBox({
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
+  const [mainInfo, lawInfo] = useMemo(() => {
+    const [main, law] = info.split('⚖️');
+    return [main?.trim(), law?.trim()];
+  }, [info]);
+
   const normalizedHistory = useMemo(() => {
     return history.map(entry => ({
       ...entry,
@@ -186,10 +191,6 @@ export default function TaskUploadBox({
 
         <div className={styles.modalBody}>
           <div className={styles.leftPanel}>
-            <div className={styles.description}>
-              <p><em style={{ color: '#666' }}>{info}</em></p>
-            </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
               <div className={styles.uploadSection}>
                 <button type="button" className={styles.uploadButton} onClick={() => fileInputRef.current?.click()}>
@@ -203,7 +204,6 @@ export default function TaskUploadBox({
                   className={styles.fileInput}
                 />
               </div>
-            
               {file && (
                 <div className={styles.reportDate} style={{ marginTop: '1rem', textAlign: 'center' }}>
                   <label style={{ fontWeight: 500, marginBottom: '0.25rem' }}>Report Date</label>
@@ -217,7 +217,7 @@ export default function TaskUploadBox({
                 </div>
               )}
             </div>
-            
+
             {normalizedHistory.length > 0 && (
               <div className={styles.taskHistory}>
                 <h4><span className={styles.clockIcon}></span>History</h4>
