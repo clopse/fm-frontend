@@ -299,6 +299,32 @@
   100% { opacity: 0; }
 }
 
+.rightPanelFooter {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-top: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.submitButton {
+  background-color: #10b981;
+  color: white;
+  font-weight: 600;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.submitButton:hover {
+  background-color: #059669;
+}
+
+
 @media (max-width: 768px) {
   .modalBody {
     flex-direction: column;
