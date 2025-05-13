@@ -122,11 +122,6 @@ export default function TaskUploadBox({
     }
   };
 
-  const handlePreviewFile = (url: string) => {
-    setSelectedFile(url);
-    setFile(null);
-  };
-
   const handleSubmit = async () => {
     if (!file || !reportDate) {
       alert('Please select a file and report date.');
@@ -208,9 +203,6 @@ export default function TaskUploadBox({
                       <div>{entry.reportDate?.split('T')[0] || 'No date'}</div>
                       <div style={{ fontSize: '0.85rem', color: '#666' }}>{entry.fileName || 'Untitled'}</div>
                       <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={() => handlePreviewFile(entry.fileUrl!)}>
-                          <img src="/icons/pdf-icon.png" alt="Preview" width={20} height={20} />
-                        </button>
                         <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">
                           <img src="/icons/download-icon.png" alt="Download" width={20} height={20} />
                         </a>
