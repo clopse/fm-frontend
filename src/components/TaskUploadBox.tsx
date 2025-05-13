@@ -70,12 +70,6 @@ export default function TaskUploadBox({
     }));
   }, [history]);
 
-  const latestUpload = useMemo(() => {
-    return [...normalizedHistory]
-      .filter(entry => entry.type === 'upload' && entry.fileUrl)
-      .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
-  }, [normalizedHistory]);
-
   useEffect(() => {
     const confirmOnClose = (e: BeforeUnloadEvent) => {
       if (file && !submitting) {
@@ -148,6 +142,24 @@ export default function TaskUploadBox({
     }
   };
 
+  const handleConfirm = async () => {
+    try {
+      setSubmitting(true);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hotel_id: hotelId, task_id: taskId }),
+      });
+      if (!res.ok) throw new Error('Confirmation failed');
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+      alert('Error confirming task.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (!visible) return null;
 
   return (
@@ -163,6 +175,12 @@ export default function TaskUploadBox({
             <div className={styles.description}>
               <p>{info}</p>
             </div>
+
+            {!isMandatory && canConfirm && !isConfirmed && (
+              <button className={styles.submitButton} onClick={handleConfirm} disabled={submitting}>
+                {submitting ? 'Confirming...' : 'Mark as Completed'}
+              </button>
+            )}
 
             <div className={styles.uploadSection}>
               <button type="button" className={styles.uploadButton} onClick={() => fileInputRef.current?.click()}>
@@ -191,14 +209,19 @@ export default function TaskUploadBox({
               <div className={styles.taskHistory}>
                 <h4><span className={styles.clockIcon}>🕓</span> Task History</h4>
                 <div className={styles.historyList}>
-                  {normalizedHistory.filter(entry => entry.type === 'upload').map((entry, i) => (
+                  {normalizedHistory.map((entry, i) => (
                     <div key={i} className={styles.historyItem}>
-                      <div>{entry.reportDate?.split('T')[0]}</div>
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">
-                          <img src="/icons/download-icon.png" alt="Download" width={20} height={20} />
-                        </a>
+                      <div>
+                        {entry.type === 'upload' && entry.reportDate?.split('T')[0]}
+                        {entry.type === 'confirmation' && `✅ Confirmed by ${entry.confirmedBy || 'unknown'} at ${new Date(entry.confirmedAt || '').toLocaleString()}`}
                       </div>
+                      {entry.type === 'upload' && (
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">
+                            <img src="/icons/download-icon.png" alt="Download" width={20} height={20} />
+                          </a>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
