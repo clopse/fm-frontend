@@ -77,12 +77,6 @@ export default function TaskUploadBox({
   }, [normalizedHistory]);
 
   useEffect(() => {
-    if (visible && !selectedFile && latestUpload?.fileUrl) {
-      setSelectedFile(latestUpload.fileUrl);
-    }
-  }, [visible, latestUpload, selectedFile]);
-
-  useEffect(() => {
     const confirmOnClose = (e: BeforeUnloadEvent) => {
       if (file && !submitting) {
         e.preventDefault();
