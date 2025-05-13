@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import isMobile from 'ismobilejs';
 import styles from '@/styles/TaskUploadBox.module.css';
 
 interface HistoryEntry {
@@ -58,6 +59,29 @@ export default function TaskUploadBox({
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
+  const normalizedHistory = useMemo(() => {
+    return history.map(entry => ({
+      ...entry,
+      reportDate: entry.report_date || entry.reportDate || '',
+      uploadedAt: entry.uploaded_at || entry.uploadedAt || '',
+      uploadedBy: entry.uploaded_by || entry.uploadedBy || '',
+      fileUrl: entry.fileUrl || '',
+      fileName: entry.filename || entry.fileName || '',
+    }));
+  }, [history]);
+
+  const latestUpload = useMemo(() => {
+    return [...normalizedHistory]
+      .filter(entry => entry.type === 'upload' && entry.fileUrl)
+      .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0];
+  }, [normalizedHistory]);
+
+  useEffect(() => {
+    if (visible && latestUpload?.fileUrl) {
+      setSelectedFile(latestUpload.fileUrl);
+    }
+  }, [visible, latestUpload]);
+
   useEffect(() => {
     const confirmOnClose = (e: BeforeUnloadEvent) => {
       if (file && !submitting) {
@@ -77,19 +101,30 @@ export default function TaskUploadBox({
     onClose();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     setFile(selected);
     if (selected) {
-      const objectUrl = URL.createObjectURL(selected);
-      setSelectedFile(objectUrl);
-      const modifiedDate = new Date(selected.lastModified);
-      const now = new Date();
-      const safeDate = modifiedDate > now ? now : modifiedDate;
-      setReportDate(safeDate.toISOString().split('T')[0]);
+      const tempUrl = URL.createObjectURL(selected);
+      setSelectedFile(tempUrl);
+
+      // Use file creation date if available or fallback
+      try {
+        const modifiedDate = new Date(selected.lastModified);
+        const now = new Date();
+        const safeDate = modifiedDate > now ? now : modifiedDate;
+        setReportDate(safeDate.toISOString().split('T')[0]);
+      } catch {
+        setReportDate(today);
+      }
     } else {
       setReportDate('');
     }
+  };
+
+  const handlePreviewFile = (url: string) => {
+    setSelectedFile(url);
+    setFile(null);
   };
 
   const handleSubmit = async () => {
@@ -138,7 +173,7 @@ export default function TaskUploadBox({
         <div className={styles.modalBody}>
           <div className={styles.leftPanel}>
             <div className={styles.description}>
-              <p>{info}</p>
+              <p><em style={{ color: '#666' }}>{info}</em></p>
             </div>
 
             <div className={styles.uploadSection}>
@@ -154,15 +189,35 @@ export default function TaskUploadBox({
               />
             </div>
 
-            {!selectedFile && (
-              <div className={styles.centeredReportDate}>
-                <label>Report Date</label>
-                <input
-                  type="date"
-                  value={reportDate}
-                  onChange={(e) => setReportDate(e.target.value)}
-                  max={today}
-                />
+            <div className={styles.reportDate}>
+              <label>Report Date</label>
+              <input
+                type="date"
+                value={reportDate}
+                onChange={(e) => setReportDate(e.target.value)}
+                max={today}
+              />
+            </div>
+
+            {normalizedHistory.length > 0 && (
+              <div className={styles.taskHistory}>
+                <h4><span className={styles.clockIcon}>🕓</span> Task History</h4>
+                <div className={styles.historyList}>
+                  {normalizedHistory.filter(entry => entry.type === 'upload').map((entry, i) => (
+                    <div key={i} className={styles.historyItem}>
+                      <div>{entry.reportDate?.split('T')[0] || 'No date'}</div>
+                      <div style={{ fontSize: '0.85rem', color: '#666' }}>{entry.fileName || 'Untitled'}</div>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={() => handlePreviewFile(entry.fileUrl!)}>
+                          <img src="/icons/pdf-icon.png" alt="Preview" width={20} height={20} />
+                        </button>
+                        <a href={entry.fileUrl} target="_blank" rel="noopener noreferrer">
+                          <img src="/icons/download-icon.png" alt="Download" width={20} height={20} />
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -185,18 +240,16 @@ export default function TaskUploadBox({
                   src={selectedFile}
                   className={styles.viewer}
                   title="File Preview"
-                  style={{ width: '100%', height: '650px', border: 'none' }}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
                 />
               )}
-            </div>
 
-            {file && (
-              <div className={styles.rightPanelFooter}>
+              {file && (
                 <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
                   {submitting ? 'Submitting...' : 'Submit'}
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
