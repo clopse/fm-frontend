@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
 import styles from '@/styles/HotelDashboard.module.css';
 import MonthlyChecklist from '@/components/MonthlyChecklist';
+import TaskUploadBox from '@/components/TaskUploadBox';
 
 interface TaskItem {
   task_id: string;
@@ -12,6 +13,17 @@ interface TaskItem {
   frequency: string;
   category: string;
   info_popup: string;
+}
+
+interface HistoryEntry {
+  task_id: string;
+  type: 'upload' | 'confirmation';
+  fileName?: string;
+  fileUrl?: string;
+  uploadedAt?: string;
+  confirmedAt?: string;
+  confirmedBy?: string;
+  reportDate?: string;
 }
 
 export default function HotelDashboard() {
@@ -22,14 +34,18 @@ export default function HotelDashboard() {
   const [points, setPoints] = useState<string>("0/0");
   const [dueNow, setDueNow] = useState<TaskItem[]>([]);
   const [dueSoon, setDueSoon] = useState<TaskItem[]>([]);
-  const [refreshToggle, setRefreshToggle] = useState(false); // ✅ For manual refresh trigger
+  const [refreshToggle, setRefreshToggle] = useState(false);
+
+  const [allHistoryEntries, setAllHistoryEntries] = useState<HistoryEntry[]>([]);
+  const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
 
   useEffect(() => {
     if (!hotelId) return;
-
     fetchScore();
     fetchDueTasks();
-  }, [hotelId, refreshToggle]); // ✅ Re-run on refreshToggle toggle
+    fetchAllHistory();
+  }, [hotelId, refreshToggle]);
 
   const fetchScore = async () => {
     try {
@@ -53,9 +69,23 @@ export default function HotelDashboard() {
     }
   };
 
-  // ✅ Triggered after monthly task confirmed
+  const fetchAllHistory = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/all`);
+      const data = await res.json();
+      setAllHistoryEntries(data.entries || []);
+    } catch (e) {
+      console.error("Error loading history:", e);
+    }
+  };
+
   const handleChecklistUpdate = () => {
     setRefreshToggle(prev => !prev);
+  };
+
+  const handleUploadOpen = (task: TaskItem) => {
+    setActiveTask(task);
+    setUploadModalVisible(true);
   };
 
   const scoreColor =
@@ -72,6 +102,12 @@ export default function HotelDashboard() {
           >
             ℹ️
           </button>
+          <button
+            className={styles.upload}
+            onClick={() => handleUploadOpen(task)}
+          >
+            Upload
+          </button>
         </li>
       ))}
     </ul>
@@ -80,9 +116,7 @@ export default function HotelDashboard() {
   return (
     <div
       className={styles.fullBackground}
-      style={{
-        backgroundImage: `url('/${hotelId}.jpg'), url('/fallback.jpg')`
-      }}
+      style={{ backgroundImage: `url('/${hotelId}.jpg'), url('/fallback.jpg')` }}
     >
       <div className={styles.overlay} />
 
@@ -108,7 +142,7 @@ export default function HotelDashboard() {
           <MonthlyChecklist
             hotelId={hotelId}
             userEmail="admin@jmk.ie"
-            onConfirm={() => handleChecklistUpdate()} // ✅ Refresh trigger
+            onConfirm={handleChecklistUpdate}
           />
         </div>
 
@@ -122,6 +156,26 @@ export default function HotelDashboard() {
           {dueSoon.length > 0 ? renderTasks(dueSoon) : <p>No tasks forecasted for next month.</p>}
         </div>
       </div>
+
+      {activeTask && (
+        <TaskUploadBox
+          visible={uploadModalVisible}
+          hotelId={hotelId}
+          taskId={activeTask.task_id}
+          label={activeTask.label}
+          info={activeTask.info_popup}
+          isMandatory={true}
+          canConfirm={false}
+          isConfirmed={false}
+          lastConfirmedDate={null}
+          history={allHistoryEntries.filter(e => e.task_id === activeTask.task_id)}
+          onSuccess={() => {
+            handleChecklistUpdate();
+            setUploadModalVisible(false);
+          }}
+          onClose={() => setUploadModalVisible(false)}
+        />
+      )}
     </div>
   );
 }
