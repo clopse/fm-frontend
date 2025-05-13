@@ -196,9 +196,11 @@ export default function TaskUploadBox({
               )}
 
               {file && (
-                <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? 'Submitting...' : 'Submit'}
-                </button>
+                <div className={styles.rightPanelFooter}>
+                  <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
+                    {submitting ? 'Submitting...' : 'Submit'}
+                  </button>
+                </div>
               )}
             </div>
           </div>
