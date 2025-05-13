@@ -232,14 +232,17 @@ export default function TaskUploadBox({
                   src={selectedFile}
                   className={styles.viewer}
                   title="File Preview"
-                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  style={{ width: '100%', height: '90vh', border: 'none' }}
                 />
               )}
 
               {file && (
-                <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? 'Submitting...' : 'Submit'}
-                </button>
+                <div className={styles.rightPanelFooter} style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
+                  <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
+                    {submitting ? 'Submitting...' : 'Submit'}
+                  </button>
+                </div>
+              )}
               )}
             </div>
           </div>
