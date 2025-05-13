@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import isMobile from 'ismobilejs';
 import styles from '@/styles/TaskUploadBox.module.css';
 
 interface HistoryEntry {
@@ -58,8 +57,6 @@ export default function TaskUploadBox({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const isPDF = useMemo(() => selectedFile?.toLowerCase().endsWith('.pdf'), [selectedFile]);
-  const isImage = useMemo(() => /\.(jpg|jpeg|png|gif)$/i.test(selectedFile || ''), [selectedFile]);
 
   useEffect(() => {
     const confirmOnClose = (e: BeforeUnloadEvent) => {
@@ -93,11 +90,6 @@ export default function TaskUploadBox({
     } else {
       setReportDate('');
     }
-  };
-
-  const handlePreviewFile = (url: string) => {
-    setSelectedFile(url);
-    setFile(null);
   };
 
   const handleSubmit = async () => {
@@ -162,15 +154,17 @@ export default function TaskUploadBox({
               />
             </div>
 
-            <div className={styles.reportDate}>
-              <label>Report Date</label>
-              <input
-                type="date"
-                value={reportDate}
-                onChange={(e) => setReportDate(e.target.value)}
-                max={today}
-              />
-            </div>
+            {!selectedFile && (
+              <div className={styles.centeredReportDate}>
+                <label>Report Date</label>
+                <input
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  max={today}
+                />
+              </div>
+            )}
           </div>
 
           <div className={styles.rightPanel}>
@@ -191,18 +185,18 @@ export default function TaskUploadBox({
                   src={selectedFile}
                   className={styles.viewer}
                   title="File Preview"
-                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  style={{ width: '100%', height: '650px', border: 'none' }}
                 />
               )}
-
-              {file && (
-                <div className={styles.rightPanelFooter}>
-                  <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
-                    {submitting ? 'Submitting...' : 'Submit'}
-                  </button>
-                </div>
-              )}
             </div>
+
+            {file && (
+              <div className={styles.rightPanelFooter}>
+                <button className={styles.submitButton} onClick={handleSubmit} disabled={submitting}>
+                  {submitting ? 'Submitting...' : 'Submit'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
