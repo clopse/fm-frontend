@@ -32,37 +32,6 @@
   to { opacity: 1; }
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  background-color: #f0f4f8;
-  border-bottom: 1px solid #dde2e5;
-}
-
-.title {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-.closeButton {
-  background: none;
-  border: none;
-  font-size: 1.25rem;
-  cursor: pointer;
-  color: #64748b;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.closeButton:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: #334155;
-}
-
 .modalBody {
   display: flex;
   gap: 20px;
@@ -75,9 +44,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-  max-height: 100%;
+  overflow: hidden;
 }
 
 .rightPanel {
@@ -91,162 +58,22 @@
   position: relative;
 }
 
-.description {
-  padding-bottom: 0;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.description p {
-  margin: 0;
-  line-height: 1.5;
-  color: #4b5563;
-}
-
-.legalRef {
-  font-size: 0.9rem;
-  font-style: italic;
-  color: #64748b;
-  padding-left: 8px;
-  border-left: 3px solid #cbd5e1;
-  margin-top: 8px;
-}
-
-.uploadSection {
-  display: flex;
-  justify-content: center;
-}
-
-.uploadButton {
-  background-color: #3b82f6;
-  color: white;
-  font-weight: 500;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 350px;
-  transition: background-color 0.2s;
-}
-
-.uploadButton:hover {
-  background-color: #2563eb;
-}
-
-.fileIcon {
-  margin-right: 8px;
-}
-
-.fileInput {
-  display: none;
-}
-
-.dateAndSubmit {
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;
-  flex-wrap: wrap;
-}
-
-.reportDate {
+.taskHistory {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  width: 100%;
-  max-width: 175px;
-}
-
-.reportDate label {
-  font-size: 0.9rem;
-  color: #4b5563;
-  margin-bottom: 5px;
-}
-
-.reportDate input {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.submitButton {
-  background-color: #10b981;
-  color: white;
-  font-weight: 500;
-  padding: 8px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  width: 100%;
-  max-width: 175px;
-}
-
-.submitButton:hover {
-  background-color: #059669;
-}
-
-.submitButton:disabled {
-  background-color: #9ca3af;
-  cursor: not-allowed;
-  
-}
-.centeredReportDate {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  overflow: hidden;
   margin-top: 20px;
 }
 
-.centeredReportDate label {
-  font-size: 0.9rem;
-  color: #4b5563;
-  margin-bottom: 6px;
-}
-
-.centeredReportDate input {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.confirmationEntry {
-  background-color: #ecfdf5;
-  color: #047857;
-  border-left: 4px solid #10b981;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-}
-
-.taskHistory {
-  border-top: 1px solid #e2e8f0;
-  padding-top: 10px;
-}
-
-.taskHistory h4 {
-  display: flex;
-  align-items: center;
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin: 0 0 10px;
-  color: #374151;
-}
-
-.clockIcon {
-  margin-right: 6px;
-}
-
 .historyList {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 100%;
-  max-height: 200px;
   overflow-y: auto;
+  padding-right: 6px;
+  height: 100%;
 }
 
 .historyItem {
@@ -275,75 +102,11 @@
   font-weight: 500;
 }
 
-.historyDate {
-  font-size: 0.8rem;
-  color: #64748b;
-  margin-top: 3px;
-}
-
 .viewer {
   width: 100%;
   height: 100%;
   border: none;
 }
-
-.viewerPlaceholder {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #94a3b8;
-  background-color: #f8fafc;
-  text-align: center;
-  text-decoration: none;
-  padding: 20px;
-}
-
-.successMessage {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background-color: #10b981;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  z-index: 10;
-  animation: fadeInOut 3s ease;
-}
-
-@keyframes fadeInOut {
-  0% { opacity: 0; }
-  15% { opacity: 1; }
-  85% { opacity: 1; }
-  100% { opacity: 0; }
-}
-
-.rightPanelFooter {
-  padding: 16px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-top: 1px solid #e2e8f0;
-  background-color: #f8fafc;
-}
-
-.submitButton {
-  background-color: #10b981;
-  color: white;
-  font-weight: 600;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.submitButton:hover {
-  background-color: #059669;
-}
-
 
 @media (max-width: 768px) {
   .modalBody {
