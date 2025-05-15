@@ -21,7 +21,7 @@ interface Upload {
 }
 
 interface LeaderboardEntry {
-  hotel: string; // hotel ID
+  hotel: string;
   score: number;
 }
 
