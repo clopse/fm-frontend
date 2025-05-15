@@ -221,7 +221,18 @@ export default function TaskUploadBox({
             {normalizedHistory.length > 0 && (
               <div className={styles.taskHistory}>
                 <h4><span className={styles.clockIcon}></span>History</h4>
-                <div className={styles.historyList} style={{ maxHeight: '280px', overflowY: 'auto' }}>
+                <div
+                  className={styles.historyList}
+                  style={{
+                    height: 'calc(100vh - 220px)',
+                    overflowY: 'auto',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    paddingRight: '4px'
+                  }}
+                >
+
                   {normalizedHistory.filter(entry => entry.type === 'upload').map((entry, i) => (
                     <div
                       key={i}
