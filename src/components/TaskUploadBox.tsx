@@ -159,6 +159,27 @@ export default function TaskUploadBox({
     }
   };
 
+  // Added confirm button functionality from the second file
+  const handleConfirm = async () => {
+    try {
+      setSubmitting(true);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ hotel_id: hotelId, task_id: taskId, user_email: 'admin@jmk.ie' }),
+      });
+      if (!res.ok) throw new Error('Confirmation failed');
+      setSuccessMessage('Task confirmed!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+      alert('Error confirming task.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (!visible) return null;
 
   return (
@@ -192,17 +213,31 @@ export default function TaskUploadBox({
         <div className={styles.modalBody}>
           <div className={styles.leftPanel}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-              <div className={styles.uploadSection}>
-                <button type="button" className={styles.uploadButton} onClick={() => fileInputRef.current?.click()}>
-                  <span className={styles.fileIcon}>📁</span> Upload & Preview Report
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={handleFileChange}
-                  className={styles.fileInput}
-                />
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '1rem' }}>
+                {/* Added confirm button here */}
+                {canConfirm && (
+                  <button
+                    className={styles.submitButton}
+                    style={{ backgroundColor: '#3b82f6' }}
+                    onClick={handleConfirm}
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Confirming...' : 'Confirm'}
+                  </button>
+                )}
+                <div className={styles.uploadSection}>
+                  <button type="button" className={styles.uploadButton} onClick={() => fileInputRef.current?.click()}>
+                    <span className={styles.fileIcon}>📁</span> Upload & Preview Report
+                    {!isMandatory ? ' (Optional)' : ''}
+                  </button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleFileChange}
+                    className={styles.fileInput}
+                  />
+                </div>
               </div>
               {file && (
                 <div className={styles.reportDate} style={{ marginTop: '1rem', textAlign: 'center' }}>
