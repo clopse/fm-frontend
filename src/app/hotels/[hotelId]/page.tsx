@@ -38,6 +38,7 @@ export default function HotelDashboard() {
   const [allHistoryEntries, setAllHistoryEntries] = useState<HistoryEntry[]>([]);
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
+  const [activeHistory, setActiveHistory] = useState<HistoryEntry[]>([]);
 
   useEffect(() => {
     if (!hotelId) return;
@@ -82,7 +83,12 @@ export default function HotelDashboard() {
   };
 
   const handleUploadOpen = (task: TaskItem) => {
+    const taskHistory = allHistoryEntries
+      .filter(e => e.task_id === task.task_id && e.type === 'upload')
+      .sort((a, b) => (b.reportDate || '').localeCompare(a.reportDate || ''));
+
     setActiveTask(task);
+    setActiveHistory(taskHistory);
     setUploadModalVisible(true);
   };
 
@@ -93,6 +99,7 @@ export default function HotelDashboard() {
     !allHistoryEntries.some(entry =>
       entry.task_id === task.task_id &&
       entry.type === 'upload' &&
+      entry.fileUrl &&
       (entry.reportDate || entry.uploadedAt)
     )
   );
@@ -171,7 +178,7 @@ export default function HotelDashboard() {
           canConfirm={false}
           isConfirmed={false}
           lastConfirmedDate={null}
-          history={allHistoryEntries.filter(e => e.task_id === activeTask.task_id)}
+          history={activeHistory}
           onSuccess={() => {
             handleChecklistUpdate();
             setUploadModalVisible(false);
