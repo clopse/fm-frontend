@@ -1,9 +1,6 @@
 .modalOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
@@ -75,178 +72,32 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  overflow-y: auto;
-  max-height: 100%;
-}
-
-.rightPanel {
-  flex: 1.25;
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  position: relative;
-}
-
-.description {
-  padding-bottom: 0;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.description p {
-  margin: 0;
-  line-height: 1.5;
-  color: #4b5563;
-}
-
-.legalRef {
-  font-size: 0.9rem;
-  font-style: italic;
-  color: #64748b;
-  padding-left: 8px;
-  border-left: 3px solid #cbd5e1;
-  margin-top: 8px;
-}
-
-.uploadSection {
-  display: flex;
-  justify-content: center;
-}
-
-.uploadButton {
-  background-color: #3b82f6;
-  color: white;
-  font-weight: 500;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 350px;
-  transition: background-color 0.2s;
-}
-
-.uploadButton:hover {
-  background-color: #2563eb;
-}
-
-.fileIcon {
-  margin-right: 8px;
-}
-
-.fileInput {
-  display: none;
-}
-
-.dateAndSubmit {
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;
-  flex-wrap: wrap;
-}
-
-.reportDate {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 175px;
-}
-
-.reportDate label {
-  font-size: 0.9rem;
-  color: #4b5563;
-  margin-bottom: 5px;
-}
-
-.reportDate input {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.submitButton {
-  background-color: #10b981;
-  color: white;
-  font-weight: 500;
-  padding: 8px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  width: 100%;
-  max-width: 175px;
-}
-
-.submitButton:hover {
-  background-color: #059669;
-}
-
-.submitButton:disabled {
-  background-color: #9ca3af;
-  cursor: not-allowed;
-  
-}
-.centeredReportDate {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 20px;
-}
-
-.centeredReportDate label {
-  font-size: 0.9rem;
-  color: #4b5563;
-  margin-bottom: 6px;
-}
-
-.centeredReportDate input {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 0.9rem;
-}
-
-.confirmationEntry {
-  background-color: #ecfdf5;
-  color: #047857;
-  border-left: 4px solid #10b981;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: 0.85rem;
 }
 
 .taskHistory {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   border-top: 1px solid #e2e8f0;
   padding-top: 10px;
 }
 
 .taskHistory h4 {
-  display: flex;
-  align-items: center;
   font-size: 0.95rem;
   font-weight: 600;
   margin: 0 0 10px;
   color: #374151;
 }
 
-.clockIcon {
-  margin-right: 6px;
-}
-
 .historyList {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 100%;
-  max-height: 200px;
-  overflow-y: auto;
 }
 
 .historyItem {
@@ -275,15 +126,20 @@
   font-weight: 500;
 }
 
-.historyDate {
-  font-size: 0.8rem;
-  color: #64748b;
-  margin-top: 3px;
+.rightPanel {
+  flex: 1.25;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  position: relative;
 }
 
 .viewer {
+  flex: 1;
   width: 100%;
-  height: 100%;
   border: none;
 }
 
@@ -294,9 +150,89 @@
   justify-content: center;
   color: #94a3b8;
   background-color: #f8fafc;
-  text-align: center;
-  text-decoration: none;
   padding: 20px;
+  text-align: center;
+}
+
+.uploadSection {
+  display: flex;
+  justify-content: center;
+}
+
+.uploadButton {
+  background-color: #3b82f6;
+  color: white;
+  font-weight: 500;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 350px;
+  transition: background-color 0.2s;
+}
+
+.uploadButton:hover {
+  background-color: #2563eb;
+}
+
+.fileInput {
+  display: none;
+}
+
+.reportDate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.reportDate label {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin-bottom: 5px;
+}
+
+.reportDate input {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  width: 160px;
+}
+
+.submitButton {
+  background-color: #10b981;
+  color: white;
+  font-weight: 600;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  max-width: 175px;
+}
+
+.submitButton:hover {
+  background-color: #059669;
+}
+
+.submitButton:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.rightPanelFooter {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-top: 1px solid #e2e8f0;
+  background-color: #f8fafc;
 }
 
 .successMessage {
@@ -318,32 +254,6 @@
   85% { opacity: 1; }
   100% { opacity: 0; }
 }
-
-.rightPanelFooter {
-  padding: 16px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-top: 1px solid #e2e8f0;
-  background-color: #f8fafc;
-}
-
-.submitButton {
-  background-color: #10b981;
-  color: white;
-  font-weight: 600;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.submitButton:hover {
-  background-color: #059669;
-}
-
 
 @media (max-width: 768px) {
   .modalBody {
