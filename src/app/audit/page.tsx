@@ -9,13 +9,9 @@ interface AuditEntry {
   task_id: string;
   fileUrl?: string;
   reportDate?: string;
-  report_date?: string;
   filename?: string;
   uploadedAt?: string;
-  uploaded_at?: string;
-  confirmedAt?: string;
   uploaded_by?: string;
-  user?: string;
   type: 'upload' | 'confirmation';
   approved?: boolean;
   loggedAt?: string;
@@ -29,7 +25,6 @@ function normalizeEntry(entry: any): AuditEntry {
     reportDate: entry.reportDate || entry.report_date,
     filename: entry.filename,
     uploadedAt: entry.uploadedAt || entry.uploaded_at,
-    confirmedAt: entry.confirmedAt,
     uploaded_by: entry.uploaded_by,
     type: entry.type || 'upload',
     approved: !!entry.approved,
@@ -44,7 +39,7 @@ export default function AuditPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/all`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approval-log`)
       .then(res => {
         if (!res.ok) throw new Error(`Fetch error: ${res.status}`);
         return res.json();
@@ -60,7 +55,7 @@ export default function AuditPage() {
   }, []);
 
   const markApproved = async (entry: AuditEntry) => {
-    const timestamp = entry.uploadedAt || entry.uploaded_at || entry.confirmedAt;
+    const timestamp = entry.uploadedAt || entry.loggedAt;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approve`, {
         method: 'POST',
@@ -77,22 +72,12 @@ export default function AuditPage() {
         throw new Error(data.detail || 'Approval failed');
       }
 
-      setEntries(prev =>
-        prev.map(e =>
-          e.hotel_id === entry.hotel_id &&
-          e.task_id === entry.task_id &&
-          (e.uploadedAt || e.uploaded_at) === timestamp
-            ? { ...e, approved: true }
-            : e
-        )
-      );
+      setEntries(prev => prev.filter(e => e.fileUrl !== entry.fileUrl));
       setSelected(null);
     } catch (err) {
       alert(`Failed to approve: ${err instanceof Error ? err.message : err}`);
     }
   };
-
-  const unaudited = entries.filter(e => !e.approved && e.type === 'upload');
 
   return (
     <div className={styles.container}>
@@ -102,9 +87,9 @@ export default function AuditPage() {
 
       <div className={styles.auditGrid}>
         <div className={styles.auditSidebar}>
-          <h2>🕵️ Awaiting Approval ({unaudited.length})</h2>
+          <h2>🕵️ Awaiting Approval ({entries.length})</h2>
           <ul className={styles.entryList}>
-            {unaudited.map((entry, i) => (
+            {entries.map((entry, i) => (
               <li
                 key={i}
                 className={selected?.fileUrl === entry.fileUrl ? styles.entrySelected : styles.entry}
@@ -123,7 +108,7 @@ export default function AuditPage() {
               <div className={styles.previewHeader}>
                 <h3>{selected.filename || 'No filename'}</h3>
                 <p><strong>{selected.task_id}</strong> — Uploaded by {selected.uploaded_by}</p>
-                <p>Uploaded: {new Date(selected.uploadedAt || selected.uploaded_at || '').toLocaleString()}</p>
+                <p>Uploaded: {new Date(selected.uploadedAt || '').toLocaleString()}</p>
               </div>
               <iframe
                 src={selected.fileUrl + '#toolbar=0&navpanes=0'}
