@@ -31,7 +31,7 @@ export default function HotelDashboard() {
   const hotelName = hotelNames[hotelId as keyof typeof hotelNames] || 'Unknown Hotel';
 
   const [score, setScore] = useState<number>(0);
-  const [points, setPoints] = useState<string>("0/0");
+  const [points, setPoints] = useState<string>('0/0');
   const [dueNow, setDueNow] = useState<TaskItem[]>([]);
   const [refreshToggle, setRefreshToggle] = useState(false);
 
@@ -53,7 +53,7 @@ export default function HotelDashboard() {
       setScore(data.percent || 0);
       setPoints(`${data.score}/${data.max_score}`);
     } catch (e) {
-      console.error("Error loading score:", e);
+      console.error('Error loading score:', e);
     }
   };
 
@@ -63,7 +63,7 @@ export default function HotelDashboard() {
       const data = await res.json();
       setDueNow(data.due_this_month || []);
     } catch (e) {
-      console.error("Error loading due tasks:", e);
+      console.error('Error loading due tasks:', e);
     }
   };
 
@@ -73,7 +73,7 @@ export default function HotelDashboard() {
       const data = await res.json();
       setAllHistoryEntries(data.entries || []);
     } catch (e) {
-      console.error("Error loading history:", e);
+      console.error('Error loading history:', e);
     }
   };
 
@@ -88,6 +88,14 @@ export default function HotelDashboard() {
 
   const scoreColor =
     score < 60 ? '#e74c3c' : score < 80 ? '#f39c12' : '#27ae60';
+
+  const filteredDueNow = dueNow.filter(task =>
+    !allHistoryEntries.some(entry =>
+      entry.task_id === task.task_id &&
+      entry.type === 'upload' &&
+      (entry.reportDate || entry.uploadedAt)
+    )
+  );
 
   const renderTasks = (tasks: TaskItem[]) => (
     <ul className={styles.taskList}>
@@ -148,7 +156,7 @@ export default function HotelDashboard() {
 
         <div className={styles.checklistSection}>
           <h2>📌 Tasks Due This Month</h2>
-          {dueNow.length > 0 ? renderTasks(dueNow) : <p>No report-based tasks due this month.</p>}
+          {filteredDueNow.length > 0 ? renderTasks(filteredDueNow) : <p>No report-based tasks due this month.</p>}
         </div>
       </div>
 
