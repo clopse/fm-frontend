@@ -68,13 +68,11 @@ const CompliancePage = ({ params }: Props) => {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [history, setHistory] = useState<Record<string, HistoryEntry[]>>({});
   const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown>({});
-  const [scoreHistory, setScoreHistory] = useState<ScoreHistoryEntry[]>([]);
   const [visible, setVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [showPercent, setShowPercent] = useState(true);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({
@@ -84,6 +82,8 @@ const CompliancePage = ({ params }: Props) => {
     search: '',
     type: '',
   });
+
+  const [graphPoints, setGraphPoints] = useState<{ month: string; score: number; max: number; percent: number }[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -123,26 +123,16 @@ const CompliancePage = ({ params }: Props) => {
 
       const now = new Date();
       const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-      const history: ScoreHistoryEntry[] = Object.entries(data.monthly_history || {}).map(
-        ([month, entry]: [string, any]) => ({
-          month,
-          score: entry.score,
-          max: entry.max,
-          percent: entry.max > 0 ? Math.round((entry.score / entry.max) * 100) : 0,
-        })
-      );
-
-      if (!history.find(h => h.month === currentMonth)) {
-        history.push({
+      const history = [
+        {
           month: currentMonth,
           score: data.score,
           max: data.max_score,
           percent: data.max_score > 0 ? Math.round((data.score / data.max_score) * 100) : 0,
-        });
-      }
+        },
+      ];
 
-      setScoreHistory(history);
+      setGraphPoints(history);
     } catch (err) {
       console.error(err);
     }
@@ -182,39 +172,21 @@ const CompliancePage = ({ params }: Props) => {
   const totalPoints = tasks.reduce((sum, task) => sum + (task.points ?? 0), 0);
   const earnedPoints = Object.values(scoreBreakdown).reduce((sum, score) => sum + score, 0);
 
-  const now = new Date();
-  const months: string[] = [];
-  for (let i = -6; i <= 5; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    months.push(monthStr);
-  }
-
-  const processedScoreHistory = months.map((month) => {
-    const entry = scoreHistory.find((s) => s.month === month);
-    return {
-      month,
-      score: entry?.score ?? null,
-      max: entry?.max ?? totalPoints,
-      percent: entry?.percent ?? 0,
-    };
-  });
-
   return (
     <div className={styles.container}>
       {loading && <p className={styles.loading}>Loading...</p>}
       {error && <p className={styles.error}>{error}</p>}
       {successMessage && <p className={styles.success}>{successMessage}</p>}
 
-      {scoreHistory.length > 0 && (
+      {graphPoints.length > 0 && (
         <div className={styles.graphBox}>
           <div className={styles.graphHeader}>
-            <div className={styles.graphTitle}>Compliance Score (Last 12 Months)</div>
+            <div className={styles.graphTitle}>Compliance Score</div>
             <div className={styles.scoreBadge}>{earnedPoints} / {totalPoints}</div>
           </div>
           <ResponsiveContainer>
             <LineChart
-              data={processedScoreHistory}
+              data={graphPoints}
               margin={{ top: 10, right: 30, left: 0, bottom: 40 }}
             >
               <CartesianGrid strokeDasharray="3 3" />
