@@ -120,16 +120,29 @@ const CompliancePage = ({ params }: Props) => {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
       const data = await res.json();
       setScoreBreakdown(data.task_breakdown || {});
-      setScoreHistory(
-        Object.entries(data.monthly_history || {}).map(([month, entry]: [string, any]) => {
-          return {
-            month,
-            score: entry.score,
-            max: entry.max,
-            percent: entry.max > 0 ? Math.round((entry.score / entry.max) * 100) : 0,
-          };
+
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      const history: ScoreHistoryEntry[] = Object.entries(data.monthly_history || {}).map(
+        ([month, entry]: [string, any]) => ({
+          month,
+          score: entry.score,
+          max: entry.max,
+          percent: entry.max > 0 ? Math.round((entry.score / entry.max) * 100) : 0,
         })
       );
+
+      if (!history.find(h => h.month === currentMonth)) {
+        history.push({
+          month: currentMonth,
+          score: data.score,
+          max: data.max_score,
+          percent: data.max_score > 0 ? Math.round((data.score / data.max_score) * 100) : 0,
+        });
+      }
+
+      setScoreHistory(history);
     } catch (err) {
       console.error(err);
     }
