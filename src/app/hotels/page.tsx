@@ -18,6 +18,11 @@ interface Upload {
   hotel: string;
   report: string;
   date: string;
+  reportDate: string;
+  task_id: string;
+  fileUrl: string;
+  uploaded_by: string;
+  filename: string;
 }
 
 interface LeaderboardEntry {
@@ -63,7 +68,7 @@ export default function HotelsPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approval-log`);
       const data = await res.json();
-  
+
       const entries = (data.entries || [])
         .sort((a: any, b: any) =>
           new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
@@ -73,8 +78,13 @@ export default function HotelsPage() {
           hotel: e.hotel_id,
           report: `${e.task_id} (${e.type})`,
           date: e.uploaded_at,
+          reportDate: e.report_date,
+          task_id: e.task_id,
+          fileUrl: e.fileUrl,
+          uploaded_by: e.uploaded_by,
+          filename: e.filename
         }));
-  
+
       setRecentUploads(entries);
     } catch (err) {
       console.error('Error loading uploads:', err);
