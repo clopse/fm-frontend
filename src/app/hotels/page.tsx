@@ -93,7 +93,7 @@ export default function HotelsPage() {
         .slice(0, 10)
         .map((e: any) => ({
           hotel: hotelNames[e.hotel_id] || e.hotel_id,
-          report: `${taskLabelMap[e.task_id] || e.task_id} (${e.type})`,
+          report: `${taskLabelMap[e.task_id] || e.task_id}`,
           date: e.uploaded_at,
           reportDate: e.report_date,
           task_id: e.task_id,
