@@ -103,14 +103,24 @@ export default function HotelDashboard() {
   const scoreColor =
     score < 60 ? '#e74c3c' : score < 80 ? '#f39c12' : '#27ae60';
 
-  const filteredDueNow = dueNow.filter(task =>
-    !allHistoryEntries.some(entry =>
-      entry.task_id === task.task_id &&
-      entry.type === 'upload' &&
-      entry.fileUrl &&
-      (entry.reportDate || entry.uploadedAt)
-    )
+const currentMonth = new Date().getMonth();
+const currentYear = new Date().getFullYear();
+
+const filteredDueNow = dueNow.filter(task => {
+  const matchingUploads = allHistoryEntries.filter(entry =>
+    entry.task_id === task.task_id &&
+    entry.type === 'upload' &&
+    entry.reportDate
   );
+
+  // Check if any report for this task is dated this calendar month
+  const hasUploadThisMonth = matchingUploads.some(entry => {
+    const date = new Date(entry.reportDate!);
+    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+  });
+
+  return !hasUploadThisMonth;
+});
 
   const renderTasks = (tasks: TaskItem[]) => (
     <ul className={styles.taskList}>
