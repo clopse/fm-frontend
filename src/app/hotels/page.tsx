@@ -61,22 +61,20 @@ export default function HotelsPage() {
 
   const fetchRecentUploads = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/all`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approval-log`);
       const data = await res.json();
-
+  
       const entries = (data.entries || [])
-        .filter((e: any) => !e.approved)
         .sort((a: any, b: any) =>
-          new Date(b.uploadedAt || b.confirmedAt).getTime() -
-          new Date(a.uploadedAt || a.confirmedAt).getTime()
+          new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
         )
         .slice(0, 10)
         .map((e: any) => ({
           hotel: e.hotel_id,
           report: `${e.task_id} (${e.type})`,
-          date: e.uploadedAt || e.confirmedAt || '',
+          date: e.uploaded_at,
         }));
-
+  
       setRecentUploads(entries);
     } catch (err) {
       console.error('Error loading uploads:', err);
