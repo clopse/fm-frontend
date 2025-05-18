@@ -48,10 +48,15 @@ export default function HotelsPage() {
 
   useEffect(() => {
     fetchTaskLabels();
-    fetchLeaderboard();
-    fetchRecentUploads();
-    fetchMonthlyChecklist();
   }, []);
+
+  useEffect(() => {
+    if (Object.keys(taskLabelMap).length > 0) {
+      fetchLeaderboard();
+      fetchRecentUploads();
+      fetchMonthlyChecklist();
+    }
+  }, [taskLabelMap]);
 
   const fetchTaskLabels = async () => {
     try {
@@ -110,7 +115,11 @@ export default function HotelsPage() {
 
       const filtered = data.filter(t =>
         t.frequency?.toLowerCase() === 'monthly' && !t.confirmed
-      );
+      ).map(t => ({
+        ...t,
+        label: taskLabelMap[t.task_id] || t.task_id
+      }));
+
       setMonthlyTasks(filtered);
     } catch (err) {
       console.error('Error loading checklist:', err);
@@ -162,7 +171,7 @@ export default function HotelsPage() {
           <h2 className={styles.header}>Monthly Tasks Needing Confirmation</h2>
           <ul>
             {monthlyTasks.map((task) => (
-              <li key={task.task_id}>🔲 {task.label || task.task_id}</li>
+              <li key={task.task_id}>🔲 {task.label}</li>
             ))}
           </ul>
         </div>
