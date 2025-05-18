@@ -6,7 +6,6 @@ import { hotelNames } from '@/data/hotelMetadata';
 import styles from '@/styles/HotelDashboard.module.css';
 import MonthlyChecklist from '@/components/MonthlyChecklist';
 import TaskUploadBox from '@/components/TaskUploadBox';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 interface TaskItem {
   task_id: string;
@@ -27,18 +26,13 @@ interface HistoryEntry {
   reportDate?: string;
 }
 
-interface MonthlyDataPoint {
-  month: string;
-  score: number;
-  max: number;
-}
-
 export default function HotelDashboard() {
   const { hotelId } = useParams<{ hotelId: string }>();
   const hotelName = hotelNames[hotelId as keyof typeof hotelNames] || 'Unknown Hotel';
 
+  const [score, setScore] = useState<number>(0);
+  const [points, setPoints] = useState<string>('0/0');
   const [dueTasks, setDueTasks] = useState<TaskItem[]>([]);
-  const [monthlyHistory, setMonthlyHistory] = useState<MonthlyDataPoint[]>([]);
   const [refreshToggle, setRefreshToggle] = useState(false);
 
   const [allHistoryEntries, setAllHistoryEntries] = useState<HistoryEntry[]>([]);
@@ -48,10 +42,21 @@ export default function HotelDashboard() {
 
   useEffect(() => {
     if (!hotelId) return;
+    fetchScore();
     fetchDueTasks();
     fetchAllHistory();
-    fetchScoreHistory();
   }, [hotelId, refreshToggle]);
+
+  const fetchScore = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
+      const data = await res.json();
+      setScore(data.percent || 0);
+      setPoints(`${data.score}/${data.max_score}`);
+    } catch (e) {
+      console.error('Error loading score:', e);
+    }
+  };
 
   const fetchDueTasks = async () => {
     try {
@@ -70,21 +75,6 @@ export default function HotelDashboard() {
       setAllHistoryEntries(data.entries || []);
     } catch (e) {
       console.error('Error loading history:', e);
-    }
-  };
-
-  const fetchScoreHistory = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
-      const data = await res.json();
-      const chartData = Object.entries(data.monthly_history || {}).map(([month, d]: any) => ({
-        month,
-        score: d.score,
-        max: d.max
-      }));
-      setMonthlyHistory(chartData);
-    } catch (e) {
-      console.error('Error loading score history:', e);
     }
   };
 
@@ -108,6 +98,8 @@ export default function HotelDashboard() {
     setActiveHistory(taskHistory);
     setUploadModalVisible(true);
   };
+
+  const scoreColor = score < 60 ? '#e74c3c' : score < 80 ? '#f39c12' : '#27ae60';
 
   const renderTasks = (tasks: TaskItem[]) => (
     <ul className={styles.taskList}>
@@ -143,23 +135,19 @@ export default function HotelDashboard() {
       <div className={styles.content}>
         <div className={styles.headerRow}>
           <h1 className={styles.heading}>{hotelName}</h1>
-        </div>
-
-        {monthlyHistory.length > 0 && (
-          <div className={styles.checklistSection}>
-            <h2>📈 Compliance Score (Last 12 Months)</h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={monthlyHistory}>
-                <XAxis dataKey="month" />
-                <YAxis domain={[0, dataMax => Math.max(dataMax, 100)]} />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="score" stroke="#27ae60" name="Actual" />
-                <Line type="monotone" dataKey="max" stroke="#bdc3c7" name="Max" strokeDasharray="3 3" />
-              </LineChart>
-            </ResponsiveContainer>
+          <div
+            className={styles.safetyScoreBox}
+            style={{ backgroundColor: scoreColor }}
+          >
+            <span className={styles.safetyScoreTitle}>Compliance Score</span>
+            <div className={styles.safetyScoreContent}>
+              <span className={styles.safetyScorePercent}>
+                {score}%
+                <span className={styles.tooltip}>{points} Points</span>
+              </span>
+            </div>
           </div>
-        )}
+        </div>
 
         <div className={styles.checklistSection}>
           <h2>✅ Monthly Checklist</h2>
