@@ -32,7 +32,7 @@ export default function HotelDashboard() {
 
   const [score, setScore] = useState<number>(0);
   const [points, setPoints] = useState<string>('0/0');
-  const [dueNow, setDueNow] = useState<TaskItem[]>([]);
+  const [dueTasks, setDueTasks] = useState<TaskItem[]>([]);
   const [refreshToggle, setRefreshToggle] = useState(false);
 
   const [allHistoryEntries, setAllHistoryEntries] = useState<HistoryEntry[]>([]);
@@ -62,7 +62,7 @@ export default function HotelDashboard() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/due-tasks/${hotelId}`);
       const data = await res.json();
-      setDueNow(data.due_this_month || []);
+      setDueTasks(data.due_this_month || []);
     } catch (e) {
       console.error('Error loading due tasks:', e);
     }
@@ -94,33 +94,12 @@ export default function HotelDashboard() {
       })
       .sort((a, b) => (b.reportDate || '').localeCompare(a.reportDate || ''));
 
-
     setActiveTask(task);
     setActiveHistory(taskHistory);
     setUploadModalVisible(true);
   };
 
-  const scoreColor =
-    score < 60 ? '#e74c3c' : score < 80 ? '#f39c12' : '#27ae60';
-
-const currentMonth = new Date().getMonth();
-const currentYear = new Date().getFullYear();
-
-const filteredDueNow = dueNow.filter(task => {
-  const matchingUploads = allHistoryEntries.filter(entry =>
-    entry.task_id === task.task_id &&
-    entry.type === 'upload' &&
-    entry.reportDate
-  );
-
-  // Check if any report for this task is dated this calendar month
-  const hasUploadThisMonth = matchingUploads.some(entry => {
-    const date = new Date(entry.reportDate!);
-    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-  });
-
-  return !hasUploadThisMonth;
-});
+  const scoreColor = score < 60 ? '#e74c3c' : score < 80 ? '#f39c12' : '#27ae60';
 
   const renderTasks = (tasks: TaskItem[]) => (
     <ul className={styles.taskList}>
@@ -180,8 +159,8 @@ const filteredDueNow = dueNow.filter(task => {
         </div>
 
         <div className={styles.checklistSection}>
-          <h2>📌 Tasks Due This Month</h2>
-          {filteredDueNow.length > 0 ? renderTasks(filteredDueNow) : <p>No report-based tasks due this month.</p>}
+          <h2>📌 Tasks Due</h2>
+          {dueTasks.length > 0 ? renderTasks(dueTasks) : <p>No report-based tasks due.</p>}
         </div>
       </div>
 
