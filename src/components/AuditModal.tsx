@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import styles from '@/styles/AuditModal.module.css';
 
 interface AuditModalProps {
@@ -20,6 +20,8 @@ interface AuditModalProps {
 }
 
 export default function AuditModal({ entry, onClose, onApprove, onReject, onDelete }: AuditModalProps) {
+  const [taskLabelMap, setTaskLabelMap] = useState<Record<string, string>>({});
+
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -27,6 +29,19 @@ export default function AuditModal({ entry, onClose, onApprove, onReject, onDele
     document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
   }, [onClose]);
+
+  useEffect(() => {
+    const fetchLabels = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/task-labels`);
+        const data = await res.json();
+        setTaskLabelMap(data);
+      } catch (err) {
+        console.error('Failed to load task labels', err);
+      }
+    };
+    fetchLabels();
+  }, []);
 
   const formattedUploadDate = new Date(entry.date).toLocaleString('en-IE', {
     dateStyle: 'medium',
@@ -44,7 +59,7 @@ export default function AuditModal({ entry, onClose, onApprove, onReject, onDele
 
         <section className={styles.meta}>
           <p><strong>🏨 Hotel:</strong> {entry.hotel}</p>
-          <p><strong>📋 Task:</strong> {entry.task_id}</p>
+          <p><strong>📋 Task:</strong> {taskLabelMap[entry.task_id] || entry.task_id}</p>
           <p><strong>🗓️ Report Date:</strong> {entry.reportDate}</p>
           <p><strong>📤 Uploaded At:</strong> {formattedUploadDate}</p>
           <p><strong>👤 Uploaded By:</strong> {entry.uploaded_by}</p>
