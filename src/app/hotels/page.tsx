@@ -157,7 +157,6 @@ export default function HotelsPage() {
       )}
 
       <div className={styles.section}>
-        <h2 className={styles.header}>Recent Uploads Awaiting Approval</h2>
         <RecentUploads uploads={recentUploads} />
       </div>
     </div>
