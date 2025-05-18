@@ -13,6 +13,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from 'recharts';
 
 interface Upload {
@@ -55,6 +56,7 @@ interface ScoreHistoryEntry {
   month: string;
   score: number;
   max: number;
+  percent?: number;
 }
 
 interface Props {
@@ -72,6 +74,7 @@ const CompliancePage = ({ params }: Props) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showPercent, setShowPercent] = useState(true);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({
@@ -118,12 +121,12 @@ const CompliancePage = ({ params }: Props) => {
       const data = await res.json();
       setScoreBreakdown(data.task_breakdown || {});
       setScoreHistory(
-        Object.entries(data.monthly_history || {}).map(([month, entry]) => {
-          const e = entry as { score: number; max: number };
+        Object.entries(data.monthly_history || {}).map(([month, entry]: [string, any]) => {
           return {
             month,
-            score: e.score,
-            max: e.max,
+            score: entry.score,
+            max: entry.max,
+            percent: entry.max > 0 ? Math.round((entry.score / entry.max) * 100) : 0,
           };
         })
       );
@@ -180,6 +183,7 @@ const CompliancePage = ({ params }: Props) => {
       month,
       score: entry?.score ?? null,
       max: entry?.max ?? totalPoints,
+      percent: entry?.percent ?? 0,
     };
   });
 
@@ -203,7 +207,8 @@ const CompliancePage = ({ params }: Props) => {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis domain={[0, totalPoints]} />
-              <Tooltip />
+              <Tooltip formatter={(value: any) => `${value} points`} />
+              <Legend />
               <Line
                 type="monotone"
                 dataKey="score"
@@ -255,7 +260,7 @@ const CompliancePage = ({ params }: Props) => {
       ))}
 
       {visible && selectedTask && selectedTaskObj && (
-       <TaskUploadBox
+        <TaskUploadBox
           visible={visible}
           hotelId={hotelId}
           taskId={selectedTask}
