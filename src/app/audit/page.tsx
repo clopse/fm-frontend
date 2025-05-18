@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import styles from '@/styles/AuditDashboard.module.css';
-import { hotelNames } from '@/lib/hotels';
+import { hotelNames } from '@/data/hotelMetadata';
+import styles from '@/styles/AuditPage.module.css';
+import AuditModal from '@/components/AuditModal';
 
 interface AuditEntry {
   hotel_id: string;
@@ -34,96 +35,95 @@ function normalizeEntry(entry: any): AuditEntry {
 
 export default function AuditPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [filtered, setFiltered] = useState<AuditEntry[]>([]);
   const [selected, setSelected] = useState<AuditEntry | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approval-log`)
-      .then(res => {
-        if (!res.ok) throw new Error(`Fetch error: ${res.status}`);
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
-        const list: AuditEntry[] = Array.isArray(data.entries)
-          ? data.entries.map(normalizeEntry)
-          : [];
+        const list = (data.entries || []).map(normalizeEntry);
         setEntries(list);
-      })
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+        setFiltered(list);
+      });
   }, []);
 
-  const markApproved = async (entry: AuditEntry) => {
+  const handleSearch = (query: string) => {
+    setSearch(query);
+    setFiltered(entries.filter(e =>
+      e.task_id.toLowerCase().includes(query.toLowerCase()) ||
+      (hotelNames[e.hotel_id]?.toLowerCase().includes(query.toLowerCase())) ||
+      (e.reportDate || '').includes(query)
+    ));
+  };
+
+  const handleApprove = async (entry: AuditEntry) => {
     const timestamp = entry.uploadedAt || entry.loggedAt;
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          hotel_id: entry.hotel_id,
-          task_id: entry.task_id,
-          timestamp
-        })
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || 'Approval failed');
-      }
-
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotel_id: entry.hotel_id, task_id: entry.task_id, timestamp })
+    });
+    if (res.ok) {
       setEntries(prev => prev.filter(e => e.fileUrl !== entry.fileUrl));
+      setFiltered(prev => prev.filter(e => e.fileUrl !== entry.fileUrl));
       setSelected(null);
-    } catch (err) {
-      alert(`Failed to approve: ${err instanceof Error ? err.message : err}`);
+    } else {
+      alert('Failed to approve file');
     }
   };
 
   return (
-    <div className={styles.container}>
-      <h1>📋 Compliance Audit Review</h1>
-      {loading && <p>Loading audit data...</p>}
-      {error && <p className={styles.errorMessage}>Error: {error}</p>}
-
-      <div className={styles.auditGrid}>
-        <div className={styles.auditSidebar}>
-          <h2>🕵️ Awaiting Approval ({entries.length})</h2>
-          <ul className={styles.entryList}>
-            {entries.map((entry, i) => (
-              <li
-                key={i}
-                className={selected?.fileUrl === entry.fileUrl ? styles.entrySelected : styles.entry}
-                onClick={() => setSelected(entry)}
-              >
-                <strong>{hotelNames[entry.hotel_id] || entry.hotel_id}</strong><br />
-                {entry.task_id} — {entry.reportDate?.split('T')[0] || 'No date'}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className={styles.auditPreview}>
-          {selected ? (
-            <>
-              <div className={styles.previewHeader}>
-                <h3>{selected.filename || 'No filename'}</h3>
-                <p><strong>{selected.task_id}</strong> — Uploaded by {selected.uploaded_by}</p>
-                <p>Uploaded: {new Date(selected.uploadedAt || '').toLocaleString()}</p>
-              </div>
-              <iframe
-                src={selected.fileUrl + '#toolbar=0&navpanes=0'}
-                title="Audit File Preview"
-                className={styles.iframePreview}
-              />
-              <button className={styles.approveBtn} onClick={() => markApproved(selected)}>
-                ✅ Approve This Report
-              </button>
-            </>
-          ) : (
-            <div className={styles.previewPlaceholder}>Select a file to review and approve</div>
-          )}
-        </div>
+    <div className={styles.wrapper}>
+      <div className={styles.headerRow}>
+        <h1>Audit Queue</h1>
+        <input
+          type="text"
+          className={styles.searchBox}
+          placeholder="Search hotel, task, or date"
+          value={search}
+          onChange={e => handleSearch(e.target.value)}
+        />
       </div>
+      <div className={styles.tableContainer}>
+        <table className={styles.auditTable}>
+          <thead>
+            <tr>
+              <th>Hotel</th>
+              <th>Task</th>
+              <th>Report Date</th>
+              <th>Uploaded At</th>
+              <th>By</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((entry, index) => (
+              <tr key={index}>
+                <td>{hotelNames[entry.hotel_id] || entry.hotel_id}</td>
+                <td>{entry.task_id}</td>
+                <td>{entry.reportDate}</td>
+                <td>{new Date(entry.uploadedAt || '').toLocaleString('en-IE')}</td>
+                <td>{entry.uploaded_by}</td>
+                <td>
+                  <button onClick={() => setSelected(entry)} className={styles.auditBtn}>Audit</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {selected && (
+        <AuditModal
+          entry={selected}
+          onClose={() => setSelected(null)}
+          onApprove={() => handleApprove(selected)}
+          onReject={() => alert('Rejection route to be implemented')}
+          onDelete={() => alert('Deletion route to be implemented')}
+        />
+      )}
     </div>
   );
 }
