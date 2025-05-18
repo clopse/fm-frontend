@@ -1,15 +1,15 @@
 .container {
   background-color: #fff;
   padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .header {
   font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: 1rem;
-  color: #333;
+  color: #222;
 }
 
 .uploadList {
@@ -19,30 +19,52 @@
 }
 
 .uploadItem {
-  padding: 1rem;
-  border-bottom: 1px solid #ddd;
+  padding: 1rem 0;
+  border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
 }
 
-.uploadText {
-  font-size: 1rem;
+.uploadDetails {
+  flex: 1;
+  font-size: 0.95rem;
+  color: #333;
 }
 
-.hotelName {
+.uploadDetails strong {
+  display: block;
   font-size: 1.1rem;
+  color: #000;
+}
+
+.uploadDetails em {
+  font-style: normal;
+  color: #555;
+  font-weight: 500;
+}
+
+.meta {
+  margin-top: 0.5rem;
+}
+
+.meta p {
+  margin: 0.25rem 0;
+  color: #555;
+  font-size: 0.9rem;
 }
 
 .auditButton {
-  background-color: #28a745;
+  background-color: #1e88e5;
   color: white;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 1.2rem;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
+  font-size: 0.95rem;
+  transition: background-color 0.2s ease;
 }
 
 .auditButton:hover {
-  background-color: #218838;
+  background-color: #1565c0;
 }
