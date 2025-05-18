@@ -9,7 +9,8 @@ import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
 import { RecentUploads } from '@/components/RecentUploads';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
 import UserPanel from '@/components/UserPanel';
-import { hotels } from '@/lib/hotels';
+import { hotelNames } from '@/lib/hotels';
+import { getTaskLabelMap } from '@/lib/getTaskLabelMap';
 
 import styles from '@/styles/AdminDashboard.module.css';
 import headerStyles from '@/styles/HeaderBar.module.css';
@@ -43,7 +44,9 @@ export default function HotelsPage() {
   const [monthlyTasks, setMonthlyTasks] = useState<MonthlyTask[]>([]);
   const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
-  const [currentHotel, setCurrentHotel] = useState(hotels[0].name);
+  const [currentHotel, setCurrentHotel] = useState(hotelNames['hiex']);
+
+  const taskLabelMap = getTaskLabelMap();
 
   useEffect(() => {
     fetchLeaderboard();
@@ -75,8 +78,8 @@ export default function HotelsPage() {
         )
         .slice(0, 10)
         .map((e: any) => ({
-          hotel: e.hotel_id,
-          report: `${e.task_id} (${e.type})`,
+          hotel: hotelNames[e.hotel_id] || e.hotel_id,
+          report: `${taskLabelMap[e.task_id] || e.task_id} (${e.type})`,
           date: e.uploaded_at,
           reportDate: e.report_date,
           task_id: e.task_id,
