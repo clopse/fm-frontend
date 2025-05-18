@@ -10,7 +10,7 @@ import { RecentUploads } from '@/components/RecentUploads';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
 import UserPanel from '@/components/UserPanel';
 import { hotelNames } from '@/lib/hotels';
-import { getTaskLabelMap } from '@/lib/getTaskLabelMap';
+import complianceData from '../../app/data/compliance.json';
 
 import styles from '@/styles/AdminDashboard.module.css';
 import headerStyles from '@/styles/HeaderBar.module.css';
@@ -36,6 +36,16 @@ interface MonthlyTask {
   frequency: string;
   confirmed: boolean;
   label?: string;
+}
+
+function getTaskLabelMap(): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const section of complianceData) {
+    for (const task of section.tasks) {
+      map[task.task_id] = task.label;
+    }
+  }
+  return map;
 }
 
 export default function HotelsPage() {
