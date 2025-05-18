@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import styles from '@/styles/RecentUploads.module.css';
+import AuditModal from '@/components/AuditModal';
 
 interface UploadEntry {
   hotel: string;
@@ -14,14 +16,35 @@ interface UploadEntry {
 }
 
 export function RecentUploads({ uploads }: { uploads: UploadEntry[] }) {
-  const handleAuditClick = (upload: UploadEntry) => {
-    alert(`Previewing: ${upload.filename}\nHotel: ${upload.hotel}\nTask: ${upload.task_id}\nReport Date: ${upload.reportDate}\nUploaded: ${formatDate(upload.date)}\nBy: ${upload.uploaded_by}`);
-    // 🔜 Eventually open modal with preview + approve/reject/delete
-  };
+  const [selected, setSelected] = useState<UploadEntry | null>(null);
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
-    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const handleApprove = () => {
+    // 🔜 TODO: POST to /approve
+    alert(`Approved ${selected?.filename}`);
+    setSelected(null);
+  };
+
+  const handleReject = (reason: string) => {
+    // 🔜 TODO: POST to /reject with reason
+    alert(`Rejected ${selected?.filename} for: ${reason}`);
+    setSelected(null);
+  };
+
+  const handleDelete = () => {
+    // 🔜 TODO: DELETE from server
+    alert(`Deleted ${selected?.filename}`);
+    setSelected(null);
   };
 
   return (
@@ -38,12 +61,22 @@ export function RecentUploads({ uploads }: { uploads: UploadEntry[] }) {
                 <p><strong>By:</strong> {upload.uploaded_by}</p>
               </div>
             </div>
-            <button className={styles.auditButton} onClick={() => handleAuditClick(upload)}>
+            <button className={styles.auditButton} onClick={() => setSelected(upload)}>
               Audit
             </button>
           </li>
         ))}
       </ul>
+
+      {selected && (
+        <AuditModal
+          entry={selected}
+          onClose={() => setSelected(null)}
+          onApprove={handleApprove}
+          onReject={handleReject}
+          onDelete={handleDelete}
+        />
+      )}
     </div>
   );
 }
