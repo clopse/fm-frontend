@@ -29,21 +29,46 @@ export function RecentUploads({ uploads }: { uploads: UploadEntry[] }) {
     });
   };
 
-  const handleApprove = () => {
-    // 🔜 TODO: POST to /approve
-    alert(`Approved ${selected?.filename}`);
+  const handleApprove = async () => {
+    if (!selected) return;
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hotel_id: selected.hotel,
+        task_id: selected.task_id,
+        timestamp: selected.date,
+      }),
+    });
     setSelected(null);
   };
 
-  const handleReject = (reason: string) => {
-    // 🔜 TODO: POST to /reject with reason
-    alert(`Rejected ${selected?.filename} for: ${reason}`);
+  const handleReject = async (reason: string) => {
+    if (!selected) return;
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hotel_id: selected.hotel,
+        task_id: selected.task_id,
+        timestamp: selected.date,
+        reason,
+      }),
+    });
     setSelected(null);
   };
 
-  const handleDelete = () => {
-    // 🔜 TODO: DELETE from server
-    alert(`Deleted ${selected?.filename}`);
+  const handleDelete = async () => {
+    if (!selected) return;
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/delete`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hotel_id: selected.hotel,
+        task_id: selected.task_id,
+        timestamp: selected.date,
+      }),
+    });
     setSelected(null);
   };
 
