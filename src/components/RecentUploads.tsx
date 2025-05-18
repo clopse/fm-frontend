@@ -74,24 +74,35 @@ export function RecentUploads({ uploads }: { uploads: UploadEntry[] }) {
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.header}>Recent Uploads</h2>
-      <ul className={styles.uploadList}>
-        {uploads.map((upload, index) => (
-          <li key={index} className={styles.uploadItem}>
-            <div className={styles.uploadDetails}>
-              <strong>{upload.hotel}</strong> — <em>{upload.task_id}</em>
-              <div className={styles.meta}>
-                <p><strong>Report Date:</strong> {upload.reportDate}</p>
-                <p><strong>Uploaded At:</strong> {formatDate(upload.date)}</p>
-                <p><strong>By:</strong> {upload.uploaded_by}</p>
-              </div>
-            </div>
-            <button className={styles.auditButton} onClick={() => setSelected(upload)}>
-              Audit
-            </button>
-          </li>
-        ))}
-      </ul>
+      <h2 className={styles.header}>Audit Queue</h2>
+      <table className={styles.auditTable}>
+        <thead>
+          <tr>
+            <th>Hotel</th>
+            <th>Task</th>
+            <th>Report Date</th>
+            <th>Uploaded At</th>
+            <th>By</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {uploads.map((upload, index) => (
+            <tr key={index}>
+              <td>{upload.hotel}</td>
+              <td>{upload.task_id}</td>
+              <td>{upload.reportDate}</td>
+              <td>{formatDate(upload.date)}</td>
+              <td>{upload.uploaded_by}</td>
+              <td>
+                <button className={styles.auditButton} onClick={() => setSelected(upload)}>
+                  Audit
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       {selected && (
         <AuditModal
