@@ -90,7 +90,7 @@ export function RecentUploads({ uploads }: { uploads: UploadEntry[] }) {
           {uploads.map((upload, index) => (
             <tr key={index}>
               <td>{upload.hotel}</td>
-              <td>{upload.task_id}</td>
+              <td>{upload.report}</td>
               <td>{upload.reportDate}</td>
               <td>{formatDate(upload.date)}</td>
               <td>{upload.uploaded_by}</td>
