@@ -19,16 +19,14 @@ interface AuditModalProps {
   onDelete: () => void;
 }
 
-export default function AuditModal({ entry, onClose, onApprove, onReject, onDelete }: AuditModalProps) {
+export default function AuditModal({
+  entry,
+  onClose,
+  onApprove,
+  onReject,
+  onDelete,
+}: AuditModalProps) {
   const [taskLabelMap, setTaskLabelMap] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [onClose]);
 
   useEffect(() => {
     const fetchLabels = async () => {
@@ -40,8 +38,15 @@ export default function AuditModal({ entry, onClose, onApprove, onReject, onDele
         console.error('Failed to load task labels', err);
       }
     };
+
     fetchLabels();
-  }, []);
+
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [onClose]);
 
   const formattedUploadDate = new Date(entry.date).toLocaleString('en-IE', {
     dateStyle: 'medium',
@@ -49,20 +54,34 @@ export default function AuditModal({ entry, onClose, onApprove, onReject, onDele
     timeZone: 'Europe/Dublin',
   });
 
+  const readableTask = taskLabelMap[entry.task_id] || 'Loading...';
+
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
         <header className={styles.header}>
           <h2>🧾 Audit File</h2>
-          <button className={styles.closeBtn} onClick={onClose}>×</button>
+          <button className={styles.closeBtn} onClick={onClose}>
+            ×
+          </button>
         </header>
 
         <section className={styles.meta}>
-          <p><strong>🏨 Hotel:</strong> {entry.hotel}</p>
-          <p><strong>📋 Task:</strong> {taskLabelMap[entry.task_id] || entry.task_id}</p>
-          <p><strong>🗓️ Report Date:</strong> {entry.reportDate}</p>
-          <p><strong>📤 Uploaded At:</strong> {formattedUploadDate}</p>
-          <p><strong>👤 Uploaded By:</strong> {entry.uploaded_by}</p>
+          <p>
+            <strong>🏨 Hotel:</strong> {entry.hotel}
+          </p>
+          <p>
+            <strong>📋 Task:</strong> {readableTask}
+          </p>
+          <p>
+            <strong>🗓️ Report Date:</strong> {entry.reportDate}
+          </p>
+          <p>
+            <strong>📤 Uploaded At:</strong> {formattedUploadDate}
+          </p>
+          <p>
+            <strong>👤 Uploaded By:</strong> {entry.uploaded_by}
+          </p>
         </section>
 
         <iframe
@@ -72,7 +91,9 @@ export default function AuditModal({ entry, onClose, onApprove, onReject, onDele
         />
 
         <footer className={styles.actions}>
-          <button className={styles.approveBtn} onClick={onApprove}>✅ Approve</button>
+          <button className={styles.approveBtn} onClick={onApprove}>
+            ✅ Approve
+          </button>
           <button
             className={styles.rejectBtn}
             onClick={() => {
@@ -82,7 +103,9 @@ export default function AuditModal({ entry, onClose, onApprove, onReject, onDele
           >
             ❌ Reject
           </button>
-          <button className={styles.deleteBtn} onClick={onDelete}>🗑️ Delete</button>
+          <button className={styles.deleteBtn} onClick={onDelete}>
+            🗑️ Delete
+          </button>
         </footer>
       </div>
     </div>
