@@ -117,7 +117,15 @@ export default function AuditPage() {
 
       {selected && (
         <AuditModal
-          entry={selected}
+          entry={{
+            hotel: hotelNames[selected.hotel_id] || selected.hotel_id,
+            task_id: selected.task_id,
+            reportDate: selected.reportDate || '',
+            date: selected.uploadedAt || selected.loggedAt || '',
+            uploaded_by: selected.uploaded_by || '',
+            fileUrl: selected.fileUrl || '',
+            filename: selected.filename || '',
+          }}
           onClose={() => setSelected(null)}
           onApprove={() => handleApprove(selected)}
           onReject={() => alert('Rejection route to be implemented')}
