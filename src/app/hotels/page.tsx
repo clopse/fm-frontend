@@ -10,7 +10,6 @@ import { RecentUploads } from '@/components/RecentUploads';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
 import UserPanel from '@/components/UserPanel';
 import { hotelNames } from '@/lib/hotels';
-import complianceData from '../../app/data/compliance.json';
 
 import styles from '@/styles/AdminDashboard.module.css';
 import headerStyles from '@/styles/HeaderBar.module.css';
@@ -38,16 +37,6 @@ interface MonthlyTask {
   label?: string;
 }
 
-function getTaskLabelMap(): Record<string, string> {
-  const map: Record<string, string> = {};
-  for (const section of complianceData) {
-    for (const task of section.tasks) {
-      map[task.task_id] = task.label;
-    }
-  }
-  return map;
-}
-
 export default function HotelsPage() {
   const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
@@ -55,14 +44,24 @@ export default function HotelsPage() {
   const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
   const [currentHotel, setCurrentHotel] = useState(hotelNames['hiex']);
-
-  const taskLabelMap = getTaskLabelMap();
+  const [taskLabelMap, setTaskLabelMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    fetchTaskLabels();
     fetchLeaderboard();
     fetchRecentUploads();
     fetchMonthlyChecklist();
   }, []);
+
+  const fetchTaskLabels = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/task-labels`);
+      const data = await res.json();
+      setTaskLabelMap(data);
+    } catch (err) {
+      console.error('Error fetching task labels:', err);
+    }
+  };
 
   const fetchLeaderboard = async () => {
     try {
