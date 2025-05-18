@@ -83,9 +83,17 @@ export default function HotelDashboard() {
   };
 
   const handleUploadOpen = (task: TaskItem) => {
+    const seen = new Set<string>();
     const taskHistory = allHistoryEntries
       .filter(e => e.task_id === task.task_id && e.type === 'upload')
+      .filter(e => {
+        const key = `${e.reportDate}-${e.fileName}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
       .sort((a, b) => (b.reportDate || '').localeCompare(a.reportDate || ''));
+
 
     setActiveTask(task);
     setActiveHistory(taskHistory);
