@@ -38,6 +38,7 @@ export default function AuditPage() {
   const [filtered, setFiltered] = useState<AuditEntry[]>([]);
   const [selected, setSelected] = useState<AuditEntry | null>(null);
   const [search, setSearch] = useState('');
+  const [taskLabelMap, setTaskLabelMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approval-log`)
@@ -47,6 +48,17 @@ export default function AuditPage() {
         setEntries(list);
         setFiltered(list);
       });
+
+    const fetchLabels = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/task-labels`);
+        const data = await res.json();
+        setTaskLabelMap(data);
+      } catch (err) {
+        console.error('Failed to fetch task labels:', err);
+      }
+    };
+    fetchLabels();
   }, []);
 
   const handleSearch = (query: string) => {
@@ -102,7 +114,7 @@ export default function AuditPage() {
             {filtered.map((entry, index) => (
               <tr key={index}>
                 <td>{hotelNames[entry.hotel_id] || entry.hotel_id}</td>
-                <td>{entry.task_id}</td>
+                <td>{taskLabelMap[entry.task_id] || entry.task_id}</td>
                 <td>{entry.reportDate}</td>
                 <td>{new Date(entry.uploadedAt || '').toLocaleString('en-IE')}</td>
                 <td>{entry.uploaded_by}</td>
