@@ -14,7 +14,6 @@ interface FileState {
 export default function UtilitiesUploadBox() {
   const [dragActive, setDragActive] = useState(false);
   const [files, setFiles] = useState<Record<string, FileState>>({});
-  const [messages, setMessages] = useState<string[]>([]);
   const [billDate, setBillDate] = useState<string>(new Date().toISOString().substring(0, 10));
 
   const hotelId = useMemo(() => {
@@ -29,27 +28,24 @@ export default function UtilitiesUploadBox() {
     const name = filename.toLowerCase();
     if (name.includes('flogas') || name.includes('fgnc')) return 'Flogas';
     if (name.includes('arden')) return 'Arden Energy';
-    // Add more suppliers as needed
+    if (name.includes('aes') || name.includes('aes916')) return 'Arden Energy';
     return 'Unknown';
   };
 
   const precheckFile = useCallback(async (file: File): Promise<void> => {
     const fileKey = file.name;
-    
-    // Quick supplier detection from filename
     const supplier = quickSupplierDetection(file.name);
     
     console.log(`🔍 Frontend: Detected supplier "${supplier}" for file "${file.name}"`);
     
-    // Update file state
     setFiles(prev => ({
       ...prev,
       [fileKey]: {
         file,
         supplier,
-        billType: 'Unknown',
+        billType: 'Detecting...',
         status: 'pending',
-        message: 'Detecting supplier...'
+        message: 'Analyzing document...'
       }
     }));
 
@@ -62,27 +58,13 @@ export default function UtilitiesUploadBox() {
           message: 'Could not detect supplier from filename'
         }
       }));
-      setMessages(prev => [...prev, `⚠️ ${file.name}: Could not detect supplier`]);
       return;
     }
 
-    // Run backend precheck
     try {
-      setFiles(prev => ({
-        ...prev,
-        [fileKey]: {
-          ...prev[fileKey],
-          status: 'pending',
-          message: 'Running precheck...'
-        }
-      }));
-
-      // Create FormData and explicitly append fields
       const precheckData = new FormData();
       precheckData.append('file', file, file.name);
       precheckData.append('supplier', supplier);
-      
-      console.log(`🔍 Frontend: Sending precheck with supplier: "${supplier}"`);
 
       const precheckRes = await fetch('/api/utilities/precheck', {
         method: 'POST',
@@ -91,8 +73,8 @@ export default function UtilitiesUploadBox() {
 
       if (!precheckRes.ok) {
         const errorText = await precheckRes.text();
-        console.error(`Precheck failed with ${precheckRes.status}:`, errorText);
-        throw new Error(`Precheck failed: ${precheckRes.status} ${errorText}`);
+        console.error(`Precheck failed:`, errorText);
+        throw new Error(`HTTP ${precheckRes.status}: ${errorText}`);
       }
 
       const result = await precheckRes.json();
@@ -103,18 +85,15 @@ export default function UtilitiesUploadBox() {
           [fileKey]: {
             ...prev[fileKey],
             status: 'error',
+            billType: 'Error',
             message: result.error
           }
         }));
-        setMessages(prev => [...prev, `❌ ${file.name}: ${result.error}`]);
         return;
       }
 
-      // Update with precheck results
       const billType = result.bill_type === 'gas' ? 'Gas' : 
                       result.bill_type === 'electricity' ? 'Electricity' : 'Unknown';
-      
-      console.log(`✅ Frontend: Precheck successful - detected ${billType} for supplier ${result.supplier}`);
       
       setFiles(prev => ({
         ...prev,
@@ -122,11 +101,9 @@ export default function UtilitiesUploadBox() {
           ...prev[fileKey],
           billType,
           status: 'prechecked',
-          message: `Ready to upload - ${billType} bill detected`
+          message: 'Ready to upload'
         }
       }));
-      
-      setMessages(prev => [...prev, `✅ ${file.name}: Precheck passed - ${billType} bill detected`]);
       
     } catch (err) {
       console.error('Precheck error:', err);
@@ -135,10 +112,10 @@ export default function UtilitiesUploadBox() {
         [fileKey]: {
           ...prev[fileKey],
           status: 'error',
-          message: `Precheck failed: ${(err as Error).message}`
+          billType: 'Error',
+          message: `Analysis failed: ${(err as Error).message}`
         }
       }));
-      setMessages(prev => [...prev, `❌ ${file.name}: Precheck failed`]);
     }
   }, []);
 
@@ -153,12 +130,12 @@ export default function UtilitiesUploadBox() {
       [fileKey]: {
         ...prev[fileKey],
         status: 'uploading',
-        message: 'Uploading for processing...'
+        message: 'Processing...'
       }
     }));
 
     const uploadData = new FormData();
-    uploadData.append('file', file);
+    uploadData.append('file', file, file.name);
     uploadData.append('hotel_id', hotelId);
     uploadData.append('bill_date', billDate);
     uploadData.append('supplier', supplier);
@@ -177,10 +154,9 @@ export default function UtilitiesUploadBox() {
           [fileKey]: {
             ...prev[fileKey],
             status: 'completed',
-            message: 'Successfully uploaded for processing'
+            message: 'Successfully processed'
           }
         }));
-        setMessages(prev => [...prev, `🚀 ${file.name}: Upload successful`]);
       } else {
         setFiles(prev => ({
           ...prev,
@@ -190,7 +166,6 @@ export default function UtilitiesUploadBox() {
             message: result.detail || 'Upload failed'
           }
         }));
-        setMessages(prev => [...prev, `❌ ${file.name}: ${result.detail || 'Upload failed'}`]);
       }
     } catch (err) {
       setFiles(prev => ({
@@ -198,10 +173,9 @@ export default function UtilitiesUploadBox() {
         [fileKey]: {
           ...prev[fileKey],
           status: 'error',
-          message: `Upload error: ${(err as Error).message}`
+          message: 'Upload error'
         }
       }));
-      setMessages(prev => [...prev, `❌ ${file.name}: Upload error`]);
     }
   }, [files, hotelId, billDate]);
 
@@ -226,20 +200,115 @@ export default function UtilitiesUploadBox() {
 
   const fileArray = Object.entries(files);
   const readyToUpload = fileArray.filter(([_, state]) => state.status === 'prechecked').length;
+  const totalFiles = fileArray.length;
+  const completedFiles = fileArray.filter(([_, state]) => state.status === 'completed').length;
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending': return '🔄';
+      case 'prechecked': return '✅';
+      case 'uploading': return '⏳';
+      case 'completed': return '🎉';
+      case 'error': return '❌';
+      default: return '📄';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending': return '#ffa500';
+      case 'prechecked': return '#28a745';
+      case 'uploading': return '#007bff';
+      case 'completed': return '#28a745';
+      case 'error': return '#dc3545';
+      default: return '#6c757d';
+    }
+  };
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>Utilities Upload</h1>
+    <div style={{ 
+      padding: '2rem', 
+      maxWidth: '1200px', 
+      margin: '0 auto',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+    }}>
+      <div style={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        padding: '2rem',
+        borderRadius: '12px',
+        marginBottom: '2rem',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+      }}>
+        <h1 style={{ margin: 0, fontSize: '2rem', fontWeight: 600 }}>
+          Utility Bill Upload
+        </h1>
+        <p style={{ margin: '0.5rem 0 0 0', opacity: 0.9 }}>
+          Upload your utility bills for automatic processing and analysis
+        </p>
+      </div>
 
-      <div className={styles.metaFields}>
-        <label>
-          Bill Date:
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '1.5rem',
+        marginBottom: '2rem'
+      }}>
+        <div style={{
+          background: 'white',
+          padding: '1.5rem',
+          borderRadius: '8px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          border: '1px solid #e0e0e0'
+        }}>
+          <label style={{ 
+            display: 'block', 
+            fontWeight: 600, 
+            marginBottom: '0.5rem',
+            color: '#333'
+          }}>
+            Bill Date
+          </label>
           <input
             type="date"
             value={billDate}
             onChange={(e) => setBillDate(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              fontSize: '1rem',
+              boxSizing: 'border-box'
+            }}
           />
-        </label>
+        </div>
+
+        <div style={{
+          background: 'white',
+          padding: '1.5rem',
+          borderRadius: '8px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          border: '1px solid #e0e0e0'
+        }}>
+          <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: '#333' }}>
+            Upload Progress
+          </div>
+          <div style={{ fontSize: '0.9rem', color: '#666' }}>
+            {totalFiles > 0 ? (
+              <>
+                {completedFiles} of {totalFiles} files processed
+                {readyToUpload > 0 && (
+                  <span style={{ color: '#28a745', marginLeft: '0.5rem' }}>
+                    ({readyToUpload} ready to upload)
+                  </span>
+                )}
+              </>
+            ) : (
+              'No files uploaded yet'
+            )}
+          </div>
+        </div>
       </div>
 
       <div
@@ -249,68 +318,132 @@ export default function UtilitiesUploadBox() {
           setDragActive(true);
         }}
         onDragLeave={() => setDragActive(false)}
-        className={dragActive ? styles.dragActive : styles.dropZone}
+        style={{
+          border: dragActive ? '3px dashed #007bff' : '2px dashed #ccc',
+          borderRadius: '12px',
+          padding: '3rem 2rem',
+          textAlign: 'center',
+          background: dragActive ? '#f8f9fa' : 'white',
+          transition: 'all 0.3s ease',
+          cursor: 'pointer',
+          marginBottom: '2rem'
+        }}
       >
-        {dragActive ? 'Release to upload your files' : 'Drag & drop files here'}
+        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+          {dragActive ? '📥' : '📄'}
+        </div>
+        <div style={{ 
+          fontSize: '1.25rem', 
+          fontWeight: 600, 
+          marginBottom: '0.5rem',
+          color: dragActive ? '#007bff' : '#333'
+        }}>
+          {dragActive ? 'Drop your files here' : 'Drag & drop PDF files here'}
+        </div>
+        <div style={{ color: '#666', fontSize: '0.9rem' }}>
+          Supports PDF files up to 10MB
+        </div>
       </div>
 
       {readyToUpload > 0 && (
-        <div style={{ margin: '1rem 0' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <button 
             onClick={uploadAllReady}
             style={{ 
-              padding: '0.5rem 1rem', 
-              backgroundColor: '#007bff', 
-              color: 'white', 
-              border: 'none', 
-              borderRadius: '4px',
-              cursor: 'pointer'
+              padding: '0.75rem 2rem',
+              backgroundColor: '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '25px',
+              fontSize: '1rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 2px 10px rgba(40, 167, 69, 0.3)',
+              transition: 'all 0.3s ease'
             }}
+            onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
+            onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
           >
-            Upload All Ready Files ({readyToUpload})
+            Process All Ready Files ({readyToUpload})
           </button>
         </div>
       )}
 
-      {messages.length > 0 && (
-        <div className={styles.messages}>
-          <h3>Status Messages</h3>
-          <ul>{messages.map((msg, i) => <li key={i}>{msg}</li>)}</ul>
-        </div>
-      )}
-
-      <div className={styles.filesList}>
-        {fileArray.map(([fileKey, state]) => (
-          <div className={styles.fileItem} key={fileKey}>
-            <img
-              src="/icons/pdf-icon.png"
-              className={styles.fileIcon}
-              alt="file"
-            />
-            <div>
-              <p>{state.file.name}</p>
-              <small>
-                Supplier: {state.supplier}<br/>
-                Type: {state.billType}<br/>
-                Status: {state.message}
-              </small>
+      {fileArray.length > 0 && (
+        <div style={{
+          background: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            background: '#f8f9fa',
+            padding: '1rem 1.5rem',
+            borderBottom: '1px solid #e0e0e0',
+            fontWeight: 600
+          }}>
+            Uploaded Files
+          </div>
+          {fileArray.map(([fileKey, state]) => (
+            <div 
+              key={fileKey}
+              style={{
+                padding: '1.5rem',
+                borderBottom: '1px solid #f0f0f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                <div style={{ fontSize: '2rem', marginRight: '1rem' }}>
+                  {getStatusIcon(state.status)}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
+                    {state.file.name}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: '#666' }}>
+                    <span style={{ marginRight: '1rem' }}>
+                      <strong>Supplier:</strong> {state.supplier}
+                    </span>
+                    <span style={{ marginRight: '1rem' }}>
+                      <strong>Type:</strong> {state.billType}
+                    </span>
+                    <span>
+                      <strong>Size:</strong> {(state.file.size / 1024).toFixed(1)} KB
+                    </span>
+                  </div>
+                  <div style={{ 
+                    fontSize: '0.8rem', 
+                    color: getStatusColor(state.status),
+                    marginTop: '0.25rem',
+                    fontWeight: 500
+                  }}>
+                    {state.message}
+                  </div>
+                </div>
+              </div>
               {state.status === 'prechecked' && (
                 <button 
                   onClick={() => uploadFile(fileKey)}
                   style={{ 
-                    display: 'block', 
-                    marginTop: '0.5rem',
-                    padding: '0.25rem 0.5rem',
-                    fontSize: '0.8rem'
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#007bff',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 500
                   }}
                 >
-                  Upload This File
+                  Process
                 </button>
               )}
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
