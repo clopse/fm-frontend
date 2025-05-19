@@ -11,6 +11,7 @@ export default function UtilitiesUploadBox() {
   const [messages, setMessages] = useState<string[]>([]);
   const [billDate, setBillDate] = useState<string>(new Date().toISOString().substring(0, 10));
   const [detectedSuppliers, setDetectedSuppliers] = useState<Record<string, string>>({});
+  const [detectedBillTypes, setDetectedBillTypes] = useState<Record<string, string>>({});
 
   const hotelId = useMemo(() => {
     if (typeof window !== 'undefined') {
@@ -35,21 +36,42 @@ export default function UtilitiesUploadBox() {
     return fullText.toLowerCase();
   };
 
-  const detectSupplier = async (file: File): Promise<string> => {
+  const detectBillType = (text: string): string => {
+    const gasIndicators = ['mprn', 'gas usage', 'therms', 'cubic feet', 'calorific value', 'gas supply', 'gas bill', 'gas account'];
+    const electricityIndicators = ['mpan', 'kwh', 'kilowatt', 'day units', 'night units', 'electricity', 'electricity supply', 'electricity bill'];
+    
+    const gasScore = gasIndicators.filter(indicator => text.includes(indicator)).length;
+    const elecScore = electricityIndicators.filter(indicator => text.includes(indicator)).length;
+    
+    if (gasScore > elecScore) return 'Gas';
+    if (elecScore > gasScore) return 'Electricity';
+    return 'Unknown';
+  };
+
+  const detectSupplierAndBillType = async (file: File): Promise<{supplier: string, billType: string}> => {
     try {
       const text = await extractTextFromPDF(file);
-      if (text.includes('flogas')) return 'Flogas';
-      if (text.includes('arden')) return 'Arden Energy';
-      return 'Unknown';
+      
+      // Detect supplier
+      let supplier = 'Unknown';
+      if (text.includes('flogas')) supplier = 'Flogas';
+      else if (text.includes('arden')) supplier = 'Arden Energy';
+      
+      // Detect bill type
+      const billType = detectBillType(text);
+      
+      return { supplier, billType };
     } catch (err) {
       console.error(`Error reading PDF for ${file.name}:`, err);
-      return 'Unknown';
+      return { supplier: 'Unknown', billType: 'Unknown' };
     }
   };
 
   const uploadFile = useCallback(async (file: File) => {
-    const supplier = await detectSupplier(file);
+    const { supplier, billType } = await detectSupplierAndBillType(file);
+    
     setDetectedSuppliers(prev => ({ ...prev, [file.name]: supplier }));
+    setDetectedBillTypes(prev => ({ ...prev, [file.name]: billType }));
 
     if (supplier === 'Unknown') {
       setMessages(prev => [...prev, `⚠️ ${file.name}: Could not detect supplier.`]);
@@ -70,7 +92,7 @@ export default function UtilitiesUploadBox() {
 
       const result = await res.json();
       if (res.ok) {
-        setMessages((prev) => [...prev, `✅ ${file.name} (${supplier}) uploaded.`]);
+        setMessages((prev) => [...prev, `✅ ${file.name} (${supplier} - ${billType}) uploaded.`]);
       } else {
         setMessages((prev) => [...prev, `❌ ${file.name}: ${result.detail || 'Error'}`]);
       }
@@ -134,7 +156,10 @@ export default function UtilitiesUploadBox() {
               alt="file"
             />
             <p>{file.name}</p>
-            <small>Detected: {detectedSuppliers[file.name] || '...'}</small>
+            <small>
+              Supplier: {detectedSuppliers[file.name] || '...'}<br/>
+              Type: {detectedBillTypes[file.name] || '...'}
+            </small>
           </div>
         ))}
       </div>
