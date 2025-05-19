@@ -123,7 +123,7 @@ export default function UtilitiesUploadBox() {
     const fileState = files[fileKey];
     if (!fileState || fileState.status !== 'prechecked') return;
 
-    const { file, supplier } = fileState;
+    const { file, supplier, billType } = fileState;
 
     setFiles(prev => ({
       ...prev,
@@ -139,6 +139,13 @@ export default function UtilitiesUploadBox() {
     uploadData.append('hotel_id', hotelId);
     uploadData.append('bill_date', billDate);
     uploadData.append('supplier', supplier);
+    
+    // Pass the detected bill type from precheck
+    const billTypeForBackend = billType === 'Gas' ? 'gas' : 
+                               billType === 'Electricity' ? 'electricity' : '';
+    uploadData.append('bill_type', billTypeForBackend);
+    
+    console.log(`🚀 Uploading ${file.name} with bill_type: ${billTypeForBackend}`);
 
     try {
       const uploadRes = await fetch('/api/utilities/parse-and-save', {
