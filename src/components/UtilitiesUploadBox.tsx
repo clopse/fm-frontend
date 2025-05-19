@@ -3,12 +3,19 @@
 import { useState, useCallback, useMemo } from 'react';
 import styles from '@/styles/DragDropZone.module.css';
 
+async function extractTextFromPDF(file: File): Promise<string> {
+  // ⚠️ TODO: Replace with real PDF parsing logic, like using pdfjs-dist
+  // e.g., https://mozilla.github.io/pdf.js/examples/
+  const text = await file.text(); // This won’t work for binary PDFs
+  return text.toLowerCase();
+}
+
 export default function UtilitiesUploadBox() {
   const [dragActive, setDragActive] = useState(false);
   const [fileList, setFileList] = useState<File[]>([]);
   const [messages, setMessages] = useState<string[]>([]);
-  const [billDate, setBillDate] = useState<string>(new Date().toISOString().substring(0, 10));
   const [detectedSuppliers, setDetectedSuppliers] = useState<Record<string, string>>({});
+  const [billDate, setBillDate] = useState<string>(new Date().toISOString().substring(0, 10));
 
   const hotelId = useMemo(() => {
     if (typeof window !== 'undefined') {
@@ -19,11 +26,14 @@ export default function UtilitiesUploadBox() {
   }, []);
 
   const detectSupplier = async (file: File): Promise<string> => {
-    const text = await file.text();
-    const lower = text.toLowerCase();
-    if (lower.includes('flogas')) return 'Flogas';
-    if (lower.includes('arden')) return 'Arden Energy';
-    return 'Unknown';
+    try {
+      const content = await extractTextFromPDF(file);
+      if (content.includes('flogas')) return 'Flogas';
+      if (content.includes('arden')) return 'Arden Energy';
+      return 'Unknown';
+    } catch {
+      return 'Unknown';
+    }
   };
 
   const uploadFile = useCallback(async (file: File) => {
@@ -31,7 +41,7 @@ export default function UtilitiesUploadBox() {
     setDetectedSuppliers(prev => ({ ...prev, [file.name]: supplier }));
 
     if (supplier === 'Unknown') {
-      setMessages(prev => [...prev, `⚠️ ${file.name}: Could not detect supplier.`]);
+      setMessages(prev => [...prev, `❌ ${file.name}: Could not determine supplier.`]);
       return;
     }
 
@@ -42,37 +52,36 @@ export default function UtilitiesUploadBox() {
     formData.append('supplier', supplier);
 
     try {
-      const res: Response = await fetch('/api/utilities/parse-and-save', {
+      const res = await fetch('/api/utilities/parse-and-save', {
         method: 'POST',
         body: formData,
       });
 
       const result = await res.json();
       if (res.ok) {
-        setMessages((prev) => [...prev, `✅ ${file.name} (${supplier}) uploaded.`]);
+        setMessages(prev => [...prev, `✅ ${file.name} (${supplier}) uploaded.`]);
       } else {
-        setMessages((prev) => [...prev, `❌ ${file.name}: ${result.detail || 'Error'}`]);
+        setMessages(prev => [...prev, `❌ ${file.name}: ${result.detail || 'Server error'}`]);
       }
-    } catch (err) {
-      setMessages((prev) => [...prev, `❌ ${file.name}: ${(err as Error).message}`]);
+    } catch (err: any) {
+      setMessages(prev => [...prev, `❌ ${file.name}: ${err.message}`]);
     }
   }, [hotelId, billDate]);
 
-  const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
+  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
     setDragActive(false);
 
-    if (event.dataTransfer.files?.length > 0) {
-      const droppedFiles = Array.from(event.dataTransfer.files);
-      setFileList((prev) => [...prev, ...droppedFiles]);
+    if (e.dataTransfer.files?.length) {
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      setFileList(prev => [...prev, ...droppedFiles]);
       droppedFiles.forEach(uploadFile);
     }
   }, [uploadFile]);
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1>Utilities Upload</h1>
+      <h1>Upload Utility Bill</h1>
 
       <div className={styles.metaFields}>
         <label>
@@ -94,29 +103,27 @@ export default function UtilitiesUploadBox() {
         onDragLeave={() => setDragActive(false)}
         className={dragActive ? styles.dragActive : styles.dropZone}
       >
-        {dragActive ? 'Release to upload your files' : 'Drag & drop files here'}
+        {dragActive ? 'Release to upload files' : 'Drag & drop utility PDFs here'}
       </div>
 
       {messages.length > 0 && (
         <div className={styles.messages}>
-          <h3>Upload Status</h3>
+          <h3>Upload Log</h3>
           <ul>{messages.map((msg, i) => <li key={i}>{msg}</li>)}</ul>
         </div>
       )}
 
-      <div className={styles.filesList}>
-        {fileList.map((file, i) => (
-          <div className={styles.fileItem} key={i}>
-            <img
-              src="/icons/pdf-icon.png"
-              className={styles.fileIcon}
-              alt="file"
-            />
-            <p>{file.name}</p>
-            <small>Detected: {detectedSuppliers[file.name] || '...'}</small>
-          </div>
-        ))}
-      </div>
+      {fileList.length > 0 && (
+        <div className={styles.filesList}>
+          {fileList.map((file, i) => (
+            <div className={styles.fileItem} key={i}>
+              <img src="/icons/pdf-icon.png" alt="file icon" className={styles.fileIcon} />
+              <p>{file.name}</p>
+              <small>Detected: {detectedSuppliers[file.name] || 'Checking...'}</small>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
