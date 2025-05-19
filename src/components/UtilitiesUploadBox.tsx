@@ -8,7 +8,7 @@ export default function UtilitiesUploadBox() {
   const [fileList, setFileList] = useState<File[]>([]);
   const [messages, setMessages] = useState<string[]>([]);
   const [billDate, setBillDate] = useState<string>(new Date().toISOString().substring(0, 10));
-  const [utilityType, setUtilityType] = useState('');
+  const [detectedSuppliers, setDetectedSuppliers] = useState<Record<string, string>>({});
 
   const hotelId = useMemo(() => {
     if (typeof window !== 'undefined') {
@@ -18,12 +18,28 @@ export default function UtilitiesUploadBox() {
     return 'unknown';
   }, []);
 
+  const detectSupplier = async (file: File): Promise<string> => {
+    const text = await file.text();
+    const lower = text.toLowerCase();
+    if (lower.includes('flogas')) return 'Flogas';
+    if (lower.includes('arden')) return 'Arden Energy';
+    return 'Unknown';
+  };
+
   const uploadFile = useCallback(async (file: File) => {
+    const supplier = await detectSupplier(file);
+    setDetectedSuppliers(prev => ({ ...prev, [file.name]: supplier }));
+
+    if (supplier === 'Unknown') {
+      setMessages(prev => [...prev, `⚠️ ${file.name}: Could not detect supplier.`]);
+      return;
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('hotel_id', hotelId);
     formData.append('bill_date', billDate);
-    formData.append('supplier', utilityType); // <-- Map utilityType to supplier
+    formData.append('supplier', supplier);
 
     try {
       const res: Response = await fetch('/api/utilities/parse-and-save', {
@@ -33,14 +49,14 @@ export default function UtilitiesUploadBox() {
 
       const result = await res.json();
       if (res.ok) {
-        setMessages((prev) => [...prev, `✅ ${file.name} uploaded.`]);
+        setMessages((prev) => [...prev, `✅ ${file.name} (${supplier}) uploaded.`]);
       } else {
         setMessages((prev) => [...prev, `❌ ${file.name}: ${result.detail || 'Error'}`]);
       }
     } catch (err) {
       setMessages((prev) => [...prev, `❌ ${file.name}: ${(err as Error).message}`]);
     }
-  }, [hotelId, billDate, utilityType]);
+  }, [hotelId, billDate]);
 
   const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -66,15 +82,6 @@ export default function UtilitiesUploadBox() {
             value={billDate}
             onChange={(e) => setBillDate(e.target.value)}
           />
-        </label>
-
-        <label>
-          Utility Type:
-          <select value={utilityType} onChange={(e) => setUtilityType(e.target.value)}>
-            <option value="">Select</option>
-            <option value="Arden Energy">Electric</option>
-            <option value="Flogas">Gas</option>
-          </select>
         </label>
       </div>
 
@@ -106,6 +113,7 @@ export default function UtilitiesUploadBox() {
               alt="file"
             />
             <p>{file.name}</p>
+            <small>Detected: {detectedSuppliers[file.name] || '...'}</small>
           </div>
         ))}
       </div>
