@@ -73,17 +73,36 @@ export default function UtilitiesDashboard() {
 
   const fetchData = async () => {
     if (!hotelId) return;
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/${hotelId}/${year}`);
-    const data = await res.json();
 
-    if (year === "2025" && (!data?.electricity?.length || !data?.gas?.length)) {
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/utilities/${hotelId}/${year}`;
+    let success = false;
+    const retries = 3;
+    const delay = 4000;
+
+    for (let i = 0; i < retries; i++) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        if (data?.electricity?.length || data?.gas?.length) {
+          setElectricity(data.electricity || []);
+          setGas(data.gas || []);
+          setWater([]);
+          success = true;
+          break;
+        }
+      } catch (err) {
+        console.error(`Fetch attempt ${i + 1} failed:`, err);
+      }
+      await new Promise((r) => setTimeout(r, delay * (i + 1)));
+    }
+
+    if (!success && year === "2025") {
+      console.warn("Fallback to sample utility data");
       setElectricity(sampleElectricity2025);
       setGas(sampleGas2025);
       setWater(sampleWater2025);
-    } else {
-      setElectricity(data.electricity || []);
-      setGas(data.gas || []);
-      setWater([]);
     }
   };
 
@@ -107,16 +126,10 @@ export default function UtilitiesDashboard() {
   }, [year, viewMode]);
 
   const formatElectricity = () =>
-    electricity.map((e) => ({
-      ...e,
-      value: viewMode === "eur" ? e.total_eur : viewMode === "room" ? e.per_room_kwh : e.total_kwh,
-    }));
+    electricity.map((e) => ({ ...e, value: viewMode === "eur" ? e.total_eur : viewMode === "room" ? e.per_room_kwh : e.total_kwh }));
 
   const formatGas = () =>
-    gas.map((g) => ({
-      ...g,
-      value: viewMode === "eur" ? g.total_eur : viewMode === "room" ? g.per_room_kwh : g.total_kwh,
-    }));
+    gas.map((g) => ({ ...g, value: viewMode === "eur" ? g.total_eur : viewMode === "room" ? g.per_room_kwh : g.total_kwh }));
 
   const totalElectricity = electricity.reduce((sum, e) =>
     sum + (viewMode === "eur" ? e.total_eur : viewMode === "room" ? e.per_room_kwh : e.total_kwh), 0);
