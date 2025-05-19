@@ -67,39 +67,70 @@ export default function UtilitiesUploadBox() {
     }
   };
 
-  const uploadFile = useCallback(async (file: File) => {
-    const { supplier, billType } = await detectSupplierAndBillType(file);
+  const precheckAndUploadFile = useCallback(async (file: File) => {
+    // First detect supplier locally for quick feedback
+    const { supplier, billType: localBillType } = await detectSupplierAndBillType(file);
     
     setDetectedSuppliers(prev => ({ ...prev, [file.name]: supplier }));
-    setDetectedBillTypes(prev => ({ ...prev, [file.name]: billType }));
+    setDetectedBillTypes(prev => ({ ...prev, [file.name]: localBillType }));
 
     if (supplier === 'Unknown') {
       setMessages(prev => [...prev, `⚠️ ${file.name}: Could not detect supplier.`]);
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('hotel_id', hotelId);
-    formData.append('bill_date', billDate);
-    formData.append('supplier', supplier);
+    // Run precheck with supplier info
+    const precheckData = new FormData();
+    precheckData.append('file', file);
+    precheckData.append('supplier', supplier);
 
     try {
-      const res: Response = await fetch('/api/utilities/parse-and-save', {
+      setMessages(prev => [...prev, `🔍 ${file.name}: Running precheck...`]);
+      
+      const precheckRes = await fetch('/api/utilities/precheck', {
         method: 'POST',
-        body: formData,
+        body: precheckData,
       });
 
-      const result = await res.json();
-      if (res.ok) {
-        setMessages((prev) => [...prev, `✅ ${file.name} (${supplier} - ${billType}) uploaded.`]);
+      const precheckResult = await precheckRes.json();
+      
+      if (!precheckResult.valid) {
+        setMessages(prev => [...prev, `❌ ${file.name}: ${precheckResult.error}`]);
+        return;
+      }
+
+      // Update bill type if detected by precheck
+      if (precheckResult.bill_type && precheckResult.bill_type !== 'unknown') {
+        const serverBillType = precheckResult.bill_type === 'gas' ? 'Gas' : 'Electricity';
+        setDetectedBillTypes(prev => ({ ...prev, [file.name]: serverBillType }));
+        setMessages(prev => [...prev, `✅ ${file.name}: Precheck passed - detected ${serverBillType} bill`]);
       } else {
-        setMessages((prev) => [...prev, `❌ ${file.name}: ${result.detail || 'Error'}`]);
+        setMessages(prev => [...prev, `✅ ${file.name}: Precheck passed`]);
+      }
+
+      // Now proceed with the main upload
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+      uploadData.append('hotel_id', hotelId);
+      uploadData.append('bill_date', billDate);
+      uploadData.append('supplier', supplier);
+
+      const uploadRes = await fetch('/api/utilities/parse-and-save', {
+        method: 'POST',
+        body: uploadData,
+      });
+
+      const uploadResult = await uploadRes.json();
+      if (uploadRes.ok) {
+        const currentBillType = detectedBillTypes[file.name] || localBillType;
+        setMessages(prev => [...prev, `🚀 ${file.name} (${supplier} - ${currentBillType}) uploaded for processing.`]);
+      } else {
+        setMessages(prev => [...prev, `❌ ${file.name}: ${uploadResult.detail || 'Upload error'}`]);
       }
     } catch (err) {
-      setMessages((prev) => [...prev, `❌ ${file.name}: ${(err as Error).message}`]);
+      setMessages(prev => [...prev, `❌ ${file.name}: ${(err as Error).message}`]);
     }
-  }, [hotelId, billDate]);
+  }, [hotelId, billDate, detectedBillTypes]);
 
   const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -109,9 +140,9 @@ export default function UtilitiesUploadBox() {
     if (event.dataTransfer.files?.length > 0) {
       const droppedFiles = Array.from(event.dataTransfer.files);
       setFileList((prev) => [...prev, ...droppedFiles]);
-      droppedFiles.forEach(uploadFile);
+      droppedFiles.forEach(precheckAndUploadFile);
     }
-  }, [uploadFile]);
+  }, [precheckAndUploadFile]);
 
   return (
     <div style={{ padding: '2rem' }}>
