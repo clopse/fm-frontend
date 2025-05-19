@@ -2,16 +2,20 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import styles from '@/styles/DragDropZone.module.css';
-import * as pdfjsLib from 'pdfjs-dist';
-import 'pdfjs-dist/build/pdf.worker.entry';
+
+interface FileState {
+  file: File;
+  supplier: string;
+  billType: string;
+  status: 'pending' | 'prechecked' | 'uploading' | 'completed' | 'error';
+  message: string;
+}
 
 export default function UtilitiesUploadBox() {
   const [dragActive, setDragActive] = useState(false);
-  const [fileList, setFileList] = useState<File[]>([]);
+  const [files, setFiles] = useState<Record<string, FileState>>({});
   const [messages, setMessages] = useState<string[]>([]);
   const [billDate, setBillDate] = useState<string>(new Date().toISOString().substring(0, 10));
-  const [detectedSuppliers, setDetectedSuppliers] = useState<Record<string, string>>({});
-  const [detectedBillTypes, setDetectedBillTypes] = useState<Record<string, string>>({});
 
   const hotelId = useMemo(() => {
     if (typeof window !== 'undefined') {
@@ -21,116 +25,171 @@ export default function UtilitiesUploadBox() {
     return 'unknown';
   }, []);
 
-  const extractTextFromPDF = async (file: File): Promise<string> => {
-    const loadingTask = pdfjsLib.getDocument(await file.arrayBuffer());
-    const pdf = await loadingTask.promise;
-    let fullText = '';
-
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const content = await page.getTextContent();
-      const strings = content.items.map((item: any) => item.str);
-      fullText += strings.join(' ') + ' ';
-    }
-
-    return fullText.toLowerCase();
-  };
-
-  const detectBillType = (text: string): string => {
-    const gasIndicators = ['mprn', 'gas usage', 'therms', 'cubic feet', 'calorific value', 'gas supply', 'gas bill', 'gas account'];
-    const electricityIndicators = ['mpan', 'kwh', 'kilowatt', 'day units', 'night units', 'electricity', 'electricity supply', 'electricity bill'];
-    
-    const gasScore = gasIndicators.filter(indicator => text.includes(indicator)).length;
-    const elecScore = electricityIndicators.filter(indicator => text.includes(indicator)).length;
-    
-    if (gasScore > elecScore) return 'Gas';
-    if (elecScore > gasScore) return 'Electricity';
+  const quickSupplierDetection = (filename: string): string => {
+    const name = filename.toLowerCase();
+    if (name.includes('flogas') || name.includes('fgnc')) return 'Flogas';
+    if (name.includes('arden')) return 'Arden Energy';
+    // Add more suppliers as needed
     return 'Unknown';
   };
 
-  const detectSupplierAndBillType = async (file: File): Promise<{supplier: string, billType: string}> => {
-    try {
-      const text = await extractTextFromPDF(file);
-      
-      // Detect supplier
-      let supplier = 'Unknown';
-      if (text.includes('flogas')) supplier = 'Flogas';
-      else if (text.includes('arden')) supplier = 'Arden Energy';
-      
-      // Detect bill type
-      const billType = detectBillType(text);
-      
-      return { supplier, billType };
-    } catch (err) {
-      console.error(`Error reading PDF for ${file.name}:`, err);
-      return { supplier: 'Unknown', billType: 'Unknown' };
-    }
-  };
-
-  const precheckAndUploadFile = useCallback(async (file: File) => {
-    // First detect supplier locally for quick feedback
-    const { supplier, billType: localBillType } = await detectSupplierAndBillType(file);
+  const precheckFile = useCallback(async (file: File): Promise<void> => {
+    const fileKey = file.name;
     
-    setDetectedSuppliers(prev => ({ ...prev, [file.name]: supplier }));
-    setDetectedBillTypes(prev => ({ ...prev, [file.name]: localBillType }));
+    // Quick supplier detection from filename
+    const supplier = quickSupplierDetection(file.name);
+    
+    // Update file state
+    setFiles(prev => ({
+      ...prev,
+      [fileKey]: {
+        file,
+        supplier,
+        billType: 'Unknown',
+        status: 'pending',
+        message: 'Detecting supplier...'
+      }
+    }));
 
     if (supplier === 'Unknown') {
-      setMessages(prev => [...prev, `⚠️ ${file.name}: Could not detect supplier.`]);
+      setFiles(prev => ({
+        ...prev,
+        [fileKey]: {
+          ...prev[fileKey],
+          status: 'error',
+          message: 'Could not detect supplier from filename'
+        }
+      }));
+      setMessages(prev => [...prev, `⚠️ ${file.name}: Could not detect supplier`]);
       return;
     }
 
-    // Run precheck with supplier info
+    // Run backend precheck
     const precheckData = new FormData();
     precheckData.append('file', file);
     precheckData.append('supplier', supplier);
 
     try {
-      setMessages(prev => [...prev, `🔍 ${file.name}: Running precheck...`]);
-      
+      setFiles(prev => ({
+        ...prev,
+        [fileKey]: {
+          ...prev[fileKey],
+          status: 'pending',
+          message: 'Running precheck...'
+        }
+      }));
+
       const precheckRes = await fetch('/api/utilities/precheck', {
         method: 'POST',
         body: precheckData,
       });
 
-      const precheckResult = await precheckRes.json();
+      const result = await precheckRes.json();
       
-      if (!precheckResult.valid) {
-        setMessages(prev => [...prev, `❌ ${file.name}: ${precheckResult.error}`]);
+      if (!result.valid) {
+        setFiles(prev => ({
+          ...prev,
+          [fileKey]: {
+            ...prev[fileKey],
+            status: 'error',
+            message: result.error
+          }
+        }));
+        setMessages(prev => [...prev, `❌ ${file.name}: ${result.error}`]);
         return;
       }
 
-      // Update bill type if detected by precheck
-      if (precheckResult.bill_type && precheckResult.bill_type !== 'unknown') {
-        const serverBillType = precheckResult.bill_type === 'gas' ? 'Gas' : 'Electricity';
-        setDetectedBillTypes(prev => ({ ...prev, [file.name]: serverBillType }));
-        setMessages(prev => [...prev, `✅ ${file.name}: Precheck passed - detected ${serverBillType} bill`]);
-      } else {
-        setMessages(prev => [...prev, `✅ ${file.name}: Precheck passed`]);
+      // Update with precheck results
+      const billType = result.bill_type === 'gas' ? 'Gas' : 
+                      result.bill_type === 'electricity' ? 'Electricity' : 'Unknown';
+      
+      setFiles(prev => ({
+        ...prev,
+        [fileKey]: {
+          ...prev[fileKey],
+          billType,
+          status: 'prechecked',
+          message: `Ready to upload - ${billType} bill detected`
+        }
+      }));
+      
+      setMessages(prev => [...prev, `✅ ${file.name}: Precheck passed - ${billType} bill detected`]);
+      
+    } catch (err) {
+      setFiles(prev => ({
+        ...prev,
+        [fileKey]: {
+          ...prev[fileKey],
+          status: 'error',
+          message: `Precheck failed: ${(err as Error).message}`
+        }
+      }));
+      setMessages(prev => [...prev, `❌ ${file.name}: Precheck failed`]);
+    }
+  }, []);
+
+  const uploadFile = useCallback(async (fileKey: string): Promise<void> => {
+    const fileState = files[fileKey];
+    if (!fileState || fileState.status !== 'prechecked') return;
+
+    const { file, supplier } = fileState;
+
+    setFiles(prev => ({
+      ...prev,
+      [fileKey]: {
+        ...prev[fileKey],
+        status: 'uploading',
+        message: 'Uploading for processing...'
       }
+    }));
 
-      // Now proceed with the main upload
-      const uploadData = new FormData();
-      uploadData.append('file', file);
-      uploadData.append('hotel_id', hotelId);
-      uploadData.append('bill_date', billDate);
-      uploadData.append('supplier', supplier);
+    const uploadData = new FormData();
+    uploadData.append('file', file);
+    uploadData.append('hotel_id', hotelId);
+    uploadData.append('bill_date', billDate);
+    uploadData.append('supplier', supplier);
 
+    try {
       const uploadRes = await fetch('/api/utilities/parse-and-save', {
         method: 'POST',
         body: uploadData,
       });
 
-      const uploadResult = await uploadRes.json();
+      const result = await uploadRes.json();
+      
       if (uploadRes.ok) {
-        const currentBillType = detectedBillTypes[file.name] || localBillType;
-        setMessages(prev => [...prev, `🚀 ${file.name} (${supplier} - ${currentBillType}) uploaded for processing.`]);
+        setFiles(prev => ({
+          ...prev,
+          [fileKey]: {
+            ...prev[fileKey],
+            status: 'completed',
+            message: 'Successfully uploaded for processing'
+          }
+        }));
+        setMessages(prev => [...prev, `🚀 ${file.name}: Upload successful`]);
       } else {
-        setMessages(prev => [...prev, `❌ ${file.name}: ${uploadResult.detail || 'Upload error'}`]);
+        setFiles(prev => ({
+          ...prev,
+          [fileKey]: {
+            ...prev[fileKey],
+            status: 'error',
+            message: result.detail || 'Upload failed'
+          }
+        }));
+        setMessages(prev => [...prev, `❌ ${file.name}: ${result.detail || 'Upload failed'}`]);
       }
     } catch (err) {
-      setMessages(prev => [...prev, `❌ ${file.name}: ${(err as Error).message}`]);
+      setFiles(prev => ({
+        ...prev,
+        [fileKey]: {
+          ...prev[fileKey],
+          status: 'error',
+          message: `Upload error: ${(err as Error).message}`
+        }
+      }));
+      setMessages(prev => [...prev, `❌ ${file.name}: Upload error`]);
     }
-  }, [hotelId, billDate, detectedBillTypes]);
+  }, [files, hotelId, billDate]);
 
   const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -139,10 +198,20 @@ export default function UtilitiesUploadBox() {
 
     if (event.dataTransfer.files?.length > 0) {
       const droppedFiles = Array.from(event.dataTransfer.files);
-      setFileList((prev) => [...prev, ...droppedFiles]);
-      droppedFiles.forEach(precheckAndUploadFile);
+      droppedFiles.forEach(precheckFile);
     }
-  }, [precheckAndUploadFile]);
+  }, [precheckFile]);
+
+  const uploadAllReady = useCallback(() => {
+    Object.keys(files).forEach(fileKey => {
+      if (files[fileKey].status === 'prechecked') {
+        uploadFile(fileKey);
+      }
+    });
+  }, [files, uploadFile]);
+
+  const fileArray = Object.entries(files);
+  const readyToUpload = fileArray.filter(([_, state]) => state.status === 'prechecked').length;
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -171,26 +240,60 @@ export default function UtilitiesUploadBox() {
         {dragActive ? 'Release to upload your files' : 'Drag & drop files here'}
       </div>
 
+      {readyToUpload > 0 && (
+        <div style={{ margin: '1rem 0' }}>
+          <button 
+            onClick={uploadAllReady}
+            style={{ 
+              padding: '0.5rem 1rem', 
+              backgroundColor: '#007bff', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Upload All Ready Files ({readyToUpload})
+          </button>
+        </div>
+      )}
+
       {messages.length > 0 && (
         <div className={styles.messages}>
-          <h3>Upload Status</h3>
+          <h3>Status Messages</h3>
           <ul>{messages.map((msg, i) => <li key={i}>{msg}</li>)}</ul>
         </div>
       )}
 
       <div className={styles.filesList}>
-        {fileList.map((file, i) => (
-          <div className={styles.fileItem} key={i}>
+        {fileArray.map(([fileKey, state]) => (
+          <div className={styles.fileItem} key={fileKey}>
             <img
               src="/icons/pdf-icon.png"
               className={styles.fileIcon}
               alt="file"
             />
-            <p>{file.name}</p>
-            <small>
-              Supplier: {detectedSuppliers[file.name] || '...'}<br/>
-              Type: {detectedBillTypes[file.name] || '...'}
-            </small>
+            <div>
+              <p>{state.file.name}</p>
+              <small>
+                Supplier: {state.supplier}<br/>
+                Type: {state.billType}<br/>
+                Status: {state.message}
+              </small>
+              {state.status === 'prechecked' && (
+                <button 
+                  onClick={() => uploadFile(fileKey)}
+                  style={{ 
+                    display: 'block', 
+                    marginTop: '0.5rem',
+                    padding: '0.25rem 0.5rem',
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  Upload This File
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>
