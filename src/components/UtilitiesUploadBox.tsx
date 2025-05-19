@@ -23,10 +23,10 @@ export default function UtilitiesUploadBox() {
     formData.append('file', file);
     formData.append('hotel_id', hotelId);
     formData.append('bill_date', billDate);
-    formData.append('utility_type', utilityType);
+    formData.append('supplier', utilityType); // <-- Map utilityType to supplier
 
     try {
-      const res: Response = await fetch('/uploads/utilities', {
+      const res: Response = await fetch('/api/utilities/parse-and-save', {
         method: 'POST',
         body: formData,
       });
@@ -72,10 +72,8 @@ export default function UtilitiesUploadBox() {
           Utility Type:
           <select value={utilityType} onChange={(e) => setUtilityType(e.target.value)}>
             <option value="">Select</option>
-            <option value="electric">Electric</option>
-            <option value="gas">Gas</option>
-            <option value="water">Water</option>
-            <option value="waste">Waste</option>
+            <option value="Arden Energy">Electric</option>
+            <option value="Flogas">Gas</option>
           </select>
         </label>
       </div>
