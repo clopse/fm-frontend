@@ -39,6 +39,8 @@ export default function UtilitiesUploadBox() {
     // Quick supplier detection from filename
     const supplier = quickSupplierDetection(file.name);
     
+    console.log(`🔍 Frontend: Detected supplier "${supplier}" for file "${file.name}"`);
+    
     // Update file state
     setFiles(prev => ({
       ...prev,
@@ -65,10 +67,6 @@ export default function UtilitiesUploadBox() {
     }
 
     // Run backend precheck
-    const precheckData = new FormData();
-    precheckData.append('file', file);
-    precheckData.append('supplier', supplier);
-
     try {
       setFiles(prev => ({
         ...prev,
@@ -79,10 +77,23 @@ export default function UtilitiesUploadBox() {
         }
       }));
 
+      // Create FormData and explicitly append fields
+      const precheckData = new FormData();
+      precheckData.append('file', file, file.name);
+      precheckData.append('supplier', supplier);
+      
+      console.log(`🔍 Frontend: Sending precheck with supplier: "${supplier}"`);
+
       const precheckRes = await fetch('/api/utilities/precheck', {
         method: 'POST',
         body: precheckData,
       });
+
+      if (!precheckRes.ok) {
+        const errorText = await precheckRes.text();
+        console.error(`Precheck failed with ${precheckRes.status}:`, errorText);
+        throw new Error(`Precheck failed: ${precheckRes.status} ${errorText}`);
+      }
 
       const result = await precheckRes.json();
       
@@ -103,6 +114,8 @@ export default function UtilitiesUploadBox() {
       const billType = result.bill_type === 'gas' ? 'Gas' : 
                       result.bill_type === 'electricity' ? 'Electricity' : 'Unknown';
       
+      console.log(`✅ Frontend: Precheck successful - detected ${billType} for supplier ${result.supplier}`);
+      
       setFiles(prev => ({
         ...prev,
         [fileKey]: {
@@ -116,6 +129,7 @@ export default function UtilitiesUploadBox() {
       setMessages(prev => [...prev, `✅ ${file.name}: Precheck passed - ${billType} bill detected`]);
       
     } catch (err) {
+      console.error('Precheck error:', err);
       setFiles(prev => ({
         ...prev,
         [fileKey]: {
