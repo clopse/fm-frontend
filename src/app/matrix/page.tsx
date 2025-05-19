@@ -16,31 +16,30 @@ interface TaskLabelMap {
 export default function ComplianceMatrixPage() {
   const [entries, setEntries] = useState<MatrixEntry[]>([]);
   const [taskLabels, setTaskLabels] = useState<TaskLabelMap>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchMatrix();
-    fetchLabels();
+    const loadData = async () => {
+      try {
+        const [matrixRes, labelsRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/matrix`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/task-labels`)
+        ]);
+
+        const matrixJson = await matrixRes.json();
+        const labelsJson = await labelsRes.json();
+
+        setEntries(matrixJson.entries || []);
+        setTaskLabels(labelsJson || {});
+      } catch (err) {
+        console.error('Error loading compliance matrix:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
-
-  const fetchMatrix = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/matrix`);
-      const data = await res.json();
-      setEntries(data.entries);
-    } catch (err) {
-      console.error('Failed to load matrix data', err);
-    }
-  };
-
-  const fetchLabels = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/task-labels`);
-      const data = await res.json();
-      setTaskLabels(data);
-    } catch (err) {
-      console.error('Failed to load task labels', err);
-    }
-  };
 
   const hotels = [...new Set(entries.map(e => e.hotel_id))];
   const tasks = [...new Set(entries.map(e => e.task_id))];
@@ -49,6 +48,10 @@ export default function ComplianceMatrixPage() {
     const match = entries.find(e => e.hotel_id === hotelId && e.task_id === taskId);
     return match?.status || 'missing';
   };
+
+  if (loading) {
+    return <div style={{ padding: '2rem' }}>Loading matrix...</div>;
+  }
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -59,14 +62,18 @@ export default function ComplianceMatrixPage() {
             <tr>
               <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f0f0f0' }}>Hotel</th>
               {tasks.map(taskId => (
-                <th key={taskId} style={{ textAlign: 'left', padding: '0.5rem', background: '#f0f0f0' }}>{taskLabels[taskId] || taskId}</th>
+                <th key={taskId} style={{ textAlign: 'left', padding: '0.5rem', background: '#f0f0f0' }}>
+                  {taskLabels[taskId] || taskId}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {hotels.map(hotelId => (
               <tr key={hotelId}>
-                <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>{hotelNames[hotelId] || hotelId}</td>
+                <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>
+                  {hotelNames[hotelId] || hotelId}
+                </td>
                 {tasks.map(taskId => {
                   const status = getStatus(hotelId, taskId);
                   let bgColor = '#eee';
