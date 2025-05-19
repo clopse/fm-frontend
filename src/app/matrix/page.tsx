@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { hotelNames } from '@/lib/hotels';
-import styles from '@/styles/ComplianceMatrix.module.css';
 
 interface MatrixEntry {
   hotel_id: string;
@@ -52,27 +51,38 @@ export default function ComplianceMatrixPage() {
   };
 
   return (
-    <div className={styles.matrixWrapper}>
-      <h1 className={styles.title}>Compliance Matrix</h1>
-      <div className={styles.scrollContainer}>
-        <table className={styles.matrixTable}>
+    <div style={{ padding: '2rem' }}>
+      <h1 style={{ fontSize: '1.75rem', fontWeight: '600', marginBottom: '1rem' }}>Compliance Matrix</h1>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ borderCollapse: 'collapse', minWidth: '100%' }}>
           <thead>
             <tr>
-              <th>Hotel</th>
+              <th style={{ textAlign: 'left', padding: '0.5rem', background: '#f0f0f0' }}>Hotel</th>
               {tasks.map(taskId => (
-                <th key={taskId}>{taskLabels[taskId] || taskId}</th>
+                <th key={taskId} style={{ textAlign: 'left', padding: '0.5rem', background: '#f0f0f0' }}>{taskLabels[taskId] || taskId}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {hotels.map(hotelId => (
               <tr key={hotelId}>
-                <td className={styles.hotelName}>{hotelNames[hotelId] || hotelId}</td>
-                {tasks.map(taskId => (
-                  <td key={taskId} className={styles[getStatus(hotelId, taskId)]}>
-                    {getStatus(hotelId, taskId)}
-                  </td>
-                ))}
+                <td style={{ padding: '0.5rem', fontWeight: 'bold' }}>{hotelNames[hotelId] || hotelId}</td>
+                {tasks.map(taskId => {
+                  const status = getStatus(hotelId, taskId);
+                  let bgColor = '#eee';
+                  if (status === 'done') bgColor = '#c8f7c5';
+                  else if (status === 'pending') bgColor = '#fff3cd';
+                  else if (status === 'missing') bgColor = '#f8d7da';
+
+                  return (
+                    <td
+                      key={taskId}
+                      style={{ padding: '0.5rem', textAlign: 'center', backgroundColor: bgColor }}
+                    >
+                      {status}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
