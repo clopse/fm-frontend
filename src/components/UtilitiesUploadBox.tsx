@@ -143,9 +143,13 @@ export default function UtilitiesUploadBox() {
     // Pass the detected bill type from precheck
     const billTypeForBackend = billType === 'Gas' ? 'gas' : 
                                billType === 'Electricity' ? 'electricity' : '';
-    uploadData.append('bill_type', billTypeForBackend);
     
-    console.log(`🚀 Uploading ${file.name} with bill_type: ${billTypeForBackend}`);
+    if (billTypeForBackend) {
+      uploadData.append('bill_type', billTypeForBackend);
+      console.log(`🚀 Uploading ${file.name} with bill_type: ${billTypeForBackend}`);
+    } else {
+      console.log(`⚠️ No bill type detected for ${file.name}, backend will detect`);
+    }
 
     try {
       const uploadRes = await fetch('/api/utilities/parse-and-save', {
