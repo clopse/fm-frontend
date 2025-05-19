@@ -177,11 +177,7 @@ export default function HotelsPage() {
         </div>
       )}
 
-      <div
-        className={styles.section}
-        onClick={() => window.location.href = '/audit'}
-        style={{ cursor: 'pointer' }}
-      >
+      <div className={styles.auditWrapper}>
         <RecentUploads uploads={recentUploads} />
       </div>
     </div>
