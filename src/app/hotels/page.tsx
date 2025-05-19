@@ -177,13 +177,11 @@ export default function HotelsPage() {
         </div>
       )}
 
-      <div style={{ padding: '2rem 0' }}>
-        <h2
-          style={{ cursor: 'pointer', textDecoration: 'underline', marginBottom: '1rem' }}
-          onClick={() => window.location.href = '/audit'}
-        >
-          Audit Queue ↗
-        </h2>
+      <div
+        className={styles.section}
+        onClick={() => window.location.href = '/audit'}
+        style={{ cursor: 'pointer' }}
+      >
         <RecentUploads uploads={recentUploads} />
       </div>
     </div>
