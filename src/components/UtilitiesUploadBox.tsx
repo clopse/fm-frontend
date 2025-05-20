@@ -9,6 +9,7 @@ interface FileState {
   billType: string;
   status: 'pending' | 'prechecked' | 'uploading' | 'completed' | 'error';
   message: string;
+  rawBillType?: string; // Store the raw value from precheck
 }
 
 export default function UtilitiesUploadBox() {
@@ -62,9 +63,18 @@ export default function UtilitiesUploadBox() {
     }
 
     try {
+      // First, chill for a moment before starting precheck
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second pause
+      
       const precheckData = new FormData();
       precheckData.append('file', file, file.name);
       precheckData.append('supplier', supplier);
+
+      // Debug: Log what we're sending
+      console.log('📤 Precheck form data:');
+      for (let pair of precheckData.entries()) {
+        console.log(`  ${pair[0]}: ${pair[1]}`);
+      }
 
       const precheckRes = await fetch('/api/utilities/precheck', {
         method: 'POST',
@@ -78,6 +88,7 @@ export default function UtilitiesUploadBox() {
       }
 
       const result = await precheckRes.json();
+      console.log('📥 Precheck response:', result);
       
       if (!result.valid) {
         setFiles(prev => ({
@@ -101,7 +112,8 @@ export default function UtilitiesUploadBox() {
           ...prev[fileKey],
           billType,
           status: 'prechecked',
-          message: 'Ready to upload'
+          message: 'Ready to upload',
+          rawBillType: result.bill_type // Store the raw value for upload
         }
       }));
       
@@ -123,14 +135,26 @@ export default function UtilitiesUploadBox() {
     const fileState = files[fileKey];
     if (!fileState || fileState.status !== 'prechecked') return;
 
-    const { file, supplier, billType } = fileState;
+    const { file, supplier, rawBillType } = fileState;
 
     setFiles(prev => ({
       ...prev,
       [fileKey]: {
         ...prev[fileKey],
         status: 'uploading',
-        message: 'Processing...'
+        message: 'Preparing for upload...'
+      }
+    }));
+
+    // Super chill pause before uploading (20 seconds as requested)
+    console.log(`😴 Taking a 20-second chill break before uploading ${file.name}...`);
+    await new Promise(resolve => setTimeout(resolve, 20000));
+
+    setFiles(prev => ({
+      ...prev,
+      [fileKey]: {
+        ...prev[fileKey],
+        message: 'Starting upload...'
       }
     }));
 
@@ -140,34 +164,60 @@ export default function UtilitiesUploadBox() {
     uploadData.append('bill_date', billDate);
     uploadData.append('supplier', supplier);
     
-    // Pass the detected bill type from precheck
-    const billTypeForBackend = billType === 'Gas' ? 'gas' : 
-                               billType === 'Electricity' ? 'electricity' : '';
-    
-    if (billTypeForBackend) {
-      uploadData.append('bill_type', billTypeForBackend);
-      console.log(`🚀 Uploading ${file.name} with bill_type: ${billTypeForBackend}`);
+    // Use the raw bill_type from precheck (gas/electricity, not Gas/Electricity)
+    if (rawBillType && rawBillType.trim()) {
+      uploadData.append('bill_type', rawBillType.trim());
+      console.log(`🚀 Uploading ${file.name} with bill_type: "${rawBillType}"`);
     } else {
-      console.log(`⚠️ No bill type detected for ${file.name}, backend will detect`);
+      console.log(`⚠️ No raw bill type for ${file.name}, backend will detect`);
+    }
+
+    // Debug: Log exactly what we're sending
+    console.log('📤 Upload form data:');
+    for (let pair of uploadData.entries()) {
+      console.log(`  ${pair[0]}: ${pair[1]}`);
     }
 
     try {
+      setFiles(prev => ({
+        ...prev,
+        [fileKey]: {
+          ...prev[fileKey],
+          message: 'Processing with DocuPipe...'
+        }
+      }));
+
       const uploadRes = await fetch('/api/utilities/parse-and-save', {
         method: 'POST',
         body: uploadData,
       });
 
       const result = await uploadRes.json();
+      console.log('📥 Upload response:', result);
       
       if (uploadRes.ok) {
+        // Don't immediately mark as completed - show processing status
         setFiles(prev => ({
           ...prev,
           [fileKey]: {
             ...prev[fileKey],
-            status: 'completed',
-            message: 'Successfully processed'
+            status: 'uploading',
+            message: 'Processing in background... (this may take 2-5 minutes)'
           }
         }));
+
+        // Wait another 30 seconds before showing "completed"
+        setTimeout(() => {
+          setFiles(prev => ({
+            ...prev,
+            [fileKey]: {
+              ...prev[fileKey],
+              status: 'completed',
+              message: 'Upload submitted successfully (processing in background)'
+            }
+          }));
+        }, 30000);
+
       } else {
         setFiles(prev => ({
           ...prev,
@@ -179,6 +229,7 @@ export default function UtilitiesUploadBox() {
         }));
       }
     } catch (err) {
+      console.error('Upload error:', err);
       setFiles(prev => ({
         ...prev,
         [fileKey]: {
