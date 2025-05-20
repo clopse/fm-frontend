@@ -423,8 +423,8 @@ export default function UtilitiesUploadBox() {
               boxShadow: '0 2px 10px rgba(40, 167, 69, 0.3)',
               transition: 'all 0.3s ease'
             }}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#218838'}
-            onMouseOut={(e) => e.target.style.backgroundColor = '#28a745'}
+            onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#218838'}
+            onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#28a745'}
           >
             Process All Ready Files ({readyToUpload})
           </button>
