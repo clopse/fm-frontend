@@ -162,8 +162,14 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
       const result = await res.json();
       setStatus('⏳ Upload successful. Processing in background...');
       
-      // Start polling for processing status
-      pollProcessingStatus(file.name);
+      // Don't refresh immediately - wait for processing to complete
+      // The webhook should trigger a refresh, or user can manually refresh
+      setUploading(false); // Allow user to close modal
+      
+      // Optional: Auto-refresh after a reasonable delay (e.g., 2-3 minutes)
+      setTimeout(() => {
+        onSave?.();
+      }, 120000); // 2 minutes delay
       
     } catch (err: any) {
       console.error('Upload error:', err);
