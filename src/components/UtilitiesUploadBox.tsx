@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import styles from './UtilitiesUploadBox.module.css';
+import styles from '@/styles/UtilitiesUploadBox.module.css';
 
 interface FileState {
   file: File;
