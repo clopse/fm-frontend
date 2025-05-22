@@ -3,12 +3,6 @@
 import { useState } from 'react';
 import styles from '@/styles/UtilitiesUploadBox.module.css';
 
-interface FileState {
-  file: File;
-  status: 'pending' | 'uploading' | 'completed' | 'error';
-  message: string;
-}
-
 interface Props {
   hotelId: string;
   onClose: () => void;
@@ -54,8 +48,10 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
       }
 
       setStatus('✅ Upload successful. Dashboard will refresh shortly.');
-      onSave?.();
-      setTimeout(onClose, 2000);
+      setTimeout(() => {
+        onSave?.();
+        onClose();
+      }, 3000); // Wait 3 seconds before closing
     } catch (err: any) {
       console.error(err);
       setStatus(`❌ Upload failed: ${err.message}`);
@@ -90,7 +86,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
             className={styles.fileInput}
           />
           {file && <p>📄 {file.name}</p>}
-          {status && <p>{status}</p>}
+          {status && <p className={styles.status}>{status}</p>}
         </div>
 
         <div className={styles.footer}>
