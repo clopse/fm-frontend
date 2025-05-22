@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import styles from './UtilitiesUploadBox.module.css';
 
 interface FileState {
   file: File;
@@ -23,17 +24,11 @@ export default function UtilitiesUploadBox() {
 
   const uploadFile = useCallback(async (file: File): Promise<void> => {
     const fileKey = file.name;
-    
     setFiles(prev => ({
       ...prev,
-      [fileKey]: {
-        file,
-        status: 'pending',
-        message: 'Validating...'
-      }
+      [fileKey]: { file, status: 'pending', message: 'Validating...' }
     }));
 
-    // Basic validation
     if (!file.name.toLowerCase().endsWith('.pdf')) {
       setFiles(prev => ({
         ...prev,
@@ -90,7 +85,6 @@ export default function UtilitiesUploadBox() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
-    
     const droppedFiles = Array.from(e.dataTransfer.files);
     droppedFiles.forEach(uploadFile);
   }, [uploadFile]);
@@ -106,67 +100,38 @@ export default function UtilitiesUploadBox() {
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
-      <h1>Utility Bill Upload</h1>
-      
-      <div style={{ marginBottom: '2rem' }}>
-        <label>
-          Bill Date:
-          <input
-            type="date"
-            value={billDate}
-            onChange={(e) => setBillDate(e.target.value)}
-            style={{ marginLeft: '1rem', padding: '0.5rem' }}
-          />
-        </label>
-      </div>
+    <div className={styles.uploadBoxWrapper}>
+      <h3>Upload Utility Bill</h3>
+
+      <label className={styles.labelRow}>
+        Bill Date:
+        <input
+          type="date"
+          value={billDate}
+          onChange={(e) => setBillDate(e.target.value)}
+          className={styles.dateInput}
+        />
+      </label>
 
       <div
+        className={dragActive ? styles.dropZoneActive : styles.dropZone}
         onDrop={handleDrop}
         onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
         onDragLeave={() => setDragActive(false)}
-        style={{
-          border: dragActive ? '3px dashed #007bff' : '2px dashed #ccc',
-          padding: '3rem',
-          textAlign: 'center',
-          background: dragActive ? '#f8f9fa' : 'white',
-          borderRadius: '8px',
-          marginBottom: '2rem'
-        }}
       >
-        <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>
-          {dragActive ? '📥' : '📄'}
-        </div>
-        <div>
-          {dragActive ? 'Drop files here' : 'Drag & drop PDF files here'}
-        </div>
+        <div className={styles.dropIcon}>{dragActive ? '📥' : '📄'}</div>
+        <p>{dragActive ? 'Drop files here' : 'Drag & drop PDF files here'}</p>
       </div>
 
       {Object.entries(files).map(([fileName, fileState]) => (
-        <div key={fileName} style={{
-          padding: '1rem',
-          border: '1px solid #ddd',
-          borderRadius: '4px',
-          marginBottom: '1rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
+        <div key={fileName} className={styles.fileCard}>
           <div>
-            <div style={{ fontWeight: 'bold' }}>{fileName}</div>
-            <div style={{ color: getStatusColor(fileState.status), fontSize: '0.9rem' }}>
-              {fileState.message}
-            </div>
+            <div className={styles.fileName}>{fileName}</div>
+            <div style={{ color: getStatusColor(fileState.status) }}>{fileState.message}</div>
           </div>
-          <div style={{
-            padding: '0.25rem 0.5rem',
-            borderRadius: '4px',
-            color: 'white',
-            backgroundColor: getStatusColor(fileState.status),
-            fontSize: '0.8rem'
-          }}>
+          <span className={styles.statusBadge} style={{ backgroundColor: getStatusColor(fileState.status) }}>
             {fileState.status}
-          </div>
+          </span>
         </div>
       ))}
     </div>
