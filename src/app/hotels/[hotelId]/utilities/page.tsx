@@ -51,6 +51,7 @@ export default function UtilitiesDashboard() {
   const [gas, setGas] = useState<GasEntry[]>([]);
   const [water, setWater] = useState<WaterEntry[]>([]);
   const [multiHotelData, setMultiHotelData] = useState<HotelTotals[]>([]);
+  const [showModal, setShowModal] = useState(false);
 
   const fetchData = async () => {
     if (!hotelId) return;
@@ -121,9 +122,19 @@ export default function UtilitiesDashboard() {
             <option value="room">kWh/room</option>
           </select>
         </div>
+        <div>
+          <button onClick={() => window.print()}>Export PDF</button>
+          <button onClick={() => setShowModal(true)}>+ Add Utility Bill</button>
+        </div>
       </div>
 
-      <UtilitiesUploadBox />
+      {showModal && (
+        <UtilitiesUploadBox
+          hotelId={hotelId}
+          onClose={() => setShowModal(false)}
+          onSave={fetchData}
+        />
+      )}
 
       <div className={styles.kpiGrid}>
         <div className={styles.kpiCard}>
