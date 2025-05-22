@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState } from 'react';
 import styles from '@/styles/UtilitiesUploadBox.module.css';
 
 interface FileState {
@@ -9,143 +9,100 @@ interface FileState {
   message: string;
 }
 
-export default function UtilitiesUploadBox() {
-  const [visible, setVisible] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
-  const [files, setFiles] = useState<Record<string, FileState>>({});
+interface Props {
+  hotelId: string;
+  onClose: () => void;
+  onSave?: () => void;
+}
+
+export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) {
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [status, setStatus] = useState('');
   const [billDate, setBillDate] = useState<string>(new Date().toISOString().substring(0, 10));
 
-  const hotelId = useMemo(() => {
-    if (typeof window !== 'undefined') {
-      const parts = window.location.pathname.split('/');
-      return parts[2] || 'unknown';
-    }
-    return 'unknown';
-  }, []);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0] || null;
+    setFile(selected);
+    setStatus('');
+  };
 
-  const uploadFile = useCallback(async (file: File): Promise<void> => {
-    const fileKey = file.name;
-    setFiles(prev => ({
-      ...prev,
-      [fileKey]: { file, status: 'pending', message: 'Validating...' }
-    }));
-
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setFiles(prev => ({
-        ...prev,
-        [fileKey]: { ...prev[fileKey], status: 'error', message: 'Only PDF files allowed' }
-      }));
+  const handleSubmit = async () => {
+    if (!file) {
+      alert('Please select a file.');
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setFiles(prev => ({
-        ...prev,
-        [fileKey]: { ...prev[fileKey], status: 'error', message: 'File too large (max 10MB)' }
-      }));
-      return;
-    }
-
-    setFiles(prev => ({
-      ...prev,
-      [fileKey]: { ...prev[fileKey], status: 'uploading', message: 'Uploading...' }
-    }));
+    setUploading(true);
+    setStatus('⏳ Uploading bill...');
 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('hotel_id', hotelId);
+    formData.append('supplier', 'docupanda');
     formData.append('bill_date', billDate);
 
     try {
-      const response = await fetch('/api/utilities/parse-and-save', {
+      const res = await fetch('/api/utilities/parse-and-save', {
         method: 'POST',
         body: formData,
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        setFiles(prev => ({
-          ...prev,
-          [fileKey]: { ...prev[fileKey], status: 'completed', message: 'Processing in background' }
-        }));
-      } else {
-        setFiles(prev => ({
-          ...prev,
-          [fileKey]: { ...prev[fileKey], status: 'error', message: result.detail || 'Upload failed' }
-        }));
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Upload failed');
       }
-    } catch (error) {
-      setFiles(prev => ({
-        ...prev,
-        [fileKey]: { ...prev[fileKey], status: 'error', message: 'Network error' }
-      }));
-    }
-  }, [hotelId, billDate]);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(false);
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    droppedFiles.forEach(uploadFile);
-  }, [uploadFile]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return '#ffa500';
-      case 'uploading': return '#007bff';
-      case 'completed': return '#28a745';
-      case 'error': return '#dc3545';
-      default: return '#6c757d';
+      setStatus('✅ Upload successful. Dashboard will refresh shortly.');
+      onSave?.();
+      setTimeout(onClose, 2000);
+    } catch (err: any) {
+      console.error(err);
+      setStatus(`❌ Upload failed: ${err.message}`);
+    } finally {
+      setUploading(false);
     }
   };
 
   return (
-    <>
-      <button onClick={() => setVisible(true)} className={styles.openButton}>+ Upload Utility Bill</button>
-
-      {visible && (
-        <div className={styles.overlay}>
-          <div className={styles.modal}>
-            <div className={styles.header}>
-              <h2>Upload Utility Bill</h2>
-              <button onClick={() => setVisible(false)}>✕</button>
-            </div>
-
-            <label className={styles.labelRow}>
-              Bill Date:
-              <input
-                type="date"
-                value={billDate}
-                onChange={(e) => setBillDate(e.target.value)}
-                className={styles.dateInput}
-              />
-            </label>
-
-            <div
-              className={dragActive ? styles.dropZoneActive : styles.dropZone}
-              onDrop={handleDrop}
-              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-              onDragLeave={() => setDragActive(false)}
-            >
-              <div className={styles.dropIcon}>{dragActive ? '📥' : '📄'}</div>
-              <p>{dragActive ? 'Drop files here' : 'Drag & drop PDF files here'}</p>
-            </div>
-
-            {Object.entries(files).map(([fileName, fileState]) => (
-              <div key={fileName} className={styles.fileCard}>
-                <div>
-                  <div className={styles.fileName}>{fileName}</div>
-                  <div style={{ color: getStatusColor(fileState.status) }}>{fileState.message}</div>
-                </div>
-                <span className={styles.statusBadge} style={{ backgroundColor: getStatusColor(fileState.status) }}>
-                  {fileState.status}
-                </span>
-              </div>
-            ))}
-          </div>
+    <div className={styles.overlay}>
+      <div className={styles.modal}>
+        <div className={styles.header}>
+          <h2>Upload Utility Bill</h2>
+          <button onClick={onClose}>✕</button>
         </div>
-      )}
-    </>
+
+        <div className={styles.body}>
+          <label>
+            Bill Date:
+            <input
+              type="date"
+              value={billDate}
+              onChange={(e) => setBillDate(e.target.value)}
+              className={styles.dateInput}
+            />
+          </label>
+
+          <input
+            type="file"
+            accept="application/pdf"
+            onChange={handleFileChange}
+            className={styles.fileInput}
+          />
+          {file && <p>📄 {file.name}</p>}
+          {status && <p>{status}</p>}
+        </div>
+
+        <div className={styles.footer}>
+          <button
+            className={styles.uploadButton}
+            onClick={handleSubmit}
+            disabled={!file || uploading}
+          >
+            {uploading ? 'Uploading...' : 'Upload Bill'}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
