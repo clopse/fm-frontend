@@ -10,6 +10,7 @@ interface FileState {
 }
 
 export default function UtilitiesUploadBox() {
+  const [visible, setVisible] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [files, setFiles] = useState<Record<string, FileState>>({});
   const [billDate, setBillDate] = useState<string>(new Date().toISOString().substring(0, 10));
@@ -100,40 +101,51 @@ export default function UtilitiesUploadBox() {
   };
 
   return (
-    <div className={styles.uploadBoxWrapper}>
-      <h3>Upload Utility Bill</h3>
+    <>
+      <button onClick={() => setVisible(true)} className={styles.openButton}>+ Upload Utility Bill</button>
 
-      <label className={styles.labelRow}>
-        Bill Date:
-        <input
-          type="date"
-          value={billDate}
-          onChange={(e) => setBillDate(e.target.value)}
-          className={styles.dateInput}
-        />
-      </label>
+      {visible && (
+        <div className={styles.overlay}>
+          <div className={styles.modal}>
+            <div className={styles.header}>
+              <h2>Upload Utility Bill</h2>
+              <button onClick={() => setVisible(false)}>✕</button>
+            </div>
 
-      <div
-        className={dragActive ? styles.dropZoneActive : styles.dropZone}
-        onDrop={handleDrop}
-        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-        onDragLeave={() => setDragActive(false)}
-      >
-        <div className={styles.dropIcon}>{dragActive ? '📥' : '📄'}</div>
-        <p>{dragActive ? 'Drop files here' : 'Drag & drop PDF files here'}</p>
-      </div>
+            <label className={styles.labelRow}>
+              Bill Date:
+              <input
+                type="date"
+                value={billDate}
+                onChange={(e) => setBillDate(e.target.value)}
+                className={styles.dateInput}
+              />
+            </label>
 
-      {Object.entries(files).map(([fileName, fileState]) => (
-        <div key={fileName} className={styles.fileCard}>
-          <div>
-            <div className={styles.fileName}>{fileName}</div>
-            <div style={{ color: getStatusColor(fileState.status) }}>{fileState.message}</div>
+            <div
+              className={dragActive ? styles.dropZoneActive : styles.dropZone}
+              onDrop={handleDrop}
+              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+              onDragLeave={() => setDragActive(false)}
+            >
+              <div className={styles.dropIcon}>{dragActive ? '📥' : '📄'}</div>
+              <p>{dragActive ? 'Drop files here' : 'Drag & drop PDF files here'}</p>
+            </div>
+
+            {Object.entries(files).map(([fileName, fileState]) => (
+              <div key={fileName} className={styles.fileCard}>
+                <div>
+                  <div className={styles.fileName}>{fileName}</div>
+                  <div style={{ color: getStatusColor(fileState.status) }}>{fileState.message}</div>
+                </div>
+                <span className={styles.statusBadge} style={{ backgroundColor: getStatusColor(fileState.status) }}>
+                  {fileState.status}
+                </span>
+              </div>
+            ))}
           </div>
-          <span className={styles.statusBadge} style={{ backgroundColor: getStatusColor(fileState.status) }}>
-            {fileState.status}
-          </span>
         </div>
-      ))}
-    </div>
+      )}
+    </>
   );
 }
