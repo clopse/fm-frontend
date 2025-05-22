@@ -1,68 +1,104 @@
-.uploadBoxWrapper {
-  margin: 2rem auto;
+/* UtilitiesUploadBox.module.css */
+
+.openButton {
+  background-color: #2563eb;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  margin: 1rem 0;
+  transition: background-color 0.2s ease;
+}
+
+.openButton:hover {
+  background-color: #1d4ed8;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal {
+  background: white;
   padding: 2rem;
-  max-width: 800px;
-  background: #fff;
-  border: 1px solid #e5e7eb;
   border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
 .labelRow {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 1.5rem;
-  font-weight: 500;
+  margin-bottom: 1rem;
 }
 
 .dateInput {
   padding: 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
   font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
 }
 
-.dropZone {
-  border: 2px dashed #d1d5db;
-  padding: 3rem;
+.dropZone,
+.dropZoneActive {
+  border: 2px dashed #ccc;
+  padding: 2rem;
   text-align: center;
   border-radius: 8px;
-  background-color: #f9fafb;
-  transition: border-color 0.3s ease;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  background: white;
+  transition: all 0.3s ease;
 }
 
 .dropZoneActive {
-  composes: dropZone;
   border-color: #2563eb;
-  background-color: #eff6ff;
+  background: #f0f8ff;
 }
 
 .dropIcon {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
 }
 
 .fileCard {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  background: #fefefe;
+  background: #f9f9f9;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  margin-bottom: 0.75rem;
 }
 
 .fileName {
   font-weight: 600;
-  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
 }
 
 .statusBadge {
   color: white;
-  padding: 0.3rem 0.6rem;
+  padding: 0.25rem 0.75rem;
   font-size: 0.75rem;
   border-radius: 5px;
   text-transform: capitalize;
