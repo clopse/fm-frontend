@@ -27,13 +27,11 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
 
     if (!selected) return;
 
-    // Validate file type
     if (!selected.name.toLowerCase().endsWith('.pdf')) {
       setStatus('❌ Please select a PDF file');
       return;
     }
 
-    // Validate file size (e.g., max 10MB)
     if (selected.size > 10 * 1024 * 1024) {
       setStatus('❌ File too large. Maximum size is 10MB');
       return;
@@ -49,46 +47,47 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
         method: 'POST',
         body: formData,
       });
-      
+
       if (!res.ok) {
         const errorText = await res.text();
         throw new Error(`Precheck failed: ${res.status} - ${errorText}`);
       }
 
       const data = await res.json();
-      
+
       if (data.error) {
         throw new Error(data.error);
       }
-      
+
       if (data.bill_type === 'electricity' || data.bill_type === 'gas') {
         setDetectedType(data.bill_type);
         setStatus(`✅ Detected: ${data.bill_type} bill (${data.supplier || 'Unknown supplier'})`);
       } else {
         setDetectedType('unknown');
-        setStatus('⚠️ Unknown bill type — please select manually.');
+        setManualType('');
+        setStatus('⚠️ Unable to detect bill type — please select manually before uploading.');
       }
     } catch (err: any) {
       console.error('Precheck error:', err);
-      setStatus(`❌ Failed to check bill type: ${err.message}`);
       setDetectedType('unknown');
+      setManualType('');
+      setStatus(`❌ Failed to check bill type: ${err.message}`);
     }
   };
 
   const pollProcessingStatus = async (filename: string) => {
-    // Poll for processing status every 5 seconds for up to 5 minutes
-    const maxAttempts = 60; // 5 minutes
+    const maxAttempts = 60;
     let attempts = 0;
-    
+
     const poll = async () => {
       try {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/utilities/status/${hotelId}/${encodeURIComponent(filename)}`
         );
-        
+
         if (res.ok) {
           const data = await res.json();
-          
+
           if (data.status === 'completed') {
             setStatus('✅ Processing complete! Dashboard will refresh.');
             onSave?.();
@@ -100,10 +99,10 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
             return;
           }
         }
-        
+
         attempts++;
         if (attempts < maxAttempts) {
-          setTimeout(poll, 5000); // Poll every 5 seconds
+          setTimeout(poll, 5000);
         } else {
           setStatus('⚠️ Processing is taking longer than expected. Check back later.');
           setUploading(false);
@@ -119,8 +118,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
         }
       }
     };
-    
-    // Start polling after initial delay
+
     setTimeout(poll, 5000);
   };
 
@@ -161,16 +159,11 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
 
       const result = await res.json();
       setStatus('⏳ Upload successful. Processing in background...');
-      
-      // Don't refresh immediately - wait for processing to complete
-      // The webhook should trigger a refresh, or user can manually refresh
-      setUploading(false); // Allow user to close modal
-      
-      // Optional: Auto-refresh after a reasonable delay (e.g., 2-3 minutes)
+      setUploading(false);
+
       setTimeout(() => {
         onSave?.();
-      }, 120000); // 2 minutes delay
-      
+      }, 120000);
     } catch (err: any) {
       console.error('Upload error:', err);
       setStatus(`❌ Upload failed: ${err.message}`);
@@ -207,9 +200,9 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
               disabled={uploading}
             />
           </div>
-          
+
           {file && <p>📄 {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</p>}
-          
+
           {status && (
             <div className={`${styles.statusMessage} ${
               status.includes('❌') ? styles.error : 
@@ -245,7 +238,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
           >
             {uploading ? 'Processing...' : 'Upload Bill'}
           </button>
-          
+
           <button
             className={styles.cancelButton}
             onClick={onClose}
