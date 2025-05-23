@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import styles from '@/styles/UtilitiesUploadBox.module.css';
 
 interface Props {
   hotelId: string;
@@ -11,38 +10,36 @@ interface Props {
 
 export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) {
   const [file, setFile] = useState<File | null>(null);
-  const [billDate, setBillDate] = useState<string>(new Date().toISOString().substring(0, 10));
   const [detectedType, setDetectedType] = useState<string | null>(null);
   const [manualType, setManualType] = useState<string>('');
   const [status, setStatus] = useState<string>('');
   const [uploading, setUploading] = useState<boolean>(false);
-  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState<boolean>(false);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0] || null;
-    setFile(selected);
+  const handleFileChange = async (selectedFile: File) => {
+    setFile(selectedFile);
     setStatus('');
     setDetectedType(null);
     setManualType('');
 
-    if (!selected) return;
+    if (!selectedFile) return;
 
     // Validate file type
-    if (!selected.name.toLowerCase().endsWith('.pdf')) {
-      setStatus('❌ Please select a PDF file');
+    if (!selectedFile.name.toLowerCase().endsWith('.pdf')) {
+      setStatus('Please select a PDF file');
       return;
     }
 
-    // Validate file size (e.g., max 10MB)
-    if (selected.size > 10 * 1024 * 1024) {
-      setStatus('❌ File too large. Maximum size is 10MB');
+    // Validate file size (max 10MB)
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      setStatus('File too large. Maximum size is 10MB');
       return;
     }
 
     const formData = new FormData();
-    formData.append('file', selected);
+    formData.append('file', selectedFile);
 
-    setStatus('⏳ Checking file type...');
+    setStatus('Analyzing bill...');
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/precheck`, {
@@ -51,8 +48,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
       });
       
       if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Precheck failed: ${res.status} - ${errorText}`);
+        throw new Error(`Analysis failed: ${res.status}`);
       }
 
       const data = await res.json();
@@ -66,80 +62,52 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
         setStatus(`✅ Detected: ${data.bill_type} bill (${data.supplier || 'Unknown supplier'})`);
       } else {
         setDetectedType('unknown');
-        setStatus('⚠️ Unknown bill type — please select manually.');
+        setStatus('⚠️ Unable to detect bill type automatically');
       }
     } catch (err: any) {
-      console.error('Precheck error:', err);
-      setStatus(`❌ Failed to check bill type: ${err.message}`);
+      console.error('Analysis error:', err);
+      setStatus(`Failed to analyze bill: ${err.message}`);
       setDetectedType('unknown');
     }
   };
 
-  const pollProcessingStatus = async (filename: string) => {
-    // Poll for processing status every 5 seconds for up to 5 minutes
-    const maxAttempts = 60; // 5 minutes
-    let attempts = 0;
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
     
-    const poll = async () => {
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/utilities/status/${hotelId}/${encodeURIComponent(filename)}`
-        );
-        
-        if (res.ok) {
-          const data = await res.json();
-          
-          if (data.status === 'completed') {
-            setStatus('✅ Processing complete! Dashboard will refresh.');
-            onSave?.();
-            setTimeout(onClose, 2000);
-            return;
-          } else if (data.status === 'error') {
-            setStatus(`❌ Processing failed: ${data.error || 'Unknown error'}`);
-            setUploading(false);
-            return;
-          }
-        }
-        
-        attempts++;
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 5000); // Poll every 5 seconds
-        } else {
-          setStatus('⚠️ Processing is taking longer than expected. Check back later.');
-          setUploading(false);
-        }
-      } catch (err) {
-        console.error('Status polling error:', err);
-        attempts++;
-        if (attempts < maxAttempts) {
-          setTimeout(poll, 5000);
-        } else {
-          setStatus('⚠️ Unable to check processing status. Check back later.');
-          setUploading(false);
-        }
-      }
-    };
-    
-    // Start polling after initial delay
-    setTimeout(poll, 5000);
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      handleFileChange(files[0]);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
   };
 
   const handleSubmit = async () => {
-    if (!file) return alert('Please select a file.');
+    if (!file) return;
 
     const utilityType = detectedType !== 'unknown' ? detectedType : manualType;
-    if (!utilityType) return alert('Please select a utility type.');
-
-    if (!billDate) return alert('Please select a bill date.');
+    if (!utilityType) {
+      setStatus('Please select a utility type');
+      return;
+    }
 
     setUploading(true);
-    setStatus('⏳ Uploading bill...');
+    setStatus('Uploading bill...');
 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('hotel_id', hotelId);
-    formData.append('supplier', 'docupanda');
-    formData.append('bill_date', billDate);
+    formData.append('supplier', 'docupipe');
     formData.append('bill_type', utilityType);
 
     try {
@@ -159,99 +127,183 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
         throw new Error(message);
       }
 
-      const result = await res.json();
-      setStatus('⏳ Upload successful. Processing in background...');
+      setStatus('✅ Upload successful! Processing in background...');
       
-      // Don't refresh immediately - wait for processing to complete
-      // The webhook should trigger a refresh, or user can manually refresh
-      setUploading(false); // Allow user to close modal
-      
-      // Optional: Auto-refresh after a reasonable delay (e.g., 2-3 minutes)
+      // Show success for 3 seconds then close
       setTimeout(() => {
         onSave?.();
-      }, 120000); // 2 minutes delay
+        onClose();
+      }, 3000);
       
     } catch (err: any) {
       console.error('Upload error:', err);
-      setStatus(`❌ Upload failed: ${err.message}`);
+      setStatus(`Upload failed: ${err.message}`);
       setUploading(false);
     }
   };
 
+  const getStatusColor = () => {
+    if (status.includes('✅')) return 'text-green-600 bg-green-50';
+    if (status.includes('⚠️') || status.includes('Failed') || status.includes('failed')) return 'text-red-600 bg-red-50';
+    return 'text-blue-600 bg-blue-50';
+  };
+
   return (
-    <div className={styles.overlay}>
-      <div className={styles.modal}>
-        <div className={styles.header}>
-          <h2>Upload Utility Bill</h2>
-          <button onClick={onClose} disabled={uploading}>✕</button>
-        </div>
-
-        <div className={styles.body}>
-          <label>
-            Bill Date:
-            <input 
-              type="date" 
-              value={billDate} 
-              onChange={(e) => setBillDate(e.target.value)}
-              disabled={uploading}
-              required
-            />
-          </label>
-
-          <div>
-            <label>Select PDF file:</label>
-            <input 
-              type="file" 
-              accept="application/pdf,.pdf" 
-              onChange={handleFileChange}
-              disabled={uploading}
-            />
-          </div>
-          
-          {file && <p>📄 {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)</p>}
-          
-          {status && (
-            <div className={`${styles.statusMessage} ${
-              status.includes('❌') ? styles.error : 
-              status.includes('✅') ? styles.success : 
-              styles.info
-            }`}>
-              {status}
-            </div>
-          )}
-
-          {detectedType === 'unknown' && (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
+        {/* Header Banner */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+          <div className="flex items-center justify-between">
             <div>
-              <label>Select Utility Type:</label>
-              <select
-                value={manualType}
-                onChange={(e) => setManualType(e.target.value)}
-                disabled={uploading}
-                required
-              >
-                <option value="">-- Select --</option>
-                <option value="electricity">Electricity</option>
-                <option value="gas">Gas</option>
-              </select>
+              <h2 className="text-xl font-bold text-white">Upload Utility Bill</h2>
+              <p className="text-blue-100 text-sm">AI-powered bill processing</p>
+            </div>
+            <button
+              onClick={onClose}
+              disabled={uploading}
+              className="text-white hover:text-blue-200 transition-colors p-1"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* File Upload Area */}
+          <div
+            className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+              dragActive
+                ? 'border-blue-400 bg-blue-50'
+                : file
+                ? 'border-green-400 bg-green-50'
+                : 'border-gray-300 hover:border-gray-400'
+            }`}
+            onDrop={handleDrop}
+            onDragOver={handleDrag}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+          >
+            {file ? (
+              <div className="space-y-2">
+                <div className="w-12 h-12 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="font-medium text-gray-900">{file.name}</p>
+                <p className="text-sm text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                <button
+                  onClick={() => {
+                    setFile(null);
+                    setDetectedType(null);
+                    setManualType('');
+                    setStatus('');
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  Choose different file
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="w-12 h-12 mx-auto bg-gray-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-lg font-medium text-gray-900">Drop your PDF here</p>
+                  <p className="text-gray-500">or click to browse</p>
+                </div>
+                <input
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                  disabled={uploading}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <label
+                  htmlFor="file-upload"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer"
+                >
+                  Select PDF File
+                </label>
+              </div>
+            )}
+          </div>
+
+          {/* Status Message */}
+          {status && (
+            <div className={`p-4 rounded-lg border ${getStatusColor()}`}>
+              <p className="text-sm font-medium">{status}</p>
+            </div>
+          )}
+
+          {/* Manual Type Selection */}
+          {detectedType === 'unknown' && (
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-700">
+                Select Utility Type
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setManualType('electricity')}
+                  className={`p-3 rounded-lg border text-center transition-colors ${
+                    manualType === 'electricity'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                  disabled={uploading}
+                >
+                  ⚡ Electricity
+                </button>
+                <button
+                  onClick={() => setManualType('gas')}
+                  className={`p-3 rounded-lg border text-center transition-colors ${
+                    manualType === 'gas'
+                      ? 'border-orange-500 bg-orange-50 text-orange-700'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                  disabled={uploading}
+                >
+                  🔥 Gas
+                </button>
+              </div>
             </div>
           )}
         </div>
 
-        <div className={styles.footer}>
+        {/* Footer */}
+        <div className="bg-gray-50 px-6 py-4 flex items-center justify-between">
           <button
-            className={styles.uploadButton}
-            onClick={handleSubmit}
-            disabled={!file || uploading || !billDate || (!detectedType && !manualType)}
+            onClick={onClose}
+            disabled={uploading}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
           >
-            {uploading ? 'Processing...' : 'Upload Bill'}
+            Cancel
           </button>
           
           <button
-            className={styles.cancelButton}
-            onClick={onClose}
-            disabled={uploading}
+            onClick={handleSubmit}
+            disabled={!file || uploading || (!detectedType && !manualType)}
+            className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+              !file || uploading || (!detectedType && !manualType)
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
           >
-            Cancel
+            {uploading ? (
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <span>Processing...</span>
+              </div>
+            ) : (
+              'Upload Bill'
+            )}
           </button>
         </div>
       </div>
