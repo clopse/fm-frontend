@@ -11,10 +11,12 @@ interface Props {
 
 export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) {
   const [file, setFile] = useState<File | null>(null);
+  const [billDate, setBillDate] = useState<string>(new Date().toISOString().substring(0, 10));
   const [detectedType, setDetectedType] = useState<string | null>(null);
   const [manualType, setManualType] = useState<string>('');
   const [status, setStatus] = useState<string>('');
   const [uploading, setUploading] = useState<boolean>(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
@@ -31,7 +33,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
       return;
     }
 
-    // Validate file size (max 10MB)
+    // Validate file size (e.g., max 10MB)
     if (selected.size > 10 * 1024 * 1024) {
       setStatus('❌ File too large. Maximum size is 10MB');
       return;
@@ -73,11 +75,62 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
     }
   };
 
+  const pollProcessingStatus = async (filename: string) => {
+    // Poll for processing status every 5 seconds for up to 5 minutes
+    const maxAttempts = 60; // 5 minutes
+    let attempts = 0;
+    
+    const poll = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/utilities/status/${hotelId}/${encodeURIComponent(filename)}`
+        );
+        
+        if (res.ok) {
+          const data = await res.json();
+          
+          if (data.status === 'completed') {
+            setStatus('✅ Processing complete! Dashboard will refresh.');
+            onSave?.();
+            setTimeout(onClose, 2000);
+            return;
+          } else if (data.status === 'error') {
+            setStatus(`❌ Processing failed: ${data.error || 'Unknown error'}`);
+            setUploading(false);
+            return;
+          }
+        }
+        
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 5000); // Poll every 5 seconds
+        } else {
+          setStatus('⚠️ Processing is taking longer than expected. Check back later.');
+          setUploading(false);
+        }
+      } catch (err) {
+        console.error('Status polling error:', err);
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(poll, 5000);
+        } else {
+          setStatus('⚠️ Unable to check processing status. Check back later.');
+          setUploading(false);
+        }
+      }
+    };
+    
+    // Start polling after initial delay
+    setTimeout(poll, 5000);
+  };
+
   const handleSubmit = async () => {
     if (!file) return alert('Please select a file.');
 
     const utilityType = detectedType !== 'unknown' ? detectedType : manualType;
     if (!utilityType) return alert('Please select a utility type.');
+
+    if (!billDate) return alert('Please select a bill date.');
 
     setUploading(true);
     setStatus('⏳ Uploading bill...');
@@ -85,7 +138,8 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('hotel_id', hotelId);
-    formData.append('supplier', 'docupipe');
+    formData.append('supplier', 'docupanda');
+    formData.append('bill_date', billDate);
     formData.append('bill_type', utilityType);
 
     try {
@@ -105,13 +159,17 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
         throw new Error(message);
       }
 
-      setStatus('✅ Upload successful! Processing in background...');
+      const result = await res.json();
+      setStatus('⏳ Upload successful. Processing in background...');
       
-      // Auto-close after 3 seconds
+      // Don't refresh immediately - wait for processing to complete
+      // The webhook should trigger a refresh, or user can manually refresh
+      setUploading(false); // Allow user to close modal
+      
+      // Optional: Auto-refresh after a reasonable delay (e.g., 2-3 minutes)
       setTimeout(() => {
         onSave?.();
-        onClose();
-      }, 3000);
+      }, 120000); // 2 minutes delay
       
     } catch (err: any) {
       console.error('Upload error:', err);
@@ -129,6 +187,17 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
         </div>
 
         <div className={styles.body}>
+          <label>
+            Bill Date:
+            <input 
+              type="date" 
+              value={billDate} 
+              onChange={(e) => setBillDate(e.target.value)}
+              disabled={uploading}
+              required
+            />
+          </label>
+
           <div>
             <label>Select PDF file:</label>
             <input 
@@ -172,7 +241,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
           <button
             className={styles.uploadButton}
             onClick={handleSubmit}
-            disabled={!file || uploading || (!detectedType && !manualType)}
+            disabled={!file || uploading || !billDate || (!detectedType && !manualType)}
           >
             {uploading ? 'Processing...' : 'Upload Bill'}
           </button>
