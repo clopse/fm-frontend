@@ -19,62 +19,65 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0] || null;
-    setFile(selected);
-    setStatus('');
-    setDetectedType(null);
-    setManualType('');
+  const selected = e.target.files?.[0] || null;
+  setFile(selected);
+  setStatus('');
+  setDetectedType(null);
+  setManualType('');
 
-    if (!selected) return;
+  if (!selected) return;
 
-    if (!selected.name.toLowerCase().endsWith('.pdf')) {
-      setStatus('❌ Please select a PDF file');
-      return;
+  // Validate file type
+  if (!selected.name.toLowerCase().endsWith('.pdf')) {
+    setStatus('❌ Please select a PDF file');
+    return;
+  }
+
+  // Validate file size (e.g., max 10MB)
+  if (selected.size > 10 * 1024 * 1024) {
+    setStatus('❌ File too large. Maximum size is 10MB');
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', selected);
+
+  setStatus('⏳ Checking file type...');
+
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/precheck`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Precheck failed: ${res.status} - ${errorText}`);
     }
 
-    if (selected.size > 10 * 1024 * 1024) {
-      setStatus('❌ File too large. Maximum size is 10MB');
-      return;
+    const data = await res.json();
+
+    if (data.error) {
+      throw new Error(data.error);
     }
 
-    const formData = new FormData();
-    formData.append('file', selected);
+    const type = data.bill_type;
+    const supplier = data.supplier || 'Unknown supplier';
 
-    setStatus('⏳ Checking file type...');
-
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/precheck`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Precheck failed: ${res.status} - ${errorText}`);
-      }
-
-      const data = await res.json();
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      if (data.bill_type === 'electricity' || data.bill_type === 'gas') {
-        setDetectedType(data.bill_type);
-        setStatus(`✅ Detected: ${data.bill_type} bill (${data.supplier || 'Unknown supplier'})`);
-      } else {
-        setDetectedType('unknown');
-        setManualType('');
-        setStatus('⚠️ Unable to detect bill type — please select manually before uploading.');
-      }
-    } catch (err: any) {
-      console.error('Precheck error:', err);
+    if (type === 'electricity' || type === 'gas') {
+      setDetectedType(type);
+      setStatus(`✅ Detected: ${type} bill (${supplier})`);
+    } else {
       setDetectedType('unknown');
-      setManualType('');
-      setStatus(`❌ Failed to check bill type: ${err.message}`);
+      setStatus(`⚠️ Could not determine bill type (${supplier}). Please select manually.`);
     }
-  };
-
+  } catch (err: any) {
+    console.error('Precheck error:', err);
+    setDetectedType('unknown');
+    setStatus(`❌ Failed to check bill type: ${err.message}`);
+  }
+};
+  
   const pollProcessingStatus = async (filename: string) => {
     const maxAttempts = 60;
     let attempts = 0;
