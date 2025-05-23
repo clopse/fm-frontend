@@ -56,7 +56,7 @@ export default function UtilitiesDashboard() {
   const fetchData = async () => {
     if (!hotelId) return;
 
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/api/utilities/${hotelId}/${year}`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/${year}`;
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -74,7 +74,7 @@ export default function UtilitiesDashboard() {
   useEffect(() => {
     async function fetchAllHotelData() {
       const results = await Promise.all(hotelOptions.map(async (id) => {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/utilities/${id}/${year}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/${id}/${year}`);
         const data = await res.json();
         const electricity = data.electricity?.reduce((sum: number, e: ElectricityEntry) =>
           sum + (viewMode === "eur" ? e.total_eur : viewMode === "room" ? e.per_room_kwh : e.total_kwh), 0) || 0;
