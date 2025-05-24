@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState } from 'react';
 import { 
   ChevronDown, 
@@ -24,15 +23,40 @@ import {
   Users
 } from 'lucide-react';
 
+// Type definitions
+interface Tender {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  createdBy: string;
+  createdAt: string;
+  dueDate: string;
+  status: string;
+  quotesReceived: number;
+  totalQuotes: number;
+  suppliers: string[];
+  emailSent: boolean;
+  emailDate: string | null;
+  budget: number;
+  comments: number;
+  priority: string;
+}
+
+interface TenderModalProps {
+  tender: Tender;
+  onClose: () => void;
+}
+
 const TenderManagementSystem = () => {
-  const [sortField, setSortField] = useState(null);
-  const [sortDirection, setSortDirection] = useState('asc');
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTender, setSelectedTender] = useState(null);
+  const [selectedTender, setSelectedTender] = useState<Tender | null>(null);
   const [showNewTenderModal, setShowNewTenderModal] = useState(false);
 
   // Sample tender data
-  const [tenders] = useState([
+  const [tenders] = useState<Tender[]>([
     {
       id: 'TND-001',
       title: 'Lobby Tiles Replacement',
@@ -89,7 +113,7 @@ const TenderManagementSystem = () => {
     }
   ]);
 
-  const TenderModal = ({ tender, onClose }) => {
+  const TenderModal: React.FC<TenderModalProps> = ({ tender, onClose }) => {
     const [activeTab, setActiveTab] = useState('overview');
     const [newComment, setNewComment] = useState('');
     
@@ -404,7 +428,7 @@ const TenderManagementSystem = () => {
     }
   };
 
-  const handleSort = (field) => {
+  const handleSort = (field: keyof Tender) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -413,7 +437,7 @@ const TenderManagementSystem = () => {
     }
   };
 
-  const SortIcon = ({ field }) => {
+  const SortIcon: React.FC<{ field: keyof Tender }> = ({ field }) => {
     if (sortField !== field) return <ChevronDown className="w-4 h-4 text-gray-400" />;
     return sortDirection === 'asc' ? 
       <ChevronUp className="w-4 h-4 text-gray-600" /> : 
