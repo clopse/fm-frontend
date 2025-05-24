@@ -464,8 +464,14 @@ export default function TendersPage() {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-      {/* Header */}
+    <div>
+      {/* Tailwind Test */}
+      <div className="bg-blue-500 text-white p-4 rounded-lg mb-4">
+        🎉 Tailwind Test - This should be a blue box!
+      </div>
+      
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+        {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Tender Management</h2>
