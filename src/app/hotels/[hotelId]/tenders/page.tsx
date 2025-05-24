@@ -419,7 +419,7 @@ const TenderManagementSystem = () => {
     );
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'active': return 'text-green-600 bg-green-50';
       case 'pending': return 'text-yellow-600 bg-yellow-50';
