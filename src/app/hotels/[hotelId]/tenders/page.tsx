@@ -41,6 +41,19 @@ interface Tender {
   budget: number;
   comments: number;
   priority: string;
+  category: string; // New field
+}
+
+interface Supplier {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  categories: string[];
+  totalJobs: number;
+  averageRating: number;
+  pricePerM2?: number;
+  notes: string;
 }
 
 interface TenderModalProps {
@@ -48,14 +61,36 @@ interface TenderModalProps {
   onClose: () => void;
 }
 
+// Hotel categories for filtering
+const HOTEL_CATEGORIES = [
+  'Electrical',
+  'Plumbing', 
+  'Carpets',
+  'Painting',
+  'Windows',
+  'Doors',
+  'HVAC',
+  'Flooring',
+  'Lighting',
+  'Security',
+  'Fire Safety',
+  'Landscaping',
+  'Cleaning',
+  'Furniture',
+  'Kitchen Equipment'
+];
+
 export default function TendersPage() {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTender, setSelectedTender] = useState<Tender | null>(null);
   const [showNewTenderModal, setShowNewTenderModal] = useState(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
 
-  // Sample tender data
+  // Sample tender data with categories
   const [tenders] = useState<Tender[]>([
     {
       id: 'TND-001',
@@ -73,7 +108,8 @@ export default function TendersPage() {
       emailDate: '2025-01-21',
       budget: 15000,
       comments: 3,
-      priority: 'High'
+      priority: 'High',
+      category: 'Flooring'
     },
     {
       id: 'TND-002',
@@ -91,7 +127,8 @@ export default function TendersPage() {
       emailDate: null,
       budget: 45000,
       comments: 1,
-      priority: 'Medium'
+      priority: 'Medium',
+      category: 'HVAC'
     },
     {
       id: 'TND-003',
@@ -109,12 +146,48 @@ export default function TendersPage() {
       emailDate: '2025-01-16',
       budget: 85000,
       comments: 8,
-      priority: 'High'
+      priority: 'High',
+      category: 'Electrical'
+    }
+  ]);
+
+  // Sample supplier database
+  const [suppliers] = useState<Supplier[]>([
+    {
+      id: 'SUP-001',
+      name: 'JJs Carpets',
+      email: 'info@jjscarpets.ie',
+      phone: '+353-1-234-5678',
+      categories: ['Carpets', 'Flooring'],
+      totalJobs: 23,
+      averageRating: 4.7,
+      pricePerM2: 45,
+      notes: 'Excellent quality, always on time. Preferred for luxury suites.'
+    },
+    {
+      id: 'SUP-002', 
+      name: 'Dublin Electrical Services',
+      email: 'quotes@dublinelectric.ie',
+      phone: '+353-1-567-8910',
+      categories: ['Electrical', 'Lighting'],
+      totalJobs: 31,
+      averageRating: 4.5,
+      notes: 'Reliable for emergency repairs. 24/7 availability.'
+    },
+    {
+      id: 'SUP-003',
+      name: 'Premium Plumbing Solutions',
+      email: 'service@premiumplumbing.ie', 
+      phone: '+353-1-345-6789',
+      categories: ['Plumbing', 'HVAC'],
+      totalJobs: 18,
+      averageRating: 4.8,
+      notes: 'High-end work, excellent for guest bathrooms.'
     }
   ]);
 
   const TenderModal: React.FC<TenderModalProps> = ({ tender, onClose }) => {
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState('quotes'); // Changed default to quotes
     const [newComment, setNewComment] = useState('');
     
     const mockQuotes = [
@@ -214,7 +287,7 @@ export default function TendersPage() {
                     <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                       <div><span className="font-medium">Description:</span> {tender.description}</div>
                       <div><span className="font-medium">Location:</span> {tender.location}</div>
-                      <div><span className="font-medium">Budget:</span> ${tender.budget.toLocaleString()}</div>
+                      <div><span className="font-medium">Budget:</span> €{tender.budget.toLocaleString()}</div>
                       <div><span className="font-medium">Due Date:</span> {tender.dueDate}</div>
                       <div><span className="font-medium">Priority:</span> 
                         <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
@@ -275,7 +348,7 @@ export default function TendersPage() {
                         <div>
                           <h4 className="font-medium text-gray-900">{quote.supplier}</h4>
                           {quote.amount && (
-                            <p className="text-lg font-semibold text-green-600">${quote.amount.toLocaleString()}</p>
+                            <p className="text-lg font-semibold text-green-600">€{quote.amount.toLocaleString()}</p>
                           )}
                           {quote.submittedAt && (
                             <p className="text-sm text-gray-500">Submitted: {quote.submittedAt}</p>
@@ -437,11 +510,15 @@ export default function TendersPage() {
     }
   };
 
-  const filteredData = tenders.filter(item =>
-    Object.values(item).some(value =>
+  const filteredData = tenders.filter(item => {
+    const matchesSearch = Object.values(item).some(value =>
       String(value).toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+    );
+    const matchesCategory = !selectedCategory || item.category === selectedCategory;
+    const matchesStatus = !selectedStatus || item.status === selectedStatus;
+    
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
 
   const sortedData = [...filteredData].sort((a, b) => {
     if (!sortField) return 0;
@@ -464,14 +541,8 @@ export default function TendersPage() {
   };
 
   return (
-    <div>
-      {/* Tailwind Test */}
-      <div className="bg-blue-500 text-white p-4 rounded-lg mb-4">
-        🎉 Tailwind Test - This should be a blue box!
-      </div>
-      
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        {/* Header */}
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+      {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Tender Management</h2>
@@ -502,10 +573,78 @@ export default function TendersPage() {
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <button className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-                <Filter className="w-4 h-4 mr-2" />
-                Filter
-              </button>
+              
+              {/* Filter Dropdown */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                  className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filter
+                  {(selectedCategory || selectedStatus) && (
+                    <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                      {[selectedCategory, selectedStatus].filter(Boolean).length}
+                    </span>
+                  )}
+                </button>
+                
+                {showFilterDropdown && (
+                  <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                    <div className="p-4 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                        <select
+                          value={selectedCategory}
+                          onChange={(e) => setSelectedCategory(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                        >
+                          <option value="">All Categories</option>
+                          {HOTEL_CATEGORIES.map(category => (
+                            <option key={category} value={category}>{category}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select
+                          value={selectedStatus}
+                          onChange={(e) => setSelectedStatus(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                        >
+                          <option value="">All Statuses</option>
+                          <option value="Active">Active</option>
+                          <option value="Pending">Pending</option>
+                          <option value="Closed">Closed</option>
+                        </select>
+                      </div>
+                      
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => {
+                            setSelectedCategory('');
+                            setSelectedStatus('');
+                          }}
+                          className="flex-1 px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+                        >
+                          Clear
+                        </button>
+                        <button
+                          onClick={() => setShowFilterDropdown(false)}
+                          className="flex-1 px-3 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="text-sm text-gray-500">
+              {filteredData.length} of {tenders.length} tenders
             </div>
           </div>
         </div>
@@ -541,6 +680,9 @@ export default function TendersPage() {
                     <span>Created By</span>
                     <SortIcon field="createdBy" />
                   </button>
+                </th>
+                <th className="px-6 py-3 text-left">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Category</span>
                 </th>
                 <th className="px-6 py-3 text-left">
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Quotes</span>
