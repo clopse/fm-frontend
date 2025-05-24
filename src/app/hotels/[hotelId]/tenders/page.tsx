@@ -446,13 +446,13 @@ export default function TendersPage() {
   const sortedData = [...filteredData].sort((a, b) => {
     if (!sortField) return 0;
     
-    const aVal = a[sortField];
-    const bVal = b[sortField];
+    const aVal = a[sortField as keyof Tender];
+    const bVal = b[sortField as keyof Tender];
     
     if (sortDirection === 'asc') {
-      return aVal > bVal ? 1 : -1;
+      return String(aVal) > String(bVal) ? 1 : -1;
     } else {
-      return aVal < bVal ? 1 : -1;
+      return String(aVal) < String(bVal) ? 1 : -1;
     }
   });
 
