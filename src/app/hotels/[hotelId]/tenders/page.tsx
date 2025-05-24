@@ -48,7 +48,7 @@ interface TenderModalProps {
   onClose: () => void;
 }
 
-const TenderManagementSystem = () => {
+export default function TendersPage() {
   const [sortField, setSortField] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [searchTerm, setSearchTerm] = useState('');
@@ -437,6 +437,25 @@ const TenderManagementSystem = () => {
     }
   };
 
+  const filteredData = tenders.filter(item =>
+    Object.values(item).some(value =>
+      String(value).toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
+
+  const sortedData = [...filteredData].sort((a, b) => {
+    if (!sortField) return 0;
+    
+    const aVal = a[sortField];
+    const bVal = b[sortField];
+    
+    if (sortDirection === 'asc') {
+      return aVal > bVal ? 1 : -1;
+    } else {
+      return aVal < bVal ? 1 : -1;
+    }
+  });
+
   const SortIcon: React.FC<{ field: keyof Tender }> = ({ field }) => {
     if (sortField !== field) return <ChevronDown className="w-4 h-4 text-gray-400" />;
     return sortDirection === 'asc' ? 
@@ -544,7 +563,7 @@ const TenderManagementSystem = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {tenders.map((tender) => (
+            {sortedData.map((tender) => (
               <tr key={tender.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm font-medium text-blue-600">{tender.id}</span>
@@ -611,6 +630,4 @@ const TenderManagementSystem = () => {
       )}
     </div>
   );
-};
-
-export default TenderManagementSystem;
+}
