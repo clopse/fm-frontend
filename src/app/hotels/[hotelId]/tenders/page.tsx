@@ -737,7 +737,14 @@ export default function TendersPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center space-x-2">
+                  <button 
+                    onClick={() => {
+                      setSelectedTender(tender);
+                      // This will open the modal with quotes tab as default
+                    }}
+                    className="flex items-center space-x-2 hover:bg-gray-100 rounded p-1 transition-colors"
+                    title="View Quotes"
+                  >
                     <span className="text-sm font-medium text-gray-900">
                       {tender.quotesReceived}/{tender.totalQuotes}
                     </span>
@@ -747,7 +754,7 @@ export default function TendersPage() {
                         style={{width: `${(tender.quotesReceived / tender.totalQuotes) * 100}%`}}
                       ></div>
                     </div>
-                  </div>
+                  </button>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(tender.status)}`}>
@@ -765,15 +772,6 @@ export default function TendersPage() {
                       title="View Details"
                     >
                       <Eye className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setSelectedTender(tender);
-                      }}
-                      className="p-1 text-green-600 hover:text-green-800"
-                      title="Quick Quote"
-                    >
-                      💰
                     </button>
                     <button className="p-1 text-green-600 hover:text-green-800" title="Send Email">
                       <Mail className="w-4 h-4" />
