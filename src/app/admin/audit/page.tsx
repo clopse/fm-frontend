@@ -1,400 +1,149 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
-import { 
-  User2, 
-  Bell,
-  MessageSquare,
-  Settings,
-  Building,
-  Award,
-  Calendar,
-  Zap,
-  FileText,
-  CheckCircle,
-  AlertTriangle,
-  Users,
-  Clock
-} from 'lucide-react';
+import { hotelNames } from '@/data/hotelMetadata';
+import styles from '@/styles/AuditPage.module.css';
+import AuditModal from '@/components/AuditModal';
 
-import ComplianceLeaderboard from '@/components/ComplianceLeaderboard';
-import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
-import { RecentUploads } from '@/components/RecentUploads';
-import HotelSelectorModal from '@/components/HotelSelectorModal';
-import UserPanel from '@/components/UserPanel';
-import UserManagementModal from '@/components/UserManagementModal';
-import AdminSidebar from '@/components/AdminSidebar';
-import AdminHeader from '@/components/AdminHeader';
-import { hotelNames } from '@/lib/hotels';
-
-interface Upload {
-  hotel: string;
-  report: string;
-  date: string;
-  reportDate: string;
+interface AuditEntry {
+  hotel_id: string;
   task_id: string;
-  fileUrl: string;
-  uploaded_by: string;
-  filename: string;
+  fileUrl?: string;
+  reportDate?: string;
+  filename?: string;
+  uploadedAt?: string;
+  uploaded_by?: string;
+  type: 'upload' | 'confirmation';
+  approved?: boolean;
+  loggedAt?: string;
 }
 
-interface LeaderboardEntry {
-  hotel: string;
-  score: number;
+function normalizeEntry(entry: any): AuditEntry {
+  return {
+    hotel_id: entry.hotel_id,
+    task_id: entry.task_id,
+    fileUrl: entry.fileUrl,
+    reportDate: entry.reportDate || entry.report_date,
+    filename: entry.filename,
+    uploadedAt: entry.uploadedAt || entry.uploaded_at,
+    uploaded_by: entry.uploaded_by,
+    type: entry.type || 'upload',
+    approved: !!entry.approved,
+    loggedAt: entry.loggedAt,
+  };
 }
 
-interface MonthlyTask {
-  task_id: string;
-  frequency: string;
-  confirmed: boolean;
-  label?: string;
-}
-
-const mockUsers = [
-  { id: 1, name: 'Sarah Johnson', email: 'sarah@jmkhotels.ie', role: 'Hotel Manager', hotel: 'Holiday Inn Express', status: 'Active', lastLogin: '2 hours ago' },
-  { id: 2, name: 'Mike Chen', email: 'mike@jmkhotels.ie', role: 'Maintenance Lead', hotel: 'Hampton Inn', status: 'Active', lastLogin: '1 day ago' },
-  { id: 3, name: 'David Hurley', email: 'david@jmkhotels.ie', role: 'Operations Manager', hotel: 'All Hotels', status: 'Active', lastLogin: '30 min ago' }
-];
-
-export default function HotelsPage() {
-  const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
-  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
-  const [monthlyTasks, setMonthlyTasks] = useState<MonthlyTask[]>([]);
+export default function AuditPage() {
+  const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [filtered, setFiltered] = useState<AuditEntry[]>([]);
+  const [selected, setSelected] = useState<AuditEntry | null>(null);
+  const [search, setSearch] = useState('');
   const [taskLabelMap, setTaskLabelMap] = useState<Record<string, string>>({});
-  const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
-  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
-  const [showFullUserManagement, setShowFullUserManagement] = useState(false);
-  const [showAccountSettings, setShowAccountSettings] = useState(false);
-  const [showAdminSidebar, setShowAdminSidebar] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const [currentHotel, setCurrentHotel] = useState(hotelNames['hiex']);
 
   useEffect(() => {
-    fetchTaskLabels();
-    
-    // Handle mobile detection
-    const handleResize = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-      if (!mobile) {
-        setShowAdminSidebar(true);
-      } else {
-        setShowAdminSidebar(false);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approval-log`)
+      .then(res => res.json())
+      .then(data => {
+        const list = (data.entries || []).map(normalizeEntry);
+        setEntries(list);
+        setFiltered(list);
+      });
+
+    const fetchLabels = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/task-labels`);
+        const data = await res.json();
+        setTaskLabelMap(data);
+      } catch (err) {
+        console.error('Failed to fetch task labels:', err);
       }
     };
-    
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    fetchLabels();
   }, []);
 
-  useEffect(() => {
-    if (Object.keys(taskLabelMap).length > 0) {
-      fetchLeaderboard();
-      fetchRecentUploads();
-      fetchMonthlyChecklist();
-    }
-  }, [taskLabelMap]);
-
-  const fetchTaskLabels = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/task-labels`);
-      const data = await res.json();
-      setTaskLabelMap(data);
-    } catch (err) {
-      console.error('Error fetching task labels:', err);
-    }
+  const handleSearch = (query: string) => {
+    setSearch(query);
+    setFiltered(entries.filter(e =>
+      e.task_id.toLowerCase().includes(query.toLowerCase()) ||
+      (hotelNames[e.hotel_id]?.toLowerCase().includes(query.toLowerCase())) ||
+      (e.reportDate || '').includes(query)
+    ));
   };
 
-  const fetchLeaderboard = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`);
-      const data: LeaderboardEntry[] = await res.json();
-      const sorted = [...data].sort((a, b) => b.score - a.score);
-      setLeaderboardData(sorted);
-    } catch (err) {
-      console.error('Error loading leaderboard:', err);
-      setLeaderboardData([]);
+  const handleApprove = async (entry: AuditEntry) => {
+    const timestamp = entry.uploadedAt || entry.loggedAt;
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotel_id: entry.hotel_id, task_id: entry.task_id, timestamp })
+    });
+    if (res.ok) {
+      setEntries(prev => prev.filter(e => e.fileUrl !== entry.fileUrl));
+      setFiltered(prev => prev.filter(e => e.fileUrl !== entry.fileUrl));
+      setSelected(null);
+    } else {
+      alert('Failed to approve file');
     }
-  };
-
-  const fetchRecentUploads = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approval-log`);
-      const data = await res.json();
-
-      const entries = (data.entries || [])
-        .sort((a: any, b: any) =>
-          new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
-        )
-        .slice(0, 10)
-        .map((e: any) => ({
-          hotel: hotelNames[e.hotel_id] || e.hotel_id,
-          report: `${taskLabelMap[e.task_id] || e.task_id}`,
-          date: e.uploaded_at,
-          reportDate: e.report_date,
-          task_id: e.task_id,
-          fileUrl: e.fileUrl,
-          uploaded_by: e.uploaded_by,
-          filename: e.filename
-        }));
-
-      setRecentUploads(entries);
-    } catch (err) {
-      console.error('Error loading uploads:', err);
-    }
-  };
-
-  const fetchMonthlyChecklist = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`);
-      const data: MonthlyTask[] = await res.json();
-
-      const filtered = data.filter(t =>
-        t.frequency?.toLowerCase() === 'monthly' && !t.confirmed
-      ).map(t => ({
-        ...t,
-        label: taskLabelMap[t.task_id] || t.task_id
-      }));
-
-      setMonthlyTasks(filtered);
-    } catch (err) {
-      console.error('Error loading checklist:', err);
-    }
-  };
-
-  const handleHotelSelect = (hotelName: string) => {
-    setCurrentHotel(hotelName);
-    setIsHotelModalOpen(false);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Admin Sidebar */}
-      <AdminSidebar 
-        isMobile={isMobile}
-        isOpen={showAdminSidebar}
-        onClose={() => setShowAdminSidebar(false)}
-      />
-
-      {/* Main Content Area */}
-      <div className={`flex-1 transition-all duration-300 ${showAdminSidebar && !isMobile ? 'ml-72' : 'ml-0'}`}>
-        <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
-
-        {/* Admin Header */}
-        <AdminHeader 
-          showSidebar={showAdminSidebar}
-          onToggleSidebar={() => setShowAdminSidebar(!showAdminSidebar)}
-          onOpenHotelSelector={() => setIsHotelModalOpen(true)}
-          onOpenUserPanel={() => setIsUserPanelOpen(true)}
-          onOpenAccountSettings={() => setShowAccountSettings(true)}
-          isMobile={isMobile}
+    <div className={styles.wrapper}>
+      <div className={styles.headerRow}>
+        <h1>Audit Queue</h1>
+        <input
+          type="text"
+          className={styles.searchBox}
+          placeholder="Search hotel, task, or date"
+          value={search}
+          onChange={e => handleSearch(e.target.value)}
         />
-
-        <HotelSelectorModal
-          isOpen={isHotelModalOpen}
-          setIsOpen={setIsHotelModalOpen}
-          onSelectHotel={handleHotelSelect}
-        />
-
-        {/* Account Settings Modal - you can create this as a separate component later */}
-        {showAccountSettings && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900">Account Settings</h2>
-                <button onClick={() => setShowAccountSettings(false)} className="text-gray-400 hover:text-gray-600">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="p-6">
-                <p>Account settings content goes here...</p>
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button 
-                    onClick={() => setShowAccountSettings(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                  >
-                    Cancel
-                  </button>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Save Changes
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <UserManagementModal 
-          isOpen={showFullUserManagement}
-          onClose={() => setShowFullUserManagement(false)}
-        />
-
-        {/* Main Dashboard Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* User Overview */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">User Overview</h2>
-                <p className="text-sm text-gray-500">47 total users across all hotels</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setShowFullUserManagement(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-            >
-              <Settings className="w-4 h-4" />
-              <span>Manage All Users</span>
-            </button>
-          </div>
-          
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
-                  <div>
-                    <p className="text-2xl font-bold text-green-900">43</p>
-                    <p className="text-sm text-green-700">Active Users</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-yellow-50 p-4 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Clock className="w-8 h-8 text-yellow-600" />
-                  <div>
-                    <p className="text-2xl font-bold text-yellow-900">3</p>
-                    <p className="text-sm text-yellow-700">Pending Setup</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-red-50 p-4 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <AlertTriangle className="w-8 h-8 text-red-600" />
-                  <div>
-                    <p className="text-2xl font-bold text-red-900">1</p>
-                    <p className="text-sm text-red-700">Inactive Users</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-gray-900">Recent User Activity</h3>
-              {mockUsers.slice(0, 3).map(user => (
-                <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-xs font-medium text-blue-600">
-                        {user.name.split(' ').map(n => n[0]).join('')}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                      <p className="text-xs text-gray-500">{user.role} • {user.hotel}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500">Last login</p>
-                    <p className="text-sm text-gray-900">{user.lastLogin}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          
-          {/* Compliance Leaderboard */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Award className="w-5 h-5 text-green-600" />
-                </div>
-                <h2 className="text-lg font-semibold text-gray-900">Compliance Leaderboard</h2>
-              </div>
-              <span className="text-sm text-gray-500">Updated daily</span>
-            </div>
-            <ComplianceLeaderboard data={leaderboardData} />
-          </div>
-
-          {/* Monthly Tasks */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            {monthlyTasks.length > 0 ? (
-              <>
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <Calendar className="w-5 h-5 text-yellow-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">Pending Monthly Tasks</h3>
-                </div>
-                <div className="space-y-3">
-                  {monthlyTasks.slice(0, 5).map((task) => (
-                    <div key={task.task_id} className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
-                      <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
-                      <span className="text-sm text-gray-900">{task.label}</span>
-                    </div>
-                  ))}
-                  {monthlyTasks.length > 5 && (
-                    <p className="text-sm text-gray-500 text-center">
-                      +{monthlyTasks.length - 5} more tasks
-                    </p>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <div className="p-3 bg-green-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">All Tasks Complete</h3>
-                <p className="text-gray-500">No pending monthly tasks at this time.</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Utilities */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Zap className="w-5 h-5 text-purple-600" />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-900">Hotel Utilities Comparison</h2>
-            </div>
-          </div>
-          <UtilitiesGraphs />
-        </div>
-
-        {/* Recent Activity */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <FileText className="w-5 h-5 text-gray-600" />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-900">Recent Upload Activity</h2>
-            </div>
-          </div>
-          <RecentUploads uploads={recentUploads} />
-        </div>
-
-        </div>
-
       </div>
+      <div className={styles.tableContainer}>
+        <table className={styles.auditTable}>
+          <thead>
+            <tr>
+              <th>Hotel</th>
+              <th>Task</th>
+              <th>Report Date</th>
+              <th>Uploaded At</th>
+              <th>By</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((entry, index) => (
+              <tr key={index}>
+                <td>{hotelNames[entry.hotel_id] || entry.hotel_id}</td>
+                <td>{taskLabelMap[entry.task_id] || entry.task_id}</td>
+                <td>{entry.reportDate}</td>
+                <td>{new Date(entry.uploadedAt || '').toLocaleString('en-IE')}</td>
+                <td>{entry.uploaded_by}</td>
+                <td>
+                  <button onClick={() => setSelected(entry)} className={styles.auditBtn}>Audit</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {selected && (
+        <AuditModal
+          entry={{
+            hotel: hotelNames[selected.hotel_id] || selected.hotel_id,
+            task_id: selected.task_id,
+            reportDate: selected.reportDate || '',
+            date: selected.uploadedAt || selected.loggedAt || '',
+            uploaded_by: selected.uploaded_by || '',
+            fileUrl: selected.fileUrl || '',
+            filename: selected.filename || '',
+          }}
+          onClose={() => setSelected(null)}
+          onApprove={() => handleApprove(selected)}
+          onReject={() => alert('Rejection route to be implemented')}
+          onDelete={() => alert('Deletion route to be implemented')}
+        />
+      )}
     </div>
   );
 }
