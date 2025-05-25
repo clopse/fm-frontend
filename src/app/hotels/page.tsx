@@ -1,4 +1,358 @@
-'use client';
+{/* Messages */}
+                <div className="relative" data-dropdown="messages">
+                  <button 
+                    onClick={() => setShowMessages(!showMessages)}
+                    className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                    {unreadMessages > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        {unreadMessages}
+                      </span>
+                    )}
+                  </button>
+                  
+                  {showMessages && (
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                      <div className="p-4 border-b border-gray-200">
+                        <h3 className="font-semibold text-gray-900">Messages</h3>
+                      </div>
+                      <div className="max-h-96 overflow-y-auto">
+                        {mockMessages.map(message => (
+                          <div key={message.id} className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${message.unread ? 'bg-blue-50' : ''}`}>
+                            <div className="flex items-start space-x-3">
+                              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                                <span className="text-xs font-medium">{message.from.split(' ').map(n => n[0]).join('')}</span>
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <p className="font-medium text-sm text-gray-900">{message.from}</p>
+                                  <span className="text-xs text-gray-500">{message.time}</span>
+                                </div>
+                                <p className="text-sm text-gray-900 mt-1">{message.subject}</p>
+                                <p className="text-xs text-gray-600 mt-1 truncate">{message.preview}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-3 text-center border-t border-gray-200">
+                        <button className="text-sm text-blue-600 hover:text-blue-800">View All Messages</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Hotel Selector */}
+                <button 
+                  onClick={() => setIsHotelModalOpen(true)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                >
+                  <Building className="w-4 h-4" />
+                  <span>Admin Dashboard</span>
+                  <span>⌄</span>
+                </button>
+                
+                <button 
+                  onClick={() => setIsUserPanelOpen(true)} 
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Account"
+                >
+                  <User2 size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <HotelSelectorModal
+          isOpen={isHotelModalOpen}
+          setIsOpen={setIsHotelModalOpen}
+          onSelectHotel={handleHotelSelect}
+        />
+
+        {/* Account Settings Modal */}
+        {showAccountSettings && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">Account Settings</h2>
+                <button onClick={() => setShowAccountSettings(false)} className="text-gray-400 hover:text-gray-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="p-6">
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <input type="text" className="w-full p-3 border border-gray-300 rounded-lg" defaultValue="Admin User" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input type="email" className="w-full p-3 border border-gray-300 rounded-lg" defaultValue="admin@jmkhotels.ie" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                    <select className="w-full p-3 border border-gray-300 rounded-lg">
+                      <option>System Administrator</option>
+                      <option>Operations Manager</option>
+                      <option>Hotel Manager</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Notification Preferences</label>
+                    <div className="space-y-2">
+                      <label className="flex items-center">
+                        <input type="checkbox" className="mr-2" defaultChecked />
+                        <span className="text-sm">Email notifications</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input type="checkbox" className="mr-2" defaultChecked />
+                        <span className="text-sm">SMS alerts for urgent issues</span>
+                      </label>
+                      <label className="flex items-center">
+                        <input type="checkbox" className="mr-2" />
+                        <span className="text-sm">Weekly summary reports</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-3 mt-8">
+                  <button 
+                    onClick={() => setShowAccountSettings(false)}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Full User Management Modal */}
+        {showFullUserManagement && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-5/6 flex flex-col">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">User Management System</h2>
+                <button onClick={() => setShowFullUserManagement(false)} className="text-gray-400 hover:text-gray-600">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="flex-1 p-6 overflow-y-auto">
+                <div className="flex justify-between items-center mb-6">
+                  <div className="flex items-center space-x-2">
+                    <button className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">Previous</button>
+                    <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded">1</button>
+                    <button className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">2</button>
+                    <button className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">3</button>
+                    <button className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">Next</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main Dashboard Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          
+          {/* User Overview Component */}
+          <UserOverview onManageAllUsers={() => setShowFullUserManagement(true)} />
+
+          {/* Dashboard Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            
+            {/* Compliance Leaderboard */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Award className="w-5 h-5 text-green-600" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-gray-900">Compliance Leaderboard</h2>
+                </div>
+                <span className="text-sm text-gray-500">Updated daily</span>
+              </div>
+              <ComplianceLeaderboard data={leaderboardData} />
+            </div>
+
+            {/* Monthly Tasks Alert */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              {monthlyTasks.length > 0 ? (
+                <>
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <Calendar className="w-5 h-5 text-yellow-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Pending Monthly Tasks</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {monthlyTasks.slice(0, 5).map((task) => (
+                      <div key={task.task_id} className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
+                        <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                        <span className="text-sm text-gray-900">{task.label}</span>
+                      </div>
+                    ))}
+                    {monthlyTasks.length > 5 && (
+                      <p className="text-sm text-gray-500 text-center">
+                        +{monthlyTasks.length - 5} more tasks
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="p-3 bg-green-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">All Tasks Complete</h3>
+                  <p className="text-gray-500">No pending monthly tasks at this time.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Utilities Comparison */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Zap className="w-5 h-5 text-purple-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900">Hotel Utilities Comparison</h2>
+              </div>
+            </div>
+            <UtilitiesGraphs />
+          </div>
+
+          {/* Recent Activity */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-gray-100 rounded-lg">
+                  <FileText className="w-5 h-5 text-gray-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900">Recent Upload Activity</h2>
+              </div>
+            </div>
+            <RecentUploads uploads={recentUploads} />
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+}x-4">
+                    <input 
+                      type="text" 
+                      placeholder="Search users..." 
+                      className="px-4 py-2 border border-gray-300 rounded-lg w-64"
+                    />
+                    <select className="px-4 py-2 border border-gray-300 rounded-lg">
+                      <option>All Roles</option>
+                      <option>Hotel Manager</option>
+                      <option>Operations Manager</option>
+                      <option>Maintenance Lead</option>
+                      <option>System Admin</option>
+                    </select>
+                    <select className="px-4 py-2 border border-gray-300 rounded-lg">
+                      <option>All Hotels</option>
+                      <option>Holiday Inn Express</option>
+                      <option>Hampton Inn</option>
+                      <option>Holiday Inn</option>
+                      <option>Marina Hotel</option>
+                    </select>
+                  </div>
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
+                    <UserPlus className="w-4 h-4" />
+                    <span>Add New User</span>
+                  </button>
+                </div>
+
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hotel Access</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Login</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {mockUsers.map(user => (
+                        <tr key={user.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span className="text-sm font-medium text-blue-600">
+                                  {user.name.split(' ').map(n => n[0]).join('')}
+                                </span>
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                                <div className="text-sm text-gray-500">{user.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                              {user.role}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.hotel}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                              user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {user.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.lastLogin}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Jan 15, 2024</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center space-x-2">
+                              <button className="p-1 text-blue-600 hover:text-blue-800" title="View Details">
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button className="p-1 text-green-600 hover:text-green-800" title="Edit User">
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button className="p-1 text-gray-600 hover:text-gray-800" title="Send Email">
+                                <Mail className="w-4 h-4" />
+                              </button>
+                              <button className="p-1 text-yellow-600 hover:text-yellow-800" title="Reset Password">
+                                <Shield className="w-4 h-4" />
+                              </button>
+                              <button className="p-1 text-red-600 hover:text-red-800" title="Deactivate">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex items-center justify-between mt-6">
+                  <div className="text-sm text-gray-700">
+                    Showing 1 to 3 of 47 users
+                  </div>
+                  <div className="flex items-center space-'use client';
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
@@ -6,8 +360,6 @@ import {
   User2, 
   Bell,
   MessageSquare,
-  Settings,
-  Shield,
   UserPlus,
   Mail,
   Database,
@@ -28,7 +380,8 @@ import {
   Upload,
   Award,
   Calendar,
-  FileText
+  FileText,
+  Menu
 } from 'lucide-react';
 
 import ComplianceLeaderboard from '@/components/ComplianceLeaderboard';
@@ -37,6 +390,7 @@ import { RecentUploads } from '@/components/RecentUploads';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
 import UserPanel from '@/components/UserPanel';
 import UserOverview from '@/components/UserOverview';
+import AdminSidebar from '@/components/AdminSidebar';
 import { hotelNames } from '@/lib/hotels';
 
 interface Upload {
@@ -93,14 +447,30 @@ export default function HotelsPage() {
   // New state for admin features
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
-  const [showUserManagement, setShowUserManagement] = useState(false);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [showFullUserManagement, setShowFullUserManagement] = useState(false);
+  const [showAdminSidebar, setShowAdminSidebar] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(3);
   const [unreadMessages, setUnreadMessages] = useState(2);
 
   useEffect(() => {
     fetchTaskLabels();
+    
+    // Handle mobile detection
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (!mobile) {
+        setShowAdminSidebar(true);
+      } else {
+        setShowAdminSidebar(false);
+      }
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -125,16 +495,11 @@ export default function HotelsPage() {
       if (showMessages && !target.closest('[data-dropdown="messages"]')) {
         setShowMessages(false);
       }
-      
-      // Close user management dropdown if clicking outside
-      if (showUserManagement && !target.closest('[data-dropdown="settings"]')) {
-        setShowUserManagement(false);
-      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showNotifications, showMessages, showUserManagement]);
+  }, [showNotifications, showMessages]);
 
   const fetchTaskLabels = async () => {
     try {
@@ -227,19 +592,42 @@ export default function HotelsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Admin Sidebar */}
+      <AdminSidebar 
+        isMobile={isMobile}
+        isOpen={showAdminSidebar}
+        onClose={() => setShowAdminSidebar(false)}
+      />
 
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <Image src="/jmk-logo.png" alt="JMK Hotels" width={180} height={45} className="object-contain" />
-            </div>
-            
-            {/* Admin Tools & Navigation */}
-            <div className="flex items-center space-x-4">
+      {/* Main Content Area */}
+      <div className={`flex-1 transition-all duration-300 ${showAdminSidebar && !isMobile ? 'ml-72' : 'ml-0'}`}>
+        <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
+
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              
+              {/* Left - Hamburger Menu + Logo */}
+              <div className="flex items-center space-x-4">
+                {/* Mobile Hamburger */}
+                {!showAdminSidebar && (
+                  <button
+                    onClick={() => setShowAdminSidebar(true)}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors lg:hidden"
+                  >
+                    <Menu className="w-5 h-5" />
+                  </button>
+                )}
+                
+                <div className="flex items-center">
+                  <Image src="/jmk-logo.png" alt="JMK Hotels" width={140} height={35} className="object-contain" />
+                </div>
+              </div>
+              
+              {/* Right - Admin Tools & Navigation */}
+              <div className="flex items-center space-x-4">
               
               {/* Notifications */}
               <div className="relative" data-dropdown="notifications">
