@@ -688,7 +688,7 @@ export default function HotelsPage() {
                 </div>
                 <h2 className="text-lg font-semibold text-gray-900">Compliance Leaderboard</h2>
               </div>
-              <span className="text-sm text-gray-500"></span>
+              <span className="text-sm text-gray-500">Select Hotels</span>
             </div>
             <ComplianceLeaderboard data={leaderboardData} />
           </div>
