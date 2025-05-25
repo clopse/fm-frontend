@@ -96,13 +96,13 @@ export function UtilitiesGraphs() {
         const mockData: UtilityBill[] = [];
         
         // You'd replace this with actual API calls to get all utility bills
-        for (const hotelId of selectedHotels) {
+        for (const hotel of hotels) {
           for (const year of selectedYears) {
             for (const month of selectedMonths) {
               // Simulate electricity bill data
               if (selectedUtilityType === 'electricity') {
                 mockData.push({
-                  hotelId,
+                  hotelId: hotel.id,
                   billType: 'electricity',
                   month,
                   year,
@@ -132,7 +132,7 @@ export function UtilitiesGraphs() {
               // Simulate gas bill data
               if (selectedUtilityType === 'gas') {
                 mockData.push({
-                  hotelId,
+                  hotelId: hotel.id,
                   billType: 'gas',
                   month,
                   year,
@@ -237,12 +237,13 @@ export function UtilitiesGraphs() {
     
     if (comparisonMode === 'hotels') {
       return selectedHotels.map(hotelId => {
+        const hotel = hotels.find(h => h.id === hotelId);
         const hotelBills = utilityData.filter(bill => bill.hotelId === hotelId);
         const totalValue = hotelBills.reduce((sum, bill) => sum + extractMetricValue(bill, selectedMetric), 0);
         const avgValue = hotelBills.length > 0 ? totalValue / hotelBills.length : 0;
         
         return {
-          name: HOTEL_NAMES[hotelId] || hotelId,
+          name: hotel?.name || hotelId,
           value: Math.round(avgValue * 100) / 100,
           total: Math.round(totalValue * 100) / 100
         };
