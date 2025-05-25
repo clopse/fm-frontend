@@ -185,11 +185,11 @@ export default function HotelsPage() {
         {/* Admin Header */}
         <AdminHeader 
           showSidebar={showAdminSidebar}
-          setShowSidebar={setShowAdminSidebar}
-          setIsHotelModalOpen={setIsHotelModalOpen}
-          setIsUserPanelOpen={setIsUserPanelOpen}
-          setShowAccountSettings={setShowAccountSettings}
-          setShowFullUserManagement={setShowFullUserManagement}
+          onToggleSidebar={() => setShowAdminSidebar(!showAdminSidebar)}
+          onOpenHotelSelector={() => setIsHotelModalOpen(true)}
+          onOpenUserPanel={() => setIsUserPanelOpen(true)}
+          onOpenAccountSettings={() => setShowAccountSettings(true)}
+          isMobile={isMobile}
         />
 
         <HotelSelectorModal
