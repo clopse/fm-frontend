@@ -184,8 +184,8 @@ export default function HotelsPage() {
 
         {/* Admin Header */}
         <AdminHeader 
-          showAdminSidebar={showAdminSidebar}
-          setShowAdminSidebar={setShowAdminSidebar}
+          showSidebar={showAdminSidebar}
+          setShowSidebar={setShowAdminSidebar}
           setIsHotelModalOpen={setIsHotelModalOpen}
           setIsUserPanelOpen={setIsUserPanelOpen}
           setShowAccountSettings={setShowAccountSettings}
