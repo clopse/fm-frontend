@@ -34,11 +34,11 @@ export default function HeaderBar({
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 h-16 relative z-30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
-        <div className="flex justify-between items-center h-full">
+      <div className="h-full px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-full">
           
-          {/* Left Section - Hamburger Menu + Back Button */}
-          <div className="flex items-center space-x-3">
+          {/* Far Left - Hamburger Menu + Back Button */}
+          <div className="flex items-center space-x-2">
             {/* Hamburger Menu - Only visible on mobile */}
             <button
               onClick={onMenuToggle}
@@ -48,20 +48,19 @@ export default function HeaderBar({
               <Menu className="w-5 h-5" />
             </button>
             
-            {/* Back Button */}
+            {/* Back Button - Just arrow, no text */}
             {showBackButton && (
               <button
                 onClick={handleBackClick}
-                className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors text-sm font-medium"
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                 title={backButtonLabel}
               >
-                <ArrowLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Back</span>
+                <ArrowLeft className="w-5 h-5" />
               </button>
             )}
           </div>
 
-          {/* Center Section - Hotel Selector */}
+          {/* Center - Hotel Selector */}
           <div className="flex-1 flex justify-center">
             <button 
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 font-medium shadow-sm"
@@ -72,7 +71,7 @@ export default function HeaderBar({
             </button>
           </div>
 
-          {/* Right Section - User Icon */}
+          {/* Far Right - User Icon */}
           <div className="flex items-center">
             <button
               onClick={onUserIconClick}
