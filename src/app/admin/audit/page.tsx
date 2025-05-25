@@ -18,6 +18,7 @@ import { hotelNames } from '@/data/hotelMetadata';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import UserPanel from '@/components/UserPanel';
+import HotelSelectorModal from '@/components/HotelSelectorModal';
 import AuditModal from '@/components/AuditModal';
 
 interface AuditEntry {
@@ -67,6 +68,7 @@ export default function AuditPage() {
   const [showAdminSidebar, setShowAdminSidebar] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
+  const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -259,10 +261,19 @@ export default function AuditPage() {
         <AdminHeader 
           showSidebar={showAdminSidebar}
           onToggleSidebar={() => setShowAdminSidebar(!showAdminSidebar)}
-          onOpenHotelSelector={() => {}}
+          onOpenHotelSelector={() => setIsHotelModalOpen(true)}
           onOpenUserPanel={() => setIsUserPanelOpen(true)}
           onOpenAccountSettings={() => setShowAccountSettings(true)}
           isMobile={isMobile}
+        />
+
+        <HotelSelectorModal
+          isOpen={isHotelModalOpen}
+          setIsOpen={setIsHotelModalOpen}
+          onSelectHotel={(hotelName) => {
+            console.log('Selected hotel:', hotelName);
+            setIsHotelModalOpen(false);
+          }}
         />
 
         {/* Main Content */}
