@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { hotels } from '@/lib/hotels';
+import { Menu } from 'lucide-react';
 
 // Import your existing components that we'll keep
 import HotelSelectorModal from './HotelSelectorModal';
@@ -94,8 +95,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         {/* Main Content */}
         <main className={`
-          flex-1 overflow-auto bg-gray-50
-          ${!isMobile && isSidebarOpen ? 'lg:ml-64' : ''}
+          flex-1 overflow-auto bg-gray-50 transition-all duration-300 ease-in-out
+          ${isOpen ? 'ml-64' : 'ml-0'}
           ${!isDashboardHome ? 'pt-16' : ''}
         `}>
           <div className="p-6">
