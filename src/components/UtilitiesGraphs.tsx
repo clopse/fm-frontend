@@ -294,21 +294,8 @@ export function UtilitiesGraphs() {
 
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-purple-100 rounded-lg">
-            <TrendingUp className="w-5 h-5 text-purple-600" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">Utilities Comparison Dashboard</h2>
-            <p className="text-sm text-gray-500">Compare any metric across hotels, months, or years</p>
-          </div>
-        </div>
-      </div>
-
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
         
         {/* Utility Type Selector */}
         <div>
@@ -369,17 +356,6 @@ export function UtilitiesGraphs() {
                 {mode.charAt(0).toUpperCase() + mode.slice(1)}
               </button>
             ))}
-          </div>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="bg-white p-3 rounded-lg border">
-          <div className="text-sm text-gray-500">Selected Data Points</div>
-          <div className="text-lg font-semibold text-gray-900">
-            {selectedHotels.length} hotels × {selectedMonths.length} months × {selectedYears.length} years
-          </div>
-          <div className="text-xs text-gray-500 mt-1">
-            = {selectedHotels.length * selectedMonths.length * selectedYears.length} bills
           </div>
         </div>
       </div>
@@ -539,7 +515,7 @@ export function UtilitiesGraphs() {
               <thead>
                 <tr className="bg-gray-50">
                   <th className="px-4 py-2 text-left font-medium text-gray-700">
-                    {comparisonMode.charAt(0).toUpperCase() + comparisonMode.slice(0, -1)}
+                    Hotel
                   </th>
                   <th className="px-4 py-2 text-right font-medium text-gray-700">
                     Average {currentMetric?.label}
