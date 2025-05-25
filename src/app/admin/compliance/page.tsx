@@ -461,60 +461,77 @@ export default function ComplianceMatrixPage() {
             </div>
           </div>
 
-          <div className="max-w-full overflow-x-auto mx-auto">
-  <table className="min-w-[2000px] table-fixed">
-    <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-20">
-      <tr>
-        <th className="sticky left-0 bg-gray-50 px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-[200px] z-10">
-          <div className="flex items-center">
-            <Building className="w-4 h-4 mr-2" />
-            HOTEL
+          {/* Compliance Matrix Table */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            {loading ? (
+              <div className="p-8 text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="mt-2 text-gray-600">Loading compliance matrix...</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="sticky left-0 bg-gray-50 px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 min-w-[200px] z-10">
+                        <div className="flex items-center">
+                          <Building className="w-4 h-4 mr-2" />
+                          HOTEL
+                        </div>
+                      </th>
+                      {filteredTasks.map((task) => (
+                        <th 
+                          key={task.task_id} 
+                          className="px-4 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] border-r border-gray-200"
+                          title={task.label}
+                        >
+                          <div className="whitespace-nowrap">
+                            <div className="font-semibold">{task.label}</div>
+                            <div className="text-xs text-gray-400 font-normal mt-1">
+                              {task.frequency}
+                            </div>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {filteredHotels.map((hotel) => (
+                      <tr key={hotel.id} className="hover:bg-gray-50">
+                        <td className="sticky left-0 bg-white px-6 py-4 text-sm font-medium text-gray-900 border-r border-gray-200 z-10">
+                          {hotel.name}
+                        </td>
+                        {filteredTasks.map((task) => {
+                          const status = getStatus(hotel.id, task.task_id);
+                          return (
+                            <td 
+                              key={task.task_id}
+                              className={`px-4 py-4 text-center cursor-pointer transition-colors border-r border-gray-200 ${getStatusColor(status)}`}
+                              onClick={() => setSelectedCell({hotel: hotel.name, task: task.label})}
+                              title={`${hotel.name} - ${task.label}: ${getStatusText(status)}`}
+                            >
+                              <div className="flex items-center justify-center">
+                                {getStatusIcon(status)}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {filteredHotels.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Building className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No hotels match your filters</h3>
+                    <p className="text-gray-500">Try adjusting your filter criteria or check your data connection.</p>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
-        </th>
-        {filteredTasks.map((task) => (
-          <th 
-            key={task.task_id} 
-            className="px-2 py-6 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px] border-r border-gray-200"
-            title={task.label}
-          >
-            <div className="whitespace-nowrap">
-              <div className="transform -rotate-45 origin-bottom-left whitespace-nowrap text-xs font-semibold w-24">
-                {task.label}
-              </div>
-              <div className="text-xs text-gray-400 font-normal mt-1">
-                {task.frequency}
-              </div>
-            </div>
-          </th>
-        ))}
-      </tr>
-    </thead>
-    <tbody className="divide-y divide-gray-200 bg-white">
-      {filteredHotels.map((hotel) => (
-        <tr key={hotel.id} className="hover:bg-gray-50">
-          <td className="sticky left-0 bg-white px-6 py-4 text-sm font-medium text-gray-900 border-r border-gray-200 z-10">
-            {hotel.name}
-          </td>
-          {filteredTasks.map((task) => {
-            const status = getStatus(hotel.id, task.task_id);
-            return (
-              <td 
-                key={task.task_id}
-                className={`px-4 py-4 text-center cursor-pointer transition-colors border-r border-gray-200 ${getStatusColor(status)}`}
-                onClick={() => setSelectedCell({hotel: hotel.name, task: task.label})}
-                title={`${hotel.name} - ${task.label}: ${getStatusText(status)}`}
-              >
-                <div className="flex items-center justify-center">
-                  {getStatusIcon(status)}
-                </div>
-              </td>
-            );
-          })}
-        </tr>
-      ))}
-    </tbody>
-  </table>
-</div>
+
           {/* Selected Cell Info */}
           {selectedCell && (
             <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
