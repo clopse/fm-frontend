@@ -376,7 +376,7 @@ export default function HotelsPage() {
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
               >
                 <Building className="w-4 h-4" />
-                <span>{currentHotel}</span>
+                <span>Admin Dashboard</span>
                 <span>⌄</span>
               </button>
               
@@ -688,7 +688,7 @@ export default function HotelsPage() {
                 </div>
                 <h2 className="text-lg font-semibold text-gray-900">Compliance Leaderboard</h2>
               </div>
-              <span className="text-sm text-gray-500"></span>
+              <span className="text-sm text-gray-500">Updated daily</span>
             </div>
             <ComplianceLeaderboard data={leaderboardData} />
           </div>
