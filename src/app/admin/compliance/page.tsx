@@ -461,7 +461,7 @@ export default function ComplianceMatrixPage() {
             </div>
           </div>
 
-          <div className="w-full overflow-x-auto">
+          <div className="max-w-full overflow-x-auto">
   <table className="min-w-[2000px] table-fixed">
     <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-20">
       <tr>
