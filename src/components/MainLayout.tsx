@@ -2,15 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import HeaderBar from './HeaderBar';
-import HotelSelectorModal from './HotelSelectorModal';
-import MainSidebar from './MainSidebar';
-import UserPanel from './UserPanel';
 import { hotels } from '@/lib/hotels';
 
+// Import your existing components that we'll keep
+import HotelSelectorModal from './HotelSelectorModal';
+import UserPanel from './UserPanel';
+
+// New components (replace your old ones with these)
+import HeaderBar from './HeaderBar';
+import MainSidebar from './MainSidebar';
+
 export default function MainLayout({ children }: { children: React.ReactNode }) {
-  const [isModalOpen, setModalOpen] = useState(false);
-  const [isUserPanelOpen, setUserPanelOpen] = useState(false);
+  const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
+  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
@@ -22,12 +26,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   
   const isDashboardHome = /^\/hotels\/[^/]+$/.test(pathname);
 
-  // Handle responsive behavior
+  // Handle mobile detection and sidebar state
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth < 1024; // Use lg breakpoint
+      const mobile = window.innerWidth < 1024; // lg breakpoint
       setIsMobile(mobile);
-      setIsSidebarOpen(!mobile); // Open on desktop, closed on mobile by default
+      if (!mobile) {
+        setIsSidebarOpen(true); // Always open on desktop
+      } else {
+        setIsSidebarOpen(false); // Closed by default on mobile
+      }
     };
     
     handleResize();
@@ -37,9 +45,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   // Auth check
   useEffect(() => {
-    const isAuth = localStorage.getItem('auth');
-    if (!isAuth) {
-      router.push('/login');
+    if (typeof window !== 'undefined') {
+      const isAuth = localStorage.getItem('auth');
+      if (!isAuth) {
+        router.push('/login');
+      }
     }
   }, [pathname, router]);
 
@@ -49,35 +59,44 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="h-screen bg-gray-50 overflow-hidden">
       {/* Header - only show on non-dashboard pages */}
       {!isDashboardHome && (
         <HeaderBar
-          onHotelSelectClick={() => setModalOpen(true)}
+          onHotelSelectClick={() => setIsHotelModalOpen(true)}
           currentHotelName={currentHotelName}
-          onUserIconClick={() => setUserPanelOpen(true)}
+          onUserIconClick={() => setIsUserPanelOpen(true)}
           onMenuToggle={toggleSidebar}
         />
       )}
 
       {/* Modals */}
-      <HotelSelectorModal isOpen={isModalOpen} setIsOpen={setModalOpen} />
-      <UserPanel isOpen={isUserPanelOpen} onClose={() => setUserPanelOpen(false)} />
+      <HotelSelectorModal 
+        isOpen={isHotelModalOpen} 
+        setIsOpen={setIsHotelModalOpen} 
+      />
+      <UserPanel 
+        isOpen={isUserPanelOpen} 
+        onClose={() => setIsUserPanelOpen(false)} 
+      />
 
-      {/* Main Layout */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Main Content Area */}
+      <div className="flex h-full">
         {/* Sidebar */}
         <MainSidebar
           isMobile={isMobile}
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}
-          onItemClick={() => isMobile && setIsSidebarOpen(false)}
+          onItemClick={() => {
+            if (isMobile) setIsSidebarOpen(false);
+          }}
         />
 
         {/* Main Content */}
         <main className={`
-          flex-1 overflow-auto transition-all duration-300 ease-in-out
-          ${isMobile ? '' : (isSidebarOpen ? 'lg:ml-64' : 'lg:ml-0')}
+          flex-1 overflow-auto bg-gray-50
+          ${!isMobile && isSidebarOpen ? 'lg:ml-64' : ''}
+          ${!isDashboardHome ? 'pt-16' : ''}
         `}>
           <div className="p-6">
             {children}
