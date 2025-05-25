@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
+import { hotels } from '@/lib/hotels';
 
 type LeaderboardEntry = {
   hotel: string; // Hotel ID
@@ -12,15 +13,6 @@ type LeaderboardEntry = {
 interface Props {
   data: LeaderboardEntry[];
 }
-
-// Mock hotels data (replace with your actual hotels import)
-const hotels = [
-  { id: 'hiex', name: 'Holiday Inn Express' },
-  { id: 'hamp', name: 'Hampton Inn' },
-  { id: 'hi', name: 'Holiday Inn' },
-  { id: 'marina', name: 'Marina Hotel' },
-  { id: 'moxy', name: 'Moxy Hotel' }
-];
 
 export default function ComplianceLeaderboard({ data }: Props) {
   const [sortedData, setSortedData] = useState<LeaderboardEntry[]>([]);
@@ -80,13 +72,13 @@ export default function ComplianceLeaderboard({ data }: Props) {
   return (
     <div className="bg-white rounded-lg p-6 shadow-sm max-w-full w-full">
       <div className="flex justify-between items-center mb-4">
+        <div></div>
         <div className="relative" data-dropdown="hotel-filter">
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg transition-colors text-sm font-medium text-gray-700"
+            className="flex items-center justify-center p-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg transition-colors text-gray-600"
             title="Filter hotels"
           >
-            <span>Filter Hotels</span>
             <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
           </button>
           
