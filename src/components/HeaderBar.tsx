@@ -1,15 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { User2, ArrowLeft, Menu } from 'lucide-react';
+import { User2, Menu } from 'lucide-react';
 
 interface HeaderBarProps {
   onHotelSelectClick?: () => void;
   currentHotelName: string;
   onUserIconClick?: () => void;
-  showBackButton?: boolean;
-  backButtonLabel?: string;
-  customBackUrl?: string;
   onMenuToggle?: () => void;
 }
 
@@ -17,29 +14,16 @@ export default function HeaderBar({
   onHotelSelectClick,
   currentHotelName,
   onUserIconClick,
-  showBackButton = true,
-  backButtonLabel = "Back to Dashboard",
-  customBackUrl,
   onMenuToggle
 }: HeaderBarProps) {
-  const router = useRouter();
-
-  const handleBackClick = () => {
-    if (customBackUrl) {
-      router.push(customBackUrl);
-    } else {
-      router.back();
-    }
-  };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 h-16 relative z-30">
       <div className="h-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-full">
           
-          {/* Far Left - Hamburger Menu + Back Button */}
-          <div className="flex items-center space-x-2">
-            {/* Hamburger Menu - Only visible on mobile */}
+          {/* Left - Just Hamburger Menu for mobile */}
+          <div className="flex items-center">
             <button
               onClick={onMenuToggle}
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors lg:hidden"
@@ -47,17 +31,6 @@ export default function HeaderBar({
             >
               <Menu className="w-5 h-5" />
             </button>
-            
-            {/* Back Button - Just arrow, no text */}
-            {showBackButton && (
-              <button
-                onClick={handleBackClick}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                title={backButtonLabel}
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            )}
           </div>
 
           {/* Center - Hotel Selector */}
@@ -71,7 +44,7 @@ export default function HeaderBar({
             </button>
           </div>
 
-          {/* Far Right - User Icon */}
+          {/* Right - User Icon */}
           <div className="flex items-center">
             <button
               onClick={onUserIconClick}
