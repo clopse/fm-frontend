@@ -50,9 +50,8 @@ export default function AdminHeader({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           
-          {/* Left - Always show hamburger when needed */}
-          <div className="flex items-center space-x-4">
-            {/* Hamburger - show when sidebar is closed OR on mobile */}
+          {/* Left - Hamburger */}
+          <div className="flex items-center">
             {(!showSidebar || isMobile) && (
               <button
                 onClick={onToggleSidebar}
@@ -62,15 +61,22 @@ export default function AdminHeader({
                 <Menu className="w-5 h-5" />
               </button>
             )}
-            
-            {/* Page title or breadcrumb can go here */}
-            <div className="hidden sm:block">
-              {/* This space can be used for page titles or breadcrumbs */}
-            </div>
           </div>
           
-          {/* Right - Admin Tools & Navigation */}
-          <div className="flex items-center space-x-4">
+          {/* Center - Hotel Selector */}
+          <div className="flex-1 flex justify-center">
+            <button 
+              onClick={onOpenHotelSelector}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+            >
+              <Building className="w-4 h-4" />
+              <span>Admin Dashboard</span>
+              <span>⌄</span>
+            </button>
+          </div>
+          
+          {/* Right - Notifications, Messages, User - Stuck to right */}
+          <div className="flex items-center space-x-2">
             
             {/* Notifications */}
             <NotificationsDropdown 
@@ -86,7 +92,17 @@ export default function AdminHeader({
               unreadCount={unreadMessages}
             />
 
-            {/* Hotel Selector */}
+            {/* User Account */}
             <button 
-              onClick={onOpenHotelSelector}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              onClick={onOpenUserPanel} 
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Account"
+            >
+              <User2 size={20} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
