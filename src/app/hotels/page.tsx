@@ -2,7 +2,34 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { User2 } from 'lucide-react';
+import { 
+  User2, 
+  Bell,
+  MessageSquare,
+  Settings,
+  Shield,
+  UserPlus,
+  Mail,
+  Database,
+  Download,
+  Trash2,
+  Edit,
+  Eye,
+  TrendingUp, 
+  AlertTriangle, 
+  CheckCircle, 
+  Clock, 
+  BarChart3,
+  Users,
+  Building,
+  Zap,
+  Droplets,
+  Flame,
+  Upload,
+  Award,
+  Calendar,
+  FileText
+} from 'lucide-react';
 
 import ComplianceLeaderboard from '@/components/ComplianceLeaderboard';
 import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
@@ -10,9 +37,6 @@ import { RecentUploads } from '@/components/RecentUploads';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
 import UserPanel from '@/components/UserPanel';
 import { hotelNames } from '@/lib/hotels';
-
-import styles from '@/styles/AdminDashboard.module.css';
-import headerStyles from '@/styles/HeaderBar.module.css';
 
 interface Upload {
   hotel: string;
@@ -37,6 +61,25 @@ interface MonthlyTask {
   label?: string;
 }
 
+// Additional mock data for new features
+const mockNotifications = [
+  { id: 1, type: 'urgent', title: 'Fire Safety Inspection Due', message: 'Holiday Inn Express - Due in 2 days', time: '10 min ago' },
+  { id: 2, type: 'info', title: 'New Compliance Report', message: 'Hampton Inn submitted monthly report', time: '1 hour ago' },
+  { id: 3, type: 'warning', title: 'Budget Alert', message: 'Marina Hotel exceeded monthly utilities budget', time: '3 hours ago' }
+];
+
+const mockMessages = [
+  { id: 1, from: 'Sarah Johnson', subject: 'Urgent: Elevator Issue', preview: 'The main elevator in Holiday Inn Express...', time: '5 min ago', unread: true },
+  { id: 2, from: 'Mike Chen', subject: 'Monthly Report Ready', preview: 'I\'ve completed the monthly compliance...', time: '2 hours ago', unread: true },
+  { id: 3, from: 'David Hurley', subject: 'New Supplier Quote', preview: 'Received quotes for the lobby renovation...', time: '1 day ago', unread: false }
+];
+
+const mockUsers = [
+  { id: 1, name: 'Sarah Johnson', email: 'sarah@jmkhotels.ie', role: 'Hotel Manager', hotel: 'Holiday Inn Express', status: 'Active', lastLogin: '2 hours ago' },
+  { id: 2, name: 'Mike Chen', email: 'mike@jmkhotels.ie', role: 'Maintenance Lead', hotel: 'Hampton Inn', status: 'Active', lastLogin: '1 day ago' },
+  { id: 3, name: 'David Hurley', email: 'david@jmkhotels.ie', role: 'Operations Manager', hotel: 'All Hotels', status: 'Active', lastLogin: '30 min ago' }
+];
+
 export default function HotelsPage() {
   const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
@@ -45,6 +88,14 @@ export default function HotelsPage() {
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
   const [currentHotel, setCurrentHotel] = useState(hotelNames['hiex']);
   const [taskLabelMap, setTaskLabelMap] = useState<Record<string, string>>({});
+  
+  // New state for admin features
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showMessages, setShowMessages] = useState(false);
+  const [showUserManagement, setShowUserManagement] = useState(false);
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(3);
+  const [unreadMessages, setUnreadMessages] = useState(2);
 
   useEffect(() => {
     fetchTaskLabels();
@@ -72,7 +123,6 @@ export default function HotelsPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`);
       const data: LeaderboardEntry[] = await res.json();
-
       const sorted = [...data].sort((a, b) => b.score - a.score);
       setLeaderboardData(sorted);
     } catch (err) {
@@ -131,23 +181,185 @@ export default function HotelsPage() {
     setIsHotelModalOpen(false);
   };
 
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'urgent': return <AlertTriangle className="w-4 h-4 text-red-600" />;
+      case 'warning': return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
+      case 'success': return <CheckCircle className="w-4 h-4 text-green-600" />;
+      default: return <Bell className="w-4 h-4 text-blue-600" />;
+    }
+  };
+
+  const getNotificationBg = (type: string) => {
+    switch (type) {
+      case 'urgent': return 'bg-red-50 border-red-200';
+      case 'warning': return 'bg-yellow-50 border-yellow-200';
+      case 'success': return 'bg-green-50 border-green-200';
+      default: return 'bg-blue-50 border-blue-200';
+    }
+  };
+
   return (
-    <div className={styles.container}>
+    <div className="min-h-screen bg-gray-50">
       <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
 
-      <header className={headerStyles.header}>
-        <div className={headerStyles.left}>
-          <Image src="/jmk-logo.png" alt="JMK Hotels" width={228} height={60} style={{ objectFit: 'contain' }} />
-        </div>
-        <div className={headerStyles.center}>
-          <button className={headerStyles.selector} onClick={() => setIsHotelModalOpen(true)}>
-            {currentHotel} <span className={headerStyles.arrow}>⌄</span>
-          </button>
-        </div>
-        <div className={headerStyles.right}>
-          <button onClick={() => setIsUserPanelOpen(true)} className={headerStyles.userBtn} title="Account">
-            <User2 size={20} />
-          </button>
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <Image src="/jmk-logo.png" alt="JMK Hotels" width={180} height={45} className="object-contain" />
+            </div>
+            
+            {/* Admin Tools & Navigation */}
+            <div className="flex items-center space-x-4">
+              
+              {/* Notifications */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {unreadNotifications}
+                    </span>
+                  )}
+                </button>
+                
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div className="p-4 border-b border-gray-200">
+                      <h3 className="font-semibold text-gray-900">Notifications</h3>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {mockNotifications.map(notification => (
+                        <div key={notification.id} className={`p-4 border-b border-gray-100 ${getNotificationBg(notification.type)}`}>
+                          <div className="flex items-start space-x-3">
+                            {getNotificationIcon(notification.type)}
+                            <div className="flex-1">
+                              <p className="font-medium text-sm text-gray-900">{notification.title}</p>
+                              <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                              <p className="text-xs text-gray-500 mt-2">{notification.time}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="p-3 text-center border-t border-gray-200">
+                      <button className="text-sm text-blue-600 hover:text-blue-800">View All Notifications</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Messages */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowMessages(!showMessages)}
+                  className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {unreadMessages}
+                    </span>
+                  )}
+                </button>
+                
+                {showMessages && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div className="p-4 border-b border-gray-200">
+                      <h3 className="font-semibold text-gray-900">Messages</h3>
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {mockMessages.map(message => (
+                        <div key={message.id} className={`p-4 border-b border-gray-100 hover:bg-gray-50 ${message.unread ? 'bg-blue-50' : ''}`}>
+                          <div className="flex items-start space-x-3">
+                            <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium">{message.from.split(' ').map(n => n[0]).join('')}</span>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <p className="font-medium text-sm text-gray-900">{message.from}</p>
+                                <span className="text-xs text-gray-500">{message.time}</span>
+                              </div>
+                              <p className="text-sm text-gray-900 mt-1">{message.subject}</p>
+                              <p className="text-xs text-gray-600 mt-1 truncate">{message.preview}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="p-3 text-center border-t border-gray-200">
+                      <button className="text-sm text-blue-600 hover:text-blue-800">View All Messages</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Admin Tools Dropdown */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowUserManagement(!showUserManagement)}
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Admin Tools"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+                
+                {showUserManagement && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div className="p-2">
+                      <button className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
+                        <UserPlus className="w-4 h-4" />
+                        <span>Manage Users</span>
+                      </button>
+                      <button className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
+                        <Shield className="w-4 h-4" />
+                        <span>User Permissions</span>
+                      </button>
+                      <button className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
+                        <Database className="w-4 h-4" />
+                        <span>System Settings</span>
+                      </button>
+                      <button className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
+                        <Download className="w-4 h-4" />
+                        <span>Export Data</span>
+                      </button>
+                      <div className="border-t border-gray-200 my-2"></div>
+                      <button 
+                        onClick={() => setShowAccountSettings(true)}
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+                      >
+                        <User2 className="w-4 h-4" />
+                        <span>Account Settings</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Hotel Selector */}
+              <button 
+                onClick={() => setIsHotelModalOpen(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+              >
+                <Building className="w-4 h-4" />
+                <span>{currentHotel}</span>
+                <span>⌄</span>
+              </button>
+              
+              <button 
+                onClick={() => setIsUserPanelOpen(true)} 
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Account"
+              >
+                <User2 size={20} />
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -157,28 +369,213 @@ export default function HotelsPage() {
         onSelectHotel={handleHotelSelect}
       />
 
-      <div className={styles.section}>
-        <ComplianceLeaderboard data={leaderboardData} />
-      </div>
-
-      <div className={styles.section}>
-        <h2 className={styles.header}>Hotel Utilities Comparison</h2>
-        <UtilitiesGraphs />
-      </div>
-
-      {monthlyTasks.length > 0 && (
-        <div className={styles.section}>
-          <h2 className={styles.header}>Monthly Tasks Needing Confirmation</h2>
-          <ul>
-            {monthlyTasks.map((task) => (
-              <li key={task.task_id}>🔲 {task.label}</li>
-            ))}
-          </ul>
+      {/* Account Settings Modal */}
+      {showAccountSettings && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Account Settings</h2>
+              <button onClick={() => setShowAccountSettings(false)} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                  <input type="text" className="w-full p-3 border border-gray-300 rounded-lg" defaultValue="Admin User" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                  <input type="email" className="w-full p-3 border border-gray-300 rounded-lg" defaultValue="admin@jmkhotels.ie" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                  <select className="w-full p-3 border border-gray-300 rounded-lg">
+                    <option>System Administrator</option>
+                    <option>Operations Manager</option>
+                    <option>Hotel Manager</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Notification Preferences</label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input type="checkbox" className="mr-2" defaultChecked />
+                      <span className="text-sm">Email notifications</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input type="checkbox" className="mr-2" defaultChecked />
+                      <span className="text-sm">SMS alerts for urgent issues</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input type="checkbox" className="mr-2" />
+                      <span className="text-sm">Weekly summary reports</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end space-x-3 mt-8">
+                <button 
+                  onClick={() => setShowAccountSettings(false)}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      <div className={styles.auditWrapper}>
-        <RecentUploads uploads={recentUploads} />
+      {/* User Management Panel */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="w-5 h-5 text-blue-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">User Management</h2>
+            </div>
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
+              <UserPlus className="w-4 h-4" />
+              <span>Add User</span>
+            </button>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hotel</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Login</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {mockUsers.map(user => (
+                  <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                        <div className="text-sm text-gray-500">{user.email}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.role}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.hotel}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {user.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.lastLogin}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <button className="p-1 text-blue-600 hover:text-blue-800" title="View">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button className="p-1 text-green-600 hover:text-green-800" title="Edit">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button className="p-1 text-gray-600 hover:text-gray-800" title="Email">
+                          <Mail className="w-4 h-4" />
+                        </button>
+                        <button className="p-1 text-red-600 hover:text-red-800" title="Delete">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Original Dashboard Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          
+          {/* Compliance Leaderboard */}
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Award className="w-5 h-5 text-green-600" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-gray-900">Compliance Leaderboard</h2>
+                </div>
+                <span className="text-sm text-gray-500">Updated daily</span>
+              </div>
+              <ComplianceLeaderboard data={leaderboardData} />
+            </div>
+          </div>
+
+          {/* Monthly Tasks Alert */}
+          <div>
+            {monthlyTasks.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <Calendar className="w-5 h-5 text-yellow-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">Pending Monthly Tasks</h3>
+                </div>
+                <div className="space-y-3">
+                  {monthlyTasks.slice(0, 5).map((task) => (
+                    <div key={task.task_id} className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
+                      <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
+                      <span className="text-sm text-gray-900">{task.label}</span>
+                    </div>
+                  ))}
+                  {monthlyTasks.length > 5 && (
+                    <p className="text-sm text-gray-500 text-center">
+                      +{monthlyTasks.length - 5} more tasks
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Utilities Comparison */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Zap className="w-5 h-5 text-purple-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Hotel Utilities Comparison</h2>
+            </div>
+          </div>
+          <UtilitiesGraphs />
+        </div>
+
+        {/* Recent Activity */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <FileText className="w-5 h-5 text-gray-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Recent Upload Activity</h2>
+            </div>
+          </div>
+          <RecentUploads uploads={recentUploads} />
+        </div>
+
       </div>
     </div>
   );
