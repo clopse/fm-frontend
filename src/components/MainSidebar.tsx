@@ -62,7 +62,7 @@ export default function MainSidebar({
               <img
                 src="/jmk-logo.png"
                 alt="JMK Logo"
-                className="h-8 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+                className="h-9 w-auto cursor-pointer hover:opacity-80 transition-opacity"
               />
             </Link>
             
