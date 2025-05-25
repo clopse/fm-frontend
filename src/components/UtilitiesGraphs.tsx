@@ -289,6 +289,14 @@ export function UtilitiesGraphs() {
     }
   };
 
+  const selectAll = (allItems: string[], currentList: string[], setter: (list: string[]) => void) => {
+    if (currentList.length === allItems.length) {
+      setter([]); // Deselect all if all are selected
+    } else {
+      setter(allItems); // Select all
+    }
+  };
+
   const currentMetric = AVAILABLE_METRICS[selectedUtilityType].find(m => m.key === selectedMetric);
   const chartData = getChartData();
 
@@ -378,6 +386,14 @@ export function UtilitiesGraphs() {
           
           {showHotelDropdown && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+              <div className="p-2 border-b border-gray-100">
+                <button
+                  onClick={() => selectAll(hotels.map(h => h.id), selectedHotels, setSelectedHotels)}
+                  className="w-full px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded font-medium"
+                >
+                  {selectedHotels.length === hotels.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
               {hotels.map((hotel) => (
                 <label key={hotel.id} className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
                   <input
@@ -408,6 +424,14 @@ export function UtilitiesGraphs() {
           
           {showMonthDropdown && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+              <div className="p-2 border-b border-gray-100">
+                <button
+                  onClick={() => selectAll(MONTHS, selectedMonths, setSelectedMonths)}
+                  className="w-full px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded font-medium"
+                >
+                  {selectedMonths.length === MONTHS.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
               {MONTHS.map(month => (
                 <label key={month} className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
                   <input
@@ -438,6 +462,14 @@ export function UtilitiesGraphs() {
           
           {showYearDropdown && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+              <div className="p-2 border-b border-gray-100">
+                <button
+                  onClick={() => selectAll(YEARS, selectedYears, setSelectedYears)}
+                  className="w-full px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded font-medium"
+                >
+                  {selectedYears.length === YEARS.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
               {YEARS.map(year => (
                 <label key={year} className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
                   <input
