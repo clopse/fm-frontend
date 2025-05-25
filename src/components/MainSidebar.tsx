@@ -72,7 +72,7 @@ export default function MainSidebar({
               alt="JMK Logo"
               width={120}
               height={40}
-              className="cursor-pointer object-contain brightness-0 invert"
+              className="cursor-pointer object-contain filter brightness-0 invert"
             />
           </Link>
         </div>
