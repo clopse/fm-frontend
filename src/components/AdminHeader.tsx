@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { User2, Building, Menu } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
 import MessagesDropdown from './MessagesDropdown';
@@ -51,20 +50,22 @@ export default function AdminHeader({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           
-          {/* Left - Hamburger Menu + Logo */}
+          {/* Left - Always show hamburger when needed */}
           <div className="flex items-center space-x-4">
-            {/* Mobile Hamburger */}
-            {!showSidebar && (
+            {/* Hamburger - show when sidebar is closed OR on mobile */}
+            {(!showSidebar || isMobile) && (
               <button
                 onClick={onToggleSidebar}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors lg:hidden"
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Open Menu"
               >
                 <Menu className="w-5 h-5" />
               </button>
             )}
             
-            <div className="flex items-center">
-              <Image src="/jmk-logo.png" alt="JMK Hotels" width={140} height={35} className="object-contain" />
+            {/* Page title or breadcrumb can go here */}
+            <div className="hidden sm:block">
+              {/* This space can be used for page titles or breadcrumbs */}
             </div>
           </div>
           
@@ -89,23 +90,3 @@ export default function AdminHeader({
             <button 
               onClick={onOpenHotelSelector}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-            >
-              <Building className="w-4 h-4" />
-              <span>Admin Dashboard</span>
-              <span>⌄</span>
-            </button>
-            
-            {/* User Account */}
-            <button 
-              onClick={onOpenUserPanel} 
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Account"
-            >
-              <User2 size={20} />
-            </button>
-          </div>
-        </div>
-      </div>
-    </header>
-  );
-}
