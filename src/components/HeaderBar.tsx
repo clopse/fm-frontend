@@ -1,59 +1,110 @@
 'use client';
 
-import { User2, Menu } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { hotels } from '@/lib/hotels';
+import { Menu } from 'lucide-react';
 
-interface HeaderBarProps {
-  onHotelSelectClick?: () => void;
-  currentHotelName: string;
-  onUserIconClick?: () => void;
-  onMenuToggle?: () => void;
-}
+// Import your existing components that we'll keep
+import HotelSelectorModal from './HotelSelectorModal';
+import UserPanel from './UserPanel';
 
-export default function HeaderBar({
-  onHotelSelectClick,
-  currentHotelName,
-  onUserIconClick,
-  onMenuToggle
-}: HeaderBarProps) {
+// New components (replace your old ones with these)
+import HeaderBar from './HeaderBar';
+import MainSidebar from './MainSidebar';
+
+export default function MainLayout({ children }: { children: React.ReactNode }) {
+  const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
+  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  const rawPathname = usePathname();
+  const pathname = rawPathname.endsWith('/') && rawPathname !== '/'
+    ? rawPathname.slice(0, -1)
+    : rawPathname;
+  const router = useRouter();
+  
+  const isDashboardHome = /^\/hotels\/[^/]+$/.test(pathname);
+
+  // Handle mobile detection and sidebar state
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024; // lg breakpoint
+      setIsMobile(mobile);
+      if (!mobile) {
+        setIsSidebarOpen(true); // Always open on desktop
+      } else {
+        setIsSidebarOpen(false); // Closed by default on mobile
+      }
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Auth check
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isAuth = localStorage.getItem('auth');
+      if (!isAuth) {
+        router.push('/login');
+      }
+    }
+  }, [pathname, router]);
+
+  const hotelId = pathname.split('/')[2];
+  const currentHotelName = hotels.find((h) => h.id === hotelId)?.name || 'Select Hotel';
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
   return (
-    <header className="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 h-16 z-40">
-      <div className="h-full px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-full">
-          
-          {/* Left - Hamburger Menu (mobile only) */}
-          <div className="flex items-center lg:hidden">
-            <button
-              onClick={onMenuToggle}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Toggle Menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-          </div>
+    <div className="h-screen bg-gray-50 overflow-hidden">
+      {/* Header - only show on non-dashboard pages */}
+      {!isDashboardHome && (
+        <HeaderBar
+          onHotelSelectClick={() => setIsHotelModalOpen(true)}
+          currentHotelName={currentHotelName}
+          onUserIconClick={() => setIsUserPanelOpen(true)}
+          onMenuToggle={toggleSidebar}
+          showHamburger={!isSidebarOpen}
+        />
+      )}
 
-          {/* Center - Hotel Selector */}
-          <div className="flex-1 flex justify-center">
-            <button 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 font-medium shadow-sm"
-              onClick={onHotelSelectClick}
-            >
-              <span className="text-sm sm:text-base">{currentHotelName}</span>
-              <span className="text-blue-200">▼</span>
-            </button>
-          </div>
+      {/* Modals */}
+      <HotelSelectorModal 
+        isOpen={isHotelModalOpen} 
+        setIsOpen={setIsHotelModalOpen} 
+      />
+      <UserPanel 
+        isOpen={isUserPanelOpen} 
+        onClose={() => setIsUserPanelOpen(false)} 
+      />
 
-          {/* Right - User Icon */}
-          <div className="flex items-center">
-            <button
-              onClick={onUserIconClick}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Account"
-            >
-              <User2 className="w-5 h-5" />
-            </button>
+      {/* Main Content Area */}
+      <div className="flex h-full">
+        {/* Sidebar */}
+        <MainSidebar
+          isMobile={isMobile}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          onItemClick={() => {
+            if (isMobile) setIsSidebarOpen(false);
+          }}
+        />
+
+        {/* Main Content */}
+        <main className={`
+          flex-1 overflow-auto bg-gray-50 transition-all duration-300 ease-in-out
+          ${isSidebarOpen ? 'ml-64' : 'ml-0'}
+          ${!isDashboardHome ? 'pt-16' : ''}
+        `}>
+          <div className="p-6">
+            {children}
           </div>
-        </div>
+        </main>
       </div>
-    </header>
+    </div>
   );
 }
