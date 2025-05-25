@@ -68,6 +68,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           currentHotelName={currentHotelName}
           onUserIconClick={() => setIsUserPanelOpen(true)}
           onMenuToggle={toggleSidebar}
+          showHamburger={!isSidebarOpen}
         />
       )}
 
