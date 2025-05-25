@@ -8,7 +8,8 @@ import {
   PlugZap,
   FileText,
   ClipboardList,
-  X
+  X,
+  Menu
 } from 'lucide-react';
 
 interface MainSidebarProps {
@@ -53,26 +54,27 @@ export default function MainSidebar({
         }
       `}>
         
-        {/* Mobile Close Button */}
-        {isMobile && (
-          <div className="flex justify-end p-4 lg:hidden">
+        {/* Header with Logo and Toggle Button */}
+        <div className="p-4 border-b border-slate-700">
+          <div className="flex items-center justify-between">
+            {/* JMK Logo */}
+            <Link href="https://jmkfacilities.ie/hotels" onClick={handleLogoClick}>
+              <img
+                src="/jmk-logo.png"
+                alt="JMK Logo"
+                className="h-8 w-auto cursor-pointer filter brightness-0 invert hover:opacity-80 transition-opacity"
+              />
+            </Link>
+            
+            {/* Hide/Close Button */}
             <button
               onClick={onClose}
-              className="text-gray-300 hover:text-white p-1 transition-colors"
+              className="p-2 text-gray-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+              title={isMobile ? "Close Menu" : "Hide Sidebar"}
             >
-              <X className="w-6 h-6" />
+              {isMobile ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
-        )}
-
-        {/* JMK Logo/Home Button */}
-        <div className="p-6 border-b border-slate-700 flex justify-center">
-          <Link href="https://jmkfacilities.ie/hotels" onClick={handleLogoClick}>
-            <div className="text-white font-bold text-lg cursor-pointer hover:text-gray-200 transition-colors text-center">
-              JMK GROUP
-              <div className="text-xs font-normal text-gray-300 mt-1">Facilities</div>
-            </div>
-          </Link>
         </div>
 
         {/* Navigation Links */}
