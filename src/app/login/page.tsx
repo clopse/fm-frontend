@@ -10,9 +10,11 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (username === 'admin' && password === '1234') {
-      // In real implementation: localStorage.setItem('auth', 'true');
-      // router.push('/hotels');
-      alert('Login successful! (Would redirect to /hotels)');
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('auth', 'true');
+      }
+      // For demo - would use router.push('/hotels') in real app
+      window.location.href = '/hotels';
     } else {
       alert('Incorrect username or password');
     }
