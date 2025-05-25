@@ -66,13 +66,13 @@ export default function MainSidebar({
 
         {/* JMK Logo */}
         <div className="p-6 border-b border-slate-700">
-          <Link href="https://jmkfacilities.ie/hotels">
-            <Image
+          <Link href="https://jmkfacilities.ie/hotels" onClick={handleClick}>
+            <img
               src="/jmk-logo.png"
               alt="JMK Logo"
               width={120}
               height={40}
-              className="cursor-pointer object-contain filter brightness-0 invert"
+              className="cursor-pointer object-contain filter brightness-0 invert w-auto h-10"
             />
           </Link>
         </div>
