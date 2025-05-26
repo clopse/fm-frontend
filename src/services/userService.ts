@@ -1,4 +1,6 @@
 // FILE: src/services/userService.ts
+import { User, UserCreate, UserUpdate, LoginRequest, LoginResponse, UserStats } from '../types/user';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 // Generic fetch wrapper with auth
