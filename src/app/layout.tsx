@@ -1,5 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
+import RouteGuard from '@/components/RouteGuard';
 
 export const metadata: Metadata = {
   title: 'JMK Facilities Management',
@@ -9,7 +10,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <RouteGuard>
+          {children}
+        </RouteGuard>
+      </body>
     </html>
   );
 }
