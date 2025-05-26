@@ -1,6 +1,17 @@
 // FILE: src/utils/roleUtils.ts
-import type { User } from '@/types/user';
 import { hotels, hotelNames } from '@/lib/hotels';
+
+// Define the User type locally to avoid conflicts
+interface UserType {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  hotel: string;
+  status: string;
+  created_at: string;
+  last_login: string | null;
+}
 
 export interface UserRole {
   canAccessAdmin: boolean;
@@ -11,7 +22,7 @@ export interface UserRole {
   hotelId?: string; // The hotel ID for hotel-specific users
 }
 
-export function getUserRole(user: User): UserRole {
+export function getUserRole(user: UserType): UserRole {
   switch (user.role) {
     case 'System Admin':
       return {
@@ -81,7 +92,7 @@ export function getHotelNameFromId(hotelId: string): string {
   return hotelNames[hotelId] || hotelId;
 }
 
-export function canUserAccessRoute(user: User, route: string): boolean {
+export function canUserAccessRoute(user: UserType, route: string): boolean {
   const role = getUserRole(user);
   
   // Check admin routes
@@ -101,7 +112,7 @@ export function canUserAccessRoute(user: User, route: string): boolean {
 }
 
 // Helper to get all hotels user can access
-export function getUserAccessibleHotels(user: User): typeof hotels {
+export function getUserAccessibleHotels(user: UserType): typeof hotels {
   const role = getUserRole(user);
   
   if (role.canAccessAllHotels) {
@@ -116,7 +127,7 @@ export function getUserAccessibleHotels(user: User): typeof hotels {
 }
 
 // Helper for hotel selectors in UI
-export function getHotelOptions(user: User): Array<{ id: string; name: string }> {
+export function getHotelOptions(user: UserType): Array<{ id: string; name: string }> {
   const accessibleHotels = getUserAccessibleHotels(user);
   
   // Add "All Hotels" option for admin users
