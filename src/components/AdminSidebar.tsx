@@ -109,12 +109,13 @@ export default function AdminSidebar({
         {/* Header with Logo and Toggle Button */}
         <div className="p-6 border-b border-slate-700">
           <div className="flex items-center justify-between">
-            {/* JMK Logo/Admin Title */}
+            {/* JMK Logo */}
             <Link href="/hotels" onClick={handleLogoClick}>
-              <div className="cursor-pointer">
-                <div className="text-white font-bold text-lg">JMK GROUP</div>
-                <div className="text-blue-400 text-sm font-medium">Admin Dashboard</div>
-              </div>
+              <img 
+                src="/jmk-logo.png" 
+                alt="JMK Logo" 
+                className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
+              />
             </Link>
             
             {/* Hide/Close Button */}
