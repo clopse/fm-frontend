@@ -1,4 +1,3 @@
-// FILE: src/components/UserManagementModal.tsx
 'use client';
 
 import { UserPlus, Eye, Edit, Mail, Shield, Trash2, X, Plus, Check } from 'lucide-react';
