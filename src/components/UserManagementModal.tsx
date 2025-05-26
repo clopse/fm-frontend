@@ -39,9 +39,14 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
 
   const hotels = [
     'Holiday Inn Express',
-    'Hampton Inn',
-    'Holiday Inn',
-    'Marina Hotel',
+    'Moxy Cork',
+    'Holiday Inn Dublin Airport', 
+    'Hampton Dublin',
+    'Hampton Ealing',
+    'Seraphine Kensington',
+    'Waterford Marina',
+    'Hamilton Dock',
+    'Telephone House',
     'All Hotels'
   ];
 
@@ -314,9 +319,14 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                 >
                   <option value="">All Hotels</option>
                   <option value="Holiday Inn Express">Holiday Inn Express</option>
-                  <option value="Hampton Inn">Hampton Inn</option>
-                  <option value="Holiday Inn">Holiday Inn</option>
-                  <option value="Marina Hotel">Marina Hotel</option>
+                  <option value="Moxy Cork">Moxy Cork</option>
+                  <option value="Holiday Inn Dublin Airport">Holiday Inn Dublin Airport</option>
+                  <option value="Hampton Dublin">Hampton Dublin</option>
+                  <option value="Hampton Ealing">Hampton Ealing</option>
+                  <option value="Seraphine Kensington">Seraphine Kensington</option>
+                  <option value="Waterford Marina">Waterford Marina</option>
+                  <option value="Hamilton Dock">Hamilton Dock</option>
+                  <option value="Telephone House">Telephone House</option>
                   <option value="All Hotels">All Hotels</option>
                 </select>
               </div>
