@@ -1,5 +1,5 @@
 // FILE: src/utils/roleUtils.ts
-import { User } from '@/types/user';
+import type { User } from '@/types/user';
 import { hotels, hotelNames } from '@/lib/hotels';
 
 export interface UserRole {
@@ -160,7 +160,7 @@ export default function RoleBasedRedirect() {
   );
 }
 
-// FILE: src/components/AuthProtection.tsx (updated with role checking)
+// FILE: src/components/AuthProtection.tsx (updated with better token handling)
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -181,35 +181,52 @@ export default function AuthProtection({ children }: AuthProtectionProps) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Check if user has valid token
+        // First check if user has token (fast check)
         if (!userService.isAuthenticated()) {
           router.push('/login');
           return;
         }
 
-        // Verify token and get user
-        try {
-          const user = userService.getCurrentUser();
-          if (!user) {
+        // Get user from localStorage (no API call)
+        const user = userService.getCurrentUser();
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+
+        // Check if user can access current route
+        const canAccess = canUserAccessRoute(user, pathname);
+        if (!canAccess) {
+          router.push('/unauthorized');
+          return;
+        }
+
+        // Only make API call occasionally to verify token is still valid
+        // Check every 5 minutes instead of every page load
+        const lastTokenCheck = localStorage.getItem('last_token_check');
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000;
+
+        if (!lastTokenCheck || (now - parseInt(lastTokenCheck)) > fiveMinutes) {
+          try {
+            // Verify token is still valid with a lightweight API call
+            await userService.getUserStats();
+            localStorage.setItem('last_token_check', now.toString());
+          } catch (error) {
+            // Token is invalid/expired
+            console.log('Token expired, redirecting to login');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('last_token_check');
             router.push('/login');
             return;
           }
-
-          // Check if user can access current route
-          const canAccess = canUserAccessRoute(user, pathname);
-          if (!canAccess) {
-            router.push('/unauthorized');
-            return;
-          }
-
-          setIsAuthenticated(true);
-          setHasAccess(true);
-        } catch (error) {
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user');
-          router.push('/login');
         }
+
+        setIsAuthenticated(true);
+        setHasAccess(true);
       } catch (error) {
+        console.error('Auth check failed:', error);
         router.push('/login');
       }
     };
@@ -217,12 +234,13 @@ export default function AuthProtection({ children }: AuthProtectionProps) {
     checkAuth();
   }, [router, pathname]);
 
+  // Show loading only briefly - most checks are instant
   if (isAuthenticated === null || hasAccess === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verifying access...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p className="text-gray-600 text-sm">Loading...</p>
         </div>
       </div>
     );
