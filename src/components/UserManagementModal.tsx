@@ -1,10 +1,30 @@
 // FILE: src/components/UserManagementModal.tsx
 'use client';
 
-import { UserPlus, Eye, Edit, Mail, Shield, Trash2, X, Plus } from 'lucide-react';
+import { UserPlus, Eye, Edit, Mail, Shield, Trash2, X, Plus, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { User, UserCreate, UserUpdate } from '../types/user';
 import { userService } from '../services/userService';
+
+interface UserManagementModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+interface AddUserModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onUserAdded: () => void;
+}
+
+// FILE: src/components/UserManagementModal.tsx
+'use client';
+
+import { UserPlus, Eye, Edit, Mail, Shield, Trash2, X, Plus, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, UserCreate, UserUpdate } from '../types/user';
+import { userService } from '../services/userService';
+import { hotels } from '../lib/hotels';
 
 interface UserManagementModalProps {
   isOpen: boolean;
@@ -26,39 +46,56 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
     hotel: '',
     password: '',
   });
+  const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const roles = [
-    'Hotel Manager',
-    'Operations Manager', 
-    'Maintenance Lead',
-    'System Admin',
-    'Staff Member'
-  ];
+  const handleHotelToggle = (hotel: string) => {
+    setSelectedHotels(prev => {
+      if (prev.includes(hotel)) {
+        return prev.filter(h => h !== hotel);
+      } else {
+        return [...prev, hotel];
+      }
+    });
+  };
 
-  const hotels = [
-    'Holiday Inn Express',
-    'Moxy Cork',
-    'Holiday Inn Dublin Airport', 
-    'Hampton Dublin',
-    'Hampton Ealing',
-    'Seraphine Kensington',
-    'Waterford Marina',
-    'Hamilton Dock',
-    'Telephone House',
-    'All Hotels'
-  ];
+  const selectAllHotels = () => {
+    const allHotelNames = hotels.map(h => h.name);
+    if (selectedHotels.length === allHotelNames.length) {
+      setSelectedHotels([]);
+    } else {
+      setSelectedHotels([...allHotelNames]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
+    if (selectedHotels.length === 0) {
+      setError('Please select at least one hotel');
+      setLoading(false);
+      return;
+    }
+
     try {
-      await userService.createUser(formData);
+      // Convert selected hotels array to string
+      const allHotelNames = hotels.map(h => h.name);
+      const hotelAccess = selectedHotels.length === allHotelNames.length 
+        ? 'All Hotels' 
+        : selectedHotels.join(', ');
+
+      const userData = {
+        ...formData,
+        hotel: hotelAccess
+      };
+
+      await userService.createUser(userData);
       onUserAdded();
       onClose();
+      
       // Reset form
       setFormData({
         name: '',
@@ -67,6 +104,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
         hotel: '',
         password: '',
       });
+      setSelectedHotels([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user');
     } finally {
@@ -76,9 +114,11 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
 
   if (!isOpen) return null;
 
+  const allHotelNames = hotels.map(h => h.name);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Add New User</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -117,32 +157,58 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-            <select
+            <input
+              type="text"
               required
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select a role</option>
-              {roles.map(role => (
-                <option key={role} value={role}>{role}</option>
-              ))}
-            </select>
+              placeholder="Enter role (e.g., Hotel Manager, System Admin, etc.)"
+            />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Hotel Access</label>
-            <select
-              required
-              value={formData.hotel}
-              onChange={(e) => setFormData({ ...formData, hotel: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select hotel access</option>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Hotel Access</label>
+            
+            {/* Select All Button */}
+            <div className="mb-3">
+              <button
+                type="button"
+                onClick={selectAllHotels}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1"
+              >
+                <Check className="w-4 h-4" />
+                <span>
+                  {selectedHotels.length === allHotelNames.length ? 'Deselect All' : 'Select All Hotels'}
+                </span>
+              </button>
+            </div>
+
+            {/* Hotel Checkboxes */}
+            <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-md p-3 space-y-2">
               {hotels.map(hotel => (
-                <option key={hotel} value={hotel}>{hotel}</option>
+                <label key={hotel.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                  <input
+                    type="checkbox"
+                    checked={selectedHotels.includes(hotel.name)}
+                    onChange={() => handleHotelToggle(hotel.name)}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-900">{hotel.name}</span>
+                </label>
               ))}
-            </select>
+            </div>
+
+            {/* Selected Count */}
+            <div className="mt-2 text-xs text-gray-500">
+              {selectedHotels.length} of {allHotelNames.length} hotels selected
+              {selectedHotels.length > 0 && (
+                <div className="mt-1">
+                  <strong>Selected:</strong> {selectedHotels.slice(0, 2).join(', ')}
+                  {selectedHotels.length > 2 && ` and ${selectedHotels.length - 2} more`}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -272,6 +338,34 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
     }
   };
 
+  // Format hotel access for display
+  const formatHotelAccess = (hotelString: string) => {
+    if (hotelString === 'All Hotels') {
+      return (
+        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+          All Hotels
+        </span>
+      );
+    }
+    
+    // Handle comma-separated multiple hotels
+    const hotels = hotelString.split(', ');
+    if (hotels.length === 1) {
+      return <span className="text-sm text-gray-900">{hotels[0]}</span>;
+    }
+    
+    return (
+      <div className="space-y-1">
+        <span className="text-sm text-gray-900">{hotels[0]}</span>
+        {hotels.length > 1 && (
+          <div className="text-xs text-gray-500">
+            +{hotels.length - 1} more
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -311,6 +405,9 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                   <option value="Operations Manager">Operations Manager</option>
                   <option value="Maintenance Lead">Maintenance Lead</option>
                   <option value="System Admin">System Admin</option>
+                  <option value="Cluster Boss">Cluster Boss</option>
+                  <option value="Ireland Boss">Ireland Boss</option>
+                  <option value="UK Boss">UK Boss</option>
                 </select>
                 <select 
                   value={hotelFilter}
@@ -378,7 +475,9 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                             {user.role}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.hotel}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {formatHotelAccess(user.hotel)}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                             user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
