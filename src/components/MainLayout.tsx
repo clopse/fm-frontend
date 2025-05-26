@@ -1,14 +1,15 @@
+// FILE: src/components/MainLayout.tsx (updated with JWT auth)
 'use client';
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { hotels } from '@/lib/hotels';
+import { userService } from '@/services/userService';
 import { Menu } from 'lucide-react';
 
 // Import your existing components that we'll keep
 import HotelSelectorModal from './HotelSelectorModal';
 import UserPanel from './UserPanel';
-
 // New components (replace your old ones with these)
 import HeaderBar from './HeaderBar';
 import MainSidebar from './MainSidebar';
@@ -44,11 +45,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Auth check
+  // JWT Auth check (updated)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isAuth = localStorage.getItem('auth');
-      if (!isAuth) {
+      // Use the new JWT-based authentication
+      const isAuthenticated = userService.isAuthenticated();
+      if (!isAuthenticated && pathname !== '/login') {
         router.push('/login');
       }
     }
@@ -56,7 +58,6 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   const hotelId = pathname.split('/')[2];
   const currentHotelName = hotels.find((h) => h.id === hotelId)?.name || 'Select Hotel';
-
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
