@@ -4,25 +4,6 @@ import { UserPlus, Eye, Edit, Mail, Shield, Trash2, X, Plus, Check } from 'lucid
 import { useState, useEffect } from 'react';
 import { User, UserCreate, UserUpdate } from '../types/user';
 import { userService } from '../services/userService';
-
-interface UserManagementModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-interface AddUserModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onUserAdded: () => void;
-}
-
-// FILE: src/components/UserManagementModal.tsx
-'use client';
-
-import { UserPlus, Eye, Edit, Mail, Shield, Trash2, X, Plus, Check } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { User, UserCreate, UserUpdate } from '../types/user';
-import { userService } from '../services/userService';
 import { hotels } from '../lib/hotels';
 
 interface UserManagementModalProps {
@@ -36,7 +17,6 @@ interface AddUserModalProps {
   onUserAdded: () => void;
 }
 
-// Add User Modal Component
 function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
   const [formData, setFormData] = useState<UserCreate>({
     name: '',
@@ -80,7 +60,6 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
     }
 
     try {
-      // Convert selected hotels array to string
       const allHotelNames = hotels.map(h => h.name);
       const hotelAccess = selectedHotels.length === allHotelNames.length 
         ? 'All Hotels' 
@@ -95,7 +74,6 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
       onUserAdded();
       onClose();
       
-      // Reset form
       setFormData({
         name: '',
         email: '',
@@ -169,7 +147,6 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Hotel Access</label>
             
-            {/* Select All Button */}
             <div className="mb-3">
               <button
                 type="button"
@@ -183,7 +160,6 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
               </button>
             </div>
 
-            {/* Hotel Checkboxes */}
             <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-md p-3 space-y-2">
               {hotels.map(hotel => (
                 <label key={hotel.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
@@ -198,7 +174,6 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
               ))}
             </div>
 
-            {/* Selected Count */}
             <div className="mt-2 text-xs text-gray-500">
               {selectedHotels.length} of {allHotelNames.length} hotels selected
               {selectedHotels.length > 0 && (
@@ -250,7 +225,6 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   
-  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [hotelFilter, setHotelFilter] = useState('');
@@ -283,7 +257,7 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
 
     try {
       await userService.deleteUser(userId);
-      fetchUsers(); // Refresh the list
+      fetchUsers();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete user');
     }
@@ -307,7 +281,7 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
   const handleActivateUser = async (userId: string) => {
     try {
       await userService.activateUser(userId);
-      fetchUsers(); // Refresh the list
+      fetchUsers();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to activate user');
     }
@@ -337,7 +311,6 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
     }
   };
 
-  // Format hotel access for display
   const formatHotelAccess = (hotelString: string) => {
     if (hotelString === 'All Hotels') {
       return (
@@ -347,18 +320,17 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
       );
     }
     
-    // Handle comma-separated multiple hotels
-    const hotels = hotelString.split(', ');
-    if (hotels.length === 1) {
-      return <span className="text-sm text-gray-900">{hotels[0]}</span>;
+    const hotelList = hotelString.split(', ');
+    if (hotelList.length === 1) {
+      return <span className="text-sm text-gray-900">{hotelList[0]}</span>;
     }
     
     return (
       <div className="space-y-1">
-        <span className="text-sm text-gray-900">{hotels[0]}</span>
-        {hotels.length > 1 && (
+        <span className="text-sm text-gray-900">{hotelList[0]}</span>
+        {hotelList.length > 1 && (
           <div className="text-xs text-gray-500">
-            +{hotels.length - 1} more
+            +{hotelList.length - 1} more
           </div>
         )}
       </div>
@@ -400,13 +372,6 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                   className="px-4 py-2 border border-gray-300 rounded-lg"
                 >
                   <option value="">All Roles</option>
-                  <option value="Hotel Manager">Hotel Manager</option>
-                  <option value="Operations Manager">Operations Manager</option>
-                  <option value="Maintenance Lead">Maintenance Lead</option>
-                  <option value="System Admin">System Admin</option>
-                  <option value="Cluster Boss">Cluster Boss</option>
-                  <option value="Ireland Boss">Ireland Boss</option>
-                  <option value="UK Boss">UK Boss</option>
                 </select>
                 <select 
                   value={hotelFilter}
@@ -414,15 +379,9 @@ export default function UserManagementModal({ isOpen, onClose }: UserManagementM
                   className="px-4 py-2 border border-gray-300 rounded-lg"
                 >
                   <option value="">All Hotels</option>
-                  <option value="Holiday Inn Express">Holiday Inn Express</option>
-                  <option value="Moxy Cork">Moxy Cork</option>
-                  <option value="Holiday Inn Dublin Airport">Holiday Inn Dublin Airport</option>
-                  <option value="Hampton Dublin">Hampton Dublin</option>
-                  <option value="Hampton Ealing">Hampton Ealing</option>
-                  <option value="Seraphine Kensington">Seraphine Kensington</option>
-                  <option value="Waterford Marina">Waterford Marina</option>
-                  <option value="Hamilton Dock">Hamilton Dock</option>
-                  <option value="Telephone House">Telephone House</option>
+                  {hotels.map(hotel => (
+                    <option key={hotel.id} value={hotel.name}>{hotel.name}</option>
+                  ))}
                   <option value="All Hotels">All Hotels</option>
                 </select>
               </div>
