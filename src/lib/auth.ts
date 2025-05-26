@@ -1,13 +1,6 @@
-// 1. Update src/lib/auth.ts to use the hotels.ts file
 // src/lib/auth.ts
 import { User } from '@/types/user';
 import { hotels } from './hotels';
-
-// Remove the hardcoded hotelRegions and make it dynamic if needed
-export const hotelRegions = {
-  // You can define regions based on hotel IDs from hotels.ts
-  // Or remove this entirely if you don't need regional groupings
-};
 
 export interface UserPermissions {
   canAccessAllHotels: boolean;
@@ -194,20 +187,3 @@ export function useUserRedirect() {
     canAccessAdminPages: (user: User) => canAccessAdminPages(user)
   };
 }
-
-// 2. Update any navigation components to use hotels.ts
-// src/components/Navigation.tsx (if you have one)
-import { hotels } from '@/lib/hotels';
-
-// Use hotels.map(h => h.name) instead of hardcoded hotel names
-
-// 3. Update any other components that reference hotel names
-// Make sure they import from hotels.ts instead of hardcoding
-
-// 4. Update your backend FastAPI code to handle the flexible roles
-// The backend already accepts any string for role, so it should work fine
-
-// 5. If you have any other dropdowns or selectors that use hotel names:
-// Replace hardcoded arrays with:
-const hotelOptions = hotels.map(h => ({ value: h.id, label: h.name }));
-// or just: hotels.map(h => h.name) for simple arrays
