@@ -1,4 +1,161 @@
-'use client';
+const slides = [
+  {
+    title: 'Hotel Overview',
+    bullets: [
+      '198 rooms with 3 conference rooms',
+      '8 floors: -1, Ground Floor, and Floors 1-6',
+      'Guest rooms located on Floors 1-6',
+      '3 elevators: 2 for guests, 1 for staff',
+      'NEVER use elevators during a fire alarm',
+      'Two emergency stairwells for evacuation'
+    ],
+    images: ['/training/6floorplan.png', '/training/floorplan-1.png'],
+  },
+  {
+    title: 'Fire Escapes & Exit Routes',
+    bullets: [
+      'Hotel designed with two means of escape from every location',
+      'You should know both escape routes from your work area',
+      'Fire escape doors must be kept clear and closed',
+      'Report any obstructions to maintenance immediately',
+      'Green exit signs mark all escape routes',
+      'Front stairwell: 6th floor to ground floor',
+      'Rear stairwell: 6th to 1st, then tunnel to Findlater Place'
+    ],
+    images: ['/training/exit1.png', '/training/exit2.png'],
+  },
+  {
+    title: 'Fire Escape Doors',
+    bullets: [
+      'Emergency exit doors with green signage',
+      'Must be kept clear of obstructions at all times',
+      'Push bar to open during emergency',
+      'Never prop open or block these doors',
+      'Lead to designated escape routes',
+      'Check doors are functioning during shift'
+    ],
+    images: ['/training/fireescape.png'],
+  },
+  {
+    title: 'Manual Call Points',
+    bullets: [
+      'Manually trigger fire alarm when you detect fire',
+      'Break glass to activate - sets alarm to full bells',
+      'Does NOT show on fire panel display',
+      'Located on every floor near stairwells',
+      'Reset only with red fire key',
+      'Use immediately if you discover a fire'
+    ],
+    images: ['/training/mcp.png'],
+  },
+  {
+    title: 'Emergency Door Release',
+    bullets: [
+      'Unlocks secure doors during fire emergency',
+      'Allows manual and automatic door release',
+      'Does NOT trigger the fire alarm',
+      'Provides access through locked emergency exits',
+      'Reset with black fire key',
+      'Located near secure exit doors'
+    ],
+    images: ['/training/emergencydoorrelease.png'],
+  },
+  {
+    title: 'Fire Extinguishers',
+    bullets: [
+      'Use ONLY if trained and fire is small',
+      'Water: for paper, wood, and fabric fires',
+      'CO₂: for electrical equipment fires',
+      'Wet Chemical: for kitchen oil and fat fires',
+      'Never turn your back on a fire',
+      'If in doubt, evacuate immediately'
+    ],
+    images: ['/training/extinguisher.png', '/training/extinguishertypes.png'],
+  },
+  {
+    title: 'Fire Alarm Panel (Gent Vigilon)',
+    bullets: [
+      'Located in back office - check at start of each shift',
+      'Ensure "Network Healthy" shows in top left',
+      'Red light = FIRE detected in building',
+      'Amber light = FAULT in the system',
+      'Shows exact location of activated detector',
+      'Only trained staff should operate panel controls'
+    ],
+    images: ['/training/firepanel.png'],
+  },
+  {
+    title: 'Dry Riser System',
+    bullets: [
+      'Used by fire brigade to connect water hoses',
+      'Located in lift lobby and rear stairs on each floor',
+      'Marked on floor plans with special legend',
+      'Fire brigade may ask for their locations',
+      'Key to open dry risers is on fire key ring',
+      'Critical for fire brigade operations'
+    ],
+    images: ['/training/dryriser.png'],
+  },
+  {
+    title: 'Fire Keys & Emergency Box',
+    bullets: [
+      'Fire keys located in key box (holder 34)',
+      'Emergency box near reception contains:',
+      '• Floor plans and evacuation cards',
+      '• Hi-vis jackets and torches',
+      '• Megaphone for communication',
+      'Keys include: Master fob, roof access, dry risers'
+    ],
+    images: ['/training/fire-keys.png'],
+  },
+  {
+    title: 'What Fire Brigade Will Request',
+    bullets: [
+      'Floor plans (from emergency box)',
+      'Fire keys (from key box holder 34)',
+      'Current guest list (updated every 2 hours)',
+      'PEEP details for guests with mobility needs',
+      'Roof access key and information',
+      'Location of fire and dry riser access'
+    ],
+    images: ['/training/coor.png'],
+  },
+  {
+    title: 'Evacuation Roles Overview',
+    bullets: [
+      'Co-ordinator: Controls evacuation, calls emergency services',
+      'Locator: Finds fire location, reports to co-ordinator',
+      'Exit Organisers: Guide guests to assembly point',
+      'Sweepers: Clear floors if safe to do so',
+      'All staff must know all roles for flexibility',
+      'Roles posted daily in back office'
+    ],
+    images: ['/training/locator.png'],
+  },
+  {
+    title: 'Training Complete - Key Takeaways',
+    bullets: [
+      'Check fire panel at start of each shift',
+      'Update guest list every 2 hours',
+      'Know your evacuation role and backup roles',
+      'Assist guests only if safe to do so',
+      'Never ignore an alarm - treat all as real',
+      'Confidence and preparation save lives'
+    ],
+    images: ['/training/jmk-logo.png'],
+  },
+];      <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="grid md:grid-cols-1 gap-8 items-center justify-center">
+            {/* Full slide image */}
+            <div className="order-1">
+              {slide.image && (
+                <div className="text-center">
+                  <Image
+                    src={slide.image}
+                    alt={slide.title}
+                    width={900}
+                'use client';
 
 import Image from 'next/image';
 import { useState } from 'react';
@@ -10,132 +167,82 @@ interface FireSlidesProps {
 const slides = [
   {
     title: 'Hotel Overview',
-    bullets: [
-      '198 rooms across 8 floors (-1 to 6)',
-      '3 lifts total (2 guest, 1 staff)',
-      'NEVER use lifts during a fire',
-      'Two stairwells available:',
-      '• Front stairwell: 6th floor to ground',
-      '• Rear stairwell: 6th to 1st, then tunnel to Findlater Place'
-    ],
-    image: '/training/floor-plan.png',
+    image: '/training/slide3.png', // Hotel layout and floors info
+  },
+  {
+    title: 'Fire Escapes',
+    image: '/training/slide5.png', // Fire escape doors and routes
   },
   {
     title: 'Manual Call Points',
-    bullets: [
-      'Use to trigger alarm if you see fire',
-      'Activates bells immediately throughout building',
-      'Break glass to activate',
-      'Reset with red fire key only',
-      'Located on every floor near stairwells'
-    ],
-    image: '/training/manual-call-point.png',
+    image: '/training/slide6.png', // Red manual call point
   },
   {
     title: 'Emergency Door Release',
-    bullets: [
-      'Press to open secure doors during fire',
-      'Does NOT trigger the alarm system',
-      'Used for escape route access',
-      'Reset with black key',
-      'Located near secure exit doors'
-    ],
-    image: '/training/emergency-door-release.png',
+    image: '/training/slide7.png', // Green emergency door release
   },
   {
     title: 'Fire Extinguishers',
-    bullets: [
-      'Use ONLY if trained and fire is SMALL',
-      'Water extinguishers: paper, wood, fabric',
-      'CO₂ extinguishers: electrical equipment',
-      'Wet Chemical: kitchen fires (oil/fat)',
-      'If in doubt, evacuate immediately'
-    ],
-    image: '/training/extinguishers.png',
+    image: '/training/slide8.png', // Fire extinguisher types
   },
   {
-    title: 'Fire Alarm Panel (Gent Vigilon)',
-    bullets: [
-      'Located in back office',
-      'Red light = FIRE detected',
-      'Amber light = FAULT in system',
-      'Silence button stops sounders',
-      'Reset clears system after full check',
-      'Do NOT reset unless properly trained'
-    ],
-    image: '/training/fire-panel.png',
+    title: 'Fire Alarm Panel',
+    image: '/training/slide9.png', // Gent Vigilon panel
   },
   {
-    title: 'Fire Box & Essential Items',
-    bullets: [
-      'Fire box location: near reception',
-      'Contains: floor plans, safety vests, torches',
-      'Also includes: speaker and roof access fob',
-      'Fire keys kept in separate key box',
-      'Guest list: updated every shift (every 2 hours)',
-      'PEEP form posted in back office'
-    ],
-    image: '/training/fire-keys.png',
+    title: 'Dry Riser System',
+    image: '/training/slide10.png', // Dry riser outlets
   },
   {
-    title: 'What Fire Brigade Will Ask For',
-    bullets: [
-      'Floor plans (from fire box)',
-      'Fire keys (from key box)',
-      'PEEP details (mobility assistance list)',
-      'Roof access fob',
-      'Current guest list',
-      'Know exactly where fire box is located'
-    ],
-    image: '/training/assembly-point.png',
+    title: 'Evacuation Roles',
+    image: '/training/slide13.png', // Roles overview
   },
   {
-    title: 'Assembly Point & Evacuation',
-    bullets: [
-      'All guests and staff gather at designated assembly point',
-      'Located outside the building (see image)',
-      'Roll call conducted here',
-      'Emergency services coordinate from this point',
-      'NEVER re-enter building',
-      'Wait for fire brigade all-clear'
-    ],
-    image: '/training/assembly-point.png',
+    title: 'Coordinator & Locator Cards',
+    image: '/training/slide14.png', // Both role cards
   },
   {
-    title: 'Evacuation Roles & Flexibility',
-    bullets: [
-      'Daily roles posted in back office',
-      'ALL staff must know ALL roles',
-      'If someone absent: everyone shifts up',
-      'Example: Coordinator missing →',
-      '• Locator becomes Coordinator',
-      '• Exit Organiser becomes Locator, etc.'
-    ],
-    image: '/training/roles-printout.png',
+    title: 'Exit Organiser Cards',
+    image: '/training/slide15.png', // Exit organiser cards
   },
   {
-    title: 'PEEPs – Guests with Mobility Needs',
-    bullets: [
-      'PEEP = Personal Emergency Evacuation Plan',
-      'Completed by guests at check-in',
-      'Identifies guests needing assistance',
-      'Staff must know their locations',
-      'Special procedures for evacuation',
-      'Priority communication to emergency services'
-    ],
-    image: '/training/peep-form.png',
+    title: 'Fire Keys & Emergency Procedures',
+    image: '/training/fire-keys.png', // Fire keys and procedures
   },
   {
-    title: 'Final Safety Reminders',
-    bullets: [
-      'Sweep or assist ONLY if trained',
-      'Help guests only if safe to do so',
-      'Step into roles when someone is absent',
-      'Know the full evacuation chain',
-      'NEVER ignore an alarm',
-      'Confidence and preparation save lives'
-    ],
-    image: '/training/logo-jmk.png',
+    title: 'Assembly Point - Gresham Hotel',
+    image: '/training/assembly-point.png', // Assembly point location
+  },
+  {
+    title: 'PEEPs - Personal Emergency Evacuation Plans',
+    image: '/training/peep-form.png', // PEEP information
+  },
+  {
+    title: 'Training Summary',
+    image: '/training/training-summary.png', // Key takeaways and reminders
+  },
+];Dry Riser System',
+    image: '/training/slide10.png', // Dry riser outlets
+  },
+  {
+    title: 'Evacuation Roles',
+    image: '/training/slide13.png', // Roles overview
+  },
+  {
+    title: 'Coordinator & Locator Cards',
+    image: '/training/slide14.png', // Both role cards
+  },
+  {
+    title: 'Exit Organiser Cards',
+    image: '/training/slide15.png', // Exit organiser cards
+  },
+  {
+    title: 'Coordinator Details',
+    image: '/training/slide16.png', // Coordinator responsibilities
+  },
+  {
+    title: 'Floor Plans',
+    image: '/training/slide17.png', // Floor plan example
   },
 ];
 
@@ -145,40 +252,65 @@ export default function FireSlides({ onComplete }: FireSlidesProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
-      {/* Header with logos */}
-      <div className="flex justify-between items-center p-4 bg-white shadow-sm">
-        <Image
-          src="/training/logo-hiex.png"
-          alt="Holiday Inn Express"
-          width={120}
-          height={60}
-          className="h-12 w-auto"
-        />
-        <div className="text-center">
-          <h1 className="text-lg font-bold text-blue-800">Fire Safety Training</h1>
-          <p className="text-sm text-gray-600">Slide {index + 1} of {slides.length}</p>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="flex justify-between items-center p-4 max-w-7xl mx-auto">
+          {/* Left - JMK Logo */}
+          <div className="flex items-center">
+            <Image
+              src="/training/logo-jmk.png"
+              alt="JMK Group"
+              width={80}
+              height={50}
+              className="h-12 w-auto"
+            />
+          </div>
+          
+          {/* Center - Title */}
+          <div className="text-center">
+            <h1 className="text-xl font-bold text-blue-800">Fire Safety Training</h1>
+            <p className="text-sm text-gray-600">Slide {index + 1} of {slides.length}</p>
+          </div>
+          
+          {/* Right - Holiday Inn Express Logo */}
+          <div className="flex items-center">
+            <div className="text-right mr-4">
+              <p className="text-sm font-semibold text-blue-700">Holiday Inn Express</p>
+              <p className="text-xs text-gray-600">Dublin City Centre</p>
+            </div>
+            <Image
+              src="/training/logo-hiex.png"
+              alt="Holiday Inn Express"
+              width={120}
+              height={60}
+              className="h-12 w-auto"
+            />
+          </div>
         </div>
-        <Image
-          src="/training/logo-jmk.png"
-          alt="JMK"
-          width={80}
-          height={40}
-          className="h-10 w-auto"
-        />
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h2 className="text-2xl font-bold text-blue-800 mb-8 text-center">{slide.title}</h2>
           
-          <div className="grid md:grid-cols-2 gap-8 items-start">
-            {/* Content side */}
-            <div className="order-2 md:order-1">
-              <ul className="space-y-3">
-                {slide.bullets.map((bullet, idx) => (
-                  <li key={idx} className="flex items-start">
-                    {bullet.startsWith('•') ? (
-                      <span className="text-gray-700 text-lg leading-relaxed ml-4">{bullet}</span>
+          <div className="grid md:grid-cols-1 gap-8 items-center justify-center">
+            {/* Full slide image */}
+            <div className="order-1">
+              {slide.image && (
+                <div className="text-center">
+                  <Image
+                    src={slide.image}
+                    alt={slide.title}
+                    width={900}
+                    height={600}
+                    className="mx-auto rounded-lg shadow-md max-w-full h-auto"
+                  />
+                </div>
+              )}
+            </div>
+          </div>      <span className="text-gray-700 text-lg leading-relaxed ml-4">{bullet}</span>
                     ) : (
                       <>
                         <div className="w-2 h-2 bg-blue-600 rounded-full mt-3 mr-3 flex-shrink-0"></div>
