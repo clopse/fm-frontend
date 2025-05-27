@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import '../../../../globals.css';
+import '../../../../../globals.css'; // Fixed path
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Training - Holiday Inn Express',
-  description: 'Staff training modules for hotel operations',
-  robots: 'noindex, nofollow',
+  title: 'Fire Safety Training - Holiday Inn Express',
+  description: 'Fire safety training and certification for hotel staff',
+  robots: 'noindex, nofollow', // Prevent search engine indexing
 };
 
 export default function TrainingLayout({
@@ -18,6 +18,7 @@ export default function TrainingLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
+        {/* No authentication wrapper - public training access */}
         <main className="min-h-screen">
           {children}
         </main>
