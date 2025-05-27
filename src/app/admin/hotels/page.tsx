@@ -10,7 +10,7 @@ import {
   Droplets,
   Flame,
   Wind,
-  Elevator,
+  Building2,
   Car,
   Users,
   Calendar,
