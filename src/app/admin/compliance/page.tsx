@@ -297,7 +297,7 @@ export default function ComplianceMatrixPage() {
         <AdminHeader 
           showSidebar={showAdminSidebar}
           onToggleSidebar={() => setShowAdminSidebar(!showAdminSidebar)}
-          onOpenHotelSelector={() => setIsHotelModalOpen(true)}
+          onOpenHotelSelector={() => setIsHotelModalOpen(true)}  // ✅ MISSING LINE
           onOpenUserPanel={() => setIsUserPanelOpen(true)}
           onOpenAccountSettings={() => setShowAccountSettings(true)}
           isMobile={isMobile}
