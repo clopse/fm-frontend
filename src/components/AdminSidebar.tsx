@@ -9,7 +9,7 @@ import {
   FileSearch,
   Receipt,
   Settings,
-  BarChart3,
+  GraduationCap,
   Building,
   X,
   Menu
@@ -68,10 +68,10 @@ export default function AdminSidebar({
       description: 'Manage all system users'
     },
     {
-      label: 'Analytics & Reports',
-      href: '/admin/analytics',
-      icon: BarChart3,
-      description: 'Performance metrics and reports'
+      label: 'Courses & Training',
+      href: '/admin/training',
+      icon: GraduationCap,
+      description: 'Create and manage staff training modules'
     },
     {
       label: 'Hotel Management',
