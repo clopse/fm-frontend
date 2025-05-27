@@ -3,6 +3,14 @@ import { User, UserCreate, UserUpdate, LoginRequest, LoginResponse, UserStats } 
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
+// Helper function to check if current path is training
+function isTrainingPath(): boolean {
+  if (typeof window !== 'undefined') {
+    return window.location.pathname.includes('/training/');
+  }
+  return false;
+}
+
 // Generic fetch wrapper with auth
 export async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('access_token');
@@ -31,7 +39,6 @@ class UserService {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
-
     // Store token and user
     localStorage.setItem('access_token', data.access_token);
     localStorage.setItem('user', JSON.stringify(data.user));
@@ -53,7 +60,22 @@ class UserService {
   }
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('access_token');
+    // BYPASS AUTH FOR TRAINING PAGES
+    if (isTrainingPath()) {
+      return true; // Always return true for training pages
+    }
+    
+    // Normal auth check for other pages
+    if (typeof window === 'undefined') {
+      return false; // Server-side, assume not authenticated
+    }
+    
+    try {
+      return !!localStorage.getItem('access_token');
+    } catch (error) {
+      console.error('localStorage access error:', error);
+      return false;
+    }
   }
 
   // User CRUD operations
@@ -68,7 +90,6 @@ class UserService {
     if (filters?.hotel && filters.hotel !== 'All Hotels') params.append('hotel', filters.hotel);
     if (filters?.status) params.append('status', filters.status);
     if (filters?.search) params.append('search', filters.search);
-
     return apiFetch<User[]>(`/api/users/?${params}`);
   }
 
