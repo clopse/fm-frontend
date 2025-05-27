@@ -1,12 +1,11 @@
-// FILE: src/components/MainLayout.tsx (updated with JWT auth)
+// FILE: src/components/MainLayout.tsx (updated with training bypass)
 'use client';
-
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { hotels } from '@/lib/hotels';
 import { userService } from '@/services/userService';
+import { isPublicTrainingPath } from '@/lib/auth'; // Import the helper function
 import { Menu } from 'lucide-react';
-
 // Import your existing components that we'll keep
 import HotelSelectorModal from './HotelSelectorModal';
 import UserPanel from './UserPanel';
@@ -27,7 +26,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   
   const isDashboardHome = /^\/hotels\/[^/]+$/.test(pathname);
-
+  
+  // BYPASS ENTIRE MAINLAYOUT FOR TRAINING PAGES
+  if (isPublicTrainingPath(pathname)) {
+    return <>{children}</>;
+  }
+  
   // Handle mobile detection and sidebar state
   useEffect(() => {
     const handleResize = () => {
