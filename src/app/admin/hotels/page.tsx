@@ -896,10 +896,7 @@ function getRequiredServices(hotel: HotelFacilityData) {
   }
   
   return services;
-}key}>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                              </label>
+}
                               <input
                                 type={typeof value === 'number' ? 'number' : 'text'}
                                 value={value || ''}
