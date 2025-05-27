@@ -13,7 +13,7 @@ import {
   Shield,
   Info
 } from 'lucide-react';
-import { hotelNames } from '@/data/hotelMetadata';
+import { hotels, hotelNames } from '@/lib/hotels';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import UserPanel from '@/components/UserPanel';
