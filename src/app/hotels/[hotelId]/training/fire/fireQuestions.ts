@@ -12,7 +12,7 @@ const fireQuestions: FireQuestion[] = [
       "If short-staffed, hand a guest/guests exit organiser cards and briefly explain to them their job",
       "Everyone shifts up one role. Each person takes the next position in the list.",
       "Wait until Nayara returns.",
-      "Decidewho should eb coordinator in the moment."
+      "Decide who should be coordinator in the moment."
     ],
     correct: [0, 1],
     image: "/training/roles.png"
