@@ -9,10 +9,10 @@ const fireQuestions: FireQuestion[] = [
   {
     question: "The fire alarm sounds during the middle shift. Nayara (Coordinator) is on break. What should happen?",
     options: [
-      "If short-staffed, hand a guest/guests exit organiser cards and briefly explain to them their job",
-      "Everyone shifts up one role. Each person takes the next position in the list.",
+      "Call the fire brigade",
       "Wait until Nayara returns.",
-      "Decide who should be coordinator in the moment."
+      "Decide who should be coordinator in the moment.",
+      "Everyone shifts up one role. Each person takes the next position in the list."
     ],
     correct: [0, 1],
     image: "/training/roles.png"
