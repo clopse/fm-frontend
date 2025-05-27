@@ -131,8 +131,6 @@ export default function ComplianceMatrixPage() {
     }
   };
 
-  import { hotels } from '@/lib/hotels';
-
 const getUniqueHotels = () => {
   if (hotelFilter === 'all') return hotels;
   return hotels.filter(h => h.id === hotelFilter);
