@@ -895,7 +895,10 @@ function getRequiredServices(hotel: HotelFacilityData) {
     });
   }
   
-  return services; $1').replace(/^./, str => str.toUpperCase())}
+  return services;
+}key}>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                               </label>
                               <input
                                 type={typeof value === 'number' ? 'number' : 'text'}
@@ -942,6 +945,4 @@ function getRequiredServices(hotel: HotelFacilityData) {
                         <h3 className="text-lg font-semibold text-gray-900">Mechanical Systems & Equipment</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           {Object.entries(selectedHotel.mechanical).map(([key, value]) => (
-                            <div key={key}>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                {key.replace(/([A-Z])/g, '
+                            <div key={
