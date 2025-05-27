@@ -19,7 +19,9 @@ import {
   Flame,
   Building2,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  X
 } from 'lucide-react';
 
 import AdminSidebar from '@/components/AdminSidebar';
@@ -80,6 +82,7 @@ export default function UtilitiesAdminPage() {
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   // Add new state for bill viewer
   const [allBills, setAllBills] = useState<UploadedBill[]>([]);
   const [selectedBill, setSelectedBill] = useState<UploadedBill | null>(null);
@@ -166,6 +169,8 @@ export default function UtilitiesAdminPage() {
     
     return matchesSearch && matchesHotel && matchesUtility;
   });
+
+  const loadMissingBills = async () => {
     setIsLoading(true);
     try {
       // Fetch missing bills from your API
