@@ -131,28 +131,12 @@ export default function ComplianceMatrixPage() {
     }
   };
 
-  const getUniqueHotels = () => {
-    // If no entries from API, use all hotels from hotels.ts
-    if (entries.length === 0) {
-      return [
-        { id: 'hiex', name: 'Holiday Inn Express' },
-        { id: 'moxy', name: 'Moxy Cork' },
-        { id: 'hida', name: 'Holiday Inn Dublin Airport' },
-        { id: 'hbhdcc', name: 'Hampton Dublin' },
-        { id: 'hbhe', name: 'Hampton Ealing' },
-        { id: 'sera', name: 'Seraphine Kensington' },
-        { id: 'marina', name: 'Waterford Marina' },
-        { id: 'belfast', name: 'Hamilton Dock' },
-        { id: 'hiltonth', name: 'Telephone House' },
-      ];
-    }
-    
-    const hotelIds = [...new Set(entries.map(e => e.hotel_id))];
-    return hotelIds.map(id => ({ 
-      id, 
-      name: hotelNames[id] || id 
-    })).sort((a, b) => a.name.localeCompare(b.name));
-  };
+  import { hotels } from '@/lib/hotels';
+
+const getUniqueHotels = () => {
+  if (hotelFilter === 'all') return hotels;
+  return hotels.filter(h => h.id === hotelFilter);
+};
 
   const getFilteredTasks = () => {
     let filtered = mandatoryTasks;
