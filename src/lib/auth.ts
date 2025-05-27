@@ -11,6 +11,11 @@ export interface UserPermissions {
   region?: string;
 }
 
+// Helper function to check if a path should bypass authentication
+export function isPublicTrainingPath(pathname: string): boolean {
+  return pathname.includes('/training/');
+}
+
 export function getUserPermissions(user: User): UserPermissions {
   const role = user.role.toLowerCase();
   const userHotel = user.hotel;
@@ -116,6 +121,11 @@ export function canAccessAdminPages(user: User): boolean {
 export function getRedirectUrl(user: User, requestedPath?: string): string {
   const permissions = getUserPermissions(user);
 
+  // BYPASS AUTH FOR TRAINING PAGES
+  if (requestedPath && isPublicTrainingPath(requestedPath)) {
+    return requestedPath;
+  }
+
   // If they have full access and requested a specific path, allow it
   if (permissions.canAccessAllHotels && requestedPath) {
     return requestedPath;
@@ -163,6 +173,11 @@ export function useUserRedirect() {
   };
 
   const checkPageAccess = (router: any, currentPath: string) => {
+    // BYPASS AUTH CHECK FOR TRAINING PAGES
+    if (isPublicTrainingPath(currentPath)) {
+      return true;
+    }
+
     const user = getCurrentUser();
     if (!user) {
       router.push('/login');
@@ -184,6 +199,7 @@ export function useUserRedirect() {
     checkPageAccess,
     getUserPermissions: (user: User) => getUserPermissions(user),
     canAccessHotel: (user: User, hotelId: string) => canAccessHotel(user, hotelId),
-    canAccessAdminPages: (user: User) => canAccessAdminPages(user)
+    canAccessAdminPages: (user: User) => canAccessAdminPages(user),
+    isPublicTrainingPath
   };
 }
