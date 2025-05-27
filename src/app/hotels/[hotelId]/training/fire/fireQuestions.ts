@@ -12,7 +12,7 @@ const fireQuestions: FireQuestion[] = [
       "If short-staffed, hand a guest/guests exit organiser cards and briefly explain to them their job",
       "Everyone shifts up one role. Each person takes the next position in the list.",
       "Wait until Nayara returns.",
-      "Assign someone verbally in the moment."
+      "Decidewho should eb coordinator in the moment."
     ],
     correct: [0, 1],
     image: "/training/roles-printout.png"
@@ -34,7 +34,7 @@ const fireQuestions: FireQuestion[] = [
       "Only if the fire is small and you are trained.",
       "Anytime you see smoke.",
       "To silence the alarm.",
-      "To open emergency exits."
+      "To prop open doors."
     ],
     correct: [0],
     image: "/training/extinguishers.png"
@@ -55,7 +55,7 @@ const fireQuestions: FireQuestion[] = [
       "In the fire box",
       "With the manager", 
       "In the key box",
-      "Inside the lift"
+      "On the DM keys"
     ],
     correct: [2],
     image: "/training/fire-keys.png"
@@ -86,7 +86,7 @@ const fireQuestions: FireQuestion[] = [
     question: "When should the guest list be updated?",
     options: [
       "Once per week.",
-      "Every shift (recommended every 2 hours).",
+      "Every 2 hours.",
       "Only after check-in.",
       "Once a day."
     ],
@@ -95,7 +95,7 @@ const fireQuestions: FireQuestion[] = [
   {
     question: "Where do all guests and staff gather during a fire evacuation?",
     options: [
-      "At the designated assembly point outside the building.",
+      "At the designated assembly point at the Gresham Hotel.",
       "In the hotel lobby.",
       "In the car park.",
       "Wherever is convenient."
