@@ -10,57 +10,131 @@ interface FireSlidesProps {
 const slides = [
   {
     title: 'Hotel Overview',
-    content: 'Holiday Inn Express Dublin City Centre has 198 rooms across 8 floors (-1 to 6), with 3 lifts (2 guest, 1 staff). Never use lifts in a fire. Know both stairwells: front (6th to ground) and rear (6th to 1st, then tunnel to Findlater Place).',
+    bullets: [
+      '198 rooms across 8 floors (-1 to 6)',
+      '3 lifts total (2 guest, 1 staff)',
+      'NEVER use lifts during a fire',
+      'Two stairwells available:',
+      '• Front stairwell: 6th floor to ground',
+      '• Rear stairwell: 6th to 1st, then tunnel to Findlater Place'
+    ],
     image: '/training/floor-plan.png',
   },
   {
     title: 'Manual Call Points',
-    content: 'Use to trigger alarm if you see fire. This activates bells immediately. Reset with red fire key.',
+    bullets: [
+      'Use to trigger alarm if you see fire',
+      'Activates bells immediately throughout building',
+      'Break glass to activate',
+      'Reset with red fire key only',
+      'Located on every floor near stairwells'
+    ],
     image: '/training/manual-call-point.png',
   },
   {
     title: 'Emergency Door Release',
-    content: 'Press to open secure doors during fire. Does not trigger alarm. Reset with black key.',
+    bullets: [
+      'Press to open secure doors during fire',
+      'Does NOT trigger the alarm system',
+      'Used for escape route access',
+      'Reset with black key',
+      'Located near secure exit doors'
+    ],
     image: '/training/emergency-door-release.png',
   },
   {
     title: 'Fire Extinguishers',
-    content: 'Use ONLY if trained and fire is small. Water (paper/wood), CO₂ (electrical), Wet Chemical (kitchen).',
+    bullets: [
+      'Use ONLY if trained and fire is SMALL',
+      'Water extinguishers: paper, wood, fabric',
+      'CO₂ extinguishers: electrical equipment',
+      'Wet Chemical: kitchen fires (oil/fat)',
+      'If in doubt, evacuate immediately'
+    ],
     image: '/training/extinguishers.png',
   },
   {
     title: 'Fire Alarm Panel (Gent Vigilon)',
-    content: 'Located in back office. Red = FIRE, Amber = FAULT. Silence stops sounders, Reset clears system only after full check. Do NOT reset unless trained.',
+    bullets: [
+      'Located in back office',
+      'Red light = FIRE detected',
+      'Amber light = FAULT in system',
+      'Silence button stops sounders',
+      'Reset clears system after full check',
+      'Do NOT reset unless properly trained'
+    ],
     image: '/training/fire-panel.png',
   },
   {
-    title: 'Fire Box & Plans',
-    content: 'The fire box near reception contains floor plans, safety vests, torches, a speaker, and roof access fob. The fire keys are located in the key box. A printed guest list is hung in the back office and should be updated every shift (ideally every 2 hours). The PEEP form is also posted in the back office. Be ready to hand these to the fire brigade.',
+    title: 'Fire Box & Essential Items',
+    bullets: [
+      'Fire box location: near reception',
+      'Contains: floor plans, safety vests, torches',
+      'Also includes: speaker and roof access fob',
+      'Fire keys kept in separate key box',
+      'Guest list: updated every shift (every 2 hours)',
+      'PEEP form posted in back office'
+    ],
     image: '/training/fire-keys.png',
   },
   {
-    title: 'What the Fire Brigade Will Ask For',
-    content: 'On arrival, they will ask for: Floor plans, Fire keys, PEEP details, Roof access, Guest list. Know where the fire box is.',
+    title: 'What Fire Brigade Will Ask For',
+    bullets: [
+      'Floor plans (from fire box)',
+      'Fire keys (from key box)',
+      'PEEP details (mobility assistance list)',
+      'Roof access fob',
+      'Current guest list',
+      'Know exactly where fire box is located'
+    ],
     image: '/training/assembly-point.png',
   },
   {
     title: 'Assembly Point & Evacuation',
-    content: 'All guests and staff must gather at the designated assembly point outside the building. This is where the roll call takes place and where emergency services will coordinate operations. Never re-enter the building until given the all-clear by the fire brigade.',
+    bullets: [
+      'All guests and staff gather at designated assembly point',
+      'Located outside the building (see image)',
+      'Roll call conducted here',
+      'Emergency services coordinate from this point',
+      'NEVER re-enter building',
+      'Wait for fire brigade all-clear'
+    ],
     image: '/training/assembly-point.png',
   },
   {
     title: 'Evacuation Roles & Flexibility',
-    content: 'Roles are posted daily in the back office. It is important that all staff know all roles. If someone is absent, everyone shifts up one position: e.g., if the Coordinator is missing, the Locator becomes Coordinator, the Exit Organiser becomes Locator, and so on.',
+    bullets: [
+      'Daily roles posted in back office',
+      'ALL staff must know ALL roles',
+      'If someone absent: everyone shifts up',
+      'Example: Coordinator missing →',
+      '• Locator becomes Coordinator',
+      '• Exit Organiser becomes Locator, etc.'
+    ],
     image: '/training/roles-printout.png',
   },
   {
     title: 'PEEPs – Guests with Mobility Needs',
-    content: 'Guests complete a PEEP (Personal Emergency Evacuation Plan) form at check-in. Staff should know how to notify emergency services and where those guests are located. These guests require special assistance during evacuation.',
+    bullets: [
+      'PEEP = Personal Emergency Evacuation Plan',
+      'Completed by guests at check-in',
+      'Identifies guests needing assistance',
+      'Staff must know their locations',
+      'Special procedures for evacuation',
+      'Priority communication to emergency services'
+    ],
     image: '/training/peep-form.png',
   },
   {
-    title: 'Final Reminder',
-    content: 'Sweep or assist only if trained. Help guests only if safe to do so. Step into roles when someone is absent. Know the full chain of evacuation roles. Never ignore an alarm. Confidence saves lives.',
+    title: 'Final Safety Reminders',
+    bullets: [
+      'Sweep or assist ONLY if trained',
+      'Help guests only if safe to do so',
+      'Step into roles when someone is absent',
+      'Know the full evacuation chain',
+      'NEVER ignore an alarm',
+      'Confidence and preparation save lives'
+    ],
     image: '/training/logo-jmk.png',
   },
 ];
@@ -93,26 +167,43 @@ export default function FireSlides({ onComplete }: FireSlidesProps) {
         />
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-blue-800 mb-6 text-center">{slide.title}</h2>
+          <h2 className="text-2xl font-bold text-blue-800 mb-8 text-center">{slide.title}</h2>
           
-          {slide.image && (
-            <div className="mb-6 text-center">
-              <Image
-                src={slide.image}
-                alt={slide.title}
-                width={640}
-                height={360}
-                className="mx-auto rounded-lg shadow-md max-w-full h-auto"
-              />
+          <div className="grid md:grid-cols-2 gap-8 items-start">
+            {/* Content side */}
+            <div className="order-2 md:order-1">
+              <ul className="space-y-3">
+                {slide.bullets.map((bullet, idx) => (
+                  <li key={idx} className="flex items-start">
+                    {bullet.startsWith('•') ? (
+                      <span className="text-gray-700 text-lg leading-relaxed ml-4">{bullet}</span>
+                    ) : (
+                      <>
+                        <div className="w-2 h-2 bg-blue-600 rounded-full mt-3 mr-3 flex-shrink-0"></div>
+                        <span className="text-gray-700 text-lg leading-relaxed">{bullet}</span>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
             </div>
-          )}
-          
-          <div className="text-gray-700 text-lg leading-relaxed mb-8 text-center max-w-3xl mx-auto">
-            {slide.content.split('\n').map((paragraph, idx) => (
-              <p key={idx} className="mb-4">{paragraph}</p>
-            ))}
+            
+            {/* Image side */}
+            <div className="order-1 md:order-2">
+              {slide.image && (
+                <div className="text-center">
+                  <Image
+                    src={slide.image}
+                    alt={slide.title}
+                    width={500}
+                    height={350}
+                    className="mx-auto rounded-lg shadow-md max-w-full h-auto"
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Navigation */}
