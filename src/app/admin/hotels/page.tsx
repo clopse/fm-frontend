@@ -318,13 +318,20 @@ export default function HotelManagementPage() {
   const updateSelectedHotel = (section: keyof HotelFacilityData, key: string, value: any) => {
     if (!selectedHotel) return;
     
-    setSelectedHotel(prev => ({
-      ...prev!,
-      [section]: {
-        ...(prev![section as keyof HotelFacilityData] ?? {}),
-        [key]: value
-      }
-    }));
+    setSelectedHotel(prev => {
+      if (!prev) return null;
+      
+      const currentSection = prev[section];
+      const isObject = currentSection && typeof currentSection === 'object' && !Array.isArray(currentSection);
+      
+      return {
+        ...prev,
+        [section]: {
+          ...(isObject ? currentSection : {}),
+          [key]: value
+        }
+      };
+    });
   };
 
   const filteredHotels = hotelData.filter(hotel =>
