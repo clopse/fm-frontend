@@ -71,7 +71,7 @@ export default function AdminSidebar({
       label: 'Courses & Training',
       href: '/admin/training',
       icon: GraduationCap,
-      description: 'Create and manage staff training modules'
+      description: 'Manage staff training'
     },
     {
       label: 'Hotel Management',
