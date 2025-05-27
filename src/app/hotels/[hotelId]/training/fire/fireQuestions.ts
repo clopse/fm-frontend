@@ -15,7 +15,7 @@ const fireQuestions: FireQuestion[] = [
       "Decidewho should eb coordinator in the moment."
     ],
     correct: [0, 1],
-    image: "/training/roles-printout.png"
+    image: "/training/roles.png"
   },
   {
     question: "What does the red light on the fire panel indicate?",
@@ -37,7 +37,7 @@ const fireQuestions: FireQuestion[] = [
       "To prop open doors."
     ],
     correct: [0],
-    image: "/training/extinguishers.png"
+    image: "/training/extinguishertypes.png"
   },
   {
     question: "What should be handed to the fire brigade on arrival?",
@@ -80,7 +80,7 @@ const fireQuestions: FireQuestion[] = [
       "Guest meal preferences."
     ],
     correct: [0],
-    image: "/training/peep-form.png"
+    image: "/training/peeps.png"
   },
   {
     question: "When should the guest list be updated?",
@@ -112,7 +112,7 @@ const fireQuestions: FireQuestion[] = [
       "Call 999 from your mobile."
     ],
     correct: [0],
-    image: "/training/manual-call-point.png"
+    image: "/training/mcp.png"
   }
 ];
 
