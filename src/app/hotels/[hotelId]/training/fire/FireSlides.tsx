@@ -324,15 +324,19 @@ export default function FireSlides({ onComplete }: FireSlidesProps) {
             
             {/* Image side */}
             <div className="order-1 md:order-2">
-              {slide.image && (
-                <div className="text-center">
-                  <Image
-                    src={slide.image}
-                    alt={slide.title}
-                    width={500}
-                    height={350}
-                    className="mx-auto rounded-lg shadow-md max-w-full h-auto"
-                  />
+              {slide.images && (
+                <div className="text-center space-y-4">
+                  {slide.images.map((image, idx) => (
+                    <div key={idx} className="mb-4">
+                      <Image
+                        src={image}
+                        alt={`${slide.title} - Image ${idx + 1}`}
+                        width={400}
+                        height={300}
+                        className="mx-auto rounded-lg shadow-md max-w-full h-auto"
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
