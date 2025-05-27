@@ -220,17 +220,14 @@ export default function UtilitiesAdminPage() {
   const convertToCSV = (data: MissingBill[]) => {
     const headers = ['Hotel ID', 'Utility Type', 'Expected Month', 'Days Overdue', 'Status', 'Last Uploaded', 'Manager Email'];
     const rows = data.map(bill => [
-      bill.hotel_id, // Changed from bill.hotel_name to bill.hotel_id
+      bill.hotel_id,
       bill.utility_type,
       `${bill.expected_month} ${bill.expected_year}`,
       bill.days_overdue.toString(),
       bill.status,
       bill.last_uploaded || 'Never',
       bill.manager_email || 'N/A'
-  ]);
-  
-  return [headers, ...rows].map(row => row.join(',')).join('\n');
-};
+    ]);
     
     return [headers, ...rows].map(row => row.join(',')).join('\n');
   };
@@ -238,7 +235,7 @@ export default function UtilitiesAdminPage() {
   // Filter bills based on search and filters
   const filteredBills = missingBills.filter(bill => {
     const matchesSearch = 
-      bill.hotel_id.toLowerCase().includes(searchTerm.toLowerCase()) || // Changed from hotel_name
+      bill.hotel_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       bill.utility_type.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesHotel = selectedHotel === 'all' || bill.hotel_id === selectedHotel;
@@ -246,9 +243,8 @@ export default function UtilitiesAdminPage() {
     const matchesStatus = selectedStatus === 'all' || bill.status === selectedStatus;
     
     return matchesSearch && matchesHotel && matchesUtility && matchesStatus;
-});
+  });
 
-  export default function UtilitiesAdminPage() {
   const getUtilityIcon = (type: string) => {
     switch (type) {
       case 'electricity': return Zap;
@@ -503,91 +499,92 @@ export default function UtilitiesAdminPage() {
                 </div>
               </div>
             
-            <div className="overflow-x-auto">
-              {isLoading ? (
-                <div className="flex justify-center py-12">
-                  <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
-                </div>
-              ) : (
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Hotel & Utility
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Expected Period
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Days Overdue
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Last Upload
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredBills.map((bill, index) => {
-                      const UtilityIcon = getUtilityIcon(bill.utility_type);
-                      return (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center space-x-3">
-                              <div className="p-2 bg-gray-100 rounded-lg">
-                                <UtilityIcon className="w-4 h-4 text-gray-600" />
+              <div className="overflow-x-auto">
+                {isLoading ? (
+                  <div className="flex justify-center py-12">
+                    <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Hotel & Utility
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Expected Period
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Days Overdue
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Last Upload
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredBills.map((bill, index) => {
+                        const UtilityIcon = getUtilityIcon(bill.utility_type);
+                        return (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center space-x-3">
+                                <div className="p-2 bg-gray-100 rounded-lg">
+                                  <UtilityIcon className="w-4 h-4 text-gray-600" />
+                                </div>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">{bill.hotel_name}</div>
+                                  <div className="text-sm text-gray-500 capitalize">{bill.utility_type}</div>
+                                </div>
                               </div>
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">{bill.hotel_name}</div>
-                                <div className="text-sm text-gray-500 capitalize">{bill.utility_type}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{bill.expected_month} {bill.expected_year}</div>
-                            <div className="text-sm text-gray-500">Expected: {new Date(bill.expected_date).toLocaleDateString()}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`text-sm font-medium ${getOverdueColor(bill.days_overdue)}`}>
-                              {bill.days_overdue} days
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(bill.status)}`}>
-                              {bill.status.replace('_', ' ')}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {bill.last_uploaded ? new Date(bill.last_uploaded).toLocaleDateString() : 'Never'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <button
-                              onClick={() => sendReminderEmail(bill.hotel_id, bill.utility_type, `${bill.expected_month} ${bill.expected_year}`)}
-                              className="flex items-center space-x-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                            >
-                              <Mail className="w-3 h-3" />
-                              <span className="text-xs">Remind</span>
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-              
-              {!isLoading && filteredBills.length === 0 && (
-                <div className="text-center py-12">
-                  <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">All Bills Up to Date!</h3>
-                  <p className="text-gray-500">No missing or overdue bills found matching your criteria.</p>
-                </div>
-              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{bill.expected_month} {bill.expected_year}</div>
+                              <div className="text-sm text-gray-500">Expected: {new Date(bill.expected_date).toLocaleDateString()}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`text-sm font-medium ${getOverdueColor(bill.days_overdue)}`}>
+                                {bill.days_overdue} days
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(bill.status)}`}>
+                                {bill.status.replace('_', ' ')}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {bill.last_uploaded ? new Date(bill.last_uploaded).toLocaleDateString() : 'Never'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <button
+                                onClick={() => sendReminderEmail(bill.hotel_id, bill.utility_type, `${bill.expected_month} ${bill.expected_year}`)}
+                                className="flex items-center space-x-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                              >
+                                <Mail className="w-3 h-3" />
+                                <span className="text-xs">Remind</span>
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+                
+                {!isLoading && filteredBills.length === 0 && (
+                  <div className="text-center py-12">
+                    <CheckCircle className="w-12 h-12 mx-auto mb-4 text-green-500" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">All Bills Up to Date!</h3>
+                    <p className="text-gray-500">No missing or overdue bills found matching your criteria.</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
