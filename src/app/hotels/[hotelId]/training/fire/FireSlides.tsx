@@ -1,3 +1,12 @@
+'use client';
+
+import Image from 'next/image';
+import { useState } from 'react';
+
+interface FireSlidesProps {
+  onComplete: () => void;
+}
+
 const slides = [
   {
     title: 'Hotel Overview',
@@ -144,106 +153,6 @@ const slides = [
     ],
     images: ['/training/jmk-logo.png'],
   },
-];      <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="grid md:grid-cols-1 gap-8 items-center justify-center">
-            {/* Full slide image */}
-            <div className="order-1">
-              {slide.image && (
-                <div className="text-center">
-                  <Image
-                    src={slide.image}
-                    alt={slide.title}
-                    width={900}
-                'use client';
-
-import Image from 'next/image';
-import { useState } from 'react';
-
-interface FireSlidesProps {
-  onComplete: () => void;
-}
-
-const slides = [
-  {
-    title: 'Hotel Overview',
-    image: '/training/slide3.png', // Hotel layout and floors info
-  },
-  {
-    title: 'Fire Escapes',
-    image: '/training/slide5.png', // Fire escape doors and routes
-  },
-  {
-    title: 'Manual Call Points',
-    image: '/training/slide6.png', // Red manual call point
-  },
-  {
-    title: 'Emergency Door Release',
-    image: '/training/slide7.png', // Green emergency door release
-  },
-  {
-    title: 'Fire Extinguishers',
-    image: '/training/slide8.png', // Fire extinguisher types
-  },
-  {
-    title: 'Fire Alarm Panel',
-    image: '/training/slide9.png', // Gent Vigilon panel
-  },
-  {
-    title: 'Dry Riser System',
-    image: '/training/slide10.png', // Dry riser outlets
-  },
-  {
-    title: 'Evacuation Roles',
-    image: '/training/slide13.png', // Roles overview
-  },
-  {
-    title: 'Coordinator & Locator Cards',
-    image: '/training/slide14.png', // Both role cards
-  },
-  {
-    title: 'Exit Organiser Cards',
-    image: '/training/slide15.png', // Exit organiser cards
-  },
-  {
-    title: 'Fire Keys & Emergency Procedures',
-    image: '/training/fire-keys.png', // Fire keys and procedures
-  },
-  {
-    title: 'Assembly Point - Gresham Hotel',
-    image: '/training/assembly-point.png', // Assembly point location
-  },
-  {
-    title: 'PEEPs - Personal Emergency Evacuation Plans',
-    image: '/training/peep-form.png', // PEEP information
-  },
-  {
-    title: 'Training Summary',
-    image: '/training/training-summary.png', // Key takeaways and reminders
-  },
-];Dry Riser System',
-    image: '/training/slide10.png', // Dry riser outlets
-  },
-  {
-    title: 'Evacuation Roles',
-    image: '/training/slide13.png', // Roles overview
-  },
-  {
-    title: 'Coordinator & Locator Cards',
-    image: '/training/slide14.png', // Both role cards
-  },
-  {
-    title: 'Exit Organiser Cards',
-    image: '/training/slide15.png', // Exit organiser cards
-  },
-  {
-    title: 'Coordinator Details',
-    image: '/training/slide16.png', // Coordinator responsibilities
-  },
-  {
-    title: 'Floor Plans',
-    image: '/training/slide17.png', // Floor plan example
-  },
 ];
 
 export default function FireSlides({ onComplete }: FireSlidesProps) {
@@ -252,15 +161,13 @@ export default function FireSlides({ onComplete }: FireSlidesProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="flex justify-between items-center p-4 max-w-7xl mx-auto">
           {/* Left - JMK Logo */}
           <div className="flex items-center">
             <Image
-              src="/training/logo-jmk.png"
+              src="/training/jmk-logo.png"
               alt="JMK Group"
               width={80}
               height={50}
@@ -281,7 +188,7 @@ export default function FireSlides({ onComplete }: FireSlidesProps) {
               <p className="text-xs text-gray-600">Dublin City Centre</p>
             </div>
             <Image
-              src="/training/logo-hiex.png"
+              src="/training/hiex-icon.png"
               alt="Holiday Inn Express"
               width={120}
               height={60}
@@ -295,22 +202,14 @@ export default function FireSlides({ onComplete }: FireSlidesProps) {
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h2 className="text-2xl font-bold text-blue-800 mb-8 text-center">{slide.title}</h2>
           
-          <div className="grid md:grid-cols-1 gap-8 items-center justify-center">
-            {/* Full slide image */}
-            <div className="order-1">
-              {slide.image && (
-                <div className="text-center">
-                  <Image
-                    src={slide.image}
-                    alt={slide.title}
-                    width={900}
-                    height={600}
-                    className="mx-auto rounded-lg shadow-md max-w-full h-auto"
-                  />
-                </div>
-              )}
-            </div>
-          </div>      <span className="text-gray-700 text-lg leading-relaxed ml-4">{bullet}</span>
+          <div className="grid md:grid-cols-2 gap-8 items-start">
+            {/* Content side */}
+            <div className="order-2 md:order-1">
+              <ul className="space-y-3">
+                {slide.bullets.map((bullet, idx) => (
+                  <li key={idx} className="flex items-start">
+                    {bullet.startsWith('•') ? (
+                      <span className="text-gray-700 text-lg leading-relaxed ml-4">{bullet}</span>
                     ) : (
                       <>
                         <div className="w-2 h-2 bg-blue-600 rounded-full mt-3 mr-3 flex-shrink-0"></div>
@@ -343,7 +242,7 @@ export default function FireSlides({ onComplete }: FireSlidesProps) {
           </div>
 
           {/* Navigation */}
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mt-8">
             <button
               disabled={index === 0}
               onClick={() => setIndex(index - 1)}
