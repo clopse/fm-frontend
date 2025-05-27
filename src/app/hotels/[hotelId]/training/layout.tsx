@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import '../../../../../globals.css'; // Fixed path
+import '@/globals.css'; // Using absolute import with your path mapping
 
 const inter = Inter({ subsets: ['latin'] });
 
