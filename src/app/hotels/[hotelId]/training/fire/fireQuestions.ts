@@ -26,7 +26,7 @@ const fireQuestions: FireQuestion[] = [
       "Device disconnected."
     ],
     correct: [0],
-    image: "/training/fire-panel.png"
+    image: "/training/firepanel.png"
   },
   {
     question: "When should you use a fire extinguisher?",
@@ -58,7 +58,6 @@ const fireQuestions: FireQuestion[] = [
       "On the DM keys"
     ],
     correct: [2],
-    image: "/training/fire-keys.png"
   },
   {
     question: "What is the purpose of the emergency door release?",
@@ -69,7 +68,7 @@ const fireQuestions: FireQuestion[] = [
       "Calls emergency services."
     ],
     correct: [0],
-    image: "/training/emergency-door-release.png"
+    image: "/training/emergencydoorrelease.png"
   },
   {
     question: "What is a PEEP and why is it important?",
@@ -80,7 +79,6 @@ const fireQuestions: FireQuestion[] = [
       "Guest meal preferences."
     ],
     correct: [0],
-    image: "/training/peeps.png"
   },
   {
     question: "When should the guest list be updated?",
