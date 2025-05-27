@@ -321,7 +321,7 @@ export default function HotelManagementPage() {
     setSelectedHotel(prev => ({
       ...prev!,
       [section]: {
-        ...prev![section],
+        ...(prev![section as keyof HotelFacilityData] ?? {}),
         [key]: value
       }
     }));
@@ -629,7 +629,7 @@ export default function HotelManagementPage() {
                           </div>
                           <div className="bg-purple-50 p-4 rounded-lg">
                             <div className="flex items-center space-x-3">
-                              <Elevator className="w-8 h-8 text-purple-600" />
+                              <Building2 className="w-8 h-8 text-purple-600" />
                               <div>
                                 <p className="text-2xl font-bold text-purple-900">{selectedHotel.mechanical.elevators}</p>
                                 <p className="text-sm text-purple-700">Elevators</p>
@@ -646,6 +646,54 @@ export default function HotelManagementPage() {
                         <h3 className="text-lg font-semibold text-gray-900">Building Information</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           {Object.entries(selectedHotel.structural).map(([key, value]) => (
+                            <div key={key}>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                              </label>
+                              <input
+                                type="number"
+                                value={value}
+                                onChange={(e) => updateSelectedHotel('structural', key, parseInt(e.target.value) || 0)}
+                                disabled={!isEditing}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                                min="0"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Fire Safety Tab */}
+                    {activeTab === 'fire' && (
+                      <div className="space-y-6">
+                        <h3 className="text-lg font-semibold text-gray-900">Fire Safety Equipment</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          {Object.entries(selectedHotel.fireSafety).map(([key, value]) => (
+                            <div key={key}>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                              </label>
+                              <input
+                                type="number"
+                                value={value}
+                                onChange={(e) => updateSelectedHotel('fireSafety', key, parseInt(e.target.value) || 0)}
+                                disabled={!isEditing}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+                                min="0"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mechanical Tab */}
+                    {activeTab === 'mechanical' && (
+                      <div className="space-y-6">
+                        <h3 className="text-lg font-semibold text-gray-900">Mechanical Systems</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          {Object.entries(selectedHotel.mechanical).map(([key, value]) => (
                             <div key={key}>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
@@ -830,7 +878,7 @@ function getRequiredServices(hotel: HotelFacilityData) {
       name: 'Elevator Inspection',
       equipment: `${hotel.mechanical.elevators} elevator${hotel.mechanical.elevators > 1 ? 's' : ''}`,
       frequency: 'Annual',
-      icon: Elevator,
+      icon: Building2,
       color: 'bg-blue-100 text-blue-600'
     });
   }
