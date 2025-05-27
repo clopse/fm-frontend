@@ -74,7 +74,7 @@ export default function FireQuiz({ hotelId, onComplete, onBack }: FireQuizProps)
                 <p className="text-xs text-gray-600">Dublin City Centre</p>
               </div>
               <Image
-                src="/training/hiex-logo.png"
+                src="/training/hiex-icon.png"
                 alt="Holiday Inn Express"
                 width={120}
                 height={60}
@@ -147,7 +147,7 @@ export default function FireQuiz({ hotelId, onComplete, onBack }: FireQuizProps)
           {/* Left - JMK Logo */}
           <div className="flex items-center">
             <Image
-              src="/training/logo-jmk.png"
+              src="/training/jmk-logo.png"
               alt="JMK Group"
               width={80}
               height={50}
@@ -168,7 +168,7 @@ export default function FireQuiz({ hotelId, onComplete, onBack }: FireQuizProps)
               <p className="text-xs text-gray-600">Dublin City Centre</p>
             </div>
             <Image
-              src="/training/logo-hiex.png"
+              src="/training/hiex-icon.png"
               alt="Holiday Inn Express"
               width={120}
               height={60}
