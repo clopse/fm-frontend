@@ -248,6 +248,7 @@ export default function UtilitiesAdminPage() {
     return matchesSearch && matchesHotel && matchesUtility && matchesStatus;
 });
 
+  export default function UtilitiesAdminPage() {
   const getUtilityIcon = (type: string) => {
     switch (type) {
       case 'electricity': return Zap;
