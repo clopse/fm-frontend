@@ -35,9 +35,8 @@ const slides = [
   },
   {
     title: 'Fire Box & Plans',
-    content: 'The fire box near reception contains fire keys, floor plans, roof access fob, guest list (if printed). Be ready to hand to fire brigade.',
-    image: '/training/fire-keys.png',
-  },
+    content: 'The fire box near reception contains floor plans, safety vests, torches, a speaker, and roof access fob. The fire keys are located in the key box. A printed guest list is hung in the back office and should be updated every shift (ideally every 2 hours). The PEEP form is also posted in the back office. Be ready to hand these to the fire brigade.',
+    image: '/training/fire-keys.png',},
   {
     title: 'What the Fire Brigade Will Ask For',
     content: 'On arrival, they will ask for: Floor plans, Fire keys, PEEP details, Roof access, Guest list. Know where the fire box is.',
@@ -45,7 +44,7 @@ const slides = [
   },
   {
     title: 'Evacuation Roles & Flexibility',
-    content: 'Roles are posted daily in the back office. If Coordinator or other staff are absent, others should step in. Guests may assist if needed.',
+    content: 'Roles are posted daily in the back office. It is important that all staff know all roles. If someone is absent, everyone shifts up one position: e.g., if the Coordinator is missing, the Locator becomes Coordinator, the Exit Organiser becomes Locator, and so on.',
     image: '/training/roles-printout.png',
   },
   {
@@ -55,7 +54,7 @@ const slides = [
   },
   {
     title: 'Final Reminder',
-    content: 'Sweep or assist only if trained. Help guests only if safe to do so. Step into roles if needed. Never ignore an alarm. Confidence saves lives.',
+    content: 'Sweep or assist only if trained. Help guests only if safe to do so. Step into roles when someone is absent. Know the full chain of evacuation roles. Never ignore an alarm. Confidence saves lives.',
     image: '/training/logo-jmk.png',
   },
 ];
