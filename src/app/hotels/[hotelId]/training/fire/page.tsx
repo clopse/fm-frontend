@@ -203,7 +203,7 @@ export default function FireTrainingPage() {
                 </div>
               )}
 
-              <div className="flex justify-center space-x-4">
+              <div className="flex justify-center space-x-4 mb-8">
                 {!quizResult.passed && (
                   <button
                     onClick={handleRestart}
@@ -223,6 +223,35 @@ export default function FireTrainingPage() {
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* Additional Learning Section */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
+                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                  Additional Learning: Fire Panel Functions
+                </h3>
+                <p className="text-blue-700 mb-4 text-sm">
+                  Want to learn more about fire panel operations? Watch this additional video for deeper insights into fire alarm system functions and troubleshooting.
+                </p>
+                
+                <div className="relative w-full max-w-2xl mx-auto bg-white rounded-lg overflow-hidden shadow-md">
+                  <div className="relative" style={{paddingBottom: '56.25%', height: 0}}>
+                    <iframe
+                      src="https://www.youtube.com/embed/Yr5jSqiycQ8"
+                      title="Fire Panel Functions - Additional Learning"
+                      className="absolute top-0 left-0 w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    ></iframe>
+                  </div>
+                </div>
+                
+                <p className="text-xs text-blue-600 mt-3 text-center">
+                  This video provides additional context beyond your hotel-specific training
+                </p>
               </div>
 
               {/* Debug info - you can remove this in production */}
