@@ -7,6 +7,13 @@ interface FireSlidesProps {
   onComplete: () => void;
 }
 
+interface Slide {
+  title: string;
+  bullets: string[];
+  images: string[];
+  smallImages?: boolean;
+}
+
 const slides = [
   {
     title: 'Hotel Overview',
@@ -18,7 +25,7 @@ const slides = [
       'NEVER use elevators during a fire alarm',
       'Two emergency stairwells for evacuation'
     ],
-    images: ['/training/6floorplan.png', '/training/floorplan-1.png'],
+    images: ['/training/6floorplan.png'],
   },
   {
     title: 'Fire Escapes & Exit Routes',
@@ -31,7 +38,7 @@ const slides = [
       'Front stairwell: 6th floor to ground floor',
       'Rear stairwell: 6th to 1st, then tunnel to Findlater Place'
     ],
-    images: ['/training/exit1.png', '/training/exit2.png'],
+    images: ['/training/fire-exits.png'],
   },
   {
     title: 'Fire Escape Doors',
@@ -44,6 +51,7 @@ const slides = [
       'Check doors are functioning during shift'
     ],
     images: ['/training/fireescape.png'],
+    smallImages: true,
   },
   {
     title: 'Manual Call Points',
@@ -56,6 +64,7 @@ const slides = [
       'Use immediately if you discover a fire'
     ],
     images: ['/training/mcp.png'],
+    smallImages: true,
   },
   {
     title: 'Emergency Door Release',
@@ -68,6 +77,7 @@ const slides = [
       'Located near secure exit doors'
     ],
     images: ['/training/emergencydoorrelease.png'],
+    smallImages: true,
   },
   {
     title: 'Fire Extinguishers',
@@ -80,6 +90,7 @@ const slides = [
       'If in doubt, evacuate immediately'
     ],
     images: ['/training/extinguisher.png', '/training/extinguishertypes.png'],
+    smallImages: true,
   },
   {
     title: 'Fire Alarm Panel (Gent Vigilon)',
@@ -92,6 +103,7 @@ const slides = [
       'Only trained staff should operate panel controls'
     ],
     images: ['/training/firepanel.png'],
+    smallImages: true,
   },
   {
     title: 'Dry Riser System',
@@ -104,6 +116,7 @@ const slides = [
       'Critical for fire brigade operations'
     ],
     images: ['/training/dryriser.png'],
+    smallImages: true,
   },
   {
     title: 'Fire Keys & Emergency Box',
@@ -118,16 +131,16 @@ const slides = [
     images: ['/training/fire-keys.png'],
   },
   {
-    title: 'What Fire Brigade Will Request',
+    title: 'PEEPs – Personal Emergency Evacuation Plans',
     bullets: [
-      'Floor plans (from emergency box)',
-      'Fire keys (from key box holder 34)',
-      'Current guest list (updated every 2 hours)',
-      'PEEP details for guests with mobility needs',
-      'Roof access key and information',
-      'Location of fire and dry riser access'
+      'Completed by guests with mobility needs at check-in',
+      'Details special assistance requirements',
+      'Staff must know locations of PEEP guests',
+      'Priority communication to emergency services',
+      'Form posted in back office for reference',
+      'Never attempt assistance beyond your training'
     ],
-    images: ['/training/coor.png'],
+    images: ['/training/peeps.png'],
   },
   {
     title: 'Evacuation Roles Overview',
@@ -230,8 +243,8 @@ export default function FireSlides({ onComplete }: FireSlidesProps) {
                       <Image
                         src={image}
                         alt={`${slide.title} - Image ${idx + 1}`}
-                        width={400}
-                        height={300}
+                        width={slide.smallImages ? 280 : 400}
+                        height={slide.smallImages ? 210 : 300}
                         className="mx-auto rounded-lg shadow-md max-w-full h-auto"
                       />
                     </div>
