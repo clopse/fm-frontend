@@ -38,7 +38,7 @@ export default function FireTrainingPage() {
         <div 
           className="min-h-screen bg-cover bg-center bg-no-repeat relative"
           style={{
-            backgroundImage: 'url(/training/hotel-building.jpg)',
+            backgroundImage: 'url(/training/background.png)',
           }}
         >
           {/* Overlay for better text readability */}
