@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { User2, Building, Menu } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
@@ -24,8 +23,6 @@ export default function AdminHeader({
 }: AdminHeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
-  const [unreadNotifications] = useState(3);
-  const [unreadMessages] = useState(2);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -40,7 +37,6 @@ export default function AdminHeader({
         setShowMessages(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showNotifications, showMessages]);
@@ -82,14 +78,12 @@ export default function AdminHeader({
             <NotificationsDropdown 
               isOpen={showNotifications}
               onToggle={() => setShowNotifications(!showNotifications)}
-              unreadCount={unreadNotifications}
             />
 
             {/* Messages */}
             <MessagesDropdown 
               isOpen={showMessages}
               onToggle={() => setShowMessages(!showMessages)}
-              unreadCount={unreadMessages}
             />
 
             {/* User Account */}
