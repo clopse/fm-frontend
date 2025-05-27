@@ -48,25 +48,40 @@ export default function FireQuiz({ hotelId, onComplete, onBack }: FireQuizProps)
   if (step === 'form') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
-        {/* Header with logos */}
-        <div className="flex justify-between items-center p-4 bg-white shadow-sm">
-          <Image
-            src="/training/logo-hiex.png"
-            alt="Holiday Inn Express"
-            width={120}
-            height={60}
-            className="h-12 w-auto"
-          />
-          <div className="text-center">
-            <h1 className="text-lg font-bold text-blue-800">Fire Safety Quiz</h1>
+        {/* Header */}
+        <div className="bg-white shadow-sm border-b">
+          <div className="flex justify-between items-center p-4 max-w-7xl mx-auto">
+            {/* Left - JMK Logo */}
+            <div className="flex items-center">
+              <Image
+                src="/training/logo-jmk.png"
+                alt="JMK Group"
+                width={80}
+                height={50}
+                className="h-12 w-auto"
+              />
+            </div>
+            
+            {/* Center - Title */}
+            <div className="text-center">
+              <h1 className="text-xl font-bold text-blue-800">Fire Safety Quiz</h1>
+            </div>
+            
+            {/* Right - Holiday Inn Express Logo */}
+            <div className="flex items-center">
+              <div className="text-right mr-4">
+                <p className="text-sm font-semibold text-blue-700">Holiday Inn Express</p>
+                <p className="text-xs text-gray-600">Dublin City Centre</p>
+              </div>
+              <Image
+                src="/training/logo-hiex.png"
+                alt="Holiday Inn Express"
+                width={120}
+                height={60}
+                className="h-12 w-auto"
+              />
+            </div>
           </div>
-          <Image
-            src="/training/logo-jmk.png"
-            alt="JMK"
-            width={80}
-            height={40}
-            className="h-10 w-auto"
-          />
         </div>
 
         <div className="max-w-lg mx-auto px-6 py-12">
@@ -126,26 +141,41 @@ export default function FireQuiz({ hotelId, onComplete, onBack }: FireQuizProps)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white">
-      {/* Header with logos */}
-      <div className="flex justify-between items-center p-4 bg-white shadow-sm">
-        <Image
-          src="/training/logo-hiex.png"
-          alt="Holiday Inn Express"
-          width={120}
-          height={60}
-          className="h-12 w-auto"
-        />
-        <div className="text-center">
-          <h1 className="text-lg font-bold text-blue-800">Fire Safety Quiz</h1>
-          <p className="text-sm text-gray-600">Question {currentQ + 1} of {fireQuestions.length}</p>
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="flex justify-between items-center p-4 max-w-7xl mx-auto">
+          {/* Left - JMK Logo */}
+          <div className="flex items-center">
+            <Image
+              src="/training/logo-jmk.png"
+              alt="JMK Group"
+              width={80}
+              height={50}
+              className="h-12 w-auto"
+            />
+          </div>
+          
+          {/* Center - Title */}
+          <div className="text-center">
+            <h1 className="text-xl font-bold text-blue-800">Fire Safety Quiz</h1>
+            <p className="text-sm text-gray-600">Question {currentQ + 1} of {fireQuestions.length}</p>
+          </div>
+          
+          {/* Right - Holiday Inn Express Logo */}
+          <div className="flex items-center">
+            <div className="text-right mr-4">
+              <p className="text-sm font-semibold text-blue-700">Holiday Inn Express</p>
+              <p className="text-xs text-gray-600">Dublin City Centre</p>
+            </div>
+            <Image
+              src="/training/logo-hiex.png"
+              alt="Holiday Inn Express"
+              width={120}
+              height={60}
+              className="h-12 w-auto"
+            />
+          </div>
         </div>
-        <Image
-          src="/training/logo-jmk.png"
-          alt="JMK"
-          width={80}
-          height={40}
-          className="h-10 w-auto"
-        />
       </div>
 
       {/* Progress bar */}
