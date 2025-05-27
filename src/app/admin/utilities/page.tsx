@@ -218,16 +218,19 @@ export default function UtilitiesAdminPage() {
   };
 
   const convertToCSV = (data: MissingBill[]) => {
-    const headers = ['Hotel', 'Utility Type', 'Expected Month', 'Days Overdue', 'Status', 'Last Uploaded', 'Manager Email'];
+    const headers = ['Hotel ID', 'Utility Type', 'Expected Month', 'Days Overdue', 'Status', 'Last Uploaded', 'Manager Email'];
     const rows = data.map(bill => [
-      bill.hotel_name,
+      bill.hotel_id, // Changed from bill.hotel_name to bill.hotel_id
       bill.utility_type,
       `${bill.expected_month} ${bill.expected_year}`,
       bill.days_overdue.toString(),
       bill.status,
       bill.last_uploaded || 'Never',
       bill.manager_email || 'N/A'
-    ]);
+  ]);
+  
+  return [headers, ...rows].map(row => row.join(',')).join('\n');
+};
     
     return [headers, ...rows].map(row => row.join(',')).join('\n');
   };
@@ -235,7 +238,7 @@ export default function UtilitiesAdminPage() {
   // Filter bills based on search and filters
   const filteredBills = missingBills.filter(bill => {
     const matchesSearch = 
-      bill.hotel_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      bill.hotel_id.toLowerCase().includes(searchTerm.toLowerCase()) || // Changed from hotel_name
       bill.utility_type.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesHotel = selectedHotel === 'all' || bill.hotel_id === selectedHotel;
@@ -243,7 +246,7 @@ export default function UtilitiesAdminPage() {
     const matchesStatus = selectedStatus === 'all' || bill.status === selectedStatus;
     
     return matchesSearch && matchesHotel && matchesUtility && matchesStatus;
-  });
+});
 
   const getUtilityIcon = (type: string) => {
     switch (type) {
