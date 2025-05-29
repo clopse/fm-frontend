@@ -100,19 +100,17 @@ export default function ComplianceMatrix({
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-600">Loading compliance matrix...</p>
-          </div>
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">Loading compliance matrix...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <>
       {/* Container with controlled horizontal scroll */}
       <div className="w-full overflow-x-auto">
         <div className="min-w-full inline-block align-top">
@@ -189,6 +187,6 @@ export default function ComplianceMatrix({
           </p>
         </div>
       )}
-    </div>
+    </>
   );
 }
