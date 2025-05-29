@@ -17,7 +17,6 @@ import {
   Key,
   Upload,
   Download,
-  Trash2,
   RefreshCw
 } from 'lucide-react';
 
@@ -65,9 +64,9 @@ interface SystemSettings {
 const defaultSettings: SystemSettings = {
   companyName: 'JMK Facilities Management',
   companyLogo: '/jmk-logo.png',
-  timezone: 'America/New_York',
-  dateFormat: 'MM/DD/YYYY',
-  currency: 'USD',
+  timezone: 'Europe/Dublin',
+  dateFormat: 'DD/MM/YYYY',
+  currency: 'EUR',
   sessionTimeout: 30,
   passwordMinLength: 8,
   requireTwoFactor: false,
@@ -99,6 +98,8 @@ export default function SettingsPage() {
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
   const [showAdminSidebar, setShowAdminSidebar] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
 
   useEffect(() => {
     // Handle mobile detection
@@ -165,9 +166,9 @@ export default function SettingsPage() {
           <AdminHeader 
             showSidebar={showAdminSidebar}
             onToggleSidebar={() => setShowAdminSidebar(!showAdminSidebar)}
-            onOpenHotelSelector={() => {}}
+            onOpenHotelSelector={() => setIsHotelModalOpen(true)}
             onOpenUserPanel={() => setIsUserPanelOpen(true)}
-            onOpenAccountSettings={() => {}}
+            onOpenAccountSettings={() => setShowAccountSettings(true)}
             isMobile={isMobile}
           />
           <div className="flex items-center justify-center h-96">
@@ -195,10 +196,19 @@ export default function SettingsPage() {
         <AdminHeader 
           showSidebar={showAdminSidebar}
           onToggleSidebar={() => setShowAdminSidebar(!showAdminSidebar)}
-          onOpenHotelSelector={() => {}}
+          onOpenHotelSelector={() => setIsHotelModalOpen(true)}
           onOpenUserPanel={() => setIsUserPanelOpen(true)}
-          onOpenAccountSettings={() => {}}
+          onOpenAccountSettings={() => setShowAccountSettings(true)}
           isMobile={isMobile}
+        />
+
+        <HotelSelectorModal
+          isOpen={isHotelModalOpen}
+          setIsOpen={setIsHotelModalOpen}
+          onSelectHotel={(hotelName) => {
+            console.log('Selected hotel:', hotelName);
+            setIsHotelModalOpen(false);
+          }}
         />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -299,10 +309,12 @@ export default function SettingsPage() {
                             onChange={(e) => handleInputChange('timezone', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           >
-                            <option value="America/New_York">Eastern Time (UTC-5)</option>
-                            <option value="America/Chicago">Central Time (UTC-6)</option>
-                            <option value="America/Denver">Mountain Time (UTC-7)</option>
-                            <option value="America/Los_Angeles">Pacific Time (UTC-8)</option>
+                            <option value="Europe/Dublin">Dublin Time (GMT+0/+1)</option>
+                            <option value="Europe/London">London Time (GMT+0/+1)</option>
+                            <option value="Europe/Paris">Central European Time (GMT+1/+2)</option>
+                            <option value="Europe/Berlin">Berlin Time (GMT+1/+2)</option>
+                            <option value="Europe/Rome">Rome Time (GMT+1/+2)</option>
+                            <option value="Europe/Amsterdam">Amsterdam Time (GMT+1/+2)</option>
                           </select>
                         </div>
                         
@@ -315,8 +327,8 @@ export default function SettingsPage() {
                             onChange={(e) => handleInputChange('dateFormat', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           >
-                            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
                             <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
                             <option value="YYYY-MM-DD">YYYY-MM-DD</option>
                           </select>
                         </div>
@@ -330,9 +342,9 @@ export default function SettingsPage() {
                             onChange={(e) => handleInputChange('currency', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           >
-                            <option value="USD">USD - US Dollar</option>
                             <option value="EUR">EUR - Euro</option>
                             <option value="GBP">GBP - British Pound</option>
+                            <option value="USD">USD - US Dollar</option>
                             <option value="CAD">CAD - Canadian Dollar</option>
                           </select>
                         </div>
@@ -656,91 +668,4 @@ export default function SettingsPage() {
                       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                         <div>
                           <h3 className="text-sm font-medium text-gray-900">Use Secure Connection (SSL/TLS)</h3>
-                          <p className="text-sm text-gray-600">Enable secure email transmission</p>
-                        </div>
-                        <button
-                          onClick={() => handleInputChange('smtpSecure', !settings.smtpSecure)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            settings.smtpSecure ? 'bg-blue-600' : 'bg-gray-300'
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              settings.smtpSecure ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                      
-                      <div className="flex space-x-3">
-                        <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                          <Mail className="w-4 h-4" />
-                          <span>Test Email Configuration</span>
-                        </button>
-                        <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                          <Download className="w-4 h-4" />
-                          <span>Export Configuration</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Danger Zone */}
-          <div className="mt-8 bg-white rounded-lg shadow-sm border border-red-200">
-            <div className="p-6">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-red-900 mb-2">Danger Zone</h2>
-                <p className="text-red-600">Irreversible and destructive actions</p>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-medium text-red-900">Reset All Settings</h3>
-                      <p className="text-sm text-red-600">Restore all settings to their default values</p>
-                    </div>
-                    <button className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                      <RefreshCw className="w-4 h-4" />
-                      <span>Reset Settings</span>
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-medium text-red-900">Clear System Cache</h3>
-                      <p className="text-sm text-red-600">Clear all cached data and temporary files</p>
-                    </div>
-                    <button className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                      <Trash2 className="w-4 h-4" />
-                      <span>Clear Cache</span>
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-medium text-red-900">System Maintenance Mode</h3>
-                      <p className="text-sm text-red-600">Put the system in maintenance mode for all users</p>
-                    </div>
-                    <button className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                      <AlertTriangle className="w-4 h-4" />
-                      <span>Enable Maintenance Mode</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+                          <p
