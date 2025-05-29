@@ -144,14 +144,10 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
 
       {/* Card Footer */}
       <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 rounded-b-xl">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center space-x-2 text-slate-600">
-            <FileText className="w-4 h-4" />
-            <span>{task.uploads?.length || 0} upload{(task.uploads?.length || 0) !== 1 ? 's' : ''}</span>
-          </div>
+        <div className="flex items-center justify-center text-sm">
           <div className="flex items-center space-x-2 text-slate-600">
             <Award className="w-4 h-4" />
-            <span>{task.points} points</span>
+            <span>{task.points} points available</span>
           </div>
         </div>
       </div>
