@@ -126,16 +126,16 @@ export default function ComplianceMatrixPage() {
       
       // Load matrix data and task labels in parallel
       const [matrixResponse, labelsResponse] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/matrix`).catch(() => ({ ok: false })),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/task-labels`).catch(() => ({ ok: false }))
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/matrix`).catch(() => null),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/task-labels`).catch(() => null)
       ]);
       
-      if (matrixResponse.ok) {
+      if (matrixResponse && matrixResponse.ok) {
         const matrixJson = await matrixResponse.json();
         setMatrixData(matrixJson.entries || []);
       }
       
-      if (labelsResponse.ok) {
+      if (labelsResponse && labelsResponse.ok) {
         const labelsJson = await labelsResponse.json();
         setTaskLabels(labelsJson || {});
       }
