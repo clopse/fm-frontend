@@ -47,7 +47,7 @@ function normalizeEntry(entry: any): AuditEntry {
     type: entry.type || 'upload',
     approved: !!entry.approved,
     loggedAt: entry.loggedAt,
-    status: entry.approved ? 'approved' : (entry.rejected ? 'rejected' : 'pending')
+    status: entry.status || (entry.approved ? 'approved' : (entry.rejected ? 'rejected' : 'pending'))
   };
 }
 
@@ -193,9 +193,59 @@ export default function AuditPage() {
     }
   };
 
-  const handleReject = async (entry: AuditEntry) => {
-    // Implement rejection logic here
-    alert('Rejection functionality to be implemented');
+  const handleReject = async (entry: AuditEntry, reason: string) => {
+    const timestamp = entry.uploadedAt || entry.loggedAt;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          hotel_id: entry.hotel_id, 
+          task_id: entry.task_id, 
+          timestamp,
+          reason 
+        })
+      });
+      
+      if (res.ok) {
+        // Update the entry status to rejected
+        setEntries(prev => prev.map(e => 
+          e.fileUrl === entry.fileUrl ? { ...e, approved: false, status: 'rejected' } : e
+        ));
+        setSelected(null);
+      } else {
+        alert('Failed to reject file');
+      }
+    } catch (err) {
+      console.error('Error rejecting file:', err);
+      alert('Failed to reject file');
+    }
+  };
+
+  const handleDelete = async (entry: AuditEntry) => {
+    const timestamp = entry.uploadedAt || entry.loggedAt;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/delete`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          hotel_id: entry.hotel_id, 
+          task_id: entry.task_id, 
+          timestamp
+        })
+      });
+      
+      if (res.ok) {
+        // Remove the entry from the list
+        setEntries(prev => prev.filter(e => e.fileUrl !== entry.fileUrl));
+        setSelected(null);
+      } else {
+        alert('Failed to delete file');
+      }
+    } catch (err) {
+      console.error('Error deleting file:', err);
+      alert('Failed to delete file');
+    }
   };
 
   const clearFilters = () => {
@@ -518,8 +568,8 @@ export default function AuditPage() {
           }}
           onClose={() => setSelected(null)}
           onApprove={() => handleApprove(selected)}
-          onReject={() => handleReject(selected)}
-          onDelete={() => alert('Deletion route to be implemented')}
+          onReject={(reason) => handleReject(selected, reason)}
+          onDelete={() => handleDelete(selected)}
         />
       )}
     </div>
