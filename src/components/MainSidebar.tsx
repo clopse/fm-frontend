@@ -38,7 +38,12 @@ export default function MainSidebar({
   };
 
   const isActive = (path: string) => {
-    return pathname === path || pathname.startsWith(path);
+    // For dashboard, only match exact path
+    if (path.endsWith(`/hotels/${hotelId}`)) {
+      return pathname === path;
+    }
+    // For other pages, check if pathname starts with the path
+    return pathname.startsWith(path) && pathname !== `/hotels/${hotelId}`;
   };
 
   const navItems = [
