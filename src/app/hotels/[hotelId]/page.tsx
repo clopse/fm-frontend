@@ -126,41 +126,45 @@ export default function HotelDashboard() {
   );
 
   return (
-    <div
-      className={styles.fullBackground}
-      style={{ backgroundImage: `url('/${hotelId}.jpg'), url('/fallback.jpg')` }}
-    >
-      <div className={styles.overlay} />
-
-      <div className={styles.content}>
-        <div className={styles.headerRow}>
-          <h1 className={styles.heading}>{hotelName}</h1>
-          <div
-            className={styles.safetyScoreBox}
-            style={{ backgroundColor: scoreColor }}
-          >
-            <span className={styles.safetyScoreTitle}>Compliance Score</span>
-            <div className={styles.safetyScoreContent}>
-              <span className={styles.safetyScorePercent}>
-                {score}%
-                <span className={styles.tooltip}>{points} Points</span>
-              </span>
-            </div>
+    <div className={styles.container}>
+      {/* Header Bar - Outside the background wrapper */}
+      <div className={styles.headerBar}>
+        <h1 className={styles.headerTitle}>{hotelName}</h1>
+        <div
+          className={styles.safetyScoreBox}
+          style={{ backgroundColor: scoreColor }}
+        >
+          <span className={styles.safetyScoreTitle}>Compliance Score</span>
+          <div className={styles.safetyScoreContent}>
+            <span className={styles.safetyScorePercent}>
+              {score}%
+              <span className={styles.tooltip}>{points} Points</span>
+            </span>
           </div>
         </div>
+      </div>
 
-        <div className={styles.checklistSection}>
-          <h2>✅ Monthly Checklist</h2>
-          <MonthlyChecklist
-            hotelId={hotelId}
-            userEmail="admin@jmk.ie"
-            onConfirm={handleChecklistUpdate}
-          />
-        </div>
+      {/* Background and Content */}
+      <div
+        className={styles.fullBackground}
+        style={{ backgroundImage: `url('/${hotelId}.jpg'), url('/fallback.jpg')` }}
+      >
+        <div className={styles.overlay} />
 
-        <div className={styles.checklistSection}>
-          <h2>📌 Tasks Due</h2>
-          {dueTasks.length > 0 ? renderTasks(dueTasks) : <p>No report-based tasks due.</p>}
+        <div className={styles.content}>
+          <div className={styles.checklistSection}>
+            <h2>✅ Monthly Checklist</h2>
+            <MonthlyChecklist
+              hotelId={hotelId}
+              userEmail="admin@jmk.ie"
+              onConfirm={handleChecklistUpdate}
+            />
+          </div>
+
+          <div className={styles.checklistSection}>
+            <h2>📌 Tasks Due</h2>
+            {dueTasks.length > 0 ? renderTasks(dueTasks) : <p>No report-based tasks due.</p>}
+          </div>
         </div>
       </div>
 
