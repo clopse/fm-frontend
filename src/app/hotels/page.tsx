@@ -26,6 +26,7 @@ import { userService } from '@/services/userService';
 
 interface Upload {
   hotel: string;
+  hotel_id?: string; // ADDED: Include hotel_id for backend calls
   report: string;
   date: string;
   reportDate: string;
@@ -144,19 +145,21 @@ export default function HotelsPage() {
 
   const fetchRecentUploads = async () => {
     try {
+      // FIXED: Use /pending endpoint for admin dashboard (only unaudited files)
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/pending`);
       const data = await res.json();
 
       const entries = (data.entries || [])
         .sort((a: any, b: any) =>
-          new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+          new Date(b.uploaded_at || b.uploadedAt).getTime() - new Date(a.uploaded_at || a.uploadedAt).getTime()
         )
         .slice(0, 10)
         .map((e: any) => ({
           hotel: hotelNames[e.hotel_id] || e.hotel_id,
+          hotel_id: e.hotel_id, // FIXED: Include the actual hotel_id for backend calls
           report: `${taskLabelMap[e.task_id] || e.task_id}`,
-          date: e.uploaded_at,
-          reportDate: e.report_date,
+          date: e.uploaded_at || e.uploadedAt,
+          reportDate: e.report_date || e.reportDate,
           task_id: e.task_id,
           fileUrl: e.fileUrl,
           uploaded_by: e.uploaded_by,
