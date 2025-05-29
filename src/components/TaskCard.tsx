@@ -48,7 +48,7 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
 
   const progressPercentage = task.points > 0 ? Math.min((score / task.points) * 100, 100) : 0;
 
-  const getFrequencyBadgeColor = (frequency) => {
+  const getFrequencyBadgeColor = (frequency: string): string => {
     switch (frequency) {
       case 'Monthly': return 'bg-red-100 text-red-800';
       case 'Quarterly': return 'bg-orange-100 text-orange-800';
