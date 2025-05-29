@@ -144,7 +144,7 @@ export default function HotelsPage() {
 
   const fetchRecentUploads = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approval-log`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/pending`);
       const data = await res.json();
 
       const entries = (data.entries || [])
