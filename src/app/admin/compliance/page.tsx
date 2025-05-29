@@ -226,7 +226,11 @@ export default function ComplianceMatrixPage() {
 
   // Get status display components
   const getStatusDisplay = (status: string) => {
-    const configs = {
+    const configs: Record<string, {
+      icon: JSX.Element;
+      color: string;
+      text: string;
+    }> = {
       compliant: {
         icon: <CheckCircle className="w-5 h-5 text-green-600" />,
         color: 'bg-green-100 hover:bg-green-200 border-green-200',
