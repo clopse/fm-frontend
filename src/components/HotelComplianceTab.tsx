@@ -149,3 +149,43 @@ export default function HotelComplianceTab({ hotel }: HotelComplianceTabProps) {
                 <span className="text-sm font-medium">
                   {value ? 'Required' : 'Not Required'}
                 </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Contract Summary */}
+      <div className="mt-8 bg-gray-50 p-6 rounded-lg">
+        <h4 className="text-lg font-semibold text-gray-900 mb-4">Service Contracts Summary</h4>
+        {requiredServices.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {requiredServices.map((service, index) => (
+              <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="flex items-center space-x-3">
+                  <div className={`p-2 rounded-lg ${service.color}`}>
+                    <service.icon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="font-medium text-gray-900">{service.name}</h5>
+                    <p className="text-sm text-gray-600">{service.equipment}</p>
+                    <p className="text-xs text-gray-500 mt-1">{service.frequency}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h5 className="text-lg font-medium text-gray-900 mb-2">No Service Contracts Required</h5>
+            <p className="text-gray-600">
+              Based on the current equipment inventory, no compliance service contracts are required.
+              Add equipment in other tabs to see required services.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
