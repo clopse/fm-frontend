@@ -1,5 +1,4 @@
 'use client';
-
 import { useState } from 'react';
 import styles from '@/styles/RecentUploads.module.css';
 import AuditModal from '@/components/AuditModal';
@@ -13,6 +12,7 @@ interface UploadEntry {
   fileUrl: string;
   uploaded_by: string;
   filename: string;
+  hotel_id?: string; // Add this field
 }
 
 export function RecentUploads({ uploads }: { uploads: UploadEntry[] }) {
@@ -31,44 +31,84 @@ export function RecentUploads({ uploads }: { uploads: UploadEntry[] }) {
 
   const handleApprove = async () => {
     if (!selected) return;
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approve`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        hotel_id: selected.hotel,
-        task_id: selected.task_id,
-        timestamp: selected.date,
-      }),
-    });
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hotel_id: selected.hotel_id || selected.hotel, // Use hotel_id if available, fallback to hotel name
+          task_id: selected.task_id,
+          timestamp: selected.date,
+        }),
+      });
+      
+      if (res.ok) {
+        // Refresh the page or update the uploads list
+        window.location.reload(); // Simple solution
+      } else {
+        alert('Failed to approve file');
+      }
+    } catch (error) {
+      console.error('Error approving file:', error);
+      alert('Failed to approve file');
+    }
+    
     setSelected(null);
   };
 
   const handleReject = async (reason: string) => {
     if (!selected) return;
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/reject`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        hotel_id: selected.hotel,
-        task_id: selected.task_id,
-        timestamp: selected.date,
-        reason,
-      }),
-    });
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hotel_id: selected.hotel_id || selected.hotel, // Use hotel_id if available
+          task_id: selected.task_id,
+          timestamp: selected.date,
+          reason,
+        }),
+      });
+      
+      if (res.ok) {
+        window.location.reload(); // Simple solution
+      } else {
+        alert('Failed to reject file');
+      }
+    } catch (error) {
+      console.error('Error rejecting file:', error);
+      alert('Failed to reject file');
+    }
+    
     setSelected(null);
   };
 
   const handleDelete = async () => {
     if (!selected) return;
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/delete`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        hotel_id: selected.hotel,
-        task_id: selected.task_id,
-        timestamp: selected.date,
-      }),
-    });
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/delete`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hotel_id: selected.hotel_id || selected.hotel, // Use hotel_id if available
+          task_id: selected.task_id,
+          timestamp: selected.date,
+        }),
+      });
+      
+      if (res.ok) {
+        window.location.reload(); // Simple solution
+      } else {
+        alert('Failed to delete file');
+      }
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      alert('Failed to delete file');
+    }
+    
     setSelected(null);
   };
 
@@ -103,10 +143,17 @@ export function RecentUploads({ uploads }: { uploads: UploadEntry[] }) {
           ))}
         </tbody>
       </table>
-
       {selected && (
         <AuditModal
-          entry={selected}
+          entry={{
+            hotel: selected.hotel,
+            task_id: selected.task_id,
+            reportDate: selected.reportDate,
+            date: selected.date,
+            uploaded_by: selected.uploaded_by,
+            fileUrl: selected.fileUrl,
+            filename: selected.filename,
+          }}
           onClose={() => setSelected(null)}
           onApprove={handleApprove}
           onReject={handleReject}
