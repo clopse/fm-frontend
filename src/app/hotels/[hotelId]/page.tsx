@@ -3,9 +3,20 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
-import styles from '@/styles/HotelDashboard.module.css';
+import { 
+  TrendingUp, 
+  CheckCircle, 
+  Clock, 
+  AlertTriangle, 
+  Calendar, 
+  Upload,
+  Award,
+  Target,
+  FileText,
+  Info
+} from 'lucide-react';
 import MonthlyChecklist from '@/components/MonthlyChecklist';
-import TaskUploadBox from '@/components/TaskUploadModal';
+import TaskUploadModal from '@/components/TaskUploadModal';
 
 interface TaskItem {
   task_id: string;
@@ -99,77 +110,211 @@ export default function HotelDashboard() {
     setUploadModalVisible(true);
   };
 
-  const scoreColor = score < 60 ? '#e74c3c' : score < 80 ? '#f39c12' : '#27ae60';
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return 'from-green-500 to-emerald-600';
+    if (score >= 70) return 'from-blue-500 to-indigo-600';
+    if (score >= 50) return 'from-yellow-500 to-orange-600';
+    return 'from-red-500 to-rose-600';
+  };
 
-  const renderTasks = (tasks: TaskItem[]) => (
-    <ul className={styles.taskList}>
-      {tasks.map(task => (
-        <li key={task.task_id} className={styles.taskRow}>
-          <div className={styles.taskLabelWrapper}>
-            <strong>{task.label}</strong>
-            <button
-              className={styles.info}
-              onClick={() => alert(task.info_popup)}
-            >
-              ℹ️
-            </button>
-          </div>
-          <button
-            className={styles.uploadBtnBlue}
-            onClick={() => handleUploadOpen(task)}
-          >
-            Upload
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
+  const getScoreTextColor = (score: number) => {
+    if (score >= 70) return 'text-white';
+    return 'text-white';
+  };
 
   return (
-    <div className={styles.container}>
-      {/* Header Bar - Outside the background wrapper */}
-      <div className={styles.headerBar}>
-        <h1 className={styles.headerTitle}>{hotelName}</h1>
-        <div
-          className={styles.safetyScoreBox}
-          style={{ backgroundColor: scoreColor }}
-        >
-          <span className={styles.safetyScoreTitle}>Compliance Score</span>
-          <div className={styles.safetyScoreContent}>
-            <span className={styles.safetyScorePercent}>
-              {score}%
-              <span className={styles.tooltip}>{points} Points</span>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Background and Content */}
-      <div
-        className={styles.fullBackground}
-        style={{ backgroundImage: `url('/${hotelId}.jpg'), url('/fallback.jpg')` }}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Hero Section with Hotel Image Background */}
+      <div 
+        className="relative h-80 bg-cover bg-center bg-gray-800 overflow-hidden"
+        style={{ 
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('/${hotelId}.jpg'), url('/fallback.jpg')`
+        }}
       >
-        <div className={styles.overlay} />
-
-        <div className={styles.content}>
-          <div className={styles.checklistSection}>
-            <h2>✅ Monthly Checklist</h2>
-            <MonthlyChecklist
-              hotelId={hotelId}
-              userEmail="admin@jmk.ie"
-              onConfirm={handleChecklistUpdate}
-            />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        
+        <div className="relative h-full flex items-center justify-center">
+          <div className="text-center text-white px-4">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">
+              {hotelName}
+            </h1>
+            <p className="text-xl text-gray-100 drop-shadow-md">
+              Management Dashboard
+            </p>
           </div>
+        </div>
 
-          <div className={styles.checklistSection}>
-            <h2>📌 Tasks Due</h2>
-            {dueTasks.length > 0 ? renderTasks(dueTasks) : <p>No report-based tasks due.</p>}
+        {/* Floating Score Card */}
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
+          <div className={`bg-gradient-to-r ${getScoreColor(score)} rounded-2xl shadow-2xl p-6 min-w-[280px]`}>
+            <div className={`text-center ${getScoreTextColor(score)}`}>
+              <div className="flex items-center justify-center mb-2">
+                <Award className="w-6 h-6 mr-2" />
+                <span className="text-lg font-semibold">Compliance Score</span>
+              </div>
+              <div className="text-4xl font-bold mb-1">{score}%</div>
+              <div className="text-sm opacity-90">{points} Points</div>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
+        
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          
+          {/* Tasks Due Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+                <Clock className="w-5 h-5 mr-2 text-orange-500" />
+                Tasks Due
+              </h3>
+              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                dueTasks.length > 0 
+                  ? 'bg-orange-100 text-orange-800' 
+                  : 'bg-green-100 text-green-800'
+              }`}>
+                {dueTasks.length} {dueTasks.length === 1 ? 'task' : 'tasks'}
+              </div>
+            </div>
+            <div className="text-3xl font-bold text-slate-900 mb-2">
+              {dueTasks.length}
+            </div>
+            <p className="text-sm text-slate-600">
+              {dueTasks.length === 0 ? 'All caught up!' : 'Require attention this month'}
+            </p>
+          </div>
+
+          {/* Compliance Status */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+                <Target className="w-5 h-5 mr-2 text-blue-500" />
+                Compliance Level
+              </h3>
+              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                score >= 90 ? 'bg-green-100 text-green-800' :
+                score >= 70 ? 'bg-blue-100 text-blue-800' :
+                score >= 50 ? 'bg-yellow-100 text-yellow-800' :
+                'bg-red-100 text-red-800'
+              }`}>
+                {score >= 90 ? 'Excellent' :
+                 score >= 70 ? 'Good' :
+                 score >= 50 ? 'Fair' : 'Needs Work'}
+              </div>
+            </div>
+            <div className="text-3xl font-bold text-slate-900 mb-2">
+              {score}%
+            </div>
+            <p className="text-sm text-slate-600">
+              Current compliance rating
+            </p>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+                <TrendingUp className="w-5 h-5 mr-2 text-green-500" />
+                Quick Actions
+              </h3>
+            </div>
+            <div className="space-y-2">
+              <button className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg transition-colors text-sm font-medium">
+                View Full Compliance
+              </button>
+              <button className="w-full bg-green-50 hover:bg-green-100 text-green-700 px-4 py-2 rounded-lg transition-colors text-sm font-medium">
+                Upload Documents
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          {/* Monthly Checklist */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4">
+              <h2 className="text-xl font-bold flex items-center">
+                <CheckCircle className="w-6 h-6 mr-2" />
+                Monthly Checklist
+              </h2>
+              <p className="text-green-100 text-sm mt-1">Complete your routine tasks</p>
+            </div>
+            <div className="p-6">
+              <MonthlyChecklist
+                hotelId={hotelId}
+                userEmail="admin@jmk.ie"
+                onConfirm={handleChecklistUpdate}
+              />
+            </div>
+          </div>
+
+          {/* Tasks Due */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-4">
+              <h2 className="text-xl font-bold flex items-center">
+                <AlertTriangle className="w-6 h-6 mr-2" />
+                Tasks Due This Month
+              </h2>
+              <p className="text-orange-100 text-sm mt-1">Upload required documents</p>
+            </div>
+            <div className="p-6">
+              {dueTasks.length > 0 ? (
+                <div className="space-y-3">
+                  {dueTasks.map(task => (
+                    <div key={task.task_id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h3 className="font-medium text-slate-900">{task.label}</h3>
+                          <button
+                            onClick={() => alert(task.info_popup)}
+                            className="p-1 text-slate-400 hover:text-slate-600 rounded"
+                            title="More info"
+                          >
+                            <Info className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex items-center space-x-4 text-sm text-slate-500">
+                          <span className="flex items-center">
+                            <Calendar className="w-3 h-3 mr-1" />
+                            {task.frequency}
+                          </span>
+                          <span className="flex items-center">
+                            <FileText className="w-3 h-3 mr-1" />
+                            {task.category}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleUploadOpen(task)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 font-medium"
+                      >
+                        <Upload className="w-4 h-4" />
+                        <span>Upload</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-500">
+                  <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-400" />
+                  <p className="text-lg font-medium text-slate-700">All caught up!</p>
+                  <p className="text-sm">No tasks due this month</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Upload Modal */}
       {activeTask && (
-        <TaskUploadBox
+        <TaskUploadModal
           visible={uploadModalVisible}
           hotelId={hotelId}
           taskId={activeTask.task_id}
