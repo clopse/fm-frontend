@@ -2,7 +2,28 @@
 
 import { CheckCircle, Clock, AlertTriangle, Award, Calendar, FileText, Shield } from 'lucide-react';
 
-const TaskCard = ({ task, score, onClick }) => {
+interface TaskItem {
+  task_id: string;
+  label: string;
+  info_popup: string;
+  frequency: string;
+  category: string;
+  mandatory: boolean;
+  type: 'upload' | 'confirmation';
+  can_confirm: boolean;
+  is_confirmed_this_month: boolean;
+  last_confirmed_date: string | null;
+  points: number;
+  uploads?: Array<{ url: string; report_date: string; uploaded_by: string }>;
+}
+
+interface TaskCardProps {
+  task: TaskItem;
+  score: number;
+  onClick: () => void;
+}
+
+const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
   const isComplete = score >= task.points;
   const isPartial = score > 0 && score < task.points;
   const isEmpty = score === 0;
