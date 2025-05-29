@@ -12,7 +12,8 @@ import {
   Building,
   FileText,
   User,
-  Clock
+  Clock,
+  FileDown
 } from 'lucide-react';
 import { hotelNames } from '@/data/hotelMetadata';
 import AdminSidebar from '@/components/AdminSidebar';
@@ -71,6 +72,7 @@ export default function AuditPage() {
   const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => {
     // Handle mobile detection
@@ -181,15 +183,19 @@ export default function AuditPage() {
       if (res.ok) {
         // Update the entry status instead of removing it
         setEntries(prev => prev.map(e => 
-          e.fileUrl === entry.fileUrl ? { ...e, approved: true, status: 'approved' } : e
+          (e.hotel_id === entry.hotel_id && e.task_id === entry.task_id && (e.uploadedAt || e.loggedAt) === timestamp) 
+            ? { ...e, approved: true, status: 'approved' } 
+            : e
         ));
         setSelected(null);
+        alert('File approved successfully');
       } else {
-        alert('Failed to approve file');
+        const errorData = await res.json();
+        alert(`Failed to approve file: ${errorData.detail || 'Unknown error'}`);
       }
     } catch (err) {
       console.error('Error approving file:', err);
-      alert('Failed to approve file');
+      alert('Failed to approve file - network error');
     }
   };
 
@@ -210,19 +216,28 @@ export default function AuditPage() {
       if (res.ok) {
         // Update the entry status to rejected
         setEntries(prev => prev.map(e => 
-          e.fileUrl === entry.fileUrl ? { ...e, approved: false, status: 'rejected' } : e
+          (e.hotel_id === entry.hotel_id && e.task_id === entry.task_id && (e.uploadedAt || e.loggedAt) === timestamp)
+            ? { ...e, approved: false, status: 'rejected' } 
+            : e
         ));
         setSelected(null);
+        alert('File rejected successfully');
       } else {
-        alert('Failed to reject file');
+        const errorData = await res.json();
+        alert(`Failed to reject file: ${errorData.detail || 'Unknown error'}`);
       }
     } catch (err) {
       console.error('Error rejecting file:', err);
-      alert('Failed to reject file');
+      alert('Failed to reject file - network error');
     }
   };
 
+  // FIXED DELETE FUNCTION
   const handleDelete = async (entry: AuditEntry) => {
+    if (!confirm('Are you sure you want to delete this entry? This action cannot be undone.')) {
+      return;
+    }
+
     const timestamp = entry.uploadedAt || entry.loggedAt;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/delete`, {
@@ -231,20 +246,148 @@ export default function AuditPage() {
         body: JSON.stringify({ 
           hotel_id: entry.hotel_id, 
           task_id: entry.task_id, 
-          timestamp
+          timestamp: timestamp // This must match exactly with backend
         })
       });
       
       if (res.ok) {
-        // Remove the entry from the list
-        setEntries(prev => prev.filter(e => e.fileUrl !== entry.fileUrl));
+        // Remove the entry using exact match on all identifying fields
+        setEntries(prev => prev.filter(e => 
+          !(e.hotel_id === entry.hotel_id && 
+            e.task_id === entry.task_id && 
+            (e.uploadedAt || e.loggedAt) === timestamp)
+        ));
         setSelected(null);
+        alert('Entry deleted successfully');
       } else {
-        alert('Failed to delete file');
+        const errorData = await res.json();
+        alert(`Failed to delete file: ${errorData.detail || 'Unknown error'}`);
       }
     } catch (err) {
       console.error('Error deleting file:', err);
-      alert('Failed to delete file');
+      alert('Failed to delete file - network error');
+    }
+  };
+
+  // FILENAME TRUNCATION HELPER
+  const truncateFilename = (filename: string | undefined, maxLength: number = 35): string => {
+    if (!filename) return '-';
+    if (filename.length <= maxLength) return filename;
+    return filename.substring(0, maxLength) + '...';
+  };
+
+  // CSV EXPORT FUNCTION
+  const exportToCSV = () => {
+    const csvData = filtered.map(entry => ({
+      Hotel: hotelNames[entry.hotel_id] || entry.hotel_id,
+      Task: taskLabelMap[entry.task_id] || entry.task_id,
+      'Report Date': entry.reportDate || '',
+      'Uploaded At': entry.uploadedAt ? new Date(entry.uploadedAt).toLocaleString('en-IE') : '',
+      'Uploaded By': entry.uploaded_by || '',
+      Status: entry.status || 'pending',
+      Filename: entry.filename || ''
+    }));
+
+    // Convert to CSV
+    const headers = Object.keys(csvData[0] || {});
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => 
+        headers.map(header => {
+          const value = row[header as keyof typeof row];
+          // Escape commas and quotes in CSV
+          return typeof value === 'string' && (value.includes(',') || value.includes('"')) 
+            ? `"${value.replace(/"/g, '""')}"` 
+            : value;
+        }).join(',')
+      )
+    ].join('\n');
+
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `audit-files-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // PDF EXPORT FUNCTION
+  const exportToPDF = () => {
+    // Create HTML content for PDF
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Audit Files Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #333; border-bottom: 2px solid #ccc; padding-bottom: 10px; }
+            .summary { background: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+            th { background-color: #f2f2f2; font-weight: bold; }
+            .status-approved { color: #16a34a; font-weight: bold; }
+            .status-rejected { color: #dc2626; font-weight: bold; }
+            .status-pending { color: #ca8a04; font-weight: bold; }
+            .footer { margin-top: 30px; text-align: center; color: #666; font-size: 10px; }
+          </style>
+        </head>
+        <body>
+          <h1>Audit Files Report</h1>
+          <div class="summary">
+            <p><strong>Generated:</strong> ${new Date().toLocaleString('en-IE')}</p>
+            <p><strong>Total Entries:</strong> ${filtered.length}</p>
+            <p><strong>Pending:</strong> ${filtered.filter(e => e.status === 'pending').length} | 
+               <strong>Approved:</strong> ${filtered.filter(e => e.status === 'approved').length} | 
+               <strong>Rejected:</strong> ${filtered.filter(e => e.status === 'rejected').length}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Hotel</th>
+                <th>Task</th>
+                <th>Report Date</th>
+                <th>Uploaded</th>
+                <th>By</th>
+                <th>Status</th>
+                <th>Filename</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.map(entry => `
+                <tr>
+                  <td>${hotelNames[entry.hotel_id] || entry.hotel_id}</td>
+                  <td>${taskLabelMap[entry.task_id] || entry.task_id}</td>
+                  <td>${entry.reportDate || '-'}</td>
+                  <td>${entry.uploadedAt ? new Date(entry.uploadedAt).toLocaleDateString('en-IE') : '-'}</td>
+                  <td>${entry.uploaded_by || '-'}</td>
+                  <td class="status-${entry.status || 'pending'}">${(entry.status || 'pending').toUpperCase()}</td>
+                  <td>${entry.filename || '-'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div class="footer">
+            <p>JMK Facilities Management - Compliance Audit Report</p>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Open in new window and print
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
     }
   };
 
@@ -253,23 +396,6 @@ export default function AuditPage() {
     setStatusFilter('all');
     setHotelFilter('all');
     setDateRange({ start: '', end: '' });
-  };
-
-  const exportData = () => {
-    // Implement CSV export
-    const csvData = filtered.map(entry => ({
-      Hotel: hotelNames[entry.hotel_id] || entry.hotel_id,
-      Task: taskLabelMap[entry.task_id] || entry.task_id,
-      'Report Date': entry.reportDate,
-      'Uploaded At': entry.uploadedAt,
-      'Uploaded By': entry.uploaded_by,
-      Status: entry.status,
-      Filename: entry.filename
-    }));
-    
-    // Convert to CSV and download
-    console.log('Export data:', csvData);
-    alert('Export functionality to be implemented');
   };
 
   const getStatusBadge = (status: string) => {
@@ -337,13 +463,44 @@ export default function AuditPage() {
                 <p className="text-gray-600 mt-1">Review and manage all compliance document submissions</p>
               </div>
               <div className="flex items-center space-x-3">
-                <button 
-                  onClick={exportData}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
-                </button>
+                {/* Export Dropdown */}
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowExportMenu(!showExportMenu)}
+                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </button>
+                  
+                  {showExportMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                      <div className="py-1">
+                        <button
+                          onClick={() => {
+                            exportToCSV();
+                            setShowExportMenu(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                        >
+                          <FileDown className="w-4 h-4 mr-2" />
+                          Export as CSV
+                        </button>
+                        <button
+                          onClick={() => {
+                            exportToPDF();
+                            setShowExportMenu(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                        >
+                          <FileText className="w-4 h-4 mr-2" />
+                          Export as PDF
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
                 <button 
                   onClick={clearFilters}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
@@ -510,8 +667,11 @@ export default function AuditPage() {
                             {taskLabelMap[entry.task_id] || entry.task_id}
                           </div>
                           {entry.filename && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {entry.filename}
+                            <div 
+                              className="text-xs text-gray-500 mt-1 cursor-help" 
+                              title={entry.filename}
+                            >
+                              {truncateFilename(entry.filename)}
                             </div>
                           )}
                         </td>
@@ -570,6 +730,14 @@ export default function AuditPage() {
           onApprove={() => handleApprove(selected)}
           onReject={(reason) => handleReject(selected, reason)}
           onDelete={() => handleDelete(selected)}
+        />
+      )}
+
+      {/* Click outside to close export menu */}
+      {showExportMenu && (
+        <div 
+          className="fixed inset-0 z-0" 
+          onClick={() => setShowExportMenu(false)}
         />
       )}
     </div>
