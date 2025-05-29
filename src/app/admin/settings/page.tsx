@@ -24,6 +24,7 @@ import {
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import UserPanel from '@/components/UserPanel';
+import HotelSelectorModal from '@/components/HotelSelectorModal';
 
 interface SystemSettings {
   // General Settings
