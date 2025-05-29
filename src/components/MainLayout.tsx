@@ -1,15 +1,12 @@
-// FILE: src/components/MainLayout.tsx (updated with training bypass)
 'use client';
+
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { hotels } from '@/lib/hotels';
 import { userService } from '@/services/userService';
-import { isPublicTrainingPath } from '@/lib/auth'; // Import the helper function
-import { Menu } from 'lucide-react';
-// Import your existing components that we'll keep
+import { isPublicTrainingPath } from '@/lib/auth';
 import HotelSelectorModal from './HotelSelectorModal';
 import UserPanel from './UserPanel';
-// New components (replace your old ones with these)
 import HeaderBar from './HeaderBar';
 import MainSidebar from './MainSidebar';
 
@@ -25,6 +22,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     : rawPathname;
   const router = useRouter();
   
+  // Check if it's the hotel dashboard home page
   const isDashboardHome = /^\/hotels\/[^/]+$/.test(pathname);
   
   // BYPASS ENTIRE MAINLAYOUT FOR TRAINING PAGES
@@ -35,12 +33,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   // Handle mobile detection and sidebar state
   useEffect(() => {
     const handleResize = () => {
-      const mobile = window.innerWidth < 1024; // lg breakpoint
+      const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
       if (!mobile) {
-        setIsSidebarOpen(true); // Always open on desktop
+        setIsSidebarOpen(true);
       } else {
-        setIsSidebarOpen(false); // Closed by default on mobile
+        setIsSidebarOpen(false);
       }
     };
     
@@ -49,10 +47,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // JWT Auth check (updated)
+  // JWT Auth check
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Use the new JWT-based authentication
       const isAuthenticated = userService.isAuthenticated();
       if (!isAuthenticated && pathname !== '/login') {
         router.push('/login');
@@ -66,16 +63,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="h-screen bg-gray-50 overflow-hidden">
-      {/* Header - only show on non-dashboard pages */}
-      {!isDashboardHome && (
-        <HeaderBar
-          onHotelSelectClick={() => setIsHotelModalOpen(true)}
-          currentHotelName={currentHotelName}
-          onUserIconClick={() => setIsUserPanelOpen(true)}
-          onMenuToggle={toggleSidebar}
-          showHamburger={!isSidebarOpen}
-        />
-      )}
+      {/* Header - Always visible */}
+      <HeaderBar
+        onHotelSelectClick={() => setIsHotelModalOpen(true)}
+        currentHotelName={currentHotelName}
+        onUserIconClick={() => setIsUserPanelOpen(true)}
+        onMenuToggle={toggleSidebar}
+        showHamburger={!isSidebarOpen}
+      />
 
       {/* Modals */}
       <HotelSelectorModal 
@@ -88,7 +83,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       />
 
       {/* Main Content Area */}
-      <div className="flex h-full">
+      <div className="flex h-full pt-16"> {/* Always account for header */}
+        
         {/* Sidebar */}
         <MainSidebar
           isMobile={isMobile}
@@ -101,13 +97,22 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         {/* Main Content */}
         <main className={`
-          flex-1 overflow-auto bg-gray-50 transition-all duration-300 ease-in-out
-          ${isSidebarOpen ? 'ml-64' : 'ml-0'}
-          ${!isDashboardHome ? 'pt-16' : ''}
+          flex-1 overflow-auto transition-all duration-300 ease-in-out
+          ${isSidebarOpen && !isMobile ? 'ml-72' : 'ml-0'}
         `}>
-          <div className="p-6">
-            {children}
-          </div>
+          {isDashboardHome ? (
+            // Dashboard gets no padding and can use full space
+            <div className="h-full">
+              {children}
+            </div>
+          ) : (
+            // Other pages get standard padding and background
+            <div className="bg-gradient-to-br from-slate-50 to-blue-50 min-h-full">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {children}
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </div>
