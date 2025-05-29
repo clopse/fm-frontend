@@ -168,19 +168,8 @@ export default function HotelDashboard() {
                 </div>
               </div>
             </div>
-          </div>xl font-bold mb-1">{score}%</div>
-              <div className="text-sm opacity-90">{points} Points</div>
-            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          
           {/* Tasks Due Card */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
@@ -224,7 +213,6 @@ export default function HotelDashboard() {
               </button>
               <button 
                 onClick={() => {
-                  // You can either navigate to compliance page or open upload modal
                   window.location.href = `/hotels/${hotelId}/compliance`;
                 }}
                 className="w-full bg-green-50 hover:bg-green-100 text-green-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2"
