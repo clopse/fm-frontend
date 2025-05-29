@@ -13,7 +13,7 @@ import {
   Droplets, 
   TrendingUp, 
   TrendingDown,
-  DollarSign,
+  Euro,
   BarChart3,
   Calendar,
   Upload,
@@ -301,7 +301,7 @@ export default function UtilitiesDashboard() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-4">
               <div className="flex items-center justify-between">
-                <DollarSign className="w-8 h-8" />
+                <Euro className="w-8 h-8" />
                 <BarChart3 className="w-5 h-5" />
               </div>
             </div>
