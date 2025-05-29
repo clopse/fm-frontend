@@ -145,7 +145,7 @@ export default function HotelDashboard() {
         </div>
 
         {/* Floating Score Card */}
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
+        <div className="absolute -bottom-14 left-1/2 transform -translate-x-1/2">
           <div className={`bg-gradient-to-r ${getScoreColor(score)} rounded-2xl shadow-2xl p-6 min-w-[280px]`}>
             <div className={`text-center ${getScoreTextColor(score)}`}>
               <div className="flex items-center justify-center mb-2">
@@ -160,7 +160,7 @@ export default function HotelDashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
         
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -198,13 +198,21 @@ export default function HotelDashboard() {
             </div>
             <div className="space-y-3">
               <button 
-                onClick={() => window.location.href = `/hotels/${hotelId}/compliance`}
+                onClick={() => {
+                  window.location.href = `/hotels/${hotelId}/compliance`;
+                }}
                 className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2"
               >
                 <Target className="w-4 h-4" />
                 <span>View Full Compliance</span>
               </button>
-              <button className="w-full bg-green-50 hover:bg-green-100 text-green-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2">
+              <button 
+                onClick={() => {
+                  // You can either navigate to compliance page or open upload modal
+                  window.location.href = `/hotels/${hotelId}/compliance`;
+                }}
+                className="w-full bg-green-50 hover:bg-green-100 text-green-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2"
+              >
                 <Upload className="w-4 h-4" />
                 <span>Upload Documents</span>
               </button>
