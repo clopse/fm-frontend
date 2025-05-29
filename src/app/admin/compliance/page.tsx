@@ -14,6 +14,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { hotelNames } from '@/data/hotelMetadata';
+import tasksData from '@/data/tasks.json';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import UserPanel from '@/components/UserPanel';
@@ -42,44 +43,17 @@ interface TaskLabelMap {
   [key: string]: string;
 }
 
-// Compliance tasks - organized by category
-const complianceTasks: TaskInfo[] = [
-  // Fire Safety
-  { task_id: 'fire_risk_assessment', label: 'Fire Risk Assessment', frequency: 'Annually', category: 'Fire Safety', mandatory: true, points: 20 },
-  { task_id: 'fire_alarm_service_certificate', label: 'Fire Alarm Service Certificate', frequency: 'Quarterly', category: 'Fire Safety', mandatory: true, points: 20 },
-  { task_id: 'fire_extinguisher_certificate', label: 'Fire Extinguisher Service Certificate', frequency: 'Annually', category: 'Fire Safety', mandatory: true, points: 20 },
-  { task_id: 'emergency_light_cert', label: 'Emergency Lighting Test Certificate', frequency: 'Annually', category: 'Fire Safety', mandatory: true, points: 20 },
-  { task_id: 'sprinkler_service_certificate', label: 'Sprinkler System Service Certificate', frequency: 'Annually', category: 'Fire Safety', mandatory: true, points: 20 },
-  { task_id: 'weekly_fire_alarm_test', label: 'Weekly Fire Alarm Test', frequency: 'Weekly', category: 'Fire Safety', mandatory: true, points: 15 },
-  { task_id: 'fire_warden_training', label: 'Fire Warden Training', frequency: 'Annually', category: 'Fire Safety', mandatory: true, points: 15 },
-  { task_id: 'fire_evacuation_drill', label: 'Fire Evacuation Drill', frequency: 'Bi-annually', category: 'Fire Safety', mandatory: true, points: 15 },
-  
-  // Electrical Safety
-  { task_id: 'eicr_certificate', label: 'Electrical Installation Condition Report (EICR)', frequency: 'Every 5 Years', category: 'Electrical Safety', mandatory: true, points: 20 },
-  { task_id: 'pat_testing', label: 'Portable Appliance Testing (PAT)', frequency: 'Annually', category: 'Electrical Safety', mandatory: true, points: 20 },
-  
-  // Gas Safety
-  { task_id: 'gas_safety_certificate', label: 'Gas Safety Certificate', frequency: 'Annually', category: 'Gas Safety', mandatory: true, points: 20 },
-  { task_id: 'boiler_service', label: 'Boiler Service Report', frequency: 'Annually', category: 'Gas Safety', mandatory: true, points: 20 },
-  
-  // Water Safety
-  { task_id: 'legionella_risk_assessment', label: 'Legionella Risk Assessment', frequency: 'Bi-annually', category: 'Water Safety', mandatory: true, points: 20 },
-  { task_id: 'tank_inspection_annual', label: 'Water Tank Inspection', frequency: 'Annually', category: 'Water Safety', mandatory: true, points: 20 },
-  { task_id: 'tmv_annual_service', label: 'TMV Service', frequency: 'Annually', category: 'Water Safety', mandatory: true, points: 20 },
-  
-  // Lifts & Equipment
-  { task_id: 'passenger_lift_cert', label: 'Passenger Lift Inspection', frequency: 'Bi-annually', category: 'Lifts & Equipment', mandatory: true, points: 20 },
-  
-  // Food Safety
-  { task_id: 'food_handler_training_log', label: 'Food Handler Training', frequency: 'Annually', category: 'Food Safety', mandatory: true, points: 20 },
-  { task_id: 'pest_control_inspection', label: 'Pest Control Inspection', frequency: 'Monthly', category: 'Food Safety', mandatory: true, points: 20 },
-  { task_id: 'fridge_temp_log', label: 'Temperature Monitoring', frequency: 'Daily', category: 'Food Safety', mandatory: true, points: 20 },
-  
-  // Health & Safety
-  { task_id: 'safety_statement_review', label: 'Safety Statement Review', frequency: 'Annually', category: 'Health & Safety', mandatory: true, points: 20 },
-  { task_id: 'first_aid_certified_staff', label: 'First Aid Certification', frequency: 'Annually', category: 'Health & Safety', mandatory: true, points: 20 },
-  { task_id: 'guest_fire_safety_information', label: 'Guest Safety Information', frequency: 'Monthly', category: 'Health & Safety', mandatory: true, points: 15 }
-];
+// Get compliance tasks from JSON data - filter to mandatory only
+const complianceTasks: TaskInfo[] = tasksData.tasks
+  .filter(task => task.mandatory)
+  .map(task => ({
+    task_id: task.task_id,
+    label: task.label,
+    frequency: task.frequency,
+    category: task.category,
+    mandatory: task.mandatory,
+    points: task.points || 20
+  }));
 
 export default function ComplianceMatrixPage() {
   // Data state
