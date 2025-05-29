@@ -13,7 +13,28 @@ import {
 } from 'recharts';
 import { TrendingUp, Award, Target, Calendar } from 'lucide-react';
 
-const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }) => {
+interface ScoreData {
+  score: number;
+  max_score: number;
+  percent: number;
+  monthly_history?: Record<string, { score: number; max: number }>;
+}
+
+interface GraphPoint {
+  month: string;
+  score: number;
+  max: number;
+  percent: number;
+}
+
+interface ScoreCardProps {
+  scoreData: ScoreData | null;
+  earnedPoints: number;
+  totalPoints: number;
+  graphPoints: GraphPoint[];
+}
+
+const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreCardProps) => {
   const percentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
   
   const getScoreColor = (percent) => {
