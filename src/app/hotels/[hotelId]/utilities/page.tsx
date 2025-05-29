@@ -190,7 +190,7 @@ export default function UtilitiesDashboard() {
                 <h1 className="text-3xl font-bold mb-1">
                   {hotelNames[hotelId] || hotelId.toUpperCase()} Utilities
                 </h1>
-                <p className="text-blue-100">AI-Powered Energy Analytics Dashboard</p>
+                <p className="text-blue-100">Energy Management Dashboard</p>
               </div>
             </div>
             
@@ -393,7 +393,7 @@ export default function UtilitiesDashboard() {
         </div>
 
         {/* Water Usage and Energy Mix */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           
           {/* Water Usage */}
           {water.length > 0 && (
@@ -445,86 +445,6 @@ export default function UtilitiesDashboard() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          </div>
-
-          {/* AI Insights Panel */}
-          <div className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-white border-opacity-20">
-              <h3 className="text-lg font-semibold flex items-center">
-                <AlertTriangle className="w-5 h-5 mr-2" />
-                AI Insights
-              </h3>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <CheckCircle className="w-4 h-4 text-green-300" />
-                  <span className="text-sm font-medium">Peak Usage</span>
-                </div>
-                <p className="text-sm text-white text-opacity-90">
-                  Highest consumption detected in winter months
-                </p>
-              </div>
-              
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <TrendingDown className="w-4 h-4 text-blue-300" />
-                  <span className="text-sm font-medium">Efficiency</span>
-                </div>
-                <p className="text-sm text-white text-opacity-90">
-                  12% reduction in per-room consumption
-                </p>
-              </div>
-              
-              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-4">
-                <div className="flex items-center space-x-2 mb-2">
-                  <DollarSign className="w-4 h-4 text-yellow-300" />
-                  <span className="text-sm font-medium">Cost Savings</span>
-                </div>
-                <p className="text-sm text-white text-opacity-90">
-                  Potential €2,400 annual savings identified
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Multi-Hotel Comparison */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-          <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-6 py-4 border-b border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-              <Building className="w-5 h-5 mr-2 text-slate-600" />
-              Multi-Hotel Comparison
-            </h3>
-            <p className="text-sm text-slate-600 mt-1">Performance across all properties</p>
-          </div>
-          <div className="p-6">
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={multiHotelData} margin={{ bottom: 80 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis 
-                  dataKey="hotelId" 
-                  tickFormatter={(id) => hotelNames[id] || id}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                  stroke="#64748b"
-                />
-                <YAxis stroke="#64748b" />
-                <Tooltip 
-                  labelFormatter={(id) => hotelNames[id] || id}
-                  contentStyle={{ 
-                    backgroundColor: 'white', 
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                  }}
-                />
-                <Legend />
-                <Bar dataKey="electricity" fill={COLORS.electricity} name="Electricity" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="gas" fill={COLORS.gas} name="Gas" radius={[2, 2, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
           </div>
         </div>
       </div>
