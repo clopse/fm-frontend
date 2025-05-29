@@ -315,7 +315,7 @@ export default function ComplianceMatrixPage() {
       />
 
       {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${showAdminSidebar && !isMobile ? 'ml-72' : 'ml-0'}`}>
+      <div className={`flex-1 transition-all duration-300 ${showAdminSidebar && !isMobile ? 'ml-72' : 'ml-0'} min-w-0`}>
         {/* User Panel */}
         <UserPanel 
           isOpen={isUserPanelOpen} 
@@ -342,8 +342,8 @@ export default function ComplianceMatrixPage() {
           }}
         />
 
-        {/* Page Content - Fixed width container */}
-        <div className="w-full max-w-none px-4 sm:px-6 lg:px-8 py-8">
+        {/* Page Content - Constrained container */}
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-8 overflow-hidden">
           
           {/* Page Header */}
           <div className="mb-8">
