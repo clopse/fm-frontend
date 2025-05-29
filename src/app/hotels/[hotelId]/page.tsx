@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
 import styles from '@/styles/HotelDashboard.module.css';
 import MonthlyChecklist from '@/components/MonthlyChecklist';
-import TaskUploadBox from '@/components/TaskUploadBox';
+import TaskUploadBox from '@/components/TaskUploadModal';
 
 interface TaskItem {
   task_id: string;
