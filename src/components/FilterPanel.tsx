@@ -1,3 +1,5 @@
+'use client';
+
 import { Search, X, Shield, Clock } from 'lucide-react';
 
 const FilterPanel = ({ filters, onChange, categories, frequencies, onClose }) => {
