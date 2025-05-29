@@ -27,10 +27,10 @@ import {
 } from 'lucide-react';
 
 // Import the new components we'll create
-import TaskUploadModal from './TaskUploadModal';
-import TaskCard from './TaskCard';
-import FilterPanel from './FilterPanel';
-import ScoreCard from './ScoreCard';
+import TaskUploadModal from '@/components/TaskUploadModal';
+import TaskCard from '@/components/TaskCard';
+import FilterPanel from '@/components/FilterPanel';
+import ScoreCard from '@/components/ScoreCard';
 
 interface Upload {
   url: string;
