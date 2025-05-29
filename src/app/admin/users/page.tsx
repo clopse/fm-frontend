@@ -6,7 +6,7 @@ import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import UserPanel from '@/components/UserPanel';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
-import UserManagementModal from '@/components/UserManagementModal';
+import InlineUserManagement from '@/components/InlineUserManagement';
 
 export default function UsersPage() {
   // UI State
@@ -83,13 +83,7 @@ export default function UsersPage() {
           </div>
 
           {/* Inline User Management Content */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            {/* Remove the modal wrapper and display the content directly */}
-            <UserManagementModal 
-              isOpen={true}
-              onClose={() => {}} // No close functionality since this is inline
-            />
-          </div>
+          <InlineUserManagement className="shadow-sm" />
         </div>
       </div>
     </div>
