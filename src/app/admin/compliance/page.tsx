@@ -18,6 +18,7 @@ import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import UserPanel from '@/components/UserPanel';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
+import ComplianceMatrix from '@/components/ComplianceMatrix';
 
 interface MatrixEntry {
   hotel_id: string;
@@ -373,8 +374,8 @@ export default function ComplianceMatrixPage() {
           }}
         />
 
-        {/* Page Content */}
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Page Content - Fixed width container */}
+        <div className="w-full max-w-none px-4 sm:px-6 lg:px-8 py-8">
           
           {/* Page Header */}
           <div className="mb-8">
