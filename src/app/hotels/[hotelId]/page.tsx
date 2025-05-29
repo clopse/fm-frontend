@@ -126,7 +126,7 @@ export default function HotelDashboard() {
     <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Hero Section with Hotel Image Background */}
       <div 
-        className="relative h-80 bg-cover bg-center bg-gray-800 overflow-hidden"
+        className="relative h-96 bg-cover bg-center bg-gray-800 overflow-hidden"
         style={{ 
           backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('/${hotelId}.jpg'), url('/fallback.jpg')`
         }}
@@ -143,16 +143,32 @@ export default function HotelDashboard() {
             </p>
           </div>
         </div>
+      </div>
 
-        {/* Floating Score Card */}
-        <div className="absolute -bottom-14 left-1/2 transform -translate-x-1/2">
-          <div className={`bg-gradient-to-r ${getScoreColor(score)} rounded-2xl shadow-2xl p-6 min-w-[280px]`}>
-            <div className={`text-center ${getScoreTextColor(score)}`}>
-              <div className="flex items-center justify-center mb-2">
-                <Award className="w-6 h-6 mr-2" />
-                <span className="text-lg font-semibold">Compliance Score</span>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          
+          {/* Compliance Score Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className={`bg-gradient-to-r ${getScoreColor(score)} text-white p-6`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center mb-2">
+                    <Award className="w-6 h-6 mr-2" />
+                    <span className="text-lg font-semibold">Compliance Score</span>
+                  </div>
+                  <div className="text-3xl font-bold">{score}%</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm opacity-90">{points}</div>
+                  <div className="text-xs opacity-75">Points</div>
+                </div>
               </div>
-              <div className="text-4xl font-bold mb-1">{score}%</div>
+            </div>
+          </div>xl font-bold mb-1">{score}%</div>
               <div className="text-sm opacity-90">{points} Points</div>
             </div>
           </div>
@@ -160,7 +176,7 @@ export default function HotelDashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
