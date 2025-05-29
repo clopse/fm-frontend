@@ -14,7 +14,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { hotelNames } from '@/data/hotelMetadata';
-import tasksData from '@/data/compliance.json';
+import complianceData from '@/data/compliance.json';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import UserPanel from '@/components/UserPanel';
@@ -43,8 +43,9 @@ interface TaskLabelMap {
   [key: string]: string;
 }
 
-// Get compliance tasks from JSON data - filter to mandatory only
-const complianceTasks: TaskInfo[] = tasksData.tasks
+// Get compliance tasks from JSON data - flatten all sections and filter to mandatory only
+const complianceTasks: TaskInfo[] = complianceData
+  .flatMap(section => section.tasks)
   .filter(task => task.mandatory)
   .map(task => ({
     task_id: task.task_id,
@@ -125,18 +126,11 @@ export default function ComplianceMatrixPage() {
   // Get list of hotels with data
   const getAvailableHotels = () => {
     if (matrixData.length === 0) {
-      // Fallback to predefined hotel list if no API data
-      return [
-        { id: 'hiex', name: 'Holiday Inn Express Cork' },
-        { id: 'moxy', name: 'Moxy Cork' },
-        { id: 'hida', name: 'Holiday Inn Dublin Airport' },
-        { id: 'hbhdcc', name: 'Hampton by Hilton Dublin City Centre' },
-        { id: 'hbhe', name: 'Hampton by Hilton London Ealing' },
-        { id: 'sera', name: 'Seraphine Kensington Olympia' },
-        { id: 'marina', name: 'Waterford Marina Hotel' },
-        { id: 'belfast', name: 'Hampton by Hilton Belfast City Centre' },
-        { id: 'hiltonth', name: 'Hilton London Canary Wharf' }
-      ];
+      // Use hotels from metadata instead of hardcoded list
+      return Object.entries(hotelNames).map(([id, name]) => ({
+        id,
+        name
+      })).sort((a, b) => a.name.localeCompare(b.name));
     }
     
     const hotelIds = [...new Set(matrixData.map(entry => entry.hotel_id))];
