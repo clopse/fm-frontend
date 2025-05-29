@@ -2,12 +2,28 @@
 
 import { Search, X, Shield, Clock } from 'lucide-react';
 
-const FilterPanel = ({ filters, onChange, categories, frequencies, onClose }) => {
-  const handleFilterChange = (key, value) => {
+interface FilterState {
+  category: string[];
+  frequency: string[];
+  mandatoryOnly: boolean;
+  search: string;
+  type: string;
+}
+
+interface FilterPanelProps {
+  filters: FilterState;
+  onChange: (filters: FilterState) => void;
+  categories: string[];
+  frequencies: string[];
+  onClose: () => void;
+}
+
+const FilterPanel = ({ filters, onChange, categories, frequencies, onClose }: FilterPanelProps) => {
+  const handleFilterChange = (key: keyof FilterState, value: any) => {
     onChange({ ...filters, [key]: value });
   };
 
-  const handleArrayFilterChange = (key, value) => {
+  const handleArrayFilterChange = (key: 'category' | 'frequency', value: string) => {
     let newArray;
     if (filters[key].includes(value)) {
       newArray = filters[key].filter(item => item !== value);
