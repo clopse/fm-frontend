@@ -1,4 +1,3 @@
-// FILE: src/app/admin/settings/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -25,32 +24,23 @@ import UserPanel from '@/components/UserPanel';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
 
 interface SystemSettings {
-  // General Settings
   companyName: string;
   companyLogo: string;
   timezone: string;
   dateFormat: string;
   currency: string;
-  
-  // Security Settings
   sessionTimeout: number;
   passwordMinLength: number;
   requireTwoFactor: boolean;
   allowPasswordReset: boolean;
   maxLoginAttempts: number;
-  
-  // Notification Settings
   emailNotifications: boolean;
   complianceAlerts: boolean;
   systemMaintenance: boolean;
   reportDeadlines: boolean;
-  
-  // API Settings
   apiRateLimit: number;
   apiKeyExpiry: number;
   webhookUrl: string;
-  
-  // Email Settings
   smtpHost: string;
   smtpPort: number;
   smtpUsername: string;
@@ -230,14 +220,14 @@ export default function SettingsPage() {
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >
                   {isSaving ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
-                  <span>{isSaving ? 'Saving...' : 'Save All Changes'}</span>
+                  <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               </div>
             </div>
@@ -294,112 +284,6 @@ export default function SettingsPage() {
                         
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            SMTP Username
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.smtpUsername}
-                            onChange={(e) => handleInputChange('smtpUsername', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            SMTP Password
-                          </label>
-                          <div className="relative">
-                            <input
-                              type={showPassword ? 'text' : 'password'}
-                              value={settings.smtpPassword}
-                              onChange={(e) => handleInputChange('smtpPassword', e.target.value)}
-                              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute inset-y-0 right-0 flex items-center pr-3"
-                            >
-                              {showPassword ? (
-                                <EyeOff className="w-4 h-4 text-gray-400" />
-                              ) : (
-                                <Eye className="w-4 h-4 text-gray-400" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            From Email
-                          </label>
-                          <input
-                            type="email"
-                            value={settings.fromEmail}
-                            onChange={(e) => handleInputChange('fromEmail', e.target.value)}
-                            placeholder="noreply@jmkfacilities.com"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            From Name
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.fromName}
-                            onChange={(e) => handleInputChange('fromName', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-900">Use Secure Connection (SSL/TLS)</h3>
-                          <p className="text-sm text-gray-600">Enable secure email transmission</p>
-                        </div>
-                        <button
-                          onClick={() => handleInputChange('smtpSecure', !settings.smtpSecure)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            settings.smtpSecure ? 'bg-blue-600' : 'bg-gray-300'
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              settings.smtpSecure ? 'translate-x-6' : 'translate-x-1'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                      
-                      <div className="flex space-x-3">
-                        <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                          <Mail className="w-4 h-4" />
-                          <span>Test Email Configuration</span>
-                        </button>
-                        <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
-                          <Download className="w-4 h-4" />
-                          <span>Export Configuration</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
                             Timezone
                           </label>
                           <select
@@ -411,8 +295,6 @@ export default function SettingsPage() {
                             <option value="Europe/London">London Time (GMT+0/+1)</option>
                             <option value="Europe/Paris">Central European Time (GMT+1/+2)</option>
                             <option value="Europe/Berlin">Berlin Time (GMT+1/+2)</option>
-                            <option value="Europe/Rome">Rome Time (GMT+1/+2)</option>
-                            <option value="Europe/Amsterdam">Amsterdam Time (GMT+1/+2)</option>
                           </select>
                         </div>
                         
@@ -443,25 +325,7 @@ export default function SettingsPage() {
                             <option value="EUR">EUR - Euro</option>
                             <option value="GBP">GBP - British Pound</option>
                             <option value="USD">USD - US Dollar</option>
-                            <option value="CAD">CAD - Canadian Dollar</option>
                           </select>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Company Logo
-                        </label>
-                        <div className="flex items-center space-x-4">
-                          <img 
-                            src={settings.companyLogo} 
-                            alt="Current logo" 
-                            className="h-12 w-auto border border-gray-200 rounded"
-                          />
-                          <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                            <Upload className="w-4 h-4" />
-                            <span>Upload New Logo</span>
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -500,58 +364,6 @@ export default function SettingsPage() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
                         </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Max Login Attempts
-                          </label>
-                          <input
-                            type="number"
-                            value={settings.maxLoginAttempts}
-                            onChange={(e) => handleInputChange('maxLoginAttempts', parseInt(e.target.value))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-900">Require Two-Factor Authentication</h3>
-                            <p className="text-sm text-gray-600">Force all users to enable 2FA</p>
-                          </div>
-                          <button
-                            onClick={() => handleInputChange('requireTwoFactor', !settings.requireTwoFactor)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                              settings.requireTwoFactor ? 'bg-blue-600' : 'bg-gray-300'
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                settings.requireTwoFactor ? 'translate-x-6' : 'translate-x-1'
-                              }`}
-                            />
-                          </button>
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-900">Allow Password Reset</h3>
-                            <p className="text-sm text-gray-600">Users can reset passwords via email</p>
-                          </div>
-                          <button
-                            onClick={() => handleInputChange('allowPasswordReset', !settings.allowPasswordReset)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                              settings.allowPasswordReset ? 'bg-blue-600' : 'bg-gray-300'
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                settings.allowPasswordReset ? 'translate-x-6' : 'translate-x-1'
-                              }`}
-                            />
-                          </button>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -565,31 +377,24 @@ export default function SettingsPage() {
                     </div>
                     
                     <div className="space-y-4">
-                      {[
-                        { key: 'emailNotifications', label: 'Email Notifications', desc: 'Send email notifications for system events' },
-                        { key: 'complianceAlerts', label: 'Compliance Alerts', desc: 'Alert when compliance deadlines approach' },
-                        { key: 'systemMaintenance', label: 'System Maintenance', desc: 'Notify users of planned maintenance' },
-                        { key: 'reportDeadlines', label: 'Report Deadlines', desc: 'Remind users of upcoming report deadlines' }
-                      ].map((item) => (
-                        <div key={item.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-900">{item.label}</h3>
-                            <p className="text-sm text-gray-600">{item.desc}</p>
-                          </div>
-                          <button
-                            onClick={() => handleInputChange(item.key as keyof SystemSettings, !settings[item.key as keyof SystemSettings])}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                              settings[item.key as keyof SystemSettings] ? 'bg-blue-600' : 'bg-gray-300'
-                            }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                settings[item.key as keyof SystemSettings] ? 'translate-x-6' : 'translate-x-1'
-                              }`}
-                            />
-                          </button>
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-900">Email Notifications</h3>
+                          <p className="text-sm text-gray-600">Send email notifications for system events</p>
                         </div>
-                      ))}
+                        <button
+                          onClick={() => handleInputChange('emailNotifications', !settings.emailNotifications)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            settings.emailNotifications ? 'bg-blue-600' : 'bg-gray-300'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              settings.emailNotifications ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -597,8 +402,8 @@ export default function SettingsPage() {
                 {activeTab === 'api' && (
                   <div className="p-6">
                     <div className="mb-6">
-                      <h2 className="text-xl font-semibold text-gray-900 mb-2">API & Integration Settings</h2>
-                      <p className="text-gray-600">Configure API access and third-party integrations</p>
+                      <h2 className="text-xl font-semibold text-gray-900 mb-2">API Settings</h2>
+                      <p className="text-gray-600">Configure API access and integrations</p>
                     </div>
                     
                     <div className="space-y-6">
@@ -613,49 +418,6 @@ export default function SettingsPage() {
                             onChange={(e) => handleInputChange('apiRateLimit', parseInt(e.target.value))}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            API Key Expiry (days)
-                          </label>
-                          <input
-                            type="number"
-                            value={settings.apiKeyExpiry}
-                            onChange={(e) => handleInputChange('apiKeyExpiry', parseInt(e.target.value))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Webhook URL
-                        </label>
-                        <input
-                          type="url"
-                          value={settings.webhookUrl}
-                          onChange={(e) => handleInputChange('webhookUrl', e.target.value)}
-                          placeholder="https://your-webhook-endpoint.com/webhook"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                        <p className="text-sm text-gray-500 mt-1">
-                          URL to receive system event notifications
-                        </p>
-                      </div>
-                      
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex items-start space-x-3">
-                          <Key className="w-5 h-5 text-blue-600 mt-0.5" />
-                          <div>
-                            <h3 className="text-sm font-medium text-blue-900">API Documentation</h3>
-                            <p className="text-sm text-blue-700 mt-1">
-                              Access the full API documentation and manage API keys in the developer portal.
-                            </p>
-                            <button className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium">
-                              View API Docs →
-                            </button>
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -686,10 +448,25 @@ export default function SettingsPage() {
                         
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            SMTP Port
+                            From Email
                           </label>
                           <input
-                            type="number"
-                            value={settings.smtpPort}
-                            onChange={(e) => handleInputChange('smtpPort', parseInt(e.target.value))}
-                            className="w-full px
+                            type="email"
+                            value={settings.fromEmail}
+                            onChange={(e) => handleInputChange('fromEmail', e.target.value)}
+                            placeholder="noreply@jmkfacilities.com"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
