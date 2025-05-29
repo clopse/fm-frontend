@@ -27,7 +27,8 @@ import {
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import UserPanel from '@/components/UserPanel';
-import { hotelNames } from '@/lib/hotels';
+import HotelSelectorModal from '@/components/HotelSelectorModal';
+import { hotelNames } from '@/data/hotelMetadata';
 
 interface UploadedBill {
   id: string;
@@ -93,6 +94,8 @@ export default function UtilitiesAdminPage() {
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
   const [showAdminSidebar, setShowAdminSidebar] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
+  const [showAccountSettings, setShowAccountSettings] = useState(false);
 
   useEffect(() => {
     // Handle mobile detection
@@ -284,10 +287,19 @@ export default function UtilitiesAdminPage() {
         <AdminHeader 
           showSidebar={showAdminSidebar}
           onToggleSidebar={() => setShowAdminSidebar(!showAdminSidebar)}
-          onOpenHotelSelector={() => {}}
+          onOpenHotelSelector={() => setIsHotelModalOpen(true)}
           onOpenUserPanel={() => setIsUserPanelOpen(true)}
-          onOpenAccountSettings={() => {}}
+          onOpenAccountSettings={() => setShowAccountSettings(true)}
           isMobile={isMobile}
+        />
+
+        <HotelSelectorModal
+          isOpen={isHotelModalOpen}
+          setIsOpen={setIsHotelModalOpen}
+          onSelectHotel={(hotelName) => {
+            console.log('Selected hotel:', hotelName);
+            setIsHotelModalOpen(false);
+          }}
         />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
