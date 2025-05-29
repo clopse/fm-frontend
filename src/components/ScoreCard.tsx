@@ -37,27 +37,27 @@ interface ScoreCardProps {
 const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreCardProps) => {
   const percentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
   
-  const getScoreColor = (percent) => {
+  const getScoreColor = (percent: number): string => {
     if (percent >= 90) return 'text-green-600';
     if (percent >= 70) return 'text-blue-600';
     if (percent >= 50) return 'text-yellow-600';
     return 'text-red-600';
   };
 
-  const getScoreBgColor = (percent) => {
+  const getScoreBgColor = (percent: number): string => {
     if (percent >= 90) return 'from-green-500 to-emerald-600';
     if (percent >= 70) return 'from-blue-500 to-indigo-600';
     if (percent >= 50) return 'from-yellow-500 to-orange-600';
     return 'from-red-500 to-rose-600';
   };
 
-  const formatMonth = (month) => {
+  const formatMonth = (month: string): string => {
     const [year, monthNum] = month.split('-');
     const date = new Date(parseInt(year), parseInt(monthNum) - 1);
     return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
   };
 
-  const CustomTooltip = ({ active, payload, label }) => {
+  const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border border-slate-200 rounded-lg shadow-lg">
