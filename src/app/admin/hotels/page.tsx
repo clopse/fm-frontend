@@ -8,9 +8,9 @@ import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import UserPanel from '@/components/UserPanel';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
-import HotelListSidebar from '@/components/hotels/HotelListSidebar';
-import HotelDetailsPanel from '@/components/hotels/HotelDetailsPanel';
-import SaveIndicator from '@/components/hotels/SaveIndicator';
+import HotelListSidebar from '@/components/HotelListSidebar';
+import HotelDetailsPanel from '@/components/HotelDetailsPanel';
+import SaveIndicator from '@/components/SaveIndicator';
 
 import { hotelNames } from '@/data/hotelMetadata';
 import { HotelFacilityData, createDefaultHotelData } from '@/types/hotelTypes';
