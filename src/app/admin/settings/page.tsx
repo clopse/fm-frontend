@@ -7,7 +7,6 @@ import {
   Shield,
   Bell,
   Database,
-  Globe,
   Mail,
   Save,
   AlertTriangle,
@@ -102,7 +101,6 @@ export default function SettingsPage() {
   const [showAccountSettings, setShowAccountSettings] = useState(false);
 
   useEffect(() => {
-    // Handle mobile detection
     const handleResize = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
@@ -116,7 +114,6 @@ export default function SettingsPage() {
     handleResize();
     window.addEventListener('resize', handleResize);
     
-    // Simulate loading settings
     setTimeout(() => {
       setIsLoading(false);
     }, 1000);
@@ -134,7 +131,6 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
       setSaveMessage('Settings saved successfully!');
       setTimeout(() => setSaveMessage(''), 3000);
@@ -212,7 +208,6 @@ export default function SettingsPage() {
         />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}
           <div className="mb-8">
             <div className="flex items-center justify-between">
               <div>
@@ -249,7 +244,6 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Sidebar Navigation */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <nav className="space-y-2">
@@ -274,11 +268,9 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Main Content */}
             <div className="lg:col-span-3">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                 
-                {/* General Settings */}
                 {activeTab === 'general' && (
                   <div className="p-6">
                     <div className="mb-6">
@@ -297,6 +289,112 @@ export default function SettingsPage() {
                             value={settings.companyName}
                             onChange={(e) => handleInputChange('companyName', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            SMTP Username
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.smtpUsername}
+                            onChange={(e) => handleInputChange('smtpUsername', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            SMTP Password
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={showPassword ? 'text' : 'password'}
+                              value={settings.smtpPassword}
+                              onChange={(e) => handleInputChange('smtpPassword', e.target.value)}
+                              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPassword(!showPassword)}
+                              className="absolute inset-y-0 right-0 flex items-center pr-3"
+                            >
+                              {showPassword ? (
+                                <EyeOff className="w-4 h-4 text-gray-400" />
+                              ) : (
+                                <Eye className="w-4 h-4 text-gray-400" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            From Email
+                          </label>
+                          <input
+                            type="email"
+                            value={settings.fromEmail}
+                            onChange={(e) => handleInputChange('fromEmail', e.target.value)}
+                            placeholder="noreply@jmkfacilities.com"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            From Name
+                          </label>
+                          <input
+                            type="text"
+                            value={settings.fromName}
+                            onChange={(e) => handleInputChange('fromName', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-900">Use Secure Connection (SSL/TLS)</h3>
+                          <p className="text-sm text-gray-600">Enable secure email transmission</p>
+                        </div>
+                        <button
+                          onClick={() => handleInputChange('smtpSecure', !settings.smtpSecure)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                            settings.smtpSecure ? 'bg-blue-600' : 'bg-gray-300'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              settings.smtpSecure ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      
+                      <div className="flex space-x-3">
+                        <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                          <Mail className="w-4 h-4" />
+                          <span>Test Email Configuration</span>
+                        </button>
+                        <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                          <Download className="w-4 h-4" />
+                          <span>Export Configuration</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
                         </div>
                         
@@ -370,7 +468,6 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {/* Security Settings */}
                 {activeTab === 'security' && (
                   <div className="p-6">
                     <div className="mb-6">
@@ -460,7 +557,6 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {/* Notification Settings */}
                 {activeTab === 'notifications' && (
                   <div className="p-6">
                     <div className="mb-6">
@@ -498,7 +594,6 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {/* API Settings */}
                 {activeTab === 'api' && (
                   <div className="p-6">
                     <div className="mb-6">
@@ -567,7 +662,6 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {/* Email Settings */}
                 {activeTab === 'email' && (
                   <div className="p-6">
                     <div className="mb-6">
@@ -598,74 +692,4 @@ export default function SettingsPage() {
                             type="number"
                             value={settings.smtpPort}
                             onChange={(e) => handleInputChange('smtpPort', parseInt(e.target.value))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            SMTP Username
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.smtpUsername}
-                            onChange={(e) => handleInputChange('smtpUsername', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            SMTP Password
-                          </label>
-                          <div className="relative">
-                            <input
-                              type={showPassword ? 'text' : 'password'}
-                              value={settings.smtpPassword}
-                              onChange={(e) => handleInputChange('smtpPassword', e.target.value)}
-                              className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPassword(!showPassword)}
-                              className="absolute inset-y-0 right-0 flex items-center pr-3"
-                            >
-                              {showPassword ? (
-                                <EyeOff className="w-4 h-4 text-gray-400" />
-                              ) : (
-                                <Eye className="w-4 h-4 text-gray-400" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            From Email
-                          </label>
-                          <input
-                            type="email"
-                            value={settings.fromEmail}
-                            onChange={(e) => handleInputChange('fromEmail', e.target.value)}
-                            placeholder="noreply@jmkfacilities.com"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            From Name
-                          </label>
-                          <input
-                            type="text"
-                            value={settings.fromName}
-                            onChange={(e) => handleInputChange('fromName', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-900">Use Secure Connection (SSL/TLS)</h3>
-                          <p
+                            className="w-full px
