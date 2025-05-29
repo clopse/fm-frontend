@@ -123,7 +123,7 @@ export default function HotelDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Hero Section with Hotel Image Background */}
       <div 
         className="relative h-80 bg-cover bg-center bg-gray-800 overflow-hidden"
@@ -160,10 +160,10 @@ export default function HotelDashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8">
         
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           
           {/* Tasks Due Card */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -188,32 +188,6 @@ export default function HotelDashboard() {
             </p>
           </div>
 
-          {/* Compliance Status */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-                <Target className="w-5 h-5 mr-2 text-blue-500" />
-                Compliance Level
-              </h3>
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                score >= 90 ? 'bg-green-100 text-green-800' :
-                score >= 70 ? 'bg-blue-100 text-blue-800' :
-                score >= 50 ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                {score >= 90 ? 'Excellent' :
-                 score >= 70 ? 'Good' :
-                 score >= 50 ? 'Fair' : 'Needs Work'}
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-slate-900 mb-2">
-              {score}%
-            </div>
-            <p className="text-sm text-slate-600">
-              Current compliance rating
-            </p>
-          </div>
-
           {/* Quick Actions */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
@@ -222,12 +196,17 @@ export default function HotelDashboard() {
                 Quick Actions
               </h3>
             </div>
-            <div className="space-y-2">
-              <button className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg transition-colors text-sm font-medium">
-                View Full Compliance
+            <div className="space-y-3">
+              <button 
+                onClick={() => window.location.href = `/hotels/${hotelId}/compliance`}
+                className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2"
+              >
+                <Target className="w-4 h-4" />
+                <span>View Full Compliance</span>
               </button>
-              <button className="w-full bg-green-50 hover:bg-green-100 text-green-700 px-4 py-2 rounded-lg transition-colors text-sm font-medium">
-                Upload Documents
+              <button className="w-full bg-green-50 hover:bg-green-100 text-green-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium flex items-center justify-center space-x-2">
+                <Upload className="w-4 h-4" />
+                <span>Upload Documents</span>
               </button>
             </div>
           </div>
