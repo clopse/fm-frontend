@@ -147,39 +147,85 @@ export default function BuildingPage() {
               {/* Viewer Content */}
               <div className="relative h-full">
                 {selectedDrawing ? (
-                  // Drawing Viewer
-                  <iframe
-                    src={selectedDrawing}
-                    className="w-full h-full border-0"
-                    title="Drawing Viewer"
-                  />
+                  // Drawing Viewer - Landscape optimized
+                  <div className="h-full flex flex-col">
+                    {/* Drawing Controls */}
+                    <div className="flex items-center justify-between px-4 py-2 bg-slate-100 border-b">
+                      <div className="flex items-center space-x-2 text-sm text-slate-600">
+                        <span>Auto-rotated for landscape viewing</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            const iframe = document.querySelector('iframe[title="Drawing Viewer"]') as HTMLIFrameElement;
+                            if (iframe) {
+                              const currentSrc = iframe.src;
+                              const hasRotate = currentSrc.includes('#rotate=');
+                              if (hasRotate) {
+                                iframe.src = currentSrc.replace(/#rotate=\d+/, '#rotate=0');
+                              } else {
+                                iframe.src = currentSrc + '#rotate=270';
+                              }
+                            }
+                          }}
+                          className="px-2 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded"
+                        >
+                          Rotate
+                        </button>
+                        <button
+                          onClick={() => {
+                            const iframe = document.querySelector('iframe[title="Drawing Viewer"]') as HTMLIFrameElement;
+                            if (iframe) {
+                              iframe.src = iframe.src.split('#')[0] + '#zoom=fit-width';
+                            }
+                          }}
+                          className="px-2 py-1 text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded"
+                        >
+                          Fit Width
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Drawing Frame - Landscape aspect ratio */}
+                    <div className="flex-1 p-4 bg-slate-100">
+                      <div className="w-full h-full bg-white rounded shadow-sm overflow-hidden">
+                        <iframe
+                          src={selectedDrawing + '#rotate=0&zoom=fit-width&toolbar=1'}
+                          className="w-full h-full border-0"
+                          title="Drawing Viewer"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 ) : hasModel ? (
                   // 3D Model Area
                   load3D ? (
                     <SpeckleEmbed height="100%" />
                   ) : (
-                    // 3D Model Preview
+                    // 3D Model Preview - Landscape optimized
                     <div 
                       className="relative h-full cursor-pointer group bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center"
                       onClick={() => setLoad3D(true)}
                     >
-                      <div className="relative w-full h-full">
-                        <Image
-                          src={`/previews/${hotelId}.png`}
-                          alt={`${hotelName} Preview`}
-                          fill
-                          className="object-cover"
-                        />
-                        
-                        {/* Overlay */}
-                        <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-                          <div className="bg-white bg-opacity-90 backdrop-blur-sm rounded-2xl p-8 transform group-hover:scale-105 transition-transform duration-300 shadow-xl">
-                            <div className="text-center">
-                              <div className="bg-blue-100 p-4 rounded-full inline-block mb-4">
-                                <Play className="w-8 h-8 text-blue-600" />
+                      <div className="relative w-full h-full max-h-[70vh] flex items-center justify-center">
+                        <div className="relative w-[90%] aspect-[4/3] max-w-4xl">
+                          <Image
+                            src={`/previews/${hotelId}.png`}
+                            alt={`${hotelName} Preview`}
+                            fill
+                            className="object-contain rounded-lg shadow-xl"
+                          />
+                          
+                          {/* Overlay */}
+                          <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center rounded-lg">
+                            <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-2xl p-8 transform group-hover:scale-105 transition-transform duration-300 shadow-2xl">
+                              <div className="text-center">
+                                <div className="bg-blue-100 p-4 rounded-full inline-block mb-4">
+                                  <Play className="w-8 h-8 text-blue-600" />
+                                </div>
+                                <h3 className="text-xl font-bold text-slate-900 mb-2">Load 3D Model</h3>
+                                <p className="text-slate-600">Click to view interactive 3D building model</p>
                               </div>
-                              <h3 className="text-xl font-bold text-slate-900 mb-2">Load 3D Model</h3>
-                              <p className="text-slate-600">Click to view interactive 3D building model</p>
                             </div>
                           </div>
                         </div>
