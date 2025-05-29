@@ -14,7 +14,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { hotelNames } from '@/data/hotelMetadata';
-import tasksData from '@/data/tasks.json';
+import tasksData from '@/data/compliance.json';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import UserPanel from '@/components/UserPanel';
