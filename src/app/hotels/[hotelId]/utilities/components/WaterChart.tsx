@@ -32,7 +32,32 @@ export default function WaterChart({ data, loading }: WaterChartProps) {
             {formatMonth(label)}
           </p>
           <div className="space-y-1 text-sm">
-            <div className="flex items-center justify-between">
+            <div className="text-2xl font-bold text-cyan-900 mb-1">
+              {data.reduce((sum, w) => sum + w.cubic_meters, 0).toLocaleString()} m³
+            </div>
+            <div className="text-cyan-700 text-xs">
+              {(data.reduce((sum, w) => sum + w.per_room_m3, 0) / data.length).toFixed(2)} m³/room avg
+            </div>
+          </div>
+          
+          <div className="bg-red-50 p-4 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-red-800">Total Cost</span>
+              <span className="text-red-600">€</span>
+            </div>
+            <div className="text-2xl font-bold text-red-900 mb-1">
+              €{data.reduce((sum, w) => sum + w.total_eur, 0).toLocaleString()}
+            </div>
+            <div className="text-red-700 text-xs">
+              €{(data.reduce((sum, w) => sum + w.total_eur, 0) / 
+                  data.reduce((sum, w) => sum + w.cubic_meters, 0)).toFixed(2)}/m³ avg rate
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}flex items-center justify-between">
               <span className="flex items-center">
                 <div className="w-3 h-3 rounded bg-cyan-500 mr-2"></div>
                 Usage:
