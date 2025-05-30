@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState,useMemo } from "react";
 import { useParams } from "next/navigation";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -22,7 +22,6 @@ import {
   Loader2,
   Gauge,
   X,
-  useMemo,
   AlertTriangle,
   CheckCircle,
   FileText,
