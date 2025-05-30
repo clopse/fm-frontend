@@ -1,6 +1,7 @@
 // app/[hotelId]/utilities/water/page.tsx
 'use client';
 
+import React from 'react';
 import { useParams } from "next/navigation";
 import { Droplets, TrendingUp, TrendingDown, Gauge, Euro, BarChart3, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ComposedChart } from 'recharts';
