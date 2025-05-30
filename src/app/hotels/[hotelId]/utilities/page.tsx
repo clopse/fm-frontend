@@ -13,7 +13,7 @@ import {
   Droplets, 
   TrendingUp, 
   TrendingDown,
-  Euro,
+  DollarSign,
   BarChart3,
   Calendar,
   Upload,
@@ -82,6 +82,11 @@ export default function UtilitiesDashboard() {
   const [multiHotelData, setMultiHotelData] = useState<HotelTotals[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [activeMetric, setActiveMetric] = useState('overview');
+  const [billsData, setBillsData] = useState<any[]>([]);
+  const [selectedFilter, setSelectedFilter] = useState('overview');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [selectedBillType, setSelectedBillType] = useState('all');
+  const [showBillsList, setShowBillsList] = useState(false);
 
   const fetchData = async () => {
     if (!hotelId) return;
@@ -94,6 +99,7 @@ export default function UtilitiesDashboard() {
       setElectricity(data.electricity || []);
       setGas(data.gas || []);
       setWater(data.water || []);
+      setBillsData(data.bills || []); // Raw bill data with all details
     } catch (err) {
       console.error("Fetch failed:", err);
     }
@@ -138,12 +144,61 @@ export default function UtilitiesDashboard() {
   const totalWater = water.reduce((sum, w) => sum + w.cubic_meters, 0);
   const totalWaterCost = water.reduce((sum, w) => sum + w.total_eur, 0);
 
-  // Calculate trends
-  const electricityTrend = electricity.length > 1 ? 
-    ((electricity[electricity.length - 1]?.total_kwh || 0) - (electricity[0]?.total_kwh || 0)) / (electricity[0]?.total_kwh || 1) * 100 : 0;
+  // Advanced filtering functions
+  const getFilteredData = () => {
+    if (selectedFilter === 'overview') return { electricity, gas, water };
+    
+    const filtered = billsData.filter(bill => {
+      const billDate = new Date(bill.billDate || bill.issueDate);
+      const monthMatch = selectedMonth === 'all' || billDate.getMonth() === parseInt(selectedMonth);
+      const typeMatch = selectedBillType === 'all' || bill.billType === selectedBillType;
+      return monthMatch && typeMatch;
+    });
+    
+    return filtered;
+  };
 
-  const gasTrend = gas.length > 1 ? 
-    ((gas[gas.length - 1]?.total_kwh || 0) - (gas[0]?.total_kwh || 0)) / (gas[0]?.total_kwh || 1) * 100 : 0;
+  const getSpecificMetric = (metric: string) => {
+    const filtered = getFilteredData();
+    
+    switch(metric) {
+      case 'mic_charges':
+        return billsData
+          .filter(bill => bill.billType === 'electricity')
+          .reduce((sum, bill) => {
+            const micCharge = bill.charges?.find((c: any) => 
+              c.description.toLowerCase().includes('mic') || 
+              c.description.toLowerCase().includes('capacity')
+            );
+            return sum + (micCharge?.amount || 0);
+          }, 0);
+          
+      case 'carbon_tax':
+        return billsData
+          .filter(bill => bill.billType === 'gas')
+          .reduce((sum, bill) => {
+            const carbonTax = bill.lineItems?.find((item: any) => 
+              item.description.toLowerCase().includes('carbon')
+            );
+            return sum + (carbonTax?.amount || 0);
+          }, 0);
+          
+      case 'day_night_split':
+        return billsData
+          .filter(bill => bill.billType === 'electricity')
+          .reduce((acc, bill) => {
+            const dayUnits = bill.consumption?.find((c: any) => c.type === 'Day')?.units?.value || 0;
+            const nightUnits = bill.consumption?.find((c: any) => c.type === 'Night')?.units?.value || 0;
+            return {
+              day: acc.day + dayUnits,
+              night: acc.night + nightUnits
+            };
+          }, { day: 0, night: 0 });
+          
+      default:
+        return 0;
+    }
+  };
 
   // Prepare day/night split data
   const dayNightData = electricity.map(e => ({
@@ -181,6 +236,113 @@ export default function UtilitiesDashboard() {
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Bills List Modal */}
+        {showBillsList && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden">
+              <div className="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-6 py-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-bold">Utility Bills Archive</h3>
+                  <button 
+                    onClick={() => setShowBillsList(false)}
+                    className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                <div className="space-y-3">
+                  {billsData.map((bill, index) => (
+                    <div key={index} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          {bill.billType === 'electricity' ? 
+                            <Zap className="w-5 h-5 text-blue-500" /> : 
+                            <Flame className="w-5 h-5 text-green-500" />
+                          }
+                          <div>
+                            <p className="font-medium text-slate-900">
+                              {bill.supplier || 'Unknown Supplier'} - {bill.billType}
+                            </p>
+                            <p className="text-sm text-slate-600">
+                              {new Date(bill.billDate || bill.issueDate).toLocaleDateString()} 
+                              {bill.invoiceNumber && ` • Invoice: ${bill.invoiceNumber}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-slate-900">
+                            €{bill.totalAmount?.toLocaleString() || 'N/A'}
+                          </p>
+                          <p className="text-sm text-slate-600">
+                            {bill.totalConsumption?.toLocaleString() || 'N/A'} kWh
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {billsData.length === 0 && (
+                    <div className="text-center py-8">
+                      <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                      <p className="text-slate-500">No bills found for the selected filters</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Specific Metric Display */}
+        {selectedFilter !== 'overview' && (
+          <div className="mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-slate-200">
+                <h3 className="text-lg font-semibold text-slate-900 capitalize">
+                  {selectedFilter.replace('_', ' ')} Analysis
+                </h3>
+              </div>
+              <div className="p-6">
+                {selectedFilter === 'mic_charges' && (
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-slate-900 mb-2">
+                      €{getSpecificMetric('mic_charges').toLocaleString()}
+                    </p>
+                    <p className="text-slate-600">Total MIC/Capacity charges for {year}</p>
+                  </div>
+                )}
+                
+                {selectedFilter === 'carbon_tax' && (
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-slate-900 mb-2">
+                      €{getSpecificMetric('carbon_tax').toLocaleString()}
+                    </p>
+                    <p className="text-slate-600">Total Carbon Tax for {year}</p>
+                  </div>
+                )}
+                
+                {selectedFilter === 'day_night_analysis' && (
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-blue-600 mb-2">
+                        {getSpecificMetric('day_night_split').day.toLocaleString()} kWh
+                      </p>
+                      <p className="text-slate-600">Day Usage</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-purple-600 mb-2">
+                        {getSpecificMetric('day_night_split').night.toLocaleString()} kWh
+                      </p>
+                      <p className="text-slate-600">Night Usage</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="bg-white bg-opacity-20 p-3 rounded-xl">
@@ -195,6 +357,52 @@ export default function UtilitiesDashboard() {
             </div>
             
             <div className="flex items-center space-x-4">
+              {/* Advanced Filter Dropdown */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg px-4 py-2">
+                <select 
+                  value={selectedFilter} 
+                  onChange={(e) => setSelectedFilter(e.target.value)}
+                  className="bg-transparent text-white font-medium focus:outline-none"
+                >
+                  <option value="overview" className="text-slate-900">Overview</option>
+                  <option value="mic_charges" className="text-slate-900">MIC Charges</option>
+                  <option value="carbon_tax" className="text-slate-900">Carbon Tax</option>
+                  <option value="standing_charges" className="text-slate-900">Standing Charges</option>
+                  <option value="peak_demand" className="text-slate-900">Peak Demand</option>
+                  <option value="day_night_analysis" className="text-slate-900">Day/Night Analysis</option>
+                </select>
+              </div>
+
+              {/* Month Filter */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg px-4 py-2">
+                <select 
+                  value={selectedMonth} 
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="bg-transparent text-white font-medium focus:outline-none"
+                >
+                  <option value="all" className="text-slate-900">All Months</option>
+                  {availableMonths.map(month => (
+                    <option key={month} value={month.toString()} className="text-slate-900">
+                      {new Date(0, month).toLocaleString('default', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Bill Type Filter */}
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg px-4 py-2">
+                <select 
+                  value={selectedBillType} 
+                  onChange={(e) => setSelectedBillType(e.target.value)}
+                  className="bg-transparent text-white font-medium focus:outline-none"
+                >
+                  <option value="all" className="text-slate-900">All Types</option>
+                  <option value="electricity" className="text-slate-900">Electricity</option>
+                  <option value="gas" className="text-slate-900">Gas</option>
+                  <option value="water" className="text-slate-900">Water</option>
+                </select>
+              </div>
+              
               <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg px-4 py-2">
                 <select 
                   value={year} 
@@ -218,6 +426,14 @@ export default function UtilitiesDashboard() {
                   <option value="room" className="text-slate-900">Per Room</option>
                 </select>
               </div>
+              
+              <button
+                onClick={() => setShowBillsList(!showBillsList)}
+                className="bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg font-medium hover:bg-opacity-30 transition-colors flex items-center space-x-2"
+              >
+                <FileText className="w-4 h-4" />
+                <span>View Bills</span>
+              </button>
               
               <button
                 onClick={() => setShowModal(true)}
@@ -252,7 +468,7 @@ export default function UtilitiesDashboard() {
             <div className="p-6">
               <h3 className="text-sm font-medium text-slate-600 mb-1">Total Electricity</h3>
               <p className="text-3xl font-bold text-slate-900">
-                {Math.round(totalElectricity).toLocaleString()}
+                {viewMode === 'eur' ? '€' : ''}{Math.round(totalElectricity).toLocaleString()}
               </p>
               <p className="text-sm text-slate-500 mt-1">{getUnitLabel()}</p>
             </div>
@@ -274,7 +490,7 @@ export default function UtilitiesDashboard() {
             <div className="p-6">
               <h3 className="text-sm font-medium text-slate-600 mb-1">Total Gas</h3>
               <p className="text-3xl font-bold text-slate-900">
-                {Math.round(totalGas).toLocaleString()}
+                {viewMode === 'eur' ? '€' : ''}{Math.round(totalGas).toLocaleString()}
               </p>
               <p className="text-sm text-slate-500 mt-1">{getUnitLabel()}</p>
             </div>
@@ -301,7 +517,7 @@ export default function UtilitiesDashboard() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-4">
               <div className="flex items-center justify-between">
-                <Euro className="w-8 h-8" />
+                <DollarSign className="w-8 h-8" />
                 <BarChart3 className="w-5 h-5" />
               </div>
             </div>
