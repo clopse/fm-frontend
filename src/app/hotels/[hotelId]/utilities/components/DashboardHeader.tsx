@@ -1,4 +1,5 @@
-// app/[hotelId]/utilities/components/DashboardHeader.tsx
+"use client";
+
 import { Zap, Upload, Download, FileText, BarChart3 } from 'lucide-react';
 import { DashboardFilters, ViewMode } from '../types';
 
