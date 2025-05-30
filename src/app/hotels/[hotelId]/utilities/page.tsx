@@ -20,6 +20,7 @@ import {
   Download,
   Building,
   Gauge,
+  X,
   AlertTriangle,
   CheckCircle,
   FileText,
