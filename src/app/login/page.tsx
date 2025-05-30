@@ -1,6 +1,5 @@
-// FILE: src/app/login/page.tsx (or wherever your login page is)
+// FILE: src/app/login/page.tsx
 'use client';
-
 import { useState } from 'react';
 import Image from 'next/image';
 import { userService } from '@/services/userService';
@@ -17,9 +16,12 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // Normalize email to lowercase before sending to API
+      const normalizedEmail = email.trim().toLowerCase();
+      
       // Use the real API login
       const response = await userService.login({
-        email,
+        email: normalizedEmail,
         password
       });
 
@@ -31,6 +33,12 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Store the email as typed (preserving user's input visually)
+    // but we'll normalize it when submitting
+    setEmail(e.target.value);
   };
 
   return (
@@ -60,10 +68,12 @@ export default function LoginPage() {
             type="email"
             placeholder="Email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={handleEmailChange}
             required
             disabled={loading}
             className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+            autoComplete="email"
+            autoCapitalize="none"
           />
           
           <input
@@ -74,6 +84,7 @@ export default function LoginPage() {
             required
             disabled={loading}
             className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+            autoComplete="current-password"
           />
           
           <button 
