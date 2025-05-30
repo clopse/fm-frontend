@@ -55,17 +55,13 @@ export default function MainSidebar({
     );
   };
 
+  // Fixed active state logic
   const isActive = (path: string) => {
-    // For dashboard, only match exact path
-    if (path.endsWith(`/hotels/${hotelId}`)) {
-      return pathname === path;
-    }
-    // For other pages, check if pathname starts with the path
-    return pathname.startsWith(path) && pathname !== `/hotels/${hotelId}`;
+    return pathname === path;
   };
 
-  const isUtilitiesActive = () => {
-    return pathname.startsWith(`/hotels/${hotelId}/utilities`);
+  const isUtilitiesParentActive = () => {
+    return pathname.startsWith(`/hotels/${hotelId}/utilities`) && pathname !== `/hotels/${hotelId}/utilities`;
   };
 
   const navItems = [
@@ -203,6 +199,9 @@ export default function MainSidebar({
             const isExpanded = item.hasSubItems && expandedSections.includes(item.id || '');
             const hasSubItems = item.hasSubItems && item.subItems;
             
+            // For utilities parent, show as active only when on exact utilities page OR when a child is active
+            const isUtilitiesMainActive = item.id === 'utilities' && (active || isUtilitiesParentActive());
+            
             return (
               <div key={item.href} className="mb-2">
                 {/* Main Item */}
@@ -211,7 +210,7 @@ export default function MainSidebar({
                     href={item.href} 
                     className={`
                       flex items-center px-4 py-3 rounded-lg transition-all duration-200 group flex-1
-                      ${active || (item.id === 'utilities' && isUtilitiesActive())
+                      ${active || isUtilitiesMainActive
                         ? 'bg-blue-600 text-white shadow-lg' 
                         : 'text-gray-300 hover:bg-slate-700 hover:text-white'
                       }
@@ -219,14 +218,14 @@ export default function MainSidebar({
                     onClick={handleClick}
                   >
                     <Icon className={`w-5 h-5 mr-3 ${
-                      active || (item.id === 'utilities' && isUtilitiesActive())
+                      active || isUtilitiesMainActive
                         ? 'text-white' 
                         : 'text-gray-400 group-hover:text-white'
                     }`} />
                     <div className="flex-1">
                       <div className="font-medium">{item.label}</div>
                       <div className={`text-xs mt-0.5 ${
-                        active || (item.id === 'utilities' && isUtilitiesActive())
+                        active || isUtilitiesMainActive
                           ? 'text-blue-100' 
                           : 'text-gray-500 group-hover:text-gray-300'
                       }`}>
@@ -240,7 +239,7 @@ export default function MainSidebar({
                     <button
                       onClick={() => toggleSection(item.id || '')}
                       className={`p-2 mr-2 rounded transition-colors ${
-                        active || (item.id === 'utilities' && isUtilitiesActive())
+                        active || isUtilitiesMainActive
                           ? 'text-white hover:bg-blue-700' 
                           : 'text-gray-400 hover:text-white hover:bg-slate-700'
                       }`}
