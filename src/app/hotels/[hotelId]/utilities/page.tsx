@@ -87,6 +87,8 @@ export default function UtilitiesDashboard() {
   const [selectedMonth, setSelectedMonth] = useState('all');
   const [selectedBillType, setSelectedBillType] = useState('all');
   const [showBillsList, setShowBillsList] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<any>({});
+  const [loading, setLoading] = useState(false);
 
   const fetchData = async () => {
     if (!hotelId) return;
@@ -99,13 +101,58 @@ export default function UtilitiesDashboard() {
       setElectricity(data.electricity || []);
       setGas(data.gas || []);
       setWater(data.water || []);
-      setBillsData(data.bills || []); // Raw bill data with all details
     } catch (err) {
       console.error("Fetch failed:", err);
     }
   };
 
-  useEffect(() => { fetchData(); }, [hotelId, year]);
+  const fetchBillsData = async () => {
+    if (!hotelId) return;
+    
+    setLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${year}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setBillsData(data.bills || []);
+    } catch (err) {
+      console.error("Bills fetch failed:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    if (!hotelId || selectedFilter === 'overview') return;
+    
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        metric: selectedFilter,
+        year: year,
+        ...(selectedMonth !== 'all' && { month: selectedMonth }),
+        ...(selectedBillType !== 'all' && { utility_type: selectedBillType })
+      });
+      
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/analytics?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setAnalyticsData(data.analytics || {});
+    } catch (err) {
+      console.error("Analytics fetch failed:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { 
+    fetchData(); 
+    fetchBillsData();
+  }, [hotelId, year]);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [selectedFilter, selectedMonth, selectedBillType, year, hotelId]);
 
   useEffect(() => {
     async function fetchAllHotelData() {
@@ -258,28 +305,42 @@ export default function UtilitiesDashboard() {
                     <div key={index} className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          {bill.billType === 'electricity' ? 
+                          {bill.utility_type === 'electricity' ? 
                             <Zap className="w-5 h-5 text-blue-500" /> : 
                             <Flame className="w-5 h-5 text-green-500" />
                           }
                           <div>
                             <p className="font-medium text-slate-900">
-                              {bill.supplier || 'Unknown Supplier'} - {bill.billType}
+                              {bill.summary?.supplier || 'Unknown Supplier'} - {bill.utility_type}
                             </p>
                             <p className="text-sm text-slate-600">
-                              {new Date(bill.billDate || bill.issueDate).toLocaleDateString()} 
-                              {bill.invoiceNumber && ` • Invoice: ${bill.invoiceNumber}`}
+                              {bill.summary?.bill_date ? new Date(bill.summary.bill_date).toLocaleDateString() : 'Unknown Date'}
+                              {bill.summary?.account_number && ` • Account: ${bill.summary.account_number}`}
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="font-semibold text-slate-900">
-                            €{bill.totalAmount?.toLocaleString() || 'N/A'}
+                            €{bill.summary?.total_cost?.toLocaleString() || 'N/A'}
                           </p>
                           <p className="text-sm text-slate-600">
-                            {bill.totalConsumption?.toLocaleString() || 'N/A'} kWh
+                            {(bill.summary?.total_kwh || bill.summary?.consumption_kwh)?.toLocaleString() || 'N/A'} kWh
                           </p>
                         </div>
+                      </div>
+                      
+                      {/* Bill Details Button */}
+                      <div className="mt-3 flex justify-end">
+                        <button 
+                          onClick={() => {
+                            // You could open a detailed view modal here
+                            console.log('View bill details:', bill);
+                          }}
+                          className="text-sm text-blue-600 hover:text-blue-700 flex items-center space-x-1"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>View Details</span>
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -300,43 +361,158 @@ export default function UtilitiesDashboard() {
           <div className="mb-8">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-slate-200">
-                <h3 className="text-lg font-semibold text-slate-900 capitalize">
-                  {selectedFilter.replace('_', ' ')} Analysis
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-slate-900 capitalize">
+                    {selectedFilter.replace('_', ' ')} Analysis
+                  </h3>
+                  {loading && (
+                    <div className="flex items-center space-x-2 text-slate-600">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Loading...</span>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="p-6">
-                {selectedFilter === 'mic_charges' && (
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-slate-900 mb-2">
-                      €{getSpecificMetric('mic_charges').toLocaleString()}
-                    </p>
-                    <p className="text-slate-600">Total MIC/Capacity charges for {year}</p>
+                {selectedFilter === 'mic_charges' && analyticsData.mic_charges && (
+                  <div>
+                    <div className="text-center mb-6">
+                      <p className="text-3xl font-bold text-slate-900 mb-2">
+                        €{analyticsData.mic_charges.total.toLocaleString()}
+                      </p>
+                      <p className="text-slate-600">Total MIC/Capacity charges for {year}</p>
+                      <p className="text-sm text-slate-500 mt-1">
+                        Average monthly: €{analyticsData.mic_charges.average_monthly.toLocaleString()}
+                      </p>
+                    </div>
+                    
+                    {analyticsData.mic_charges.details.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-slate-900">Breakdown:</h4>
+                        {analyticsData.mic_charges.details.map((detail: any, index: number) => (
+                          <div key={index} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                            <div>
+                              <p className="font-medium text-slate-900">{detail.description}</p>
+                              <p className="text-sm text-slate-600">{detail.bill_date} • {detail.supplier}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-slate-900">€{detail.amount.toLocaleString()}</p>
+                              {detail.rate?.value && (
+                                <p className="text-sm text-slate-500">
+                                  €{detail.rate.value}/{detail.rate.unit}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 
-                {selectedFilter === 'carbon_tax' && (
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-slate-900 mb-2">
-                      €{getSpecificMetric('carbon_tax').toLocaleString()}
-                    </p>
-                    <p className="text-slate-600">Total Carbon Tax for {year}</p>
+                {selectedFilter === 'carbon_tax' && analyticsData.carbon_tax && (
+                  <div>
+                    <div className="text-center mb-6">
+                      <p className="text-3xl font-bold text-slate-900 mb-2">
+                        €{analyticsData.carbon_tax.total.toLocaleString()}
+                      </p>
+                      <p className="text-slate-600">Total Carbon Tax for {year}</p>
+                      <p className="text-sm text-slate-500 mt-1">
+                        Average monthly: €{analyticsData.carbon_tax.average_monthly.toLocaleString()}
+                      </p>
+                    </div>
+                    
+                    {analyticsData.carbon_tax.details.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-slate-900">Breakdown:</h4>
+                        {analyticsData.carbon_tax.details.map((detail: any, index: number) => (
+                          <div key={index} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                            <div>
+                              <p className="font-medium text-slate-900">{detail.description}</p>
+                              <p className="text-sm text-slate-600">{detail.bill_date} • {detail.supplier}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-slate-900">€{detail.amount.toLocaleString()}</p>
+                              <p className="text-sm text-slate-500">
+                                €{detail.rate} per {detail.units} kWh
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 
-                {selectedFilter === 'day_night_analysis' && (
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-blue-600 mb-2">
-                        {getSpecificMetric('day_night_split').day.toLocaleString()} kWh
-                      </p>
-                      <p className="text-slate-600">Day Usage</p>
+                {selectedFilter === 'day_night_analysis' && analyticsData.day_night_split && (
+                  <div>
+                    <div className="grid grid-cols-2 gap-6 mb-6">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-blue-600 mb-2">
+                          {analyticsData.day_night_split.totals.day.toLocaleString()} kWh
+                        </p>
+                        <p className="text-slate-600">Day Usage</p>
+                        <p className="text-sm text-slate-500">
+                          {analyticsData.day_night_split.day_percentage}% of total
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-purple-600 mb-2">
+                          {analyticsData.day_night_split.totals.night.toLocaleString()} kWh
+                        </p>
+                        <p className="text-slate-600">Night Usage</p>
+                        <p className="text-sm text-slate-500">
+                          {(100 - analyticsData.day_night_split.day_percentage).toFixed(1)}% of total
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-purple-600 mb-2">
-                        {getSpecificMetric('day_night_split').night.toLocaleString()} kWh
+                    
+                    {Object.keys(analyticsData.day_night_split.monthly_breakdown).length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-slate-900 mb-3">Monthly Breakdown:</h4>
+                        <div className="space-y-2">
+                          {Object.entries(analyticsData.day_night_split.monthly_breakdown).map(([month, data]: [string, any]) => (
+                            <div key={month} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                              <span className="font-medium text-slate-900">
+                                {new Date(month + '-01').toLocaleDateString('default', { month: 'long', year: 'numeric' })}
+                              </span>
+                              <div className="flex space-x-4 text-sm">
+                                <span className="text-blue-600">Day: {data.day.toLocaleString()} kWh</span>
+                                <span className="text-purple-600">Night: {data.night.toLocaleString()} kWh</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {selectedFilter === 'standing_charges' && analyticsData.standing_charges && (
+                  <div>
+                    <div className="text-center mb-6">
+                      <p className="text-3xl font-bold text-slate-900 mb-2">
+                        €{analyticsData.standing_charges.total.toLocaleString()}
                       </p>
-                      <p className="text-slate-600">Night Usage</p>
+                      <p className="text-slate-600">Total Standing Charges for {year}</p>
                     </div>
+                    
+                    {analyticsData.standing_charges.details.length > 0 && (
+                      <div className="space-y-3">
+                        <h4 className="font-medium text-slate-900">Breakdown:</h4>
+                        {analyticsData.standing_charges.details.map((detail: any, index: number) => (
+                          <div key={index} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                            <div>
+                              <p className="font-medium text-slate-900">{detail.description}</p>
+                              <p className="text-sm text-slate-600">
+                                {detail.bill_date} • {detail.utility_type}
+                              </p>
+                            </div>
+                            <p className="font-semibold text-slate-900">€{detail.amount.toLocaleString()}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -432,8 +608,39 @@ export default function UtilitiesDashboard() {
                 className="bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg font-medium hover:bg-opacity-30 transition-colors flex items-center space-x-2"
               >
                 <FileText className="w-4 h-4" />
-                <span>View Bills</span>
+                <span>View Bills ({billsData.length})</span>
               </button>
+              
+              <div className="relative">
+                <button
+                  onClick={() => document.getElementById('export-menu')?.classList.toggle('hidden')}
+                  className="bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg font-medium hover:bg-opacity-30 transition-colors flex items-center space-x-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Export</span>
+                </button>
+                
+                <div id="export-menu" className="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-10 py-2">
+                  <button
+                    onClick={() => handleExport('csv', false)}
+                    className="block w-full text-left px-4 py-2 hover:bg-slate-100 text-slate-700"
+                  >
+                    📊 Export CSV (Summary)
+                  </button>
+                  <button
+                    onClick={() => handleExport('csv', true)}
+                    className="block w-full text-left px-4 py-2 hover:bg-slate-100 text-slate-700"
+                  >
+                    📋 Export CSV (Full Data)
+                  </button>
+                  <button
+                    onClick={() => handleExport('json', true)}
+                    className="block w-full text-left px-4 py-2 hover:bg-slate-100 text-slate-700"
+                  >
+                    🔧 Export JSON (Raw Data)
+                  </button>
+                </div>
+              </div>
               
               <button
                 onClick={() => setShowModal(true)}
