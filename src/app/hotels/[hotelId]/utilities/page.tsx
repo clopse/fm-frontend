@@ -5,7 +5,7 @@ import React from 'react';
 import { useParams } from "next/navigation";
 import { Droplets, TrendingUp, TrendingDown, Gauge, Euro, BarChart3, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ComposedChart } from 'recharts';
-import { useUtilitiesData } from "../hooks/useUtilitiesData";
+import { useUtilitiesData } from "./hooks/useUtilitiesData";
 
 export default function WaterPage() {
   const rawParams = useParams();
