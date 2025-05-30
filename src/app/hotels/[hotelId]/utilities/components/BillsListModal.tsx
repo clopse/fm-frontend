@@ -1,4 +1,5 @@
-// app/[hotelId]/utilities/components/BillsListModal.tsx
+"use client";
+
 import { X, Zap, Flame, Droplets, Eye, FileText, Euro, Calendar } from 'lucide-react';
 import { BillEntry } from '../types';
 
