@@ -70,13 +70,13 @@ const defaultCourses: Course[] = [
     title: 'Fire Safety Induction',
     description: 'Comprehensive fire safety training covering emergency procedures, equipment usage, and evacuation protocols for hotel staff.',
     type: 'fire_induction',
-    duration_minutes: 45,
+    duration_minutes: 30,
     passing_score: 80,
-    total_questions: 20,
+    total_questions: 10,
     active: true,
-    course_url: '/training/fire-induction',
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z',
+    course_url: 'https://www.jmkfacilities.ie/hotels/hiex/training/fire',
+    created_at: '2025-05-30T00:00:00Z',
+    updated_at: '2025-05-30T00:00:00Z',
     mandatory: true,
     certificate_template: 'fire_safety_cert.pdf'
   }
