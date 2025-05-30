@@ -121,12 +121,6 @@ export default function MainSidebar({
           icon: FileText,
           description: 'All uploaded utility bills'
         },
-        {
-          label: 'Analytics',
-          href: `/hotels/${hotelId}/utilities/analytics`,
-          icon: TrendingUp,
-          description: 'Advanced metrics & insights'
-        },
       ]
     },
     {
