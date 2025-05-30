@@ -67,7 +67,7 @@ interface Course {
 const defaultCourses: Course[] = [
   {
     id: 'fire_induction',
-    title: 'Fire Safety Induction',
+    title: 'Fire Safety Induction HIEX',
     description: 'Comprehensive fire safety training covering emergency procedures, equipment usage, and evacuation protocols for hotel staff.',
     type: 'fire_induction',
     duration_minutes: 30,
