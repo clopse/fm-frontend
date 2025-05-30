@@ -2,23 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body {
-  margin: 0;
-  padding: 0;
+/* Global html rules */
+html {
+  font-size: 100%;
   width: 100%;
-  overflow-x: hidden;
-  font-family: 'Inter', sans-serif;
-  color: #000;
-  background-color: #fff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-html {
-  font-size: 100%; /* 16px by default */
-}
-
-/* Scale down for laptops, tablets, smaller monitors */
+/* Responsive scaling */
 @media (max-width: 1440px) {
   html { font-size: 92%; }
 }
@@ -30,6 +22,17 @@ html {
 }
 @media (max-width: 800px) {
   html { font-size: 80%; }
+}
+
+/* Body-specific styles */
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+  font-family: 'Inter', sans-serif;
+  color: #000;
+  background-color: #fff;
 }
 
 a {
