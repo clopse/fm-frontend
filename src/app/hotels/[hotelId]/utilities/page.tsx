@@ -92,6 +92,33 @@ export default function UtilitiesDashboard() {
   const [analyticsData, setAnalyticsData] = useState<any>({});
   const [loading, setLoading] = useState(false);
 
+  const handleExport = async (format: string, includeRaw: boolean) => {
+  try {
+    const params = new URLSearchParams({
+      format,
+      year,
+      include_raw: includeRaw.toString(),
+      ...(selectedBillType !== 'all' && { utility_type: selectedBillType })
+    });
+    
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/export?${params}`);
+    
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${hotelId}_utilities_${year}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }
+  } catch (error) {
+    console.error('Export failed:', error);
+  }
+};
+
   const fetchData = async () => {
     if (!hotelId) return;
 
