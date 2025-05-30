@@ -249,6 +249,35 @@ export default function UtilitiesDashboard() {
     }
   };
 
+  // Derive availableMonths from your actual data
+const availableMonths = useMemo(() => {
+  const months = new Set<number>();
+  electricity.forEach(e => {
+    const month = new Date(e.month + '-01').getMonth();
+    months.add(month);
+  });
+  gas.forEach(g => {
+    const month = new Date(g.period + '-01').getMonth();
+    months.add(month);
+  });
+  return Array.from(months).sort();
+}, [electricity, gas]);
+
+// Calculate trends from your data
+const electricityTrend = useMemo(() => {
+  if (electricity.length < 2) return 0;
+  const recent = electricity[electricity.length - 1]?.total_kwh || 0;
+  const previous = electricity[electricity.length - 2]?.total_kwh || 0;
+  return previous > 0 ? ((recent - previous) / previous) * 100 : 0;
+}, [electricity]);
+
+const gasTrend = useMemo(() => {
+  if (gas.length < 2) return 0;
+  const recent = gas[gas.length - 1]?.total_kwh || 0;
+  const previous = gas[gas.length - 2]?.total_kwh || 0;
+  return previous > 0 ? ((recent - previous) / previous) * 100 : 0;
+}, [gas]);
+
   // Prepare day/night split data
   const dayNightData = electricity.map(e => ({
     month: e.month,
