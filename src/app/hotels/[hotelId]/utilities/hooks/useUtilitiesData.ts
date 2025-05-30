@@ -1,4 +1,4 @@
-// app/hotels/[hotelId]/utilities/hooks/useUtilitiesData.ts
+// app/[hotelId]/utilities/hooks/useUtilitiesData.ts
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { UtilitiesData, ViewMode, ElectricityEntry, GasEntry } from '../types';
 
