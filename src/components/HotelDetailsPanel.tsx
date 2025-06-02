@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Hotel } from '../../types/hotel';
-import HotelInfoTab from './HotelInfoTab';
+import HotelOverviewTab from './hotels/HotelOverviewTab';
 import HotelStructuralTab from './HotelStructuralTab';
 import HotelFireSafetyTab from './HotelFireSafetyTab';
 import HotelMechanicalTab from './HotelMechanicalTab';
@@ -122,7 +122,7 @@ const HotelDetailsPanel: React.FC<HotelDetailsPanelProps> = ({ hotel, onClose, o
     switch (activeTab) {
       case 'info':
         return (
-          <HotelInfoTab
+          <HotelOverviewTab
             hotel={currentHotel}
             isEditing={isEditing}
             onHotelChange={handleHotelChange}
@@ -226,7 +226,7 @@ const HotelDetailsPanel: React.FC<HotelDetailsPanelProps> = ({ hotel, onClose, o
         {/* Tabs */}
         <div className="flex border-b border-gray-200 px-6">
           {[
-            { id: 'info', label: 'Hotel Info' },
+            { id: 'info', label: 'Hotel Overview' },
             { id: 'structural', label: 'Structural' },
             { id: 'fireSafety', label: 'Fire Safety' },
             { id: 'mechanical', label: 'Mechanical' },
