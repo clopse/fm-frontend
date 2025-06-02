@@ -50,6 +50,8 @@ export default function HotelDetailsPanel({
   // Handle hotel details save (equipment, building info, etc.)
   const handleHotelDetailsSave = async (hotelData: HotelFacilityData) => {
     try {
+      console.log('Saving hotel details:', hotelData); // Debug log
+      
       const response = await fetch(`/api/hotels/details/${hotelData.hotelId}`, {
         method: 'POST',
         headers: {
@@ -62,7 +64,8 @@ export default function HotelDetailsPanel({
         console.log(`Hotel details saved for ${hotelData.hotelId}`);
         onHotelUpdate(hotelData); // Update parent state
       } else {
-        console.error('Failed to save hotel details');
+        const errorText = await response.text();
+        console.error('Failed to save hotel details:', errorText);
       }
     } catch (error) {
       console.error('Error saving hotel details:', error);
