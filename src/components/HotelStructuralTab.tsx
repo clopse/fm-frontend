@@ -1,6 +1,7 @@
 // FILE: src/components/hotels/HotelStructuralTab.tsx
 'use client';
 import { StructuralInfo } from '@/types/hotelTypes';
+import { Building, Calendar, Ruler, Home } from 'lucide-react';
 
 interface HotelStructuralTabProps {
   structural: StructuralInfo;
@@ -90,6 +91,28 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
     }
   };
 
+  // Group fields for better organization with icons
+  const fieldGroups = [
+    {
+      title: 'Building Structure',
+      fields: ['floors', 'basements', 'buildingHeightMetres'],
+      icon: Building,
+      color: isEditing ? 'bg-blue-50' : 'bg-gray-50'
+    },
+    {
+      title: 'Capacity & Size',
+      fields: ['totalRooms', 'totalSquareMetres'],
+      icon: Ruler,
+      color: isEditing ? 'bg-green-50' : 'bg-gray-50'
+    },
+    {
+      title: 'Building Information',
+      fields: ['yearBuilt', 'buildingType'],
+      icon: Calendar,
+      color: isEditing ? 'bg-amber-50' : 'bg-gray-50'
+    }
+  ];
+
   return (
     <>
       {/* CSS to hide number input arrows */}
@@ -124,6 +147,31 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
             </div>
           )}
         </div>
+        
+        {fieldGroups.map((group) => (
+          <div key={group.title} className={`${group.color} rounded-lg p-6 transition-colors duration-200 ${
+            isEditing ? '' : 'opacity-90'
+          }`}>
+            <h4 className="text-md font-medium text-gray-800 mb-4 flex items-center">
+              <group.icon className="w-5 h-5 mr-2" />
+              {group.title}
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {group.fields.map((key) => {
+                const field = fieldLabels[key];
+                if (!field) return null;
+                return renderField(
+                  key, 
+                  structural[key as keyof StructuralInfo], 
+                  field.label, 
+                  field.type,
+                  field.unit,
+                  field.description
+                );
+              })}
+            </div>
+          </div>
+        ))}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {Object.entries(fieldLabels).map(([key, field]) => 
