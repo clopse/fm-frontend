@@ -39,7 +39,56 @@ export default function HotelDetailsPanel({
       }
     };
     
-    onHotelUpdate(updatedHotel);
+    // Auto-save hotel details when equipment/structure changes
+    if (['structural', 'fireSafety', 'mechanical', 'utilities'].includes(section)) {
+      handleHotelDetailsSave(updatedHotel);
+    } else {
+      onHotelUpdate(updatedHotel);
+    }
+  };
+
+  // Handle hotel details save (equipment, building info, etc.)
+  const handleHotelDetailsSave = async (hotelData: HotelFacilityData) => {
+    try {
+      const response = await fetch(`/api/hotels/details/${hotelData.hotelId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(hotelData)
+      });
+
+      if (response.ok) {
+        console.log(`Hotel details saved for ${hotelData.hotelId}`);
+        onHotelUpdate(hotelData); // Update parent state
+      } else {
+        console.error('Failed to save hotel details');
+      }
+    } catch (error) {
+      console.error('Error saving hotel details:', error);
+    }
+  };
+
+  // Handle compliance task list save to S3
+  const handleComplianceTaskSave = async (hotelId: string, taskList: any[]) => {
+    try {
+      const response = await fetch(`/api/hotels/compliance/${hotelId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(taskList)
+      });
+
+      if (response.ok) {
+        console.log(`Compliance tasks saved for hotel ${hotelId}`);
+        // Optionally show success message
+      } else {
+        console.error('Failed to save compliance tasks');
+      }
+    } catch (error) {
+      console.error('Error saving compliance tasks:', error);
+    }
   };
 
   const renderTabContent = () => {
@@ -88,6 +137,8 @@ export default function HotelDetailsPanel({
         return (
           <HotelComplianceTab
             hotel={hotel}
+            isEditing={isEditing}
+            onTaskListSave={(taskList) => handleComplianceTaskSave(hotel.hotelId, taskList)}
           />
         );
       default:
