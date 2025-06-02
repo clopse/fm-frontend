@@ -49,10 +49,7 @@ export interface StructuralInfo {
   floors: number;
   basements: number;
   totalRooms: number;
-  suites: number;
   yearBuilt: number;
-  constructionYear: number;
-  lastMajorRenovation?: number;
   totalSquareMetres: number;
   buildingHeightMetres: number;
   buildingType: string;
@@ -156,9 +153,7 @@ export const defaultStructural: StructuralInfo = {
   floors: 1,
   basements: 0,
   totalRooms: 0,
-  suites: 0,
   yearBuilt: new Date().getFullYear(),
-  constructionYear: new Date().getFullYear(),
   totalSquareMetres: 0,
   buildingHeightMetres: 0,
   buildingType: ''
