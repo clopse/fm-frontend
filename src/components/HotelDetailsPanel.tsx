@@ -183,7 +183,7 @@ export default function HotelDetailsPanel({
           <HotelComplianceTab
             hotel={hotel}
             isEditing={isEditing}
-            onTaskListSave={handleComplianceTaskSave}
+            onTaskListSave={(taskList) => handleComplianceTaskSave(hotel.hotelId, taskList)}
           />
         );
       default:
