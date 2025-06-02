@@ -2,7 +2,6 @@
 'use client';
 
 import { UtilitySystems } from '@/types/hotelTypes';
-import { Droplets, Zap, Flame, FileText, AlertCircle } from 'lucide-react';
 
 interface HotelUtilitiesTabProps {
   utilities: UtilitySystems;
@@ -32,12 +31,6 @@ export default function HotelUtilitiesTab({ utilities, isEditing, onUpdate }: Ho
       description: 'Number of water supply meters',
       unit: 'count'
     },
-    greaseTrapSize: { 
-      label: 'Total Grease Trap Capacity', 
-      description: 'Combined capacity of all grease traps',
-      unit: 'litres',
-      placeholder: 'e.g. 500'
-    },
     waterTankCapacity: { 
       label: 'Water Storage Capacity', 
       description: 'Total cold water storage tank capacity',
@@ -52,7 +45,7 @@ export default function HotelUtilitiesTab({ utilities, isEditing, onUpdate }: Ho
     },
     thermostaticMixingValves: {
       label: 'Thermostatic Mixing Valves (TMVs)',
-      description: 'Number of TMVs for Legionella prevention',
+      description: 'Usually one per room plus kitchens, bars, public toilets etc.',
       unit: 'count'
     },
     numberOfGreaseTraps: {
@@ -64,10 +57,6 @@ export default function HotelUtilitiesTab({ utilities, isEditing, onUpdate }: Ho
       label: 'Grease Removal Supplier',
       description: 'Current waste grease collection contractor',
       placeholder: 'e.g. FOG Solutions Ltd'
-    },
-    fogAuditRequired: {
-      label: 'FOG Audit Required',
-      description: 'Fats, Oils & Grease audit compliance needed'
     }
   };
 
