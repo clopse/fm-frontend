@@ -44,10 +44,6 @@ export default function HotelUtilitiesTab({ utilities, isEditing, onUpdate }: Ho
       unit: 'litres',
       placeholder: 'e.g. 2000'
     },
-    emergencyWaterSupply: { 
-      label: 'Emergency Water Supply', 
-      description: 'Backup water supply system available'
-    },
     backupGeneratorCapacity: { 
       label: 'Generator Capacity', 
       description: 'Emergency generator power rating',
@@ -74,34 +70,6 @@ export default function HotelUtilitiesTab({ utilities, isEditing, onUpdate }: Ho
       description: 'Fats, Oils & Grease audit compliance needed'
     }
   };
-
-  // Group fields for better organization
-  const fieldGroups = [
-    {
-      title: 'Utility Connections',
-      fields: ['gasMeters', 'electricalPanels', 'waterMeters'],
-      icon: Zap,
-      color: 'bg-blue-50'
-    },
-    {
-      title: 'Water Systems',
-      fields: ['waterTankCapacity', 'thermostaticMixingValves'],
-      icon: Droplets,
-      color: 'bg-cyan-50'
-    },
-    {
-      title: 'FOG Management (Fats, Oils, Grease)',
-      fields: ['numberOfGreaseTraps', 'greaseTrapSize', 'greaseRemovalSupplier', 'fogAuditRequired'],
-      icon: FileText,
-      color: 'bg-amber-50'
-    },
-    {
-      title: 'Emergency Systems',
-      fields: ['backupGeneratorCapacity'],
-      icon: Flame,
-      color: 'bg-red-50'
-    }
-  ];
 
   const renderField = (key: string, value: any) => {
     const field = fieldLabels[key];
@@ -156,7 +124,7 @@ export default function HotelUtilitiesTab({ utilities, isEditing, onUpdate }: Ho
     return (
       <div key={key} className="bg-white rounded-lg p-4 border border-gray-200">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          {label} {unit && <span className="text-gray-500">({unit})</span>}
+          {label}
         </label>
         <input
           type="text"
@@ -171,101 +139,18 @@ export default function HotelUtilitiesTab({ utilities, isEditing, onUpdate }: Ho
     );
   };
 
-  // Calculate FOG compliance requirements
-  const requiresFOGCompliance = (utilities.numberOfGreaseTraps || 0) > 0 || 
-                                (utilities.greaseTrapSize && parseFloat(utilities.greaseTrapSize) > 0);
-
   return (
     <div className="space-y-8">
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">Utility Systems</h3>
         <p className="text-sm text-gray-600">
-          Record utility connections, water systems, and FOG management facilities for compliance planning.
+          Record utility connections, water systems, and FOG management facilities.
         </p>
       </div>
 
-      {fieldGroups.map((group) => (
-        <div key={group.title} className={`${group.color} rounded-lg p-6`}>
-          <h4 className="text-md font-medium text-gray-800 mb-4 flex items-center">
-            <group.icon className="w-5 h-5 mr-2" />
-            {group.title}
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {group.fields.map((key) => {
-              // Handle fields that might not exist in utilities object yet
-              const value = utilities[key as keyof UtilitySystems] ?? 
-                           (typeof fieldLabels[key] !== 'undefined' ? 
-                            (fieldLabels[key].label.includes('Required') ? false : 
-                             fieldLabels[key].unit === 'count' ? 0 : '') : '');
-              return renderField(key, value);
-            })}
-          </div>
-        </div>
-      ))}
-
-      {/* FOG Compliance Alert */}
-      {requiresFOGCompliance && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-          <div className="flex items-start">
-            <AlertCircle className="h-5 w-5 text-amber-500 mt-0.5 mr-3 flex-shrink-0" />
-            <div>
-              <h4 className="text-md font-medium text-amber-800 mb-2">FOG Audit Compliance Required</h4>
-              <div className="text-sm text-amber-700 space-y-2">
-                <p>This property has grease traps and will require:</p>
-                <ul className="list-disc list-inside ml-4 space-y-1">
-                  <li>Grease trap schematic drawings for compliance records</li>
-                  <li>Regular FOG (Fats, Oils, Grease) audit documentation</li>
-                  <li>Waste grease collection and disposal records</li>
-                  <li>Kitchen staff training on FOG best practices</li>
-                  <li>Local authority trade effluent consent (if required)</li>
-                </ul>
-                <p className="mt-3 font-medium">
-                  Ensure your grease removal supplier provides all necessary compliance documentation.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Utilities Summary */}
-      <div className="bg-green-50 rounded-lg p-6">
-        <h4 className="text-md font-medium text-green-900 mb-3">Utilities Summary</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {(utilities.gasMeters || 0) + (utilities.electricalPanels || 0) + (utilities.waterMeters || 0)}
-            </div>
-            <div className="text-green-700">Utility Connections</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {utilities.waterTankCapacity || '—'}
-            </div>
-            <div className="text-green-700">Water Storage (L)</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {utilities.numberOfGreaseTraps || 0}
-            </div>
-            <div className="text-green-700">Grease Traps</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {utilities.thermostaticMixingValves || 0}
-            </div>
-            <div className="text-green-700">TMVs</div>
-          </div>
-        </div>
+      <div className="space-y-6">
+        {Object.entries(utilities).map(([key, value]) => renderField(key, value))}
       </div>
-
-      {!isEditing && (
-        <div className="text-center py-4">
-          <p className="text-sm text-gray-500">
-            Click "Edit Details" above to modify utility system information
-          </p>
-        </div>
-      )}
     </div>
   );
 }
