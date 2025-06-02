@@ -23,7 +23,8 @@ export default function HotelFireSafetyTab({ fireSafety, isEditing, onUpdate }: 
     fireDoorsCount: 'Fire Doors',
     fireBlankets: 'Fire Blankets',
     co2Extinguishers: 'CO₂ Extinguishers',
-    foamExtinguishers: 'Foam Extinguishers'
+    foamExtinguishers: 'Foam Extinguishers',
+    emergencyStairs: 'Emergency Stairs'
   };
 
   const fieldDescriptions: Record<string, string> = {
@@ -39,7 +40,8 @@ export default function HotelFireSafetyTab({ fireSafety, isEditing, onUpdate }: 
     fireDoorsCount: 'Fire-rated doors throughout the building',
     fireBlankets: 'Fire suppression blankets (typically in kitchens)',
     co2Extinguishers: 'Carbon dioxide fire extinguishers for electrical fires',
-    foamExtinguishers: 'Foam fire extinguishers for liquid fires'
+    foamExtinguishers: 'Foam fire extinguishers for liquid fires',
+    emergencyStairs: 'Dedicated emergency escape stairwells'
   };
 
   // Group fields for better organization
@@ -62,7 +64,7 @@ export default function HotelFireSafetyTab({ fireSafety, isEditing, onUpdate }: 
     },
     {
       title: 'Building Features',
-      fields: ['fireDoorsCount']
+      fields: ['fireDoorsCount', 'emergencyStairs']
     }
   ];
 
