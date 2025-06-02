@@ -59,12 +59,8 @@ export default function HotelDetailsPanel({
       }
     };
     
-    // Auto-save hotel details when equipment/structure changes
-    if (['structural', 'fireSafety', 'mechanical', 'utilities'].includes(section)) {
-      handleHotelDetailsSave(updatedHotel);
-    } else {
-      onHotelUpdate(updatedHotel);
-    }
+    // Just update the state - no auto-saving
+    onHotelUpdate(updatedHotel);
   };
 
   // Handle hotel details save (equipment, building info, etc.)
