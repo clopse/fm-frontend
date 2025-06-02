@@ -117,7 +117,7 @@ export default function HotelDetailsPanel({
       console.log('Saving compliance tasks for hotel:', hotel.hotelId);
       console.log('Task list being sent:', JSON.stringify(taskList, null, 2));
       
-      const response = await fetch(`${API_BASE}/hotels/facilities/${hotel.hotelId}tasks`, {
+      const response = await fetch(`${API_BASE}/hotels/facilities/${hotel.hotelId}/tasks`, {
         method: 'POST',
         headers: {
           ...getAuthHeaders(),
