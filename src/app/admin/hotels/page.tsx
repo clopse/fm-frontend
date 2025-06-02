@@ -14,8 +14,8 @@ import SaveIndicator from '@/components/SaveIndicator';
 import { hotelNames } from '@/data/hotelMetadata';
 import { HotelFacilityData, createDefaultHotelData } from '@/types/hotelTypes';
 
-// API Base URL - adjust as needed
-const API_BASE = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api';
+// API Base URL - FIXED to use correct subdomain
+const API_BASE = process.env.NODE_ENV === 'production' ? 'https://api.jmkfacilities.ie/api' : 'http://localhost:8000/api';
 
 export default function HotelManagementPage() {
   // Data state
@@ -150,6 +150,8 @@ export default function HotelManagementPage() {
   const handleSave = async (updatedHotel: HotelFacilityData) => {
     setIsSaving(true);
     try {
+      console.log('Saving to API:', `${API_BASE}/hotels/facilities/${updatedHotel.hotelId}`);
+      
       // Update compliance requirements based on equipment
       const updatedCompliance = {
         ...updatedHotel.compliance,
@@ -172,6 +174,8 @@ export default function HotelManagementPage() {
         setupComplete: true
       };
 
+      console.log('Sending data:', finalHotel);
+
       // Save to backend
       const response = await fetch(`${API_BASE}/hotels/facilities/${finalHotel.hotelId}`, {
         method: 'POST',
@@ -181,11 +185,16 @@ export default function HotelManagementPage() {
         body: JSON.stringify(finalHotel)
       });
 
+      console.log('Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to save data');
+        const errorText = await response.text();
+        console.error('Save failed:', errorText);
+        throw new Error(`Failed to save data: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('Save successful:', result);
 
       // Update in state
       setHotelData(prev => 
@@ -197,7 +206,7 @@ export default function HotelManagementPage() {
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
       console.error('Save error:', error);
-      setSaveMessage('Error saving data. Please try again.');
+      setSaveMessage(`Error saving data: ${error.message}`);
       setTimeout(() => setSaveMessage(''), 3000);
     } finally {
       setIsSaving(false);
