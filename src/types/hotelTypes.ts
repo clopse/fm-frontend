@@ -143,12 +143,13 @@ export const defaultUtilities: UtilitySystems = {
   gasMeters: 0,
   electricalPanels: 0,
   waterMeters: 0,
-  sewerConnections: 0,
-  greaseTrapSize: '', // Will be in litres
-  waterTankCapacity: '', // Will be in litres  
-  emergencyWaterSupply: false,
-  backupGeneratorCapacity: '', // Will be in kW
-  thermostaticMixingValves: 0
+  greaseTrapSize: '',
+  waterTankCapacity: '',
+  backupGeneratorCapacity: '',
+  thermostaticMixingValves: 0,
+  numberOfGreaseTraps: 0,
+  greaseRemovalSupplier: '',
+  fogAuditRequired: false
 };
 
 export const defaultStructural: StructuralInfo = {
