@@ -2,6 +2,7 @@
 'use client';
 
 import { FireSafetyEquipment } from '@/types/hotelTypes';
+import { Shield, Flame, Droplets, Zap, DoorOpen } from 'lucide-react';
 
 interface HotelFireSafetyTabProps {
   fireSafety: FireSafetyEquipment;
@@ -44,27 +45,37 @@ export default function HotelFireSafetyTab({ fireSafety, isEditing, onUpdate }: 
     emergencyStairs: 'Dedicated emergency escape stairwells'
   };
 
-  // Group fields for better organization
+  // Group fields for better organization with icons and colors
   const fieldGroups = [
     {
       title: 'Detection & Alarm Systems',
-      fields: ['smokeDetectors', 'fireAlarmPanels']
+      fields: ['smokeDetectors', 'fireAlarmPanels'],
+      icon: Shield,
+      color: isEditing ? 'bg-blue-50' : 'bg-gray-50'
     },
     {
       title: 'Suppression Equipment',
-      fields: ['fireExtinguishers', 'co2Extinguishers', 'foamExtinguishers', 'fireBlankets', 'sprinklerHeads']
+      fields: ['fireExtinguishers', 'co2Extinguishers', 'foamExtinguishers', 'fireBlankets', 'sprinklerHeads'],
+      icon: Flame,
+      color: isEditing ? 'bg-red-50' : 'bg-gray-50'
     },
     {
       title: 'Water Systems',
-      fields: ['dryRisers', 'wetRisers', 'fireHoseReels']
+      fields: ['dryRisers', 'wetRisers', 'fireHoseReels'],
+      icon: Droplets,
+      color: isEditing ? 'bg-cyan-50' : 'bg-gray-50'
     },
     {
       title: 'Emergency Systems',
-      fields: ['emergencyLighting', 'exitSigns']
+      fields: ['emergencyLighting', 'exitSigns'],
+      icon: Zap,
+      color: isEditing ? 'bg-yellow-50' : 'bg-gray-50'
     },
     {
       title: 'Building Features',
-      fields: ['fireDoorsCount', 'emergencyStairs']
+      fields: ['fireDoorsCount', 'emergencyStairs'],
+      icon: DoorOpen,
+      color: isEditing ? 'bg-green-50' : 'bg-gray-50'
     }
   ];
 
@@ -76,51 +87,8 @@ export default function HotelFireSafetyTab({ fireSafety, isEditing, onUpdate }: 
     }
   };
 
-  return (
-    <div className="space-y-8">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Fire Safety Equipment</h3>
-        <p className="text-sm text-gray-600">
-          Record all fire safety equipment and systems installed in the hotel. This information determines applicable compliance requirements.
-        </p>
-      </div>
-
-      {fieldGroups.map((group) => (
-        <div key={group.title} className="bg-gray-50 rounded-lg p-6">
-          <h4 className="text-md font-medium text-gray-800 mb-4">{group.title}</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {group.fields.map((key) => (
-              <div key={key} className="bg-white rounded-lg p-4 border border-gray-200">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {fieldLabels[key]}
-                </label>
-                <input
-                  type="number"
-                  value={fireSafety[key as keyof FireSafetyEquipment] || 0}
-                  onChange={(e) => handleInputChange(key, e.target.value)}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                  min="0"
-                  placeholder="0"
-                />
-                {fieldDescriptions[key] && (
-                  <p className="mt-2 text-xs text-gray-500">
-                    {fieldDescriptions[key]}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-
-      {!isEditing && (
-        <div className="text-center py-4">
-          <p className="text-sm text-gray-500">
-            Click "Edit Details" above to modify fire safety equipment counts
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
+  const renderField = (key: string) => (
+    <div key={key} className={`rounded-lg p-4 border transition-colors duration-200 ${
+      isEditing 
+        ? 'bg-white border-blue-200 shadow-sm' 
+        : 'bg-gray-50 border-gray-2
