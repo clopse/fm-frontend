@@ -1,51 +1,5 @@
 import { Building, Users, Flame, Building2 } from 'lucide-react';
-
-interface HotelFacilityData {
-  hotelId: string;
-  hotelName: string;
-  address: string;
-  city: string;
-  postCode: string;
-  phone: string;
-  managerName: string;
-  managerPhone: string;
-  managerEmail: string;
-  structural: {
-    floors: number;
-    totalRooms: number;
-    buildingType: string;
-    constructionYear: number;
-  };
-  fireSafety: {
-    fireAlarmSystem: boolean;
-    fireExtinguishers: number;
-    emergencyLighting: boolean;
-    sprinklerHeads: number;
-    emergencyStairs: number;
-    smokeDetectors: number;
-  };
-  mechanical: {
-    elevators: number;
-    boilers: number;
-    hvacUnits: number;
-    generators: number;
-    commercialKitchens: number;
-    ansulSystems: number;
-    poolPumps: number;
-  };
-  utilities: {
-    electricalSupply: string;
-    gasSupply: boolean;
-    waterSupply: string;
-    sewerConnection: string;
-    internetProvider: string;
-    waterStorageTanks: number;
-    thermostaticMixingValves: number;
-  };
-  setupComplete: boolean;
-  lastUpdated: string;
-  updatedBy: string;
-}
+import { HotelFacilityData } from '@/types/hotelTypes';
 
 interface HotelOverviewTabProps {
   hotel: HotelFacilityData;
