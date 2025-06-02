@@ -1,6 +1,5 @@
 // FILE: src/components/hotels/HotelStructuralTab.tsx
 'use client';
-
 import { StructuralInfo } from '@/types/hotelTypes';
 
 interface HotelStructuralTabProps {
@@ -18,7 +17,11 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
     unit?: string,
     description?: string
   ) => (
-    <div key={key} className="bg-white rounded-lg p-4 border border-gray-200">
+    <div key={key} className={`rounded-lg p-4 border transition-colors duration-200 ${
+      isEditing 
+        ? 'bg-white border-blue-200 shadow-sm' 
+        : 'bg-gray-50 border-gray-200'
+    }`}>
       <label className="block text-sm font-medium text-gray-700 mb-2">
         {label} {unit && <span className="text-gray-500">({unit})</span>}
       </label>
@@ -27,9 +30,14 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
         value={value || (type === 'number' ? 0 : '')}
         onChange={(e) => onUpdate(key, type === 'number' ? (parseInt(e.target.value) || 0) : e.target.value)}
         disabled={!isEditing}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
+        className={`w-full px-3 py-2 border rounded-lg transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+          isEditing 
+            ? 'border-gray-300 bg-white text-gray-900 hover:border-gray-400' 
+            : 'border-gray-200 bg-gray-50 text-gray-600 cursor-default'
+        } ${type === 'number' ? 'no-arrows' : ''}`}
         min={type === 'number' ? "0" : undefined}
         placeholder={type === 'number' ? '0' : `Enter ${label.toLowerCase()}`}
+        readOnly={!isEditing}
       />
       {description && (
         <p className="mt-2 text-xs text-gray-500">{description}</p>
@@ -83,34 +91,61 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Building Information</h3>
-        <p className="text-sm text-gray-600">
-          Basic structural details for compliance and safety planning.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {Object.entries(fieldLabels).map(([key, field]) => 
-          renderField(
-            key, 
-            structural[key as keyof StructuralInfo], 
-            field.label, 
-            field.type,
-            field.unit,
-            field.description
-          )
+    <>
+      {/* CSS to hide number input arrows */}
+      <style jsx>{`
+        .no-arrows::-webkit-outer-spin-button,
+        .no-arrows::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        
+        .no-arrows[type=number] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
+      
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Building Information</h3>
+          <p className="text-sm text-gray-600">
+            Basic structural details for compliance and safety planning.
+          </p>
+          {!isEditing && (
+            <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-600">
+              <span className="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
+              Read-only mode
+            </div>
+          )}
+          {isEditing && (
+            <div className="mt-2 inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
+              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+              Editing mode
+            </div>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {Object.entries(fieldLabels).map(([key, field]) => 
+            renderField(
+              key, 
+              structural[key as keyof StructuralInfo], 
+              field.label, 
+              field.type,
+              field.unit,
+              field.description
+            )
+          )}
+        </div>
+        
+        {!isEditing && (
+          <div className="text-center py-6 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-sm text-gray-500">
+              Click "Edit Details" above to modify building information
+            </p>
+          </div>
         )}
       </div>
-
-      {!isEditing && (
-        <div className="text-center py-4">
-          <p className="text-sm text-gray-500">
-            Click "Edit Details" above to modify building information
-          </p>
-        </div>
-      )}
-    </div>
+    </>
   );
 }
