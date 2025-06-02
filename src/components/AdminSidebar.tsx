@@ -44,12 +44,6 @@ export default function AdminSidebar({
       description: 'Main admin overview'
     },
     {
-      label: 'Compliance Matrix',
-      href: '/admin/compliance',
-      icon: ShieldCheck,
-      description: 'All hotels compliance status'
-    },
-    {
       label: 'Audit Files',
       href: '/admin/audit',
       icon: FileSearch,
