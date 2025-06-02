@@ -14,6 +14,7 @@ export interface FireSafetyEquipment {
   fireBlankets: number;
   co2Extinguishers: number;
   foamExtinguishers: number;
+  emergencyStairs: number;
 }
 
 export interface MechanicalSystems {
@@ -119,7 +120,8 @@ export const defaultFireSafety: FireSafetyEquipment = {
   fireDoorsCount: 0,
   fireBlankets: 0,
   co2Extinguishers: 0,
-  foamExtinguishers: 0
+  foamExtinguishers: 0,
+  emergencyStairs: 0
 };
 
 export const defaultMechanical: MechanicalSystems = {
