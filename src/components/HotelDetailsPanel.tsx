@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { Edit3, Building, Users, Flame, Building2 } from 'lucide-react';
 import { HotelFacilityData } from '@/types/hotelTypes';
+import { hotelNames } from '@/data/hotelMetadata';
 import HotelTabNavigation from './HotelTabNavigation';
 import HotelOverviewTab from './HotelOverviewTab';
 import HotelStructuralTab from './HotelStructuralTab';
@@ -46,6 +47,12 @@ export default function HotelDetailsPanel({
   onHotelUpdate
 }: HotelDetailsPanelProps) {
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Get the proper hotel name from metadata first, then fallback to stored data
+  const getHotelDisplayName = () => {
+    // Priority: metadata > stored hotelName > stored address > fallback
+    return hotelNames[hotel.hotelId] || hotel.hotelName || hotel.address || 'Unnamed Hotel';
+  };
 
   const updateHotel = (section: keyof HotelFacilityData, key: string, value: any) => {
     const currentSection = hotel[section];
@@ -181,7 +188,7 @@ export default function HotelDetailsPanel({
           <div className="flex-1">
             {/* Main hotel name - large and prominent */}
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {hotel.hotelName || hotel.address || 'Unnamed Hotel'}
+              {getHotelDisplayName()}
             </h1>
             
             {/* Hotel details in a more organized layout */}
