@@ -206,7 +206,8 @@ export default function HotelManagementPage() {
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
       console.error('Save error:', error);
-      setSaveMessage(`Error saving data: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setSaveMessage(`Error saving data: ${errorMessage}`);
       setTimeout(() => setSaveMessage(''), 3000);
     } finally {
       setIsSaving(false);
