@@ -104,6 +104,15 @@ export default function HotelDetailsPanel({
 
   // Handle compliance task list save to S3
   const handleComplianceTaskSave = async (taskList: any[]) => {
+    console.log('=== COMPLIANCE SAVE DEBUG ===');
+    console.log('1. Type of taskList:', typeof taskList);
+    console.log('2. Is Array:', Array.isArray(taskList));
+    console.log('3. TaskList length:', taskList?.length);
+    console.log('4. First item structure:', taskList[0]);
+    console.log('5. Full taskList:', JSON.stringify(taskList, null, 2));
+    console.log('6. Hotel ID:', hotel.hotelId);
+    console.log('7. API URL:', `${API_BASE}/hotels/facilities/${hotel.hotelId}tasks`);
+    console.log('=== END DEBUG ===');
     try {
       console.log('Saving compliance tasks for hotel:', hotel.hotelId);
       console.log('Task list being sent:', JSON.stringify(taskList, null, 2));
