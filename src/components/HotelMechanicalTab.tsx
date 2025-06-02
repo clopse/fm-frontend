@@ -12,8 +12,8 @@ interface HotelMechanicalTabProps {
 export default function HotelMechanicalTab({ mechanical, isEditing, onUpdate }: HotelMechanicalTabProps) {
   const fieldLabels: Record<string, { label: string; description: string }> = {
     elevators: { 
-      label: 'Lifts', 
-      description: 'Passenger and service lifts (elevators)' 
+      label: 'Elevators', 
+      description: 'Passenger and service elevators' 
     },
     escalators: { 
       label: 'Escalators', 
@@ -32,8 +32,8 @@ export default function HotelMechanicalTab({ mechanical, isEditing, onUpdate }: 
       description: 'Central heating and hot water boilers' 
     },
     chillers: { 
-      label: 'Chillers', 
-      description: 'Water cooling systems for air conditioning' 
+      label: 'Condensers', 
+      description: 'Cooling condensers for air conditioning' 
     },
     generators: { 
       label: 'Generators', 
@@ -65,28 +65,23 @@ export default function HotelMechanicalTab({ mechanical, isEditing, onUpdate }: 
   const fieldGroups = [
     {
       title: 'Vertical Transport',
-      fields: ['elevators', 'escalators', 'dumbwaiters'],
-      icon: '🏗️'
+      fields: ['elevators', 'escalators', 'dumbwaiters']
     },
     {
       title: 'HVAC & Climate Control',
-      fields: ['hvacUnits', 'boilers', 'chillers', 'exhaustFans'],
-      icon: '🌡️'
+      fields: ['hvacUnits', 'boilers', 'chillers', 'exhaustFans']
     },
     {
       title: 'Water & Heating Systems',
-      fields: ['waterHeaters', 'poolPumps'],
-      icon: '💧'
+      fields: ['waterHeaters', 'poolPumps']
     },
     {
       title: 'Kitchen & Fire Systems',
-      fields: ['commercialKitchens', 'ansulSystems'],
-      icon: '🔥'
+      fields: ['commercialKitchens', 'ansulSystems']
     },
     {
       title: 'Power & Backup',
-      fields: ['generators'],
-      icon: '⚡'
+      fields: ['generators']
     }
   ];
 
@@ -101,8 +96,7 @@ export default function HotelMechanicalTab({ mechanical, isEditing, onUpdate }: 
 
       {fieldGroups.map((group) => (
         <div key={group.title} className="bg-gray-50 rounded-lg p-6">
-          <h4 className="text-md font-medium text-gray-800 mb-4 flex items-center">
-            <span className="mr-2">{group.icon}</span>
+          <h4 className="text-md font-medium text-gray-800 mb-4">
             {group.title}
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -133,85 +127,6 @@ export default function HotelMechanicalTab({ mechanical, isEditing, onUpdate }: 
           </div>
         </div>
       ))}
-
-      {/* Compliance Requirements Summary */}
-      <div className="bg-blue-50 rounded-lg p-6">
-        <h4 className="text-md font-medium text-blue-900 mb-3">Compliance Requirements Summary</h4>
-        <div className="space-y-2 text-sm">
-          {mechanical.elevators > 0 && (
-            <div className="flex items-center text-blue-700">
-              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-              Lift inspections required (6-monthly LOLER examinations)
-            </div>
-          )}
-          {mechanical.boilers > 0 && (
-            <div className="flex items-center text-blue-700">
-              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-              Annual boiler service and gas safety certification required
-            </div>
-          )}
-          {mechanical.ansulSystems > 0 && (
-            <div className="flex items-center text-blue-700">
-              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-              Annual Ansul kitchen suppression system service required
-            </div>
-          )}
-          {mechanical.generators > 0 && (
-            <div className="flex items-center text-blue-700">
-              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-              Generator maintenance and testing schedule required
-            </div>
-          )}
-          {mechanical.poolPumps > 0 && (
-            <div className="flex items-center text-blue-700">
-              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-              Pool equipment inspections and water quality testing required
-            </div>
-          )}
-          {mechanical.commercialKitchens > 0 && (
-            <div className="flex items-center text-blue-700">
-              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-              Kitchen extract cleaning and food safety compliance required
-            </div>
-          )}
-          {Object.values(mechanical).every(value => value === 0) && (
-            <div className="text-gray-600 italic">
-              No mechanical systems recorded - add equipment above to see compliance requirements
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Equipment Totals */}
-      <div className="bg-green-50 rounded-lg p-6">
-        <h4 className="text-md font-medium text-green-900 mb-3">Equipment Summary</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {(mechanical.elevators || 0) + (mechanical.escalators || 0) + (mechanical.dumbwaiters || 0)}
-            </div>
-            <div className="text-green-700">Vertical Transport</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {(mechanical.hvacUnits || 0) + (mechanical.boilers || 0) + (mechanical.chillers || 0)}
-            </div>
-            <div className="text-green-700">HVAC Systems</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {mechanical.commercialKitchens || 0}
-            </div>
-            <div className="text-green-700">Kitchen Facilities</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {Object.values(mechanical).reduce((sum, value) => sum + (value || 0), 0)}
-            </div>
-            <div className="text-green-700">Total Equipment</div>
-          </div>
-        </div>
-      </div>
 
       {!isEditing && (
         <div className="text-center py-4">
