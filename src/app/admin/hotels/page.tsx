@@ -1,4 +1,3 @@
-// FILE: src/app/admin/hotels/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -14,6 +13,9 @@ import SaveIndicator from '@/components/SaveIndicator';
 
 import { hotelNames } from '@/data/hotelMetadata';
 import { HotelFacilityData, createDefaultHotelData } from '@/types/hotelTypes';
+
+// API Base URL - adjust as needed
+const API_BASE = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api';
 
 export default function HotelManagementPage() {
   // Data state
@@ -52,9 +54,28 @@ export default function HotelManagementPage() {
   const initializeHotelData = async () => {
     setIsLoading(true);
     try {
-      const facilityData: HotelFacilityData[] = Object.entries(hotelNames).map(([id, name]) => 
-        createDefaultHotelData(id, name)
-      );
+      const facilityData: HotelFacilityData[] = [];
+      
+      // Load data for each hotel
+      for (const [hotelId, hotelName] of Object.entries(hotelNames)) {
+        try {
+          const response = await fetch(`${API_BASE}/facilities/${hotelId}`);
+          if (response.ok) {
+            const data = await response.json();
+            facilityData.push({
+              ...data.facilities,
+              hotelId,
+              hotelName
+            });
+          } else {
+            // Create default data if not found
+            facilityData.push(createDefaultHotelData(hotelId, hotelName));
+          }
+        } catch (error) {
+          console.error(`Error loading data for ${hotelId}:`, error);
+          facilityData.push(createDefaultHotelData(hotelId, hotelName));
+        }
+      }
       
       setHotelData(facilityData);
       
@@ -64,6 +85,8 @@ export default function HotelManagementPage() {
       }
     } catch (error) {
       console.error('Error initializing hotel data:', error);
+      setSaveMessage('Error loading hotel data');
+      setTimeout(() => setSaveMessage(''), 3000);
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +104,7 @@ export default function HotelManagementPage() {
         requiresFireSystemInspection: 
           updatedHotel.fireSafety.fireExtinguishers > 0 || 
           updatedHotel.fireSafety.sprinklerHeads > 0 ||
-          updatedHotel.fireSafety.dryRisers > 0,
+          updatedHotel.fireSafety.emergencyStairs > 0,
         requiresPoolInspection: updatedHotel.mechanical.poolPumps > 0,
         requiresKitchenHoodCleaning: updatedHotel.mechanical.commercialKitchens > 0,
         requiresGeneratorService: updatedHotel.mechanical.generators > 0,
@@ -91,10 +114,23 @@ export default function HotelManagementPage() {
       const finalHotel = {
         ...updatedHotel,
         compliance: updatedCompliance,
-        lastUpdated: new Date().toISOString(),
-        updatedBy: 'Admin User',
         setupComplete: true
       };
+
+      // Save to backend
+      const response = await fetch(`${API_BASE}/facilities/${finalHotel.hotelId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(finalHotel)
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save data');
+      }
+
+      const result = await response.json();
 
       // Update in state
       setHotelData(prev => 
@@ -105,6 +141,7 @@ export default function HotelManagementPage() {
       setSaveMessage('Hotel facility data saved successfully!');
       setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
+      console.error('Save error:', error);
       setSaveMessage('Error saving data. Please try again.');
       setTimeout(() => setSaveMessage(''), 3000);
     } finally {
