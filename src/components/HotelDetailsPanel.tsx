@@ -1,85 +1,105 @@
-import React, { useState, useEffect } from 'react';
-import { Hotel } from '../../types/hotel';
-import HotelOverviewTab from './hotels/HotelOverviewTab';
+// FILE: src/components/hotels/HotelDetailsPanel.tsx
+'use client';
+
+import { useState } from 'react';
+import { Edit3, Building, Users, Flame, Building2 } from 'lucide-react';
+import { HotelFacilityData } from '@/types/hotelTypes';
+import { hotelNames } from '@/data/hotelMetadata';
+import HotelTabNavigation from './HotelTabNavigation';
+import HotelOverviewTab from './HotelOverviewTab';
 import HotelStructuralTab from './HotelStructuralTab';
 import HotelFireSafetyTab from './HotelFireSafetyTab';
 import HotelMechanicalTab from './HotelMechanicalTab';
 import HotelUtilitiesTab from './HotelUtilitiesTab';
 import HotelComplianceTab from './HotelComplianceTab';
 
-interface HotelDetailsPanelProps {
-  hotel: Hotel;
-  onClose: () => void;
-  onUpdate: (updatedHotel: Hotel) => void;
-}
+// API Base URL - FIXED to use correct subdomain
+const API_BASE = process.env.NODE_ENV === 'production' ? 'https://api.jmkfacilities.ie/api' : 'http://localhost:8000/api';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.jmkfacilities.ie/api';
-
-const getAuthHeaders = () => {
+// Helper function to get auth token
+const getAuthToken = () => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('authToken');
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
+    return localStorage.getItem('token') || sessionStorage.getItem('token');
   }
-  return {};
+  return null;
 };
 
-const HotelDetailsPanel: React.FC<HotelDetailsPanelProps> = ({ hotel, onClose, onUpdate }) => {
-  const [activeTab, setActiveTab] = useState('info');
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedHotel, setEditedHotel] = useState<Hotel>(hotel);
-  const [hasChanges, setHasChanges] = useState(false);
+// Helper function to get auth headers
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+};
 
-  useEffect(() => {
-    setEditedHotel(hotel);
-    setHasChanges(false);
-  }, [hotel]);
+interface HotelDetailsPanelProps {
+  hotel: HotelFacilityData;
+  isEditing: boolean;
+  onEditToggle: () => void;
+  onHotelUpdate: (hotel: HotelFacilityData) => void;
+}
 
-  const handleEdit = () => {
-    setIsEditing(true);
-    setEditedHotel({ ...hotel });
+export default function HotelDetailsPanel({
+  hotel,
+  isEditing,
+  onEditToggle,
+  onHotelUpdate
+}: HotelDetailsPanelProps) {
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // Get the proper hotel name from metadata first, then fallback to stored data
+  const getHotelDisplayName = () => {
+    // Priority: metadata > stored hotelName > stored address > fallback
+    return hotelNames[hotel.hotelId] || hotel.hotelName || hotel.address || 'Unnamed Hotel';
   };
 
-  const handleSave = async () => {
+  const updateHotel = (section: keyof HotelFacilityData, key: string, value: any) => {
+    const currentSection = hotel[section];
+    const isObject = currentSection && typeof currentSection === 'object' && !Array.isArray(currentSection);
+    
+    const updatedHotel = {
+      ...hotel,
+      [section]: {
+        ...(isObject ? currentSection : {}),
+        [key]: value
+      }
+    };
+    
+    // Just update the state - no auto-saving
+    onHotelUpdate(updatedHotel);
+  };
+
+  // Handle hotel details save (equipment, building info, etc.)
+  const handleHotelDetailsSave = async (hotelData: HotelFacilityData) => {
     try {
-      console.log('Saving hotel data:', editedHotel);
+      console.log('Saving hotel details to:', `${API_BASE}/hotels/details/${hotelData.hotelId}`);
+      console.log('Hotel data:', hotelData);
       
-      const response = await fetch(`${API_BASE}/hotels/facilities/${hotel.hotelId}`, {
+      const response = await fetch(`${API_BASE}/hotels/details/${hotelData.hotelId}`, {
         method: 'POST',
-        headers: {
-          ...getAuthHeaders(),
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(editedHotel)
+        headers: getAuthHeaders(),
+        body: JSON.stringify(hotelData)
       });
 
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
         const result = await response.json();
-        console.log('Hotel saved successfully:', result);
-        onUpdate(editedHotel);
-        setIsEditing(false);
-        setHasChanges(false);
-        alert('Hotel details saved successfully!');
+        console.log('Hotel details saved successfully:', result);
+        onHotelUpdate(hotelData); // Update parent state
       } else {
         const errorText = await response.text();
-        console.error('Failed to save hotel:', response.status, errorText);
+        console.error('Failed to save hotel details:', response.status, errorText);
+        
+        // Show user-friendly error
         alert(`Failed to save hotel details: ${response.status} - ${errorText}`);
       }
     } catch (error) {
-      console.error('Error saving hotel:', error);
+      console.error('Error saving hotel details:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      alert(`Error saving hotel: ${errorMessage}`);
+      alert(`Error saving hotel details: ${errorMessage}`);
     }
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedHotel(hotel);
-    setHasChanges(false);
-  };
-
-  const handleHotelChange = (updatedHotel: Hotel) => {
-    setEditedHotel(updatedHotel);
-    setHasChanges(true);
   };
 
   // Handle compliance task list save to S3
@@ -117,52 +137,50 @@ const HotelDetailsPanel: React.FC<HotelDetailsPanelProps> = ({ hotel, onClose, o
   };
 
   const renderTabContent = () => {
-    const currentHotel = isEditing ? editedHotel : hotel;
-    
     switch (activeTab) {
-      case 'info':
+      case 'overview':
         return (
           <HotelOverviewTab
-            hotel={currentHotel}
+            hotel={hotel}
             isEditing={isEditing}
-            onHotelChange={handleHotelChange}
+            onUpdate={onHotelUpdate}
           />
         );
       case 'structural':
         return (
           <HotelStructuralTab
-            hotel={currentHotel}
+            structural={hotel.structural}
             isEditing={isEditing}
-            onHotelChange={handleHotelChange}
+            onUpdate={(key, value) => updateHotel('structural', key, value)}
           />
         );
-      case 'fireSafety':
+      case 'fire':
         return (
           <HotelFireSafetyTab
-            hotel={currentHotel}
+            fireSafety={hotel.fireSafety}
             isEditing={isEditing}
-            onHotelChange={handleHotelChange}
+            onUpdate={(key, value) => updateHotel('fireSafety', key, value)}
           />
         );
       case 'mechanical':
         return (
           <HotelMechanicalTab
-            hotel={currentHotel}
+            mechanical={hotel.mechanical}
             isEditing={isEditing}
-            onHotelChange={handleHotelChange}
+            onUpdate={(key, value) => updateHotel('mechanical', key, value)}
           />
         );
       case 'utilities':
         return (
           <HotelUtilitiesTab
-            hotel={currentHotel}
+            utilities={hotel.utilities}
             isEditing={isEditing}
-            onHotelChange={handleHotelChange}
+            onUpdate={(key, value) => updateHotel('utilities', key, value)}
           />
         );
       case 'compliance':
         return (
-          <HotelComplianceTab 
+          <HotelComplianceTab
             hotel={hotel}
             isEditing={isEditing}
             onTaskListSave={handleComplianceTaskSave}
@@ -174,86 +192,73 @@ const HotelDetailsPanel: React.FC<HotelDetailsPanelProps> = ({ hotel, onClose, o
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-full max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {hotel.hotelName || hotel.hotelId}
-            </h2>
-            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-              {hotel.hotelId.toUpperCase()}
-            </span>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* Hotel Header - IMPROVED with prominent hotel name */}
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            {/* Main hotel name - large and prominent */}
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {getHotelDisplayName()}
+            </h1>
+            
+            {/* Hotel details in a more organized layout */}
+            <div className="flex flex-wrap items-center gap-6 text-sm text-gray-500">
+              <div className="flex items-center space-x-2">
+                <Building className="w-4 h-4" />
+                <span className="font-medium">ID:</span>
+                <span className="text-gray-700 font-mono">{hotel.hotelId}</span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <span className="font-medium">Last Updated:</span>
+                <span className="text-gray-700">
+                  {hotel.lastUpdated ? new Date(hotel.lastUpdated).toLocaleDateString() : 'Never'}
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <span className="font-medium">Updated by:</span>
+                <span className="text-gray-700">{hotel.updatedBy || 'Unknown'}</span>
+              </div>
+              
+              <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                hotel.setupComplete 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-yellow-100 text-yellow-800'
+              }`}>
+                {hotel.setupComplete ? '✓ Setup Complete' : '⚠ Setup Pending'}
+              </div>
+            </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            {isEditing && hasChanges && activeTab !== 'compliance' && (
-              <div className="flex gap-2">
-                <button
-                  onClick={handleSave}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Save Changes
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-            
-            {!isEditing && (
-              <button
-                onClick={handleEdit}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Edit Hotel
-              </button>
-            )}
-            
+          {/* Edit button */}
+          <div className="ml-6">
             <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+              onClick={onEditToggle}
+              className={`flex items-center space-x-2 px-6 py-3 rounded-lg transition-colors font-medium ${
+                isEditing 
+                  ? 'bg-red-100 text-red-700 hover:bg-red-200 border border-red-200' 
+                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200'
+              }`}
             >
-              ×
+              <Edit3 className="w-4 h-4" />
+              <span>{isEditing ? 'Cancel Edit' : 'Edit Details'}</span>
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 px-6">
-          {[
-            { id: 'info', label: 'Hotel Overview' },
-            { id: 'structural', label: 'Structural' },
-            { id: 'fireSafety', label: 'Fire Safety' },
-            { id: 'mechanical', label: 'Mechanical' },
-            { id: 'utilities', label: 'Utilities' },
-            { id: 'compliance', label: 'Compliance' }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      {/* Tabs Navigation */}
+      <HotelTabNavigation 
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
-        {/* Content */}
-        <div className="flex-1 overflow-auto p-6">
-          {renderTabContent()}
-        </div>
+      {/* Tab Content */}
+      <div className="p-6">
+        {renderTabContent()}
       </div>
     </div>
   );
-};
-
-export default HotelDetailsPanel;
+}
