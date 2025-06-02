@@ -7,7 +7,7 @@ export interface FireSafetyEquipment {
   sprinklerHeads: number;
   dryRisers: number;
   wetRisers: number;
-  fireHosesReels: number;
+  fireHoseReels: number; // UK/Irish spelling
   emergencyLighting: number;
   exitSigns: number;
   fireDoorsCount: number;
@@ -17,14 +17,14 @@ export interface FireSafetyEquipment {
 }
 
 export interface MechanicalSystems {
-  elevators: number;
+  elevators: number; // Called "lifts" in UK/Ireland but keeping elevators for clarity
   escalators: number;
   dumbwaiters: number;
   hvacUnits: number;
   boilers: number;
   chillers: number;
   generators: number;
-  waterHeaters: number;
+  waterHeaters: number; // Could also be "immersion heaters"
   poolPumps: number;
   exhaustFans: number;
   ansulSystems: number;
@@ -33,24 +33,25 @@ export interface MechanicalSystems {
 
 export interface UtilitySystems {
   gasMeters: number;
-  electricalPanels: number;
+  electricalPanels: number; // Could be "consumer units" in UK/Ireland
   waterMeters: number;
   sewerConnections: number;
-  greaseTrapSize: string;
-  waterTankCapacity: string;
+  greaseTrapSize: string; // In litres
+  waterTankCapacity: string; // In litres
   emergencyWaterSupply: boolean;
-  backupGeneratorCapacity: string;
+  backupGeneratorCapacity: string; // In kW
+  thermostaticMixingValves: number; // TMVs - important for Legionella prevention
 }
 
 export interface StructuralInfo {
-  floors: number;
+  floors: number; // Called "storeys" in UK/Ireland
   basements: number;
   totalRooms: number;
   suites: number;
   yearBuilt: number;
   lastMajorRenovation?: number;
-  totalSquareFootage: number;
-  buildingHeight: number;
+  totalSquareMetres: number; // Changed from square footage to square metres
+  buildingHeightMetres: number; // Changed from feet to metres
   constructionType: string;
   roofType: string;
   foundationType: string;
@@ -58,15 +59,19 @@ export interface StructuralInfo {
 
 export interface ComplianceRequirements {
   requiresAnsulService: boolean;
-  requiresElevatorInspection: boolean;
+  requiresElevatorInspection: boolean; // Called "lift inspection" in UK/Ireland
   requiresBoilerInspection: boolean;
   requiresFireSystemInspection: boolean;
   requiresPoolInspection: boolean;
   requiresKitchenHoodCleaning: boolean;
   requiresBackflowTesting: boolean;
-  requiresGraseeTrapService: boolean;
+  requiresGreaseTrapService: boolean; // Fixed typo from "Grasee"
   requiresGeneratorService: boolean;
   requiresHVACService: boolean;
+  requiresLegionellaRiskAssessment: boolean; // Important for UK/Ireland
+  requiresGasSafetyCertificate: boolean; // Gas Safe Register requirement
+  requiresPATTesting: boolean; // Portable Appliance Testing
+  requiresEICRCertificate: boolean; // Electrical Installation Condition Report
 }
 
 export interface HotelFacilityData {
@@ -74,8 +79,8 @@ export interface HotelFacilityData {
   hotelName: string;
   address: string;
   city: string;
-  state: string;
-  zipCode: string;
+  county: string; // Changed from "state" to "county" for UK/Ireland
+  postCode: string; // Changed from "zipCode" to "postCode"
   phone: string;
   managerName: string;
   managerEmail: string;
@@ -108,7 +113,7 @@ export const defaultFireSafety: FireSafetyEquipment = {
   sprinklerHeads: 0,
   dryRisers: 0,
   wetRisers: 0,
-  fireHosesReels: 0,
+  fireHoseReels: 0, // Fixed spelling
   emergencyLighting: 0,
   exitSigns: 0,
   fireDoorsCount: 0,
@@ -137,10 +142,11 @@ export const defaultUtilities: UtilitySystems = {
   electricalPanels: 0,
   waterMeters: 0,
   sewerConnections: 0,
-  greaseTrapSize: '',
-  waterTankCapacity: '',
+  greaseTrapSize: '', // Will be in litres
+  waterTankCapacity: '', // Will be in litres  
   emergencyWaterSupply: false,
-  backupGeneratorCapacity: ''
+  backupGeneratorCapacity: '', // Will be in kW
+  thermostaticMixingValves: 0
 };
 
 export const defaultStructural: StructuralInfo = {
@@ -149,8 +155,8 @@ export const defaultStructural: StructuralInfo = {
   totalRooms: 0,
   suites: 0,
   yearBuilt: new Date().getFullYear(),
-  totalSquareFootage: 0,
-  buildingHeight: 0,
+  totalSquareMetres: 0, // Changed from square footage
+  buildingHeightMetres: 0, // Changed from feet
   constructionType: '',
   roofType: '',
   foundationType: ''
@@ -164,9 +170,13 @@ export const defaultCompliance: ComplianceRequirements = {
   requiresPoolInspection: false,
   requiresKitchenHoodCleaning: false,
   requiresBackflowTesting: false,
-  requiresGraseeTrapService: false,
+  requiresGreaseTrapService: false, // Fixed typo
   requiresGeneratorService: false,
-  requiresHVACService: false
+  requiresHVACService: false,
+  requiresLegionellaRiskAssessment: false,
+  requiresGasSafetyCertificate: false,
+  requiresPATTesting: false,
+  requiresEICRCertificate: false
 };
 
 // Factory function to create default hotel data
@@ -176,8 +186,8 @@ export function createDefaultHotelData(id: string, name: string): HotelFacilityD
     hotelName: name,
     address: '',
     city: '',
-    state: '',
-    zipCode: '',
+    county: '', // Changed from state
+    postCode: '', // Changed from zipCode
     phone: '',
     managerName: '',
     managerEmail: '',
