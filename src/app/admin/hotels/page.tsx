@@ -24,6 +24,7 @@ export default function HotelManagementPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingHotel, setIsLoadingHotel] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   
@@ -59,7 +60,7 @@ export default function HotelManagementPage() {
       // Load data for each hotel
       for (const [hotelId, hotelName] of Object.entries(hotelNames)) {
         try {
-          const response = await fetch(`${API_BASE}/facilities/${hotelId}`);
+          const response = await fetch(`${API_BASE}/hotels/facilities/${hotelId}`);
           if (response.ok) {
             const data = await response.json();
             facilityData.push({
@@ -81,7 +82,7 @@ export default function HotelManagementPage() {
       
       // Auto-select first hotel
       if (facilityData.length > 0) {
-        setSelectedHotel(facilityData[0]);
+        await loadHotelDetails(facilityData[0].hotelId);
       }
     } catch (error) {
       console.error('Error initializing hotel data:', error);
@@ -89,6 +90,60 @@ export default function HotelManagementPage() {
       setTimeout(() => setSaveMessage(''), 3000);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Load fresh hotel details from API (both facilities and details)
+  const loadHotelDetails = async (hotelId: string) => {
+    setIsLoadingHotel(true);
+    setIsEditing(false); // Stop editing when switching hotels
+    
+    try {
+      // Load both facilities data and equipment details
+      const [facilitiesResponse, detailsResponse] = await Promise.all([
+        fetch(`${API_BASE}/hotels/facilities/${hotelId}`),
+        fetch(`${API_BASE}/hotels/details/${hotelId}`)
+      ]);
+
+      let hotelData: HotelFacilityData;
+      
+      if (facilitiesResponse.ok) {
+        const facilitiesData = await facilitiesResponse.json();
+        hotelData = facilitiesData.facilities;
+      } else {
+        // Create default if facilities not found
+        hotelData = createDefaultHotelData(hotelId, hotelNames[hotelId] || hotelId);
+      }
+
+      // Merge in equipment details if available
+      if (detailsResponse.ok) {
+        const detailsData = await detailsResponse.json();
+        const details = detailsData.details;
+        
+        if (details && Object.keys(details).length > 0) {
+          hotelData = {
+            ...hotelData,
+            structural: details.structural || hotelData.structural,
+            fireSafety: details.fireSafety || hotelData.fireSafety,
+            mechanical: details.mechanical || hotelData.mechanical,
+            utilities: details.utilities || hotelData.utilities,
+          };
+        }
+      }
+
+      setSelectedHotel(hotelData);
+      
+      // Update the hotel in the list as well
+      setHotelData(prev => 
+        prev.map(h => h.hotelId === hotelId ? hotelData : h)
+      );
+
+    } catch (error) {
+      console.error(`Error loading hotel details for ${hotelId}:`, error);
+      setSaveMessage('Error loading hotel details');
+      setTimeout(() => setSaveMessage(''), 3000);
+    } finally {
+      setIsLoadingHotel(false);
     }
   };
 
@@ -118,7 +173,7 @@ export default function HotelManagementPage() {
       };
 
       // Save to backend
-      const response = await fetch(`${API_BASE}/facilities/${finalHotel.hotelId}`, {
+      const response = await fetch(`${API_BASE}/hotels/facilities/${finalHotel.hotelId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,13 +205,16 @@ export default function HotelManagementPage() {
     }
   };
 
-  const handleHotelSelect = (hotelName: string) => {
+  const handleHotelSelect = async (hotelName: string) => {
     const hotel = hotelData.find(h => h.hotelName === hotelName);
     if (hotel) {
-      setSelectedHotel(hotel);
-      setIsEditing(false);
+      await loadHotelDetails(hotel.hotelId); // Load fresh data
     }
     setIsHotelModalOpen(false);
+  };
+
+  const handleHotelSelectFromSidebar = async (hotel: HotelFacilityData) => {
+    await loadHotelDetails(hotel.hotelId); // Load fresh data
   };
 
   const filteredHotels = hotelData.filter(hotel =>
@@ -242,16 +300,18 @@ export default function HotelManagementPage() {
                 selectedHotelId={selectedHotel?.hotelId}
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
-                onHotelSelect={(hotel) => {
-                  setSelectedHotel(hotel);
-                  setIsEditing(false);
-                }}
+                onHotelSelect={handleHotelSelectFromSidebar}
               />
             </div>
 
             {/* Main Content */}
             <div className="lg:col-span-3">
-              {selectedHotel ? (
+              {isLoadingHotel ? (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+                  <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+                  <p className="text-gray-600">Loading hotel details...</p>
+                </div>
+              ) : selectedHotel ? (
                 <HotelDetailsPanel
                   hotel={selectedHotel}
                   isEditing={isEditing}
