@@ -12,8 +12,8 @@ import HotelMechanicalTab from './HotelMechanicalTab';
 import HotelUtilitiesTab from './HotelUtilitiesTab';
 import HotelComplianceTab from './HotelComplianceTab';
 
-// API Base URL - adjust as needed
-const API_BASE = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api';
+// API Base URL - FIXED to use correct subdomain
+const API_BASE = process.env.NODE_ENV === 'production' ? 'https://api.jmkfacilities.ie/api' : 'http://localhost:8000/api';
 
 // Helper function to get auth token
 const getAuthToken = () => {
@@ -175,35 +175,59 @@ export default function HotelDetailsPanel({
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      {/* Hotel Header */}
+      {/* Hotel Header - IMPROVED with prominent hotel name */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">{hotel.hotelName}</h2>
-            <p className="text-gray-600">Hotel ID: {hotel.hotelId}</p>
-            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-              <span>Last Updated: {new Date(hotel.lastUpdated).toLocaleDateString()}</span>
-              <span>Updated by: {hotel.updatedBy}</span>
-              <span className={`px-2 py-1 rounded-full text-xs ${
+          <div className="flex-1">
+            {/* Main hotel name - large and prominent */}
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {hotel.hotelName || 'Unnamed Hotel'}
+            </h1>
+            
+            {/* Hotel details in a more organized layout */}
+            <div className="flex flex-wrap items-center gap-6 text-sm text-gray-500">
+              <div className="flex items-center space-x-2">
+                <Building className="w-4 h-4" />
+                <span className="font-medium">ID:</span>
+                <span className="text-gray-700 font-mono">{hotel.hotelId}</span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <span className="font-medium">Last Updated:</span>
+                <span className="text-gray-700">
+                  {hotel.lastUpdated ? new Date(hotel.lastUpdated).toLocaleDateString() : 'Never'}
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <span className="font-medium">Updated by:</span>
+                <span className="text-gray-700">{hotel.updatedBy || 'Unknown'}</span>
+              </div>
+              
+              <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                 hotel.setupComplete 
                   ? 'bg-green-100 text-green-800' 
                   : 'bg-yellow-100 text-yellow-800'
               }`}>
-                {hotel.setupComplete ? 'Setup Complete' : 'Setup Pending'}
-              </span>
+                {hotel.setupComplete ? '✓ Setup Complete' : '⚠ Setup Pending'}
+              </div>
             </div>
           </div>
-          <button
-            onClick={onEditToggle}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-              isEditing 
-                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-            }`}
-          >
-            <Edit3 className="w-4 h-4" />
-            <span>{isEditing ? 'Cancel Edit' : 'Edit Details'}</span>
-          </button>
+          
+          {/* Edit button */}
+          <div className="ml-6">
+            <button
+              onClick={onEditToggle}
+              className={`flex items-center space-x-2 px-6 py-3 rounded-lg transition-colors font-medium ${
+                isEditing 
+                  ? 'bg-red-100 text-red-700 hover:bg-red-200 border border-red-200' 
+                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200'
+              }`}
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>{isEditing ? 'Cancel Edit' : 'Edit Details'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
