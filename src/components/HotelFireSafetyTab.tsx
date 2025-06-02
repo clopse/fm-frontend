@@ -17,7 +17,7 @@ export default function HotelFireSafetyTab({ fireSafety, isEditing, onUpdate }: 
     sprinklerHeads: 'Sprinkler Heads',
     dryRisers: 'Dry Risers',
     wetRisers: 'Wet Risers',
-    fireHoseReels: 'Fire Hose Reels', // Updated spelling
+    fireHoseReels: 'Fire Hose Reels',
     emergencyLighting: 'Emergency Lighting Units',
     exitSigns: 'Exit Signs',
     fireDoorsCount: 'Fire Doors',
@@ -105,37 +105,6 @@ export default function HotelFireSafetyTab({ fireSafety, isEditing, onUpdate }: 
           </div>
         </div>
       ))}
-
-      {/* Summary Section */}
-      <div className="bg-blue-50 rounded-lg p-6">
-        <h4 className="text-md font-medium text-blue-900 mb-3">Fire Safety Summary</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {(fireSafety.fireExtinguishers || 0) + (fireSafety.co2Extinguishers || 0) + (fireSafety.foamExtinguishers || 0)}
-            </div>
-            <div className="text-blue-700">Total Extinguishers</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {(fireSafety.dryRisers || 0) + (fireSafety.wetRisers || 0)}
-            </div>
-            <div className="text-blue-700">Riser Systems</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {fireSafety.sprinklerHeads || 0}
-            </div>
-            <div className="text-blue-700">Sprinkler Heads</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {fireSafety.emergencyLighting || 0}
-            </div>
-            <div className="text-blue-700">Emergency Lights</div>
-          </div>
-        </div>
-      </div>
 
       {!isEditing && (
         <div className="text-center py-4">
