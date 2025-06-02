@@ -103,25 +103,36 @@ export default function HotelDetailsPanel({
   };
 
   // Handle compliance task list save to S3
-  const handleComplianceTaskSave = async (hotelId: string, taskList: any[]) => {
+  const handleComplianceTaskSave = async (taskList: any[]) => {
     try {
-      console.log('Saving compliance tasks to:', `${API_BASE}/hotels/facilities/${hotelId}tasks`);
+      console.log('Saving compliance tasks for hotel:', hotel.hotelId);
+      console.log('Task list being sent:', JSON.stringify(taskList, null, 2));
       
-      const response = await fetch(`${API_BASE}/hotels/facilities/${hotelId}tasks`, {
+      const response = await fetch(`${API_BASE}/hotels/facilities/${hotel.hotelId}tasks`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
         body: JSON.stringify(taskList)
       });
+
+      console.log('Response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
         console.log('Compliance tasks saved successfully:', result);
+        alert('Compliance tasks saved successfully!');
       } else {
         const errorText = await response.text();
         console.error('Failed to save compliance tasks:', response.status, errorText);
+        console.error('Error details:', errorText);
+        alert(`Failed to save compliance tasks: ${response.status} - ${errorText}`);
       }
     } catch (error) {
       console.error('Error saving compliance tasks:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Error saving compliance tasks: ${errorMessage}`);
     }
   };
 
