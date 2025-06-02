@@ -70,6 +70,8 @@ export interface ComplianceRequirements {
   requiresGasSafetyCertificate: boolean;
   requiresPATTesting: boolean;
   requiresEICRCertificate: boolean;
+  // Store selected compliance tasks from dynamic JSON
+  selectedComplianceTasks?: Record<string, boolean>;
 }
 
 export interface HotelFacilityData {
@@ -101,6 +103,28 @@ export interface ServiceContract {
   frequency: string;
   icon: any;
   color: string;
+}
+
+// Compliance task interfaces for JSON structure
+export interface ComplianceTask {
+  task_id: string;
+  label: string;
+  frequency: string;
+  category: string;
+  type: string;
+  needs_report: string;
+  mandatory: boolean;
+  points: number;
+  info_popup: string;
+  subtasks?: Array<{
+    label: string;
+    points: number;
+  }>;
+}
+
+export interface ComplianceSection {
+  section: string;
+  tasks: ComplianceTask[];
 }
 
 // Default values
@@ -173,7 +197,8 @@ export const defaultCompliance: ComplianceRequirements = {
   requiresLegionellaRiskAssessment: false,
   requiresGasSafetyCertificate: false,
   requiresPATTesting: false,
-  requiresEICRCertificate: false
+  requiresEICRCertificate: false,
+  selectedComplianceTasks: {}
 };
 
 // Factory function to create default hotel data
