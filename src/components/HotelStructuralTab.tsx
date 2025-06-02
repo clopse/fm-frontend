@@ -86,6 +86,11 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
       type: 'number',
       description: 'Original construction year'
     },
+    constructionYear: { 
+      label: 'Construction Year', 
+      type: 'number',
+      description: 'Year of construction (alternative field)'
+    },
     lastMajorRenovation: { 
       label: 'Last Major Renovation', 
       type: 'number',
@@ -108,6 +113,11 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
       type: 'text',
       description: 'Primary construction method'
     },
+    buildingType: { 
+      label: 'Building Type', 
+      type: 'text',
+      description: 'Type/category of building'
+    },
     roofType: { 
       label: 'Roof Type', 
       type: 'text',
@@ -128,7 +138,7 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
     },
     {
       title: 'Building History',
-      fields: ['yearBuilt', 'lastMajorRenovation']
+      fields: ['yearBuilt', 'constructionYear', 'lastMajorRenovation']
     },
     {
       title: 'Physical Dimensions',
@@ -136,7 +146,7 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
     },
     {
       title: 'Construction Details',
-      fields: ['constructionType', 'roofType', 'foundationType']
+      fields: ['constructionType', 'buildingType', 'roofType', 'foundationType']
     }
   ];
 
