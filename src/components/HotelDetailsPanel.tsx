@@ -111,8 +111,8 @@ export default function HotelDetailsPanel({
       const response = await fetch(`${API_BASE}/hotels/facilities/${hotel.hotelId}tasks`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(taskList)
       });
