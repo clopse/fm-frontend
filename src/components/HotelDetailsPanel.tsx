@@ -94,7 +94,8 @@ export default function HotelDetailsPanel({
       }
     } catch (error) {
       console.error('Error saving hotel details:', error);
-      alert(`Error saving hotel details: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Error saving hotel details: ${errorMessage}`);
     }
   };
 
