@@ -12,6 +12,26 @@ import HotelMechanicalTab from './HotelMechanicalTab';
 import HotelUtilitiesTab from './HotelUtilitiesTab';
 import HotelComplianceTab from './HotelComplianceTab';
 
+// API Base URL - adjust as needed
+const API_BASE = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8000/api';
+
+// Helper function to get auth token
+const getAuthToken = () => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('token') || sessionStorage.getItem('token');
+  }
+  return null;
+};
+
+// Helper function to get auth headers
+const getAuthHeaders = () => {
+  const token = getAuthToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+};
+
 interface HotelDetailsPanelProps {
   hotel: HotelFacilityData;
   isEditing: boolean;
@@ -50,44 +70,51 @@ export default function HotelDetailsPanel({
   // Handle hotel details save (equipment, building info, etc.)
   const handleHotelDetailsSave = async (hotelData: HotelFacilityData) => {
     try {
-      console.log('Saving hotel details:', hotelData); // Debug log
+      console.log('Saving hotel details to:', `${API_BASE}/hotels/details/${hotelData.hotelId}`);
+      console.log('Hotel data:', hotelData);
       
-      const response = await fetch(`/api/hotels/details/${hotelData.hotelId}`, {
+      const response = await fetch(`${API_BASE}/hotels/details/${hotelData.hotelId}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(hotelData)
       });
 
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
-        console.log(`Hotel details saved for ${hotelData.hotelId}`);
+        const result = await response.json();
+        console.log('Hotel details saved successfully:', result);
         onHotelUpdate(hotelData); // Update parent state
       } else {
         const errorText = await response.text();
-        console.error('Failed to save hotel details:', errorText);
+        console.error('Failed to save hotel details:', response.status, errorText);
+        
+        // Show user-friendly error
+        alert(`Failed to save hotel details: ${response.status} - ${errorText}`);
       }
     } catch (error) {
       console.error('Error saving hotel details:', error);
+      alert(`Error saving hotel details: ${error.message}`);
     }
   };
 
   // Handle compliance task list save to S3
   const handleComplianceTaskSave = async (hotelId: string, taskList: any[]) => {
     try {
-      const response = await fetch(`/api/hotels/compliance/${hotelId}`, {
+      console.log('Saving compliance tasks to:', `${API_BASE}/hotels/compliance/${hotelId}`);
+      
+      const response = await fetch(`${API_BASE}/hotels/compliance/${hotelId}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(taskList)
       });
 
       if (response.ok) {
-        console.log(`Compliance tasks saved for hotel ${hotelId}`);
-        // Optionally show success message
+        const result = await response.json();
+        console.log('Compliance tasks saved successfully:', result);
       } else {
-        console.error('Failed to save compliance tasks');
+        const errorText = await response.text();
+        console.error('Failed to save compliance tasks:', response.status, errorText);
       }
     } catch (error) {
       console.error('Error saving compliance tasks:', error);
