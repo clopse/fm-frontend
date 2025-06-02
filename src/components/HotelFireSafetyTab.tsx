@@ -68,6 +68,14 @@ export default function HotelFireSafetyTab({ fireSafety, isEditing, onUpdate }: 
     }
   ];
 
+  const handleInputChange = (key: string, value: string) => {
+    // Convert to number, handle empty string as 0
+    const numValue = value === '' ? 0 : parseInt(value, 10);
+    if (!isNaN(numValue) && numValue >= 0) {
+      onUpdate(key, numValue);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -89,9 +97,9 @@ export default function HotelFireSafetyTab({ fireSafety, isEditing, onUpdate }: 
                 <input
                   type="number"
                   value={fireSafety[key as keyof FireSafetyEquipment] || 0}
-                  onChange={(e) => onUpdate(key, parseInt(e.target.value) || 0)}
+                  onChange={(e) => handleInputChange(key, e.target.value)}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                   min="0"
                   placeholder="0"
                 />
