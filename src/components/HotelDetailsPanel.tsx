@@ -98,9 +98,9 @@ export default function HotelDetailsPanel({
   // Handle compliance task list save to S3
   const handleComplianceTaskSave = async (hotelId: string, taskList: any[]) => {
     try {
-      console.log('Saving compliance tasks to:', `${API_BASE}/hotels/compliance/${hotelId}`);
+      console.log('Saving compliance tasks to:', `${API_BASE}/hotels/facilities/${hotelId}tasks`);
       
-      const response = await fetch(`${API_BASE}/hotels/compliance/${hotelId}`, {
+      const response = await fetch(`${API_BASE}/hotels/facilities/${hotelId}tasks`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(taskList)
@@ -181,7 +181,7 @@ export default function HotelDetailsPanel({
           <div className="flex-1">
             {/* Main hotel name - large and prominent */}
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {hotel.hotelName || 'Unnamed Hotel'}
+              {hotel.hotelName || hotel.address || 'Unnamed Hotel'}
             </h1>
             
             {/* Hotel details in a more organized layout */}
