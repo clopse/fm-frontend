@@ -510,6 +510,29 @@ export default function TendersPage() {
     }
   };
 
+  const handleRowClick = (tender: Tender) => {
+    setSelectedTender(tender);
+  };
+
+  const handleActionClick = (e: React.MouseEvent, action: string, tender: Tender) => {
+    e.stopPropagation(); // Prevent row click when clicking action buttons
+    
+    switch (action) {
+      case 'view':
+        setSelectedTender(tender);
+        break;
+      case 'email':
+        // Handle email action
+        console.log('Send email for tender:', tender.id);
+        break;
+      case 'comments':
+        // Handle comments action - could open modal with comments tab
+        setSelectedTender(tender);
+        // You might want to set a state to open the comments tab specifically
+        break;
+    }
+  };
+
   const filteredData = tenders.filter(item => {
     const matchesSearch = Object.values(item).some(value =>
       String(value).toLowerCase().includes(searchTerm.toLowerCase())
@@ -712,7 +735,11 @@ export default function TendersPage() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {sortedData.map((tender) => (
-              <tr key={tender.id} className="hover:bg-gray-50">
+              <tr 
+                key={tender.id} 
+                onClick={() => handleRowClick(tender)}
+                className="hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+              >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm font-medium text-blue-600">{tender.id}</span>
                 </td>
@@ -737,14 +764,7 @@ export default function TendersPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <button 
-                    onClick={() => {
-                      setSelectedTender(tender);
-                      // This will open the modal with quotes tab as default
-                    }}
-                    className="flex items-center space-x-2 hover:bg-gray-100 rounded p-1 transition-colors"
-                    title="View Quotes"
-                  >
+                  <div className="flex items-center space-x-2">
                     <span className="text-sm font-medium text-gray-900">
                       {tender.quotesReceived}/{tender.totalQuotes}
                     </span>
@@ -754,7 +774,7 @@ export default function TendersPage() {
                         style={{width: `${(tender.quotesReceived / tender.totalQuotes) * 100}%`}}
                       ></div>
                     </div>
-                  </button>
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(tender.status)}`}>
@@ -767,16 +787,24 @@ export default function TendersPage() {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center space-x-2">
                     <button 
-                      onClick={() => setSelectedTender(tender)}
+                      onClick={(e) => handleActionClick(e, 'view', tender)}
                       className="p-1 text-blue-600 hover:text-blue-800"
                       title="View Details"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button className="p-1 text-green-600 hover:text-green-800" title="Send Email">
+                    <button 
+                      onClick={(e) => handleActionClick(e, 'email', tender)}
+                      className="p-1 text-green-600 hover:text-green-800" 
+                      title="Send Email"
+                    >
                       <Mail className="w-4 h-4" />
                     </button>
-                    <button className="p-1 text-gray-600 hover:text-gray-800" title="Comments">
+                    <button 
+                      onClick={(e) => handleActionClick(e, 'comments', tender)}
+                      className="p-1 text-gray-600 hover:text-gray-800" 
+                      title="Comments"
+                    >
                       <MessageSquare className="w-4 h-4" />
                     </button>
                   </div>
