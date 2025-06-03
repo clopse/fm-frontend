@@ -37,10 +37,18 @@ export default function MainSidebar({
 }: MainSidebarProps) {
   const { hotelId } = useParams();
   const pathname = usePathname();
-  const [expandedSections, setExpandedSections] = useState<string[]>(['utilities']);
+  const [expandedSections, setExpandedSections] = useState<string[]>([]);
 
   const handleClick = () => {
     if (onItemClick) onItemClick();
+  };
+
+  const handleUtilitiesClick = () => {
+    // Auto-expand utilities when clicking the main utilities link
+    if (!expandedSections.includes('utilities')) {
+      setExpandedSections(prev => [...prev, 'utilities']);
+    }
+    handleClick();
   };
 
   const handleLogoClick = () => {
@@ -203,7 +211,7 @@ export default function MainSidebar({
                         : 'text-gray-300 hover:bg-slate-700 hover:text-white'
                       }
                     `}
-                    onClick={handleClick}
+                    onClick={item.id === 'utilities' ? handleUtilitiesClick : handleClick}
                   >
                     <Icon className={`w-5 h-5 mr-3 ${
                       active || isUtilitiesMainActive
