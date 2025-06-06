@@ -142,27 +142,28 @@ export default function FirewalksPage() {
     const yellowEnd = redEnd + yellowPercent;
     
     return (
-      <div className="relative w-36 h-36 mx-auto mb-4">
-        <div 
-          className="w-full h-full rounded-full print-chart"
-          style={{
-            background: `conic-gradient(
-              #ef4444 0% ${redEnd}%, 
-              #f59e0b ${redEnd}% ${yellowEnd}%, 
-              #10b981 ${yellowEnd}% 100%
-            )`
-          }}
-        >
-          <div className="absolute inset-6 bg-white rounded-full flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-xl font-bold text-gray-900">{hotel.completionRate.toFixed(0)}%</div>
-              <div className="text-xs text-gray-500">Complete</div>
+      <div className="w-full max-w-xs mx-auto">
+        <div className="relative w-36 h-36 mx-auto mb-6">
+          <div 
+            className="w-full h-full rounded-full print-chart"
+            style={{
+              background: `conic-gradient(
+                #ef4444 0% ${redEnd}%, 
+                #f59e0b ${redEnd}% ${yellowEnd}%, 
+                #10b981 ${yellowEnd}% 100%
+              )`
+            }}
+          >
+            <div className="absolute inset-6 bg-white rounded-full flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-900">{hotel.completionRate.toFixed(0)}%</div>
+              </div>
             </div>
           </div>
         </div>
         
         {/* Legend */}
-        <div className="mt-4 space-y-2 text-left">
+        <div className="space-y-3 px-2">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-red-500 rounded-full flex-shrink-0"></div>
@@ -417,7 +418,7 @@ export default function FirewalksPage() {
                     <DonutChart hotel={hotel} />
                   </div>
                   
-                  <div className="flex justify-between text-sm text-gray-600 pt-4 mt-4 border-t border-gray-200">
+                  <div className="flex justify-between text-sm text-gray-600 pt-4 mt-4">
                     <span className="font-medium">Total Tasks: {hotel.red + hotel.yellow + hotel.green}</span>
                     <span className="font-medium text-green-600">{hotel.completionRate.toFixed(1)}% Complete</span>
                   </div>
