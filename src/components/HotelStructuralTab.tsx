@@ -25,15 +25,19 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
   }
 
   // Ensure all expected properties exist with defaults
-  const safeStructural = {
+  const defaultStructural = {
     floors: 0,
     basements: 0,
     totalRooms: 0,
     yearBuilt: 0,
     totalSquareMetres: 0,
     buildingHeightMetres: 0,
-    buildingType: '',
-    ...structural // Override with actual data if available
+    buildingType: ''
+  };
+
+  const safeStructural = {
+    ...defaultStructural,
+    ...structural // Override defaults with actual data if available
   };
 
   const renderField = (
