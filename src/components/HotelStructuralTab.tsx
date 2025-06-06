@@ -10,6 +10,32 @@ interface HotelStructuralTabProps {
 }
 
 export default function HotelStructuralTab({ structural, isEditing, onUpdate }: HotelStructuralTabProps) {
+  // Safety check - return loading state if structural data is not ready
+  if (!structural) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading structural data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Ensure all expected properties exist with defaults
+  const safeStructural = {
+    floors: 0,
+    basements: 0,
+    totalRooms: 0,
+    yearBuilt: 0,
+    totalSquareMetres: 0,
+    buildingHeightMetres: 0,
+    buildingType: '',
+    ...structural // Override with actual data if available
+  };
+
   const renderField = (
     key: string, 
     value: any, 
@@ -162,7 +188,7 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
                 if (!field) return null;
                 return renderField(
                   key, 
-                  structural[key as keyof StructuralInfo], 
+                  safeStructural[key as keyof StructuralInfo], 
                   field.label, 
                   field.type,
                   field.unit,
@@ -173,18 +199,7 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
           </div>
         ))}
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {Object.entries(fieldLabels).map(([key, field]) => 
-            renderField(
-              key, 
-              structural[key as keyof StructuralInfo], 
-              field.label, 
-              field.type,
-              field.unit,
-              field.description
-            )
-          )}
-        </div>
+        {/* Remove the duplicate field rendering section since fieldGroups covers all fields */}
         
         {!isEditing && (
           <div className="text-center py-6 bg-gray-50 rounded-lg border border-gray-200">
