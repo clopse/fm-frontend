@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { 
   Trophy, 
   PieChart, 
@@ -9,7 +9,9 @@ import {
   Building,
   Download,
   Printer,
-  Filter
+  Filter,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 
 // Define types
@@ -23,8 +25,10 @@ interface HotelData {
 }
 
 export default function FirewalksPage() {
-  const [selectedHotel, setSelectedHotel] = useState<string>('all');
+  const [selectedHotels, setSelectedHotels] = useState<string[]>(['all']);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const pageRef = useRef<HTMLDivElement>(null);
 
   // Hotel data with calculated completion rates
   const hotelData: HotelData[] = [
@@ -86,13 +90,45 @@ export default function FirewalksPage() {
     }
   ];
 
-  // Filter data based on selected hotel
-  const filteredData = selectedHotel === 'all' 
+  // Filter data based on selected hotels
+  const filteredData = selectedHotels.includes('all') 
     ? hotelData 
-    : hotelData.filter(hotel => hotel.id === selectedHotel);
+    : hotelData.filter(hotel => selectedHotels.includes(hotel.id));
 
   // Sort by completion rate (descending)
   const sortedData = [...filteredData].sort((a, b) => b.completionRate - a.completionRate);
+
+  // Handle hotel selection
+  const handleHotelSelection = (hotelId: string) => {
+    if (hotelId === 'all') {
+      setSelectedHotels(['all']);
+    } else {
+      setSelectedHotels(prev => {
+        // Remove 'all' if selecting individual hotels
+        const withoutAll = prev.filter(id => id !== 'all');
+        
+        if (withoutAll.includes(hotelId)) {
+          // Deselect hotel
+          const newSelection = withoutAll.filter(id => id !== hotelId);
+          return newSelection.length === 0 ? ['all'] : newSelection;
+        } else {
+          // Select hotel
+          const newSelection = [...withoutAll, hotelId];
+          return newSelection.length === hotelData.length ? ['all'] : newSelection;
+        }
+      });
+    }
+  };
+
+  // Get display text for dropdown
+  const getDropdownText = () => {
+    if (selectedHotels.includes('all')) return 'All Hotels';
+    if (selectedHotels.length === 1) {
+      const hotel = hotelData.find(h => h.id === selectedHotels[0]);
+      return hotel ? hotel.name : 'Select Hotels';
+    }
+    return `${selectedHotels.length} Hotels Selected`;
+  };
 
   // Simple CSS-based donut chart component
   const DonutChart = ({ hotel }: { hotel: HotelData }) => {
@@ -104,12 +140,11 @@ export default function FirewalksPage() {
     // Calculate cumulative percentages for the conic gradient
     const redEnd = redPercent;
     const yellowEnd = redEnd + yellowPercent;
-    const greenEnd = yellowEnd + greenPercent;
     
     return (
-      <div className="relative w-32 h-32 mx-auto">
+      <div className="relative w-36 h-36 mx-auto mb-4">
         <div 
-          className="w-full h-full rounded-full"
+          className="w-full h-full rounded-full print-chart"
           style={{
             background: `conic-gradient(
               #ef4444 0% ${redEnd}%, 
@@ -118,36 +153,36 @@ export default function FirewalksPage() {
             )`
           }}
         >
-          <div className="absolute inset-4 bg-white rounded-full flex items-center justify-center">
+          <div className="absolute inset-6 bg-white rounded-full flex items-center justify-center">
             <div className="text-center">
-              <div className="text-lg font-bold text-gray-900">{greenPercent.toFixed(0)}%</div>
+              <div className="text-xl font-bold text-gray-900">{hotel.completionRate.toFixed(0)}%</div>
               <div className="text-xs text-gray-500">Complete</div>
             </div>
           </div>
         </div>
         
         {/* Legend */}
-        <div className="mt-3 space-y-1">
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-              <span>Not Started</span>
+        <div className="mt-4 space-y-2 text-left">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full flex-shrink-0"></div>
+              <span className="text-gray-700">Not Started</span>
             </div>
-            <span>{hotel.red}</span>
+            <span className="font-medium text-gray-900">{hotel.red}</span>
           </div>
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-              <span>Incomplete</span>
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-yellow-500 rounded-full flex-shrink-0"></div>
+              <span className="text-gray-700">Incomplete</span>
             </div>
-            <span>{hotel.yellow}</span>
+            <span className="font-medium text-gray-900">{hotel.yellow}</span>
           </div>
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Completed</span>
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
+              <span className="text-gray-700">Completed</span>
             </div>
-            <span>{hotel.green}</span>
+            <span className="font-medium text-gray-900">{hotel.green}</span>
           </div>
         </div>
       </div>
