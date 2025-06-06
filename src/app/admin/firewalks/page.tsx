@@ -407,13 +407,15 @@ export default function FirewalksPage() {
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {sortedData.map((hotel) => (
-                <div key={hotel.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                <div key={hotel.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm min-h-[400px] flex flex-col">
                   <div className="flex items-center gap-2 mb-4">
                     <Building className="w-5 h-5 text-gray-500" />
                     <h3 className="font-semibold text-gray-900 text-lg">{hotel.name}</h3>
                   </div>
                   
-                  <DonutChart hotel={hotel} />
+                  <div className="flex-1 flex flex-col justify-center">
+                    <DonutChart hotel={hotel} />
+                  </div>
                   
                   <div className="flex justify-between text-sm text-gray-600 pt-4 mt-4 border-t border-gray-200">
                     <span className="font-medium">Total Tasks: {hotel.red + hotel.yellow + hotel.green}</span>
