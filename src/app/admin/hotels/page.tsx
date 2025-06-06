@@ -93,42 +93,46 @@ export default function HotelManagementPage() {
     }
   };
 
-  // Load fresh hotel details from API (both facilities and details)
+  // 👈 FIXED: Load fresh hotel details from API with better defaults handling
   const loadHotelDetails = async (hotelId: string) => {
     setIsLoadingHotel(true);
     setIsEditing(false); // Stop editing when switching hotels
     
     try {
-      // Load both facilities data and equipment details
-      const [facilitiesResponse, detailsResponse] = await Promise.all([
-        fetch(`${API_BASE}/hotels/facilities/${hotelId}`),
-        fetch(`${API_BASE}/hotels/details/${hotelId}`)
-      ]);
+      // 👈 ALWAYS start with defaults for setup page
+      let hotelData = createDefaultHotelData(hotelId, hotelNames[hotelId] || hotelId);
 
-      let hotelData: HotelFacilityData;
-      
-      if (facilitiesResponse.ok) {
-        const facilitiesData = await facilitiesResponse.json();
-        hotelData = facilitiesData.facilities;
-      } else {
-        // Create default if facilities not found
-        hotelData = createDefaultHotelData(hotelId, hotelNames[hotelId] || hotelId);
-      }
+      // Try to load existing data, but don't fail if none exists
+      try {
+        const [facilitiesResponse, detailsResponse] = await Promise.all([
+          fetch(`${API_BASE}/hotels/facilities/${hotelId}`),
+          fetch(`${API_BASE}/hotels/details/${hotelId}`)
+        ]);
 
-      // Merge in equipment details if available
-      if (detailsResponse.ok) {
-        const detailsData = await detailsResponse.json();
-        const details = detailsData.details;
-        
-        if (details && Object.keys(details).length > 0) {
-          hotelData = {
-            ...hotelData,
-            structural: details.structural || hotelData.structural,
-            fireSafety: details.fireSafety || hotelData.fireSafety,
-            mechanical: details.mechanical || hotelData.mechanical,
-            utilities: details.utilities || hotelData.utilities,
-          };
+        // Only merge in data if APIs actually return data
+        if (facilitiesResponse.ok) {
+          const facilitiesData = await facilitiesResponse.json();
+          if (facilitiesData.facilities) {
+            hotelData = { ...hotelData, ...facilitiesData.facilities };
+          }
         }
+
+        if (detailsResponse.ok) {
+          const detailsData = await detailsResponse.json();
+          if (detailsData.details && Object.keys(detailsData.details).length > 0) {
+            const details = detailsData.details;
+            hotelData = {
+              ...hotelData,
+              structural: { ...hotelData.structural, ...details.structural },
+              fireSafety: { ...hotelData.fireSafety, ...details.fireSafety },
+              mechanical: { ...hotelData.mechanical, ...details.mechanical },
+              utilities: { ...hotelData.utilities, ...details.utilities },
+            };
+          }
+        }
+      } catch (apiError) {
+        console.log(`No existing data for ${hotelId}, using defaults`);
+        // hotelData already has defaults, so just continue
       }
 
       setSelectedHotel(hotelData);
@@ -140,10 +144,15 @@ export default function HotelManagementPage() {
 
     } catch (error) {
       console.error(`Error loading hotel details for ${hotelId}:`, error);
-      setSaveMessage('Error loading hotel details');
+      
+      // 👈 FALLBACK: Still provide defaults even on error
+      const defaultHotel = createDefaultHotelData(hotelId, hotelNames[hotelId] || hotelId);
+      setSelectedHotel(defaultHotel);
+      
+      setSaveMessage('Using default data - some hotel information may be missing');
       setTimeout(() => setSaveMessage(''), 3000);
     } finally {
-      setIsLoadingHotel(false);
+      setIsLoadingHotel(false); // 👈 ALWAYS stop loading
     }
   };
 
