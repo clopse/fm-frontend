@@ -200,6 +200,7 @@ export default function FirewalksPage() {
 
   const handlePrintToPDF = () => {
     setIsExporting(true);
+    setIsDropdownOpen(false); // Close dropdown before printing
     
     // Use browser's print functionality which can save as PDF
     setTimeout(() => {
@@ -233,7 +234,7 @@ export default function FirewalksPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div ref={pageRef} className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -266,19 +267,54 @@ export default function FirewalksPage() {
                 <Filter className="w-4 h-4 text-gray-500" />
                 <label className="text-sm font-medium text-gray-700">Filter by Hotel:</label>
               </div>
-              <select
-                value={selectedHotel}
-                onChange={(e) => setSelectedHotel(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              >
-                <option value="all">All Hotels</option>
-                {hotelData.map(hotel => (
-                  <option key={hotel.id} value={hotel.id}>{hotel.name}</option>
-                ))}
-              </select>
+              
+              {/* Multi-select dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center justify-between w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <span className="truncate">{getDropdownText()}</span>
+                  <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isDropdownOpen && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                    {/* All Hotels Option */}
+                    <label className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedHotels.includes('all')}
+                        onChange={() => handleHotelSelection('all')}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-900 font-medium">All Hotels</span>
+                      {selectedHotels.includes('all') && <Check className="w-4 h-4 ml-auto text-blue-600" />}
+                    </label>
+                    
+                    <hr className="border-gray-200" />
+                    
+                    {/* Individual Hotels */}
+                    {hotelData.map(hotel => (
+                      <label key={hotel.id} className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedHotels.includes(hotel.id) && !selectedHotels.includes('all')}
+                          onChange={() => handleHotelSelection(hotel.id)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-900">{hotel.name}</span>
+                        {selectedHotels.includes(hotel.id) && !selectedHotels.includes('all') && (
+                          <Check className="w-4 h-4 ml-auto text-blue-600" />
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 no-print">
               <button
                 onClick={handleExportData}
                 className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -304,9 +340,9 @@ export default function FirewalksPage() {
             <div className="flex items-center gap-3">
               <Trophy className="w-5 h-5 text-blue-600" />
               <h2 className="text-lg font-semibold text-gray-900">Performance Leaderboard</h2>
-              {selectedHotel !== 'all' && (
+              {!selectedHotels.includes('all') && (
                 <span className="text-sm text-gray-500">
-                  (Filtered: {hotelData.find(h => h.id === selectedHotel)?.name})
+                  (Showing {selectedHotels.length} of {hotelData.length} hotels)
                 </span>
               )}
             </div>
@@ -369,19 +405,19 @@ export default function FirewalksPage() {
           </div>
           
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {sortedData.map((hotel) => (
-                <div key={hotel.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-4">
-                    <Building className="w-4 h-4 text-gray-500" />
-                    <h3 className="font-semibold text-gray-900 text-sm">{hotel.name}</h3>
+                <div key={hotel.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Building className="w-5 h-5 text-gray-500" />
+                    <h3 className="font-semibold text-gray-900 text-lg">{hotel.name}</h3>
                   </div>
                   
                   <DonutChart hotel={hotel} />
                   
-                  <div className="flex justify-between text-xs text-gray-600 pt-3 mt-3 border-t border-gray-300">
-                    <span>Total: {hotel.red + hotel.yellow + hotel.green}</span>
-                    <span>{hotel.completionRate.toFixed(1)}% Complete</span>
+                  <div className="flex justify-between text-sm text-gray-600 pt-4 mt-4 border-t border-gray-200">
+                    <span className="font-medium">Total Tasks: {hotel.red + hotel.yellow + hotel.green}</span>
+                    <span className="font-medium text-green-600">{hotel.completionRate.toFixed(1)}% Complete</span>
                   </div>
                 </div>
               ))}
@@ -392,42 +428,88 @@ export default function FirewalksPage() {
 
       {/* Print Styles */}
       <style jsx global>{`
+        /* Hide dropdown when printing */
         @media print {
+          .relative > div:last-child {
+            display: none !important;
+          }
+          
+          /* Ensure charts print with colors */
+          .print-chart {
+            -webkit-print-color-adjust: exact !important;
+            color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          
+          /* Print layout improvements */
           body * {
             visibility: hidden;
           }
-          #__next, #__next * {
+          
+          ${pageRef.current ? `#__next, #__next *` : `div, div *`} {
             visibility: visible;
           }
-          .no-print {
-            display: none !important;
+          
+          /* Ensure proper page breaks */
+          .grid > div {
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
+          
+          /* Color preservation */
           .bg-gradient-to-r {
-            background: #1e293b !important;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
             -webkit-print-color-adjust: exact;
             color-adjust: exact;
           }
+          
           .text-white {
             color: white !important;
           }
+          
           .bg-blue-500 {
             background: #3b82f6 !important;
             -webkit-print-color-adjust: exact;
           }
+          
           .bg-red-500 {
             background: #ef4444 !important;
             -webkit-print-color-adjust: exact;
           }
+          
           .bg-yellow-500 {
             background: #f59e0b !important;
             -webkit-print-color-adjust: exact;
           }
+          
           .bg-green-500 {
             background: #10b981 !important;
             -webkit-print-color-adjust: exact;
           }
+          
           .bg-green-600 {
             color: #059669 !important;
+          }
+          
+          /* Improve chart container for printing */
+          .bg-white {
+            background: white !important;
+            -webkit-print-color-adjust: exact;
+          }
+          
+          .border-gray-200 {
+            border-color: #e5e7eb !important;
+            -webkit-print-color-adjust: exact;
+          }
+          
+          /* Ensure grid spacing in print */
+          .grid {
+            gap: 1.5rem !important;
+          }
+          
+          /* Hide controls when printing */
+          .no-print {
+            display: none !important;
           }
         }
       `}</style>
