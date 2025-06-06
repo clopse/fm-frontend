@@ -1,14 +1,11 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useState } from 'react';
 import { 
   Trophy, 
   PieChart, 
   Building2, 
   Calendar, 
-  CheckCircle, 
-  AlertCircle, 
-  XCircle,
   Building,
   Download,
   Printer,
@@ -25,15 +22,9 @@ interface HotelData {
   completionRate: number;
 }
 
-interface ChartInstance {
-  destroy(): void;
-}
-
 export default function FirewalksPage() {
   const [selectedHotel, setSelectedHotel] = useState<string>('all');
   const [isExporting, setIsExporting] = useState(false);
-  const chartRefs = useRef<{ [key: string]: ChartInstance }>({});
-  const pageRef = useRef<HTMLDivElement>(null);
 
   // Hotel data with calculated completion rates
   const hotelData: HotelData[] = [
@@ -103,75 +94,65 @@ export default function FirewalksPage() {
   // Sort by completion rate (descending)
   const sortedData = [...filteredData].sort((a, b) => b.completionRate - a.completionRate);
 
-  useEffect(() => {
-    // Dynamically import Chart.js to avoid SSR issues
-    const loadChartJS = async () => {
-      if (typeof window !== 'undefined') {
-        const { Chart, registerables } = await import('chart.js');
-        Chart.register(...registerables);
+  // Simple CSS-based donut chart component
+  const DonutChart = ({ hotel }: { hotel: HotelData }) => {
+    const total = hotel.red + hotel.yellow + hotel.green;
+    const redPercent = (hotel.red / total) * 100;
+    const yellowPercent = (hotel.yellow / total) * 100;
+    const greenPercent = (hotel.green / total) * 100;
+    
+    // Calculate cumulative percentages for the conic gradient
+    const redEnd = redPercent;
+    const yellowEnd = redEnd + yellowPercent;
+    const greenEnd = yellowEnd + greenPercent;
+    
+    return (
+      <div className="relative w-32 h-32 mx-auto">
+        <div 
+          className="w-full h-full rounded-full"
+          style={{
+            background: `conic-gradient(
+              #ef4444 0% ${redEnd}%, 
+              #f59e0b ${redEnd}% ${yellowEnd}%, 
+              #10b981 ${yellowEnd}% 100%
+            )`
+          }}
+        >
+          <div className="absolute inset-4 bg-white rounded-full flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-lg font-bold text-gray-900">{greenPercent.toFixed(0)}%</div>
+              <div className="text-xs text-gray-500">Complete</div>
+            </div>
+          </div>
+        </div>
         
-        // Create charts for each hotel
-        sortedData.forEach((hotel, index) => {
-          const canvasId = `chart-${hotel.id}`;
-          const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
-          
-          if (canvas) {
-            // Destroy existing chart if it exists
-            if (chartRefs.current[canvasId]) {
-              chartRefs.current[canvasId].destroy();
-            }
-            
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              chartRefs.current[canvasId] = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                  labels: ['Not Started', 'Incomplete', 'Completed'],
-                  datasets: [{
-                    data: [hotel.red, hotel.yellow, hotel.green],
-                    backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
-                    hoverBackgroundColor: ['#dc2626', '#d97706', '#059669'],
-                    borderWidth: 0
-                  }]
-                },
-                options: {
-                  responsive: true,
-                  maintainAspectRatio: true,
-                  plugins: {
-                    legend: {
-                      position: 'bottom',
-                      labels: {
-                        padding: 15,
-                        usePointStyle: true,
-                        font: {
-                          size: 11
-                        }
-                      }
-                    }
-                  },
-                  elements: {
-                    arc: {
-                      borderWidth: 0
-                    }
-                  }
-                }
-              }) as ChartInstance;
-            }
-          }
-        });
-      }
-    };
-
-    loadChartJS();
-
-    // Cleanup function
-    return () => {
-      Object.values(chartRefs.current).forEach(chart => {
-        if (chart) chart.destroy();
-      });
-      chartRefs.current = {};
-    };
-  }, [selectedHotel]); // Re-run when hotel filter changes
+        {/* Legend */}
+        <div className="mt-3 space-y-1">
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <span>Not Started</span>
+            </div>
+            <span>{hotel.red}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+              <span>Incomplete</span>
+            </div>
+            <span>{hotel.yellow}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span>Completed</span>
+            </div>
+            <span>{hotel.green}</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const getRankBadgeClass = (index: number) => {
     if (index === 0) return 'bg-yellow-100 text-yellow-700'; // Gold
@@ -217,7 +198,7 @@ export default function FirewalksPage() {
   };
 
   return (
-    <div ref={pageRef} className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-700 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -356,19 +337,14 @@ export default function FirewalksPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {sortedData.map((hotel) => (
                 <div key={hotel.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-3">
+                  <div className="flex items-center justify-center gap-2 mb-4">
                     <Building className="w-4 h-4 text-gray-500" />
                     <h3 className="font-semibold text-gray-900 text-sm">{hotel.name}</h3>
                   </div>
                   
-                  <div className="w-48 h-48 mx-auto mb-3">
-                    <canvas 
-                      id={`chart-${hotel.id}`}
-                      className="max-w-full max-h-full"
-                    ></canvas>
-                  </div>
+                  <DonutChart hotel={hotel} />
                   
-                  <div className="flex justify-between text-xs text-gray-600 pt-2 border-t border-gray-300">
+                  <div className="flex justify-between text-xs text-gray-600 pt-3 mt-3 border-t border-gray-300">
                     <span>Total: {hotel.red + hotel.yellow + hotel.green}</span>
                     <span>{hotel.completionRate.toFixed(1)}% Complete</span>
                   </div>
