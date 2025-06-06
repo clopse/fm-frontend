@@ -16,7 +16,7 @@ interface UtilityBill {
   data: any; // The parsed JSON data from your utility bills
 }
 
-// Metrics we can extract from the bills
+// Enhanced metrics that match your real JSON structure
 const AVAILABLE_METRICS = {
   electricity: [
     { key: 'total_consumption', label: 'Total Consumption (kWh)', unit: 'kWh' },
@@ -29,6 +29,7 @@ const AVAILABLE_METRICS = {
     { key: 'max_demand', label: 'Max Demand', unit: 'kVa' },
     { key: 'capacity_charge', label: 'Capacity Charge', unit: '€' },
     { key: 'mic_excess_charge', label: 'MIC Excess Charge', unit: '€' },
+    { key: 'pso_levy', label: 'PSO Levy', unit: '€' },
     { key: 'electricity_tax', label: 'Electricity Tax', unit: '€' },
     { key: 'vat_amount', label: 'VAT Amount', unit: '€' }
   ],
@@ -40,7 +41,9 @@ const AVAILABLE_METRICS = {
     { key: 'standing_charge', label: 'Standing Charge', unit: '€' },
     { key: 'carbon_tax', label: 'Carbon Tax', unit: '€' },
     { key: 'gas_commodity_cost', label: 'Gas Commodity Cost', unit: '€' },
-    { key: 'capacity_charge', label: 'Gas Capacity Charge', unit: '€' }
+    { key: 'gas_capacity_charge', label: 'Gas Capacity Charge', unit: '€' },
+    { key: 'conversion_factor', label: 'Conversion Factor', unit: '' },
+    { key: 'calorific_value', label: 'Calorific Value', unit: 'MJ/m³' }
   ],
   water: [
     { key: 'total_consumption', label: 'Total Consumption (m³)', unit: 'm³' },
@@ -76,40 +79,64 @@ export function UtilitiesGraphs() {
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
 
-  // Real data fetching - replace with your actual API endpoint
+  // Real data fetching from your S3-based API
   useEffect(() => {
     const fetchUtilityData = async () => {
       setLoading(true);
       try {
-        // TODO: Replace with your actual API endpoint
-        const response = await fetch('/api/utilities/bills', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            hotels: selectedHotels,
-            utilityType: selectedUtilityType,
-            months: selectedMonths,
-            years: selectedYears
-          })
+        const billsPromises = selectedHotels.map(async (hotelId) => {
+          const bills: UtilityBill[] = [];
+          
+          for (const year of selectedYears) {
+            try {
+              const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${year}`
+              );
+              
+              if (response.ok) {
+                const data = await response.json();
+                
+                // Transform S3 data to UtilityBill format
+                for (const bill of data.bills || []) {
+                  const summary = bill.summary || {};
+                  const billDate = summary.bill_date || '';
+                  
+                  if (billDate) {
+                    const [billYear, billMonth] = billDate.split('-');
+                    const monthName = MONTHS[parseInt(billMonth) - 1];
+                    
+                    // Filter by selected months and utility type
+                    if (selectedMonths.includes(monthName) && 
+                        bill.utility_type === selectedUtilityType) {
+                      bills.push({
+                        hotelId,
+                        billType: bill.utility_type as 'electricity' | 'gas' | 'water',
+                        month: monthName,
+                        year: billYear,
+                        data: bill.raw_data || bill // Use raw_data if available, fallback to bill
+                      });
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.error(`Error fetching ${hotelId} ${year}:`, error);
+            }
+          }
+          
+          return bills;
         });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch utility data');
-        }
-
-        const bills: UtilityBill[] = await response.json();
-        setUtilityData(bills);
+        
+        const allBills = (await Promise.all(billsPromises)).flat();
+        setUtilityData(allBills);
         
       } catch (error) {
         console.error('Error fetching utility data:', error);
-        setUtilityData([]); // Set empty array on error
+        setUtilityData([]);
       }
       setLoading(false);
     };
 
-    // Only fetch if we have selections
     if (selectedHotels.length > 0 && selectedMonths.length > 0 && selectedYears.length > 0) {
       fetchUtilityData();
     } else {
@@ -118,73 +145,132 @@ export function UtilitiesGraphs() {
     }
   }, [selectedHotels, selectedUtilityType, selectedMonths, selectedYears]);
 
-  // Extract metric value from bill data - matches your JSON structure
+  // Updated metric extraction function to match your real JSON structures
   const extractMetricValue = (bill: UtilityBill, metric: string): number => {
     const data = bill.data;
     
-    switch (metric) {
-      case 'total_consumption':
-        if (bill.billType === 'electricity') {
+    if (bill.billType === 'electricity') {
+      // Arden Energy electricity bill structure
+      switch (metric) {
+        case 'total_consumption':
           const dayUnits = data.consumption?.find((c: any) => c.type === 'Day')?.units?.value || 0;
           const nightUnits = data.consumption?.find((c: any) => c.type === 'Night')?.units?.value || 0;
           return dayUnits + nightUnits;
-        }
-        if (bill.billType === 'gas') {
-          return data.consumptionDetails?.consumptionValue || 0;
-        }
-        return 0;
-        
-      case 'day_consumption':
-        return data.consumption?.find((c: any) => c.type === 'Day')?.units?.value || 0;
-        
-      case 'night_consumption':
-        return data.consumption?.find((c: any) => c.type === 'Night')?.units?.value || 0;
-        
-      case 'total_cost':
-        return data.totalAmount?.value || data.billSummary?.currentBillAmount || 0;
-        
-      case 'mic_value':
-        return data.meterDetails?.mic?.value || 0;
-        
-      case 'max_demand':
-        return data.meterDetails?.maxDemand?.value || 0;
-        
-      case 'standing_charge':
-        return data.charges?.find((c: any) => c.description.includes('Standing'))?.amount || 0;
-        
-      case 'capacity_charge':
-        return data.charges?.find((c: any) => c.description.includes('Capacity'))?.amount || 0;
-        
-      case 'mic_excess_charge':
-        return data.charges?.find((c: any) => c.description.includes('MIC Excess'))?.amount || 0;
-        
-      case 'electricity_tax':
-        return data.charges?.find((c: any) => c.description.includes('Electricity Tax'))?.amount || 0;
-        
-      case 'carbon_tax':
-        return data.lineItems?.find((i: any) => i.description.includes('Carbon Tax'))?.amount || 0;
-        
-      case 'gas_commodity_cost':
-        return data.lineItems?.find((i: any) => i.description.includes('Gas Commodity'))?.amount || 0;
-        
-      case 'vat_amount':
-        return data.taxDetails?.vatAmount || data.billSummary?.totalVatAmount || 0;
-        
-      case 'units_consumed':
-        return data.meterReadings?.unitsConsumed || 0;
-        
-      case 'cost_per_kwh':
-        const totalCost = extractMetricValue(bill, 'total_cost');
-        const totalConsumption = extractMetricValue(bill, 'total_consumption');
-        return totalConsumption > 0 ? totalCost / totalConsumption : 0;
-        
-      case 'cost_per_m3':
-        // For water bills - you'd need to add this logic based on your water bill structure
-        return 0;
-        
-      default:
-        return 0;
+          
+        case 'day_consumption':
+          return data.consumption?.find((c: any) => c.type === 'Day')?.units?.value || 0;
+          
+        case 'night_consumption':
+          return data.consumption?.find((c: any) => c.type === 'Night')?.units?.value || 0;
+          
+        case 'total_cost':
+          return data.totalAmount?.value || 0;
+          
+        case 'mic_value':
+          return data.meterDetails?.mic?.value || 0;
+          
+        case 'max_demand':
+          return data.meterDetails?.maxDemand?.value || 0;
+          
+        case 'standing_charge':
+          return data.charges?.find((c: any) => 
+            c.description?.toLowerCase().includes('standing')
+          )?.amount || 0;
+          
+        case 'capacity_charge':
+          return data.charges?.find((c: any) => 
+            c.description?.toLowerCase().includes('capacity')
+          )?.amount || 0;
+          
+        case 'mic_excess_charge':
+          return data.charges?.find((c: any) => 
+            c.description?.toLowerCase().includes('mic excess')
+          )?.amount || 0;
+          
+        case 'pso_levy':
+          return data.charges?.find((c: any) => 
+            c.description?.toLowerCase().includes('pso')
+          )?.amount || 0;
+          
+        case 'electricity_tax':
+          return data.taxDetails?.electricityTax?.amount || 0;
+          
+        case 'vat_amount':
+          return data.taxDetails?.vatAmount || 0;
+          
+        case 'cost_per_kwh':
+          const totalCost = extractMetricValue(bill, 'total_cost');
+          const totalConsumption = extractMetricValue(bill, 'total_consumption');
+          return totalConsumption > 0 ? totalCost / totalConsumption : 0;
+          
+        default:
+          return 0;
+      }
     }
+    
+    if (bill.billType === 'gas') {
+      // Flogas gas bill structure
+      switch (metric) {
+        case 'total_consumption':
+          return data.consumptionDetails?.consumptionValue || 0;
+          
+        case 'units_consumed':
+          return data.meterReadings?.unitsConsumed || 0;
+          
+        case 'total_cost':
+          return data.billSummary?.currentBillAmount || data.billSummary?.totalDueAmount || 0;
+          
+        case 'standing_charge':
+          return data.lineItems?.find((item: any) => 
+            item.description?.toLowerCase().includes('standing')
+          )?.amount || 0;
+          
+        case 'carbon_tax':
+          return data.lineItems?.find((item: any) => 
+            item.description?.toLowerCase().includes('carbon')
+          )?.amount || 0;
+          
+        case 'gas_commodity_cost':
+          return data.lineItems?.find((item: any) => 
+            item.description?.toLowerCase().includes('commodity') ||
+            item.description?.toLowerCase().includes('tariff')
+          )?.amount || 0;
+          
+        case 'gas_capacity_charge':
+          return data.lineItems?.find((item: any) => 
+            item.description?.toLowerCase().includes('capacity')
+          )?.amount || 0;
+          
+        case 'conversion_factor':
+          return data.consumptionDetails?.conversionFactor || 0;
+          
+        case 'calorific_value':
+          return data.consumptionDetails?.calibrationValue || 0;
+          
+        case 'cost_per_kwh':
+          const gasTotalCost = extractMetricValue(bill, 'total_cost');
+          const gasConsumption = extractMetricValue(bill, 'total_consumption');
+          return gasConsumption > 0 ? gasTotalCost / gasConsumption : 0;
+          
+        default:
+          return 0;
+      }
+    }
+    
+    // Water bills - implement when you have water bill structure
+    if (bill.billType === 'water') {
+      switch (metric) {
+        case 'total_consumption':
+        case 'total_cost':
+        case 'cost_per_m3':
+        case 'standing_charge':
+          return 0; // Implement when you have water bill JSON structure
+        default:
+          return 0;
+      }
+    }
+    
+    return 0;
   };
 
   // Generate chart data based on comparison mode
@@ -201,7 +287,8 @@ export function UtilitiesGraphs() {
         return {
           name: hotel?.name || hotelId,
           value: Math.round(avgValue * 100) / 100,
-          total: Math.round(totalValue * 100) / 100
+          total: Math.round(totalValue * 100) / 100,
+          billsCount: hotelBills.length
         };
       });
     }
@@ -215,7 +302,8 @@ export function UtilitiesGraphs() {
         return {
           name: month,
           value: Math.round(avgValue * 100) / 100,
-          total: Math.round(totalValue * 100) / 100
+          total: Math.round(totalValue * 100) / 100,
+          billsCount: monthBills.length
         };
       });
     }
@@ -229,7 +317,8 @@ export function UtilitiesGraphs() {
         return {
           name: year,
           value: Math.round(avgValue * 100) / 100,
-          total: Math.round(totalValue * 100) / 100
+          total: Math.round(totalValue * 100) / 100,
+          billsCount: yearBills.length
         };
       });
     }
@@ -247,9 +336,9 @@ export function UtilitiesGraphs() {
 
   const selectAll = (allItems: string[], currentList: string[], setter: (list: string[]) => void) => {
     if (currentList.length === allItems.length) {
-      setter([]); // Deselect all if all are selected
+      setter([]);
     } else {
-      setter(allItems); // Select all
+      setter(allItems);
     }
   };
 
@@ -324,7 +413,7 @@ export function UtilitiesGraphs() {
         </div>
       </div>
 
-      {/* Selection Filters */}
+      {/* Selection Filters - Keeping the same dropdown structure */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         
         {/* Hotel Selection */}
@@ -449,7 +538,7 @@ export function UtilitiesGraphs() {
             {currentMetric?.label} by {comparisonMode.charAt(0).toUpperCase() + comparisonMode.slice(1)}
           </h3>
           <div className="text-sm text-gray-500">
-            Unit: {currentMetric?.unit}
+            Unit: {currentMetric?.unit} | Bills: {utilityData.length}
           </div>
         </div>
 
@@ -457,7 +546,7 @@ export function UtilitiesGraphs() {
           <div className="flex items-center justify-center h-64 text-gray-500">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-              <p>Loading comparison data...</p>
+              <p>Loading real utility data from S3...</p>
             </div>
           </div>
         ) : chartData.length === 0 ? (
@@ -466,6 +555,7 @@ export function UtilitiesGraphs() {
               <Filter className="w-12 h-12 mx-auto mb-2 text-gray-300" />
               <p>No data available for selected filters</p>
               <p className="text-sm">Try adjusting your selections above</p>
+              <p className="text-xs mt-2">Bills processed: {utilityData.length}</p>
             </div>
           </div>
         ) : (
@@ -482,6 +572,20 @@ export function UtilitiesGraphs() {
               <Tooltip 
                 formatter={(value, name) => [`${value} ${currentMetric?.unit}`, name]}
                 labelFormatter={(label) => `${comparisonMode.slice(0, -1)}: ${label}`}
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                        <p className="font-medium">{`${comparisonMode.slice(0, -1)}: ${label}`}</p>
+                        <p className="text-blue-600">{`Average: ${payload[0].value} ${currentMetric?.unit}`}</p>
+                        <p className="text-green-600">{`Total: ${data.total} ${currentMetric?.unit}`}</p>
+                        <p className="text-gray-500 text-sm">{`Bills: ${data.billsCount}`}</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
               />
               <Bar 
                 dataKey="value" 
@@ -494,7 +598,7 @@ export function UtilitiesGraphs() {
         )}
       </div>
 
-      {/* Summary Table */}
+      {/* Enhanced Summary Table */}
       {!loading && chartData.length > 0 && (
         <div className="mt-6">
           <h4 className="text-lg font-medium text-gray-900 mb-3">Summary Table</h4>
@@ -511,6 +615,9 @@ export function UtilitiesGraphs() {
                   <th className="px-4 py-2 text-right font-medium text-gray-700">
                     Total {currentMetric?.label}
                   </th>
+                  <th className="px-4 py-2 text-right font-medium text-gray-700">
+                    Bills Count
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -523,10 +630,24 @@ export function UtilitiesGraphs() {
                     <td className="px-4 py-2 text-right text-gray-700">
                       {item.total.toLocaleString()} {currentMetric?.unit}
                     </td>
+                    <td className="px-4 py-2 text-right text-gray-500">
+                      {item.billsCount}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+          
+          {/* Data Quality Indicator */}
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-blue-700 font-medium">Data Source: Real utility bills from S3</span>
+              <span className="text-blue-600">
+                Total bills analyzed: {utilityData.length} | 
+                Selected type: {selectedUtilityType.charAt(0).toUpperCase() + selectedUtilityType.slice(1)}
+              </span>
+            </div>
           </div>
         </div>
       )}
