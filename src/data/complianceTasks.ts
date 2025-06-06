@@ -16,6 +16,7 @@ export interface ComplianceTask {
   needs_report: 'yes' | 'no';
   mandatory: boolean;
   points: number;
+  audit: string;
   info_popup: string;
   subtasks?: SubTask[];
 }
