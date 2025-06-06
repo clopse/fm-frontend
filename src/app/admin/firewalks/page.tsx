@@ -246,7 +246,7 @@ export default function FirewalksPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold">JMK Group</h1>
-                <p className="text-slate-300">Hotel Performance Dashboard</p>
+                <p className="text-slate-300">Hotel Fire Walk Dashboard</p>
               </div>
             </div>
             <div className="flex items-center gap-2 bg-blue-500/20 border border-blue-400/30 text-blue-100 px-4 py-2 rounded-lg">
@@ -340,7 +340,7 @@ export default function FirewalksPage() {
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center gap-3">
               <Trophy className="w-5 h-5 text-blue-600" />
-              <h2 className="text-lg font-semibold text-gray-900">Performance Leaderboard</h2>
+              <h2 className="text-lg font-semibold text-gray-900">Fire Walk Leaderboard</h2>
               {!selectedHotels.includes('all') && (
                 <span className="text-sm text-gray-500">
                   (Showing {selectedHotels.length} of {hotelData.length} hotels)
