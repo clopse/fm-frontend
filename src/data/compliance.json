@@ -21,7 +21,8 @@
         "points": 20,
         "audit": "fire",
         "info_popup": "Annual comprehensive service and testing of fire pumps by qualified technician.\n\n⚖️ IS EN 12845:2020, NFPA 20"
-      },      {
+      },
+      {      
         "task_id": "fog_licence",
         "label": "FOG (Fats, Oils, Grease) Licence",
         "frequency": "As Required (Reviewed Annually)",
