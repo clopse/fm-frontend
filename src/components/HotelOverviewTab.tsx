@@ -1,4 +1,4 @@
-import { Building, Users, Flame, Building2 } from 'lucide-react';
+import { Building, Users, Square, Building2 } from 'lucide-react';
 import { HotelFacilityData } from '@/types/hotelTypes';
 
 interface HotelOverviewTabProps {
@@ -13,6 +13,12 @@ export default function HotelOverviewTab({ hotel, isEditing, onUpdate }: HotelOv
       ...hotel,
       [field]: value
     });
+  };
+
+  // Format square metres with commas for readability
+  const formatSqm = (sqm: number | undefined) => {
+    if (!sqm) return '0';
+    return sqm.toLocaleString();
   };
 
   return (
@@ -124,12 +130,12 @@ export default function HotelOverviewTab({ hotel, isEditing, onUpdate }: HotelOv
             </div>
           </div>
         </div>
-        <div className="bg-red-50 p-4 rounded-lg">
+        <div className="bg-amber-50 p-4 rounded-lg">
           <div className="flex items-center space-x-3">
-            <Flame className="w-8 h-8 text-red-600" />
+            <Square className="w-8 h-8 text-amber-600" />
             <div>
-              <p className="text-2xl font-bold text-red-900">{hotel.fireSafety?.emergencyStairs || 0}</p>
-              <p className="text-sm text-red-700">Emergency Stairs</p>
+              <p className="text-2xl font-bold text-amber-900">{formatSqm(hotel.structural?.totalSquareMetres)}</p>
+              <p className="text-sm text-amber-700">Total SQM</p>
             </div>
           </div>
         </div>
