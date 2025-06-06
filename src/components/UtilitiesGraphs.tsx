@@ -13,7 +13,7 @@ interface UtilityBill {
   billType: 'electricity' | 'gas' | 'water';
   month: string;
   year: string;
-  data: any; // The parsed JSON data
+  data: any; // The parsed JSON data from your utility bills
 }
 
 // Metrics we can extract from the bills
@@ -50,16 +50,6 @@ const AVAILABLE_METRICS = {
   ]
 };
 
-const HOTEL_NAMES: { [key: string]: string } = {
-  hiex: "Holiday Inn Express",
-  moxy: "Moxy Hotel", 
-  hida: "Holiday Inn Dublin Airport",
-  hbhdcc: "Hampton by Hilton Dublin City Centre",
-  hbhe: "Hampton by Hilton Harbour Exchange",
-  sera: "Seraphina Hotel",
-  marina: "Marina Hotel"
-};
-
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
@@ -86,92 +76,49 @@ export function UtilitiesGraphs() {
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
 
-  // Mock data fetching - replace with your actual API calls
+  // Real data fetching - replace with your actual API endpoint
   useEffect(() => {
     const fetchUtilityData = async () => {
       setLoading(true);
       try {
-        // This would be your actual API calls to get the JSON data
-        // For now, I'll simulate the data structure based on your JSONs
-        const mockData: UtilityBill[] = [];
-        
-        // You'd replace this with actual API calls to get all utility bills
-        for (const hotel of hotels) {
-          for (const year of selectedYears) {
-            for (const month of selectedMonths) {
-              // Simulate electricity bill data
-              if (selectedUtilityType === 'electricity') {
-                mockData.push({
-                  hotelId: hotel.id,
-                  billType: 'electricity',
-                  month,
-                  year,
-                  data: {
-                    consumption: [
-                      { type: 'Day', units: { value: Math.floor(Math.random() * 50000 + 20000), unit: 'kWh' }},
-                      { type: 'Night', units: { value: Math.floor(Math.random() * 30000 + 15000), unit: 'kWh' }}
-                    ],
-                    meterDetails: {
-                      mic: { value: Math.floor(Math.random() * 200 + 50), unit: 'kVa' },
-                      maxDemand: { value: Math.floor(Math.random() * 250 + 100), unit: 'kVa' }
-                    },
-                    charges: [
-                      { description: 'Standing Charge', amount: Math.floor(Math.random() * 200 + 100) },
-                      { description: 'Day Units', amount: Math.floor(Math.random() * 15000 + 8000) },
-                      { description: 'Night Units', amount: Math.floor(Math.random() * 8000 + 4000) },
-                      { description: 'Capacity Charge', amount: Math.floor(Math.random() * 500 + 200) },
-                      { description: 'MIC Excess Charge', amount: Math.floor(Math.random() * 1000 + 300) },
-                      { description: 'Electricity Tax', amount: Math.floor(Math.random() * 100 + 50) }
-                    ],
-                    totalAmount: { value: Math.floor(Math.random() * 25000 + 15000), unit: '€' },
-                    taxDetails: { vatAmount: Math.floor(Math.random() * 2000 + 1000) }
-                  }
-                });
-              }
-              
-              // Simulate gas bill data
-              if (selectedUtilityType === 'gas') {
-                mockData.push({
-                  hotelId: hotel.id,
-                  billType: 'gas',
-                  month,
-                  year,
-                  data: {
-                    consumptionDetails: {
-                      consumptionValue: Math.floor(Math.random() * 50000 + 20000),
-                      consumptionUnit: 'kWh'
-                    },
-                    meterReadings: {
-                      unitsConsumed: Math.floor(Math.random() * 5000 + 2000)
-                    },
-                    lineItems: [
-                      { description: 'Gas Commodity Tariff', amount: Math.floor(Math.random() * 4000 + 2000) },
-                      { description: 'Carbon Tax', amount: Math.floor(Math.random() * 500 + 200) },
-                      { description: 'Standing charge', amount: Math.floor(Math.random() * 100 + 30) },
-                      { description: 'Gas Capacity', amount: Math.floor(Math.random() * 600 + 300) }
-                    ],
-                    billSummary: {
-                      currentBillAmount: Math.floor(Math.random() * 6000 + 3000),
-                      totalVatAmount: Math.floor(Math.random() * 500 + 200)
-                    }
-                  }
-                });
-              }
-            }
-          }
+        // TODO: Replace with your actual API endpoint
+        const response = await fetch('/api/utilities/bills', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            hotels: selectedHotels,
+            utilityType: selectedUtilityType,
+            months: selectedMonths,
+            years: selectedYears
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch utility data');
         }
+
+        const bills: UtilityBill[] = await response.json();
+        setUtilityData(bills);
         
-        setUtilityData(mockData);
       } catch (error) {
         console.error('Error fetching utility data:', error);
+        setUtilityData([]); // Set empty array on error
       }
       setLoading(false);
     };
 
-    fetchUtilityData();
+    // Only fetch if we have selections
+    if (selectedHotels.length > 0 && selectedMonths.length > 0 && selectedYears.length > 0) {
+      fetchUtilityData();
+    } else {
+      setUtilityData([]);
+      setLoading(false);
+    }
   }, [selectedHotels, selectedUtilityType, selectedMonths, selectedYears]);
 
-  // Extract metric value from bill data
+  // Extract metric value from bill data - matches your JSON structure
   const extractMetricValue = (bill: UtilityBill, metric: string): number => {
     const data = bill.data;
     
@@ -225,6 +172,15 @@ export function UtilitiesGraphs() {
         
       case 'units_consumed':
         return data.meterReadings?.unitsConsumed || 0;
+        
+      case 'cost_per_kwh':
+        const totalCost = extractMetricValue(bill, 'total_cost');
+        const totalConsumption = extractMetricValue(bill, 'total_consumption');
+        return totalConsumption > 0 ? totalCost / totalConsumption : 0;
+        
+      case 'cost_per_m3':
+        // For water bills - you'd need to add this logic based on your water bill structure
+        return 0;
         
       default:
         return 0;
@@ -547,7 +503,7 @@ export function UtilitiesGraphs() {
               <thead>
                 <tr className="bg-gray-50">
                   <th className="px-4 py-2 text-left font-medium text-gray-700">
-                    Hotel
+                    {comparisonMode.slice(0, -1).charAt(0).toUpperCase() + comparisonMode.slice(1, -1)}
                   </th>
                   <th className="px-4 py-2 text-right font-medium text-gray-700">
                     Average {currentMetric?.label}
