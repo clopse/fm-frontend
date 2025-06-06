@@ -260,7 +260,7 @@ export default function FirewalksPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Controls Bar */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8 no-print">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -428,26 +428,35 @@ export default function FirewalksPage() {
 
       {/* Print Styles */}
       <style jsx global>{`
-        /* Hide dropdown when printing */
         @media print {
-          .relative > div:last-child {
+          /* Hide controls when printing */
+          .no-print {
+            display: none !important;
+          }
+          
+          /* Hide dropdown menus */
+          .absolute.z-10 {
             display: none !important;
           }
           
           /* Ensure charts print with colors */
-          .print-chart {
+          .print-chart,
+          div[style*="conic-gradient"] {
             -webkit-print-color-adjust: exact !important;
             color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
           
-          /* Print layout improvements */
-          body * {
-            visibility: hidden;
+          /* Force color preservation for all color elements */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            color-adjust: exact !important;
           }
           
-          ${pageRef.current ? `#__next, #__next *` : `div, div *`} {
-            visibility: visible;
+          /* Page layout for print */
+          @page {
+            margin: 0.5in;
+            size: A4;
           }
           
           /* Ensure proper page breaks */
@@ -456,50 +465,38 @@ export default function FirewalksPage() {
             page-break-inside: avoid;
           }
           
-          /* Color preservation */
-          .bg-gradient-to-r {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
-            -webkit-print-color-adjust: exact;
-            color-adjust: exact;
+          /* Color preservation for specific elements */
+          .bg-red-500 {
+            background: #ef4444 !important;
+          }
+          
+          .bg-yellow-500 {
+            background: #f59e0b !important;
+          }
+          
+          .bg-green-500 {
+            background: #10b981 !important;
+          }
+          
+          .bg-blue-500 {
+            background: #3b82f6 !important;
           }
           
           .text-white {
             color: white !important;
           }
           
-          .bg-blue-500 {
-            background: #3b82f6 !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .bg-red-500 {
-            background: #ef4444 !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .bg-yellow-500 {
-            background: #f59e0b !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .bg-green-500 {
-            background: #10b981 !important;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .bg-green-600 {
-            color: #059669 !important;
-          }
-          
-          /* Improve chart container for printing */
           .bg-white {
             background: white !important;
-            -webkit-print-color-adjust: exact;
           }
           
           .border-gray-200 {
             border-color: #e5e7eb !important;
-            -webkit-print-color-adjust: exact;
+          }
+          
+          /* Header gradient fix */
+          .bg-gradient-to-r {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%) !important;
           }
           
           /* Ensure grid spacing in print */
@@ -507,9 +504,18 @@ export default function FirewalksPage() {
             gap: 1.5rem !important;
           }
           
-          /* Hide controls when printing */
-          .no-print {
-            display: none !important;
+          /* Make sure text is visible */
+          .text-gray-900,
+          .text-gray-700,
+          .text-gray-600,
+          .text-gray-500 {
+            color: #000 !important;
+          }
+          
+          /* Charts should be visible */
+          canvas,
+          .relative.w-36.h-36 {
+            visibility: visible !important;
           }
         }
       `}</style>
