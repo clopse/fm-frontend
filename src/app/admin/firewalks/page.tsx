@@ -1,654 +1,425 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JMK Group - Hotel Performance Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f8fafc;
-            color: #1e293b;
-            line-height: 1.6;
-        }
-        
-        .header {
-            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-            color: white;
-            padding: 2rem;
-            border-bottom: 3px solid #0ea5e9;
-        }
-        
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        
-        .logo-icon {
-            width: 48px;
-            height: 48px;
-            background: #0ea5e9;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .company-info h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-            letter-spacing: -0.025em;
-        }
-        
-        .company-info p {
-            font-size: 0.875rem;
-            opacity: 0.8;
-            font-weight: 400;
-        }
-        
-        .period-badge {
-            background: rgba(14, 165, 233, 0.1);
-            border: 1px solid rgba(14, 165, 233, 0.3);
-            color: #0ea5e9;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        
-        .section {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            margin-bottom: 2rem;
-            border: 1px solid #e2e8f0;
-        }
-        
-        .section-header {
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        .section-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #1e293b;
-        }
-        
-        .leaderboard-content {
-            padding: 0;
-        }
-        
-        .leaderboard-item {
-            display: flex;
-            align-items: center;
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid #f1f5f9;
-            transition: background-color 0.2s ease;
-        }
-        
-        .leaderboard-item:last-child {
-            border-bottom: none;
-        }
-        
-        .leaderboard-item:hover {
-            background: #f8fafc;
-        }
-        
-        .rank-badge {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1rem;
-            margin-right: 1.5rem;
-        }
-        
-        .rank-1 { background: #fef3c7; color: #d97706; }
-        .rank-2 { background: #e5e7eb; color: #6b7280; }
-        .rank-3 { background: #fed7aa; color: #ea580c; }
-        .rank-other { background: #f1f5f9; color: #64748b; }
-        
-        .hotel-details {
-            flex: 1;
-        }
-        
-        .hotel-name {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 0.25rem;
-        }
-        
-        .task-summary {
-            display: flex;
-            gap: 1.5rem;
-            font-size: 0.875rem;
-            color: #64748b;
-            align-items: center;
-        }
-        
-        .task-stat {
-            display: flex;
-            align-items: center;
-            gap: 0.375rem;
-        }
-        
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-        }
-        
-        .status-red { background: #ef4444; }
-        .status-yellow { background: #f59e0b; }
-        .status-green { background: #10b981; }
-        
-        .completion-score {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 0.25rem;
-        }
-        
-        .completion-percentage {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #059669;
-        }
-        
-        .completion-label {
-            font-size: 0.75rem;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        .charts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 1.5rem;
-            padding: 2rem;
-        }
-        
-        .chart-card {
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        .chart-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-            width: 100%;
-            justify-content: center;
-        }
-        
-        .chart-title {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: #1e293b;
-            text-align: center;
-        }
-        
-        .chart-canvas {
-            width: 200px !important;
-            height: 200px !important;
-        }
-        
-        .chart-stats {
-            margin-top: 1rem;
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            font-size: 0.75rem;
-            color: #64748b;
-        }
-        
-        .performance-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.375rem;
-            padding: 0.25rem 0.75rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-        
-        .indicator-excellent { background: #dcfce7; color: #166534; }
-        .indicator-good { background: #fef3c7; color: #a16207; }
-        .indicator-needs-improvement { background: #fecaca; color: #991b1b; }
-        
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                gap: 1rem;
-                text-align: center;
-            }
-            
-            .task-summary {
-                flex-direction: column;
-                gap: 0.5rem;
-                align-items: flex-start;
-            }
-            
-            .charts-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="header-content">
-            <div class="logo-section">
-                <div class="logo-icon">
-                    <i data-lucide="building-2" style="color: white; width: 24px; height: 24px;"></i>
-                </div>
-                <div class="company-info">
-                    <h1>JMK Group</h1>
-                    <p>Hotel Performance Dashboard</p>
-                </div>
-            </div>
-            <div class="period-badge">
-                <i data-lucide="calendar" style="width: 16px; height: 16px; margin-right: 0.5rem;"></i>
-                May 2025
-            </div>
-        </div>
-    </div>
-    
-    <div class="container">
-        <div class="section">
-            <div class="section-header">
-                <i data-lucide="trophy" style="width: 20px; height: 20px; color: #0ea5e9;"></i>
-                <h2 class="section-title">Performance Leaderboard</h2>
-            </div>
-            <div class="leaderboard-content">
-                <div class="leaderboard-item">
-                    <div class="rank-badge rank-1">1</div>
-                    <div class="hotel-details">
-                        <div class="hotel-name">Holiday Inn Dublin Airport</div>
-                        <div class="task-summary">
-                            <div class="task-stat">
-                                <div class="status-dot status-red"></div>
-                                <span>0 Critical</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-yellow"></div>
-                                <span>0 Medium</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-green"></div>
-                                <span>145 Complete</span>
-                            </div>
-                            <span class="performance-indicator indicator-excellent">
-                                <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i>
-                                Excellent
-                            </span>
-                        </div>
-                    </div>
-                    <div class="completion-score">
-                        <div class="completion-percentage">100.0%</div>
-                        <div class="completion-label">Completion</div>
-                    </div>
-                </div>
-                
-                <div class="leaderboard-item">
-                    <div class="rank-badge rank-2">3</div>
-                    <div class="hotel-details">
-                        <div class="hotel-name">Moxy Cork</div>
-                        <div class="task-summary">
-                            <div class="task-stat">
-                                <div class="status-dot status-red"></div>
-                                <span>0 Critical</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-yellow"></div>
-                                <span>4 Medium</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-green"></div>
-                                <span>147 Complete</span>
-                            </div>
-                            <span class="performance-indicator indicator-excellent">
-                                <i data-lucide="check-circle" style="width: 12px; height: 12px;"></i>
-                                Excellent
-                            </span>
-                        </div>
-                    </div>
-                    <div class="completion-score">
-                        <div class="completion-percentage">97.4%</div>
-                        <div class="completion-label">Completion</div>
-                    </div>
-                </div>
-                
-                <div class="leaderboard-item">
-                    <div class="rank-badge rank-3">4</div>
-                    <div class="hotel-details">
-                        <div class="hotel-name">Seraphine</div>
-                        <div class="task-summary">
-                            <div class="task-stat">
-                                <div class="status-dot status-red"></div>
-                                <span>10 Critical</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-yellow"></div>
-                                <span>0 Medium</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-green"></div>
-                                <span>77 Complete</span>
-                            </div>
-                            <span class="performance-indicator indicator-good">
-                                <i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i>
-                                Good
-                            </span>
-                        </div>
-                    </div>
-                    <div class="completion-score">
-                        <div class="completion-percentage">88.5%</div>
-                        <div class="completion-label">Completion</div>
-                    </div>
-                </div>
-                
-                <div class="leaderboard-item">
-                    <div class="rank-badge rank-other">5</div>
-                    <div class="hotel-details">
-                        <div class="hotel-name">Waterford Marina Hotel</div>
-                        <div class="task-summary">
-                            <div class="task-stat">
-                                <div class="status-dot status-red"></div>
-                                <span>12 Critical</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-yellow"></div>
-                                <span>9 Medium</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-green"></div>
-                                <span>129 Complete</span>
-                            </div>
-                            <span class="performance-indicator indicator-good">
-                                <i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i>
-                                Good
-                            </span>
-                        </div>
-                    </div>
-                    <div class="completion-score">
-                        <div class="completion-percentage">86.0%</div>
-                        <div class="completion-label">Completion</div>
-                    </div>
-                </div>
-                
-                <div class="leaderboard-item">
-                    <div class="rank-badge rank-other">6</div>
-                    <div class="hotel-details">
-                        <div class="hotel-name">Holiday Inn Express</div>
-                        <div class="task-summary">
-                            <div class="task-stat">
-                                <div class="status-dot status-red"></div>
-                                <span>14 Critical</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-yellow"></div>
-                                <span>11 Medium</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-green"></div>
-                                <span>122 Complete</span>
-                            </div>
-                            <span class="performance-indicator indicator-good">
-                                <i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i>
-                                Good
-                            </span>
-                        </div>
-                    </div>
-                    <div class="completion-score">
-                        <div class="completion-percentage">83.0%</div>
-                        <div class="completion-label">Completion</div>
-                    </div>
-                </div>
-                
-                <div class="leaderboard-item">
-                    <div class="rank-badge rank-other">7</div>
-                    <div class="hotel-details">
-                        <div class="hotel-name">Hampton by Hilton Ealing</div>
-                        <div class="task-summary">
-                            <div class="task-stat">
-                                <div class="status-dot status-red"></div>
-                                <span>19 Critical</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-yellow"></div>
-                                <span>0 Medium</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-green"></div>
-                                <span>71 Complete</span>
-                            </div>
-                            <span class="performance-indicator indicator-needs-improvement">
-                                <i data-lucide="x-circle" style="width: 12px; height: 12px;"></i>
-                                Needs Focus
-                            </span>
-                        </div>
-                    </div>
-                    <div class="completion-score">
-                        <div class="completion-percentage">78.9%</div>
-                        <div class="completion-label">Completion</div>
-                    </div>
-                </div>
-                
-                <div class="leaderboard-item">
-                    <div class="rank-badge rank-other">8</div>
-                    <div class="hotel-details">
-                        <div class="hotel-name">Hampton by Hilton Dublin</div>
-                        <div class="task-summary">
-                            <div class="task-stat">
-                                <div class="status-dot status-red"></div>
-                                <span>39 Critical</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-yellow"></div>
-                                <span>4 Medium</span>
-                            </div>
-                            <div class="task-stat">
-                                <div class="status-dot status-green"></div>
-                                <span>107 Complete</span>
-                            </div>
-                            <span class="performance-indicator indicator-needs-improvement">
-                                <i data-lucide="x-circle" style="width: 12px; height: 12px;"></i>
-                                Needs Focus
-                            </span>
-                        </div>
-                    </div>
-                    <div class="completion-score">
-                        <div class="completion-percentage">71.3%</div>
-                        <div class="completion-label">Completion</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="section">
-            <div class="section-header">
-                <i data-lucide="pie-chart" style="width: 20px; height: 20px; color: #0ea5e9;"></i>
-                <h2 class="section-title">Individual Hotel Performance</h2>
-            </div>
-            <div class="charts-grid">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <i data-lucide="building" style="width: 16px; height: 16px; color: #64748b;"></i>
-                        <div class="chart-title">Holiday Inn Dublin Airport</div>
-                    </div>
-                    <canvas id="chart1" class="chart-canvas"></canvas>
-                    <div class="chart-stats">
-                        <span>Total Tasks: 145</span>
-                        <span>100% Complete</span>
-                    </div>
-                </div>
-                
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <i data-lucide="building" style="width: 16px; height: 16px; color: #64748b;"></i>
-                        <div class="chart-title">Seraphine</div>
-                    </div>
-                    <canvas id="chart2" class="chart-canvas"></canvas>
-                    <div class="chart-stats">
-                        <span>Total Tasks: 87</span>
-                        <span>88.5% Complete</span>
-                    </div>
-                </div>
-                
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <i data-lucide="building" style="width: 16px; height: 16px; color: #64748b;"></i>
-                        <div class="chart-title">Moxy Cork</div>
-                    </div>
-                    <canvas id="chart3" class="chart-canvas"></canvas>
-                    <div class="chart-stats">
-                        <span>Total Tasks: 151</span>
-                        <span>97.4% Complete</span>
-                    </div>
-                </div>
-                
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <i data-lucide="building" style="width: 16px; height: 16px; color: #64748b;"></i>
-                        <div class="chart-title">Waterford Marina Hotel</div>
-                    </div>
-                    <canvas id="chart4" class="chart-canvas"></canvas>
-                    <div class="chart-stats">
-                        <span>Total Tasks: 150</span>
-                        <span>86.0% Complete</span>
-                    </div>
-                </div>
-                
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <i data-lucide="building" style="width: 16px; height: 16px; color: #64748b;"></i>
-                        <div class="chart-title">Holiday Inn Express</div>
-                    </div>
-                    <canvas id="chart5" class="chart-canvas"></canvas>
-                    <div class="chart-stats">
-                        <span>Total Tasks: 147</span>
-                        <span>83.0% Complete</span>
-                    </div>
-                </div>
-                
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <i data-lucide="building" style="width: 16px; height: 16px; color: #64748b;"></i>
-                        <div class="chart-title">Hampton by Hilton Ealing</div>
-                    </div>
-                    <canvas id="chart6" class="chart-canvas"></canvas>
-                    <div class="chart-stats">
-                        <span>Total Tasks: 90</span>
-                        <span>78.9% Complete</span>
-                    </div>
-                </div>
-                
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <i data-lucide="building" style="width: 16px; height: 16px; color: #64748b;"></i>
-                        <div class="chart-title">Hampton by Hilton Dublin</div>
-                    </div>
-                    <canvas id="chart7" class="chart-canvas"></canvas>
-                    <div class="chart-stats">
-                        <span>Total Tasks: 150</span>
-                        <span>71.3% Complete</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+'use client';
 
-    <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
+import { useEffect, useState, useRef } from 'react';
+import { 
+  Trophy, 
+  PieChart, 
+  Building2, 
+  Calendar, 
+  CheckCircle, 
+  AlertCircle, 
+  XCircle,
+  Building,
+  Download,
+  Printer,
+  Filter
+} from 'lucide-react';
+
+// Define types
+interface HotelData {
+  id: string;
+  name: string;
+  red: number;
+  yellow: number;
+  green: number;
+  completionRate: number;
+}
+
+interface ChartInstance {
+  destroy(): void;
+}
+
+export default function FirewalksPage() {
+  const [selectedHotel, setSelectedHotel] = useState<string>('all');
+  const [isExporting, setIsExporting] = useState(false);
+  const chartRefs = useRef<{ [key: string]: ChartInstance }>({});
+  const pageRef = useRef<HTMLDivElement>(null);
+
+  // Hotel data with calculated completion rates
+  const hotelData: HotelData[] = [
+    {
+      id: 'holiday-inn-dublin-airport',
+      name: 'Holiday Inn Dublin Airport',
+      red: 0,
+      yellow: 0,
+      green: 145,
+      completionRate: 100.0
+    },
+    {
+      id: 'moxy-cork',
+      name: 'Moxy Cork',
+      red: 0,
+      yellow: 4,
+      green: 147,
+      completionRate: 97.4
+    },
+    {
+      id: 'seraphine',
+      name: 'Seraphine',
+      red: 10,
+      yellow: 0,
+      green: 77,
+      completionRate: 88.5
+    },
+    {
+      id: 'waterford-marina',
+      name: 'Waterford Marina Hotel',
+      red: 12,
+      yellow: 9,
+      green: 129,
+      completionRate: 86.0
+    },
+    {
+      id: 'holiday-inn-express',
+      name: 'Holiday Inn Express',
+      red: 14,
+      yellow: 11,
+      green: 122,
+      completionRate: 83.0
+    },
+    {
+      id: 'hampton-ealing',
+      name: 'Hampton by Hilton Ealing',
+      red: 19,
+      yellow: 0,
+      green: 71,
+      completionRate: 78.9
+    },
+    {
+      id: 'hampton-dublin',
+      name: 'Hampton by Hilton Dublin',
+      red: 39,
+      yellow: 4,
+      green: 107,
+      completionRate: 71.3
+    }
+  ];
+
+  // Filter data based on selected hotel
+  const filteredData = selectedHotel === 'all' 
+    ? hotelData 
+    : hotelData.filter(hotel => hotel.id === selectedHotel);
+
+  // Sort by completion rate (descending)
+  const sortedData = [...filteredData].sort((a, b) => b.completionRate - a.completionRate);
+
+  useEffect(() => {
+    // Dynamically import Chart.js to avoid SSR issues
+    const loadChartJS = async () => {
+      if (typeof window !== 'undefined') {
+        const { Chart, registerables } = await import('chart.js');
+        Chart.register(...registerables);
         
-        const chartOptions = {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
+        // Create charts for each hotel
+        sortedData.forEach((hotel, index) => {
+          const canvasId = `chart-${hotel.id}`;
+          const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+          
+          if (canvas) {
+            // Destroy existing chart if it exists
+            if (chartRefs.current[canvasId]) {
+              chartRefs.current[canvasId].destroy();
+            }
+            
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              chartRefs.current[canvasId] = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                  labels: ['Not Started', 'Incomplete', 'Completed'],
+                  datasets: [{
+                    data: [hotel.red, hotel.yellow, hotel.green],
+                    backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+                    hoverBackgroundColor: ['#dc2626', '#d97706', '#059669'],
+                    borderWidth: 0
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: true,
+                  plugins: {
+                    legend: {
+                      position: 'bottom',
+                      labels: {
                         padding: 15,
                         usePointStyle: true,
                         font: {
-                            size: 11
+                          size: 11
                         }
+                      }
                     }
+                  },
+                  elements: {
+                    arc: {
+                      borderWidth: 0
+                    }
+                  }
                 }
-            },
-            elements: {
-                arc: {
-                    borderWidth: 0
-                }
+              }) as ChartInstance;
             }
-        };
-
-        const hotelData = [
-            { name: 'Holiday Inn Dublin Airport', red: 0, yellow: 0, green: 145 },
-            { name: 'Seraphine', red: 10, yellow: 0, green: 77 },
-            { name: 'Moxy Cork', red: 0, yellow: 4, green: 147 },
-            { name: 'Waterford Marina Hotel', red: 12, yellow: 9, green: 129 },
-            { name: 'Holiday Inn Express', red: 14, yellow: 11, green: 122 },
-            { name: 'Hampton by Hilton Ealing', red: 19, yellow: 0, green: 71 },
-            { name: 'Hampton by Hilton Dublin', red: 39, yellow: 4, green: 107 }
-        ];
-
-        hotelData.forEach((hotel, index) => {
-            new Chart(document.getElementById(`chart${index + 1}`), {
-                type: 'doughnut',
-                data: {
-                    labels: ['Critical Tasks', 'Medium Priority', 'Completed'],
-                    datasets: [{
-                        data: [hotel.red, hotel.yellow, hotel.green],
-                        backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
-                        hoverBackgroundColor: ['#dc2626', '#d97706', '#059669'],
-                        borderWidth: 0
-                    }]
-                },
-                options: chartOptions
-            });
+          }
         });
-    </script>
-</body>
-</html>
+      }
+    };
+
+    loadChartJS();
+
+    // Cleanup function
+    return () => {
+      Object.values(chartRefs.current).forEach(chart => {
+        if (chart) chart.destroy();
+      });
+      chartRefs.current = {};
+    };
+  }, [selectedHotel]); // Re-run when hotel filter changes
+
+  const getRankBadgeClass = (index: number) => {
+    if (index === 0) return 'bg-yellow-100 text-yellow-700'; // Gold
+    if (index === 1) return 'bg-gray-100 text-gray-700'; // Silver
+    if (index === 2) return 'bg-orange-100 text-orange-700'; // Bronze
+    return 'bg-blue-50 text-blue-700'; // Other
+  };
+
+
+
+  const handlePrintToPDF = () => {
+    setIsExporting(true);
+    
+    // Use browser's print functionality which can save as PDF
+    setTimeout(() => {
+      window.print();
+      setIsExporting(false);
+    }, 500);
+  };
+
+  const handleExportData = () => {
+    // Create CSV data
+    const csvData = [
+      ['Rank', 'Hotel', 'Not Started', 'Incomplete', 'Completed', 'Completion Rate'],
+      ...sortedData.map((hotel, index) => [
+        index + 1,
+        hotel.name,
+        hotel.red,
+        hotel.yellow,
+        hotel.green,
+        `${hotel.completionRate}%`
+      ])
+    ];
+    
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `hotel-performance-may-2025.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div ref={pageRef} className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-slate-800 to-slate-700 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                <Building2 className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">JMK Group</h1>
+                <p className="text-slate-300">Hotel Performance Dashboard</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-blue-500/20 border border-blue-400/30 text-blue-100 px-4 py-2 rounded-lg">
+              <Calendar className="w-4 h-4" />
+              May 2025
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        {/* Controls Bar */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <label className="text-sm font-medium text-gray-700">Filter by Hotel:</label>
+              </div>
+              <select
+                value={selectedHotel}
+                onChange={(e) => setSelectedHotel(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+              >
+                <option value="all">All Hotels</option>
+                {hotelData.map(hotel => (
+                  <option key={hotel.id} value={hotel.id}>{hotel.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleExportData}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Export CSV
+              </button>
+              <button
+                onClick={handlePrintToPDF}
+                disabled={isExporting}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                {isExporting ? 'Preparing...' : 'Print to PDF'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Performance Leaderboard */}
+        <div className="bg-white rounded-lg border border-gray-200 mb-8 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <Trophy className="w-5 h-5 text-blue-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Performance Leaderboard</h2>
+              {selectedHotel !== 'all' && (
+                <span className="text-sm text-gray-500">
+                  (Filtered: {hotelData.find(h => h.id === selectedHotel)?.name})
+                </span>
+              )}
+            </div>
+          </div>
+          
+          <div className="divide-y divide-gray-200">
+            {sortedData.map((hotel, index) => {
+              return (
+                <div key={hotel.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      {/* Rank Badge */}
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${getRankBadgeClass(index)}`}>
+                        {index + 1}
+                      </div>
+                      
+                      {/* Hotel Info */}
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 mb-1">{hotel.name}</h3>
+                        <div className="flex items-center gap-6 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <span>{hotel.red} Not Started</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                            <span>{hotel.yellow} Incomplete</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span>{hotel.green} Completed</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Completion Rate */}
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-green-600">
+                        {hotel.completionRate.toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-gray-500 uppercase tracking-wide">
+                        Completion
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Individual Hotel Performance Charts */}
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <PieChart className="w-5 h-5 text-blue-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Individual Hotel Performance</h2>
+            </div>
+          </div>
+          
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {sortedData.map((hotel) => (
+                <div key={hotel.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <Building className="w-4 h-4 text-gray-500" />
+                    <h3 className="font-semibold text-gray-900 text-sm">{hotel.name}</h3>
+                  </div>
+                  
+                  <div className="w-48 h-48 mx-auto mb-3">
+                    <canvas 
+                      id={`chart-${hotel.id}`}
+                      className="max-w-full max-h-full"
+                    ></canvas>
+                  </div>
+                  
+                  <div className="flex justify-between text-xs text-gray-600 pt-2 border-t border-gray-300">
+                    <span>Total: {hotel.red + hotel.yellow + hotel.green}</span>
+                    <span>{hotel.completionRate.toFixed(1)}% Complete</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Print Styles */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #__next, #__next * {
+            visibility: visible;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .bg-gradient-to-r {
+            background: #1e293b !important;
+            -webkit-print-color-adjust: exact;
+            color-adjust: exact;
+          }
+          .text-white {
+            color: white !important;
+          }
+          .bg-blue-500 {
+            background: #3b82f6 !important;
+            -webkit-print-color-adjust: exact;
+          }
+          .bg-red-500 {
+            background: #ef4444 !important;
+            -webkit-print-color-adjust: exact;
+          }
+          .bg-yellow-500 {
+            background: #f59e0b !important;
+            -webkit-print-color-adjust: exact;
+          }
+          .bg-green-500 {
+            background: #10b981 !important;
+            -webkit-print-color-adjust: exact;
+          }
+          .bg-green-600 {
+            color: #059669 !important;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
