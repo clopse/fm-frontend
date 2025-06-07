@@ -1,20 +1,23 @@
-// app/[hotelId]/utilities/components/GasChart.tsx
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Flame, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
+// components/GasChart.tsx - Add onMonthClick support
+"use client";
+
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Flame, Loader2, MousePointer2 } from 'lucide-react';
 import { GasEntry, ViewMode } from '../types';
 
 interface GasChartProps {
   data: GasEntry[];
   viewMode: ViewMode;
   loading: boolean;
+  onMonthClick?: (month: string) => void;  // ✅ Added click handler
 }
 
 const COLORS = {
   gas: '#10b981',
-  gasLight: '#34d399'
+  gasLight: '#6ee7b7'
 };
 
-export default function GasChart({ data, viewMode, loading }: GasChartProps) {
+export default function GasChart({ data, viewMode, loading, onMonthClick }: GasChartProps) {
   const getUnitLabel = () => {
     switch(viewMode) {
       case 'eur': return '€';
@@ -28,10 +31,12 @@ export default function GasChart({ data, viewMode, loading }: GasChartProps) {
       period: g.period,
       value: viewMode === 'eur' ? g.total_eur : 
              viewMode === 'room' ? g.per_room_kwh : g.total_kwh,
-      // Keep original values for tooltip
+      // Additional data for tooltip
       total_kwh: g.total_kwh,
       total_eur: g.total_eur,
-      per_room_kwh: g.per_room_kwh
+      per_room_kwh: g.per_room_kwh,
+      // ✅ Add period info for multi-month bill support
+      period_info: g.period_info
     }));
   };
 
@@ -44,41 +49,64 @@ export default function GasChart({ data, viewMode, loading }: GasChartProps) {
     }
   };
 
-  const calculateTrend = () => {
-    if (data.length < 2) return 0;
-    const sorted = [...data].sort((a, b) => a.period.localeCompare(b.period));
-    const recent = sorted[sorted.length - 1];
-    const previous = sorted[sorted.length - 2];
-    
-    const recentValue = viewMode === 'eur' ? recent.total_eur : recent.total_kwh;
-    const previousValue = viewMode === 'eur' ? previous.total_eur : previous.total_kwh;
-    
-    return previousValue > 0 ? ((recentValue - previousValue) / previousValue) * 100 : 0;
+  // ✅ Handle chart clicks
+  const handleChartClick = (data: any) => {
+    if (onMonthClick && data && data.activePayload && data.activePayload[0]) {
+      const clickedPeriod = data.activePayload[0].payload.period;
+      // Extract month number for filtering (e.g., "2025-01" -> "1")
+      const monthNumber = clickedPeriod.split('-')[1];
+      onMonthClick(monthNumber);
+    }
   };
-
-  const trend = calculateTrend();
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
         <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-slate-900 mb-2">
-            {formatMonth(label)}
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-semibold text-slate-900">
+              {formatMonth(label)}
+            </p>
+            {/* ✅ Click hint if handler provided */}
+            {onMonthClick && (
+              <span className="text-xs text-blue-600 flex items-center">
+                <MousePointer2 className="w-3 h-3 mr-1" />
+                Click for bills
+              </span>
+            )}
+          </div>
+
+          {/* ✅ Multi-month period indicator */}
+          {data.period_info?.is_multi_month && (
+            <div className="mb-2 p-2 bg-amber-50 rounded text-xs">
+              <p className="text-amber-800 font-medium">Multi-month period</p>
+              <p className="text-amber-600">
+                {data.period_info.start_date} to {data.period_info.end_date}
+              </p>
+            </div>
+          )}
+
           <div className="space-y-1 text-sm">
             <div className="flex items-center justify-between">
-              <span>Consumption:</span>
-              <span className="font-medium">{data.total_kwh.toLocaleString()} kWh</span>
+              <span className="flex items-center">
+                <div className="w-3 h-3 rounded bg-emerald-500 mr-2"></div>
+                Gas Usage:
+              </span>
+              <span className="font-medium">
+                {data.total_kwh.toLocaleString()} kWh
+              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Cost:</span>
-              <span className="font-medium">€{data.total_eur.toLocaleString()}</span>
+            <div className="flex items-center justify-between font-semibold">
+              <span>Total Cost:</span>
+              <span>€{data.total_eur.toLocaleString()}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span>Per Room:</span>
-              <span className="font-medium">{data.per_room_kwh.toFixed(1)} kWh/room</span>
-            </div>
+            {viewMode === 'room' && (
+              <div className="flex items-center justify-between text-slate-600">
+                <span>Per Room:</span>
+                <span>{data.per_room_kwh.toFixed(1)} kWh/room</span>
+              </div>
+            )}
           </div>
         </div>
       );
@@ -94,6 +122,7 @@ export default function GasChart({ data, viewMode, loading }: GasChartProps) {
             <Flame className="w-5 h-5 mr-2 text-green-600" />
             Gas Consumption ({getUnitLabel()})
           </h3>
+          <p className="text-sm text-slate-600 mt-1">Monthly gas usage and costs</p>
         </div>
         <div className="p-6 flex items-center justify-center h-80">
           <div className="text-center">
@@ -113,12 +142,13 @@ export default function GasChart({ data, viewMode, loading }: GasChartProps) {
             <Flame className="w-5 h-5 mr-2 text-green-600" />
             Gas Consumption ({getUnitLabel()})
           </h3>
+          <p className="text-sm text-slate-600 mt-1">Monthly gas usage and costs</p>
         </div>
         <div className="p-6 flex items-center justify-center h-80">
           <div className="text-center">
             <Flame className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <p className="text-slate-600">No gas data available</p>
-            <p className="text-sm text-slate-500 mt-1">Upload some gas bills to see consumption trends</p>
+            <p className="text-sm text-slate-500 mt-1">Upload some gas bills to see consumption patterns</p>
           </div>
         </div>
       </div>
@@ -134,32 +164,38 @@ export default function GasChart({ data, viewMode, loading }: GasChartProps) {
               <Flame className="w-5 h-5 mr-2 text-green-600" />
               Gas Consumption ({getUnitLabel()})
             </h3>
-            <p className="text-sm text-slate-600 mt-1">Monthly gas usage patterns</p>
+            <div className="flex items-center space-x-4 mt-1">
+              <p className="text-sm text-slate-600">Monthly gas usage and costs</p>
+              {/* ✅ Click instruction */}
+              {onMonthClick && (
+                <span className="text-xs text-blue-600 flex items-center">
+                  <MousePointer2 className="w-3 h-3 mr-1" />
+                  Click months to view bills
+                </span>
+              )}
+            </div>
           </div>
           
-          {/* Trend indicator */}
-          <div className="text-right">
-            <div className={`flex items-center space-x-1 text-sm ${
-              trend > 0 ? 'text-red-600' : trend < 0 ? 'text-green-600' : 'text-slate-600'
-            }`}>
-              {trend > 0 ? <TrendingUp className="w-4 h-4" /> : 
-               trend < 0 ? <TrendingDown className="w-4 h-4" /> : null}
-              <span>{Math.abs(trend).toFixed(1)}%</span>
+          {/* Summary stats */}
+          <div className="text-right text-sm">
+            <div className="text-slate-600">
+              {data.length} month{data.length !== 1 ? 's' : ''} of data
             </div>
-            <div className="text-xs text-slate-500 mt-1">vs last period</div>
+            <div className="text-xs text-slate-500 mt-1">
+              Latest: {formatMonth(data[data.length - 1]?.period)}
+            </div>
           </div>
         </div>
       </div>
       
       <div className="p-6">
         <ResponsiveContainer width="100%" height={320}>
-          <AreaChart data={formatData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-            <defs>
-              <linearGradient id="gasGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={COLORS.gas} stopOpacity={0.3}/>
-                <stop offset="95%" stopColor={COLORS.gas} stopOpacity={0.1}/>
-              </linearGradient>
-            </defs>
+          <BarChart 
+            data={formatData()} 
+            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+            onClick={handleChartClick}  // ✅ Add click handler
+            className={onMonthClick ? "cursor-pointer" : ""}  // ✅ Show pointer cursor if clickable
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis 
               dataKey="period" 
@@ -176,35 +212,28 @@ export default function GasChart({ data, viewMode, loading }: GasChartProps) {
               }
             />
             <Tooltip content={<CustomTooltip />} />
-            <Area
-              type="monotone"
-              dataKey="value"
-              stroke={COLORS.gas}
-              strokeWidth={3}
-              fill="url(#gasGradient)"
+            <Legend />
+            
+            <Bar 
+              dataKey="value" 
+              fill={COLORS.gas} 
+              name="Gas Usage"
+              radius={[4, 4, 0, 0]}
+              className={onMonthClick ? "cursor-pointer" : ""}  // ✅ Clickable styling
             />
-          </AreaChart>
+          </BarChart>
         </ResponsiveContainer>
         
-        {/* Summary stats */}
-        <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-          <div className="bg-green-50 p-3 rounded-lg text-center">
-            <div className="font-semibold text-green-800">
-              {data.reduce((sum, g) => sum + g.total_kwh, 0).toLocaleString()}
+        {/* Chart insights */}
+        <div className="mt-4 p-3 bg-green-50 rounded-lg">
+          <div className="flex items-center justify-between text-sm">
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded bg-green-500 mr-2"></div>
+              <span className="font-medium text-green-800">Average Monthly Usage</span>
             </div>
-            <div className="text-green-600 text-xs">Total kWh</div>
-          </div>
-          <div className="bg-green-50 p-3 rounded-lg text-center">
-            <div className="font-semibold text-green-800">
-              €{data.reduce((sum, g) => sum + g.total_eur, 0).toLocaleString()}
-            </div>
-            <div className="text-green-600 text-xs">Total Cost</div>
-          </div>
-          <div className="bg-green-50 p-3 rounded-lg text-center">
-            <div className="font-semibold text-green-800">
-              {(data.reduce((sum, g) => sum + g.total_kwh, 0) / data.length).toLocaleString()}
-            </div>
-            <div className="text-green-600 text-xs">Avg Monthly</div>
+            <span className="text-green-700 font-semibold">
+              {Math.round(data.reduce((sum, g) => sum + g.total_kwh, 0) / data.length).toLocaleString()} kWh
+            </span>
           </div>
         </div>
       </div>
