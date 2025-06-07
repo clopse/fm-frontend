@@ -14,7 +14,7 @@ interface UtilitiesData {
 
 type ViewMode = 'kwh' | 'cost';
 
-export function useUtilitiesData(hotelId: string) {
+export function useUtilitiesData(hotelId: string | undefined) {
   const [data, setData] = useState<UtilitiesData>({
     electricity: {},
     gas: {},
@@ -33,7 +33,10 @@ export function useUtilitiesData(hotelId: string) {
 
   useEffect(() => {
     async function fetchUtilitiesData() {
-      if (!hotelId) return;
+      if (!hotelId) {
+        setLoading(false);
+        return;
+      }
 
       try {
         console.log('🔄 Processing utilities data...');
