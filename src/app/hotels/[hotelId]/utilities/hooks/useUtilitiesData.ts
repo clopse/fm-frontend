@@ -1,19 +1,25 @@
 import { useState, useEffect } from 'react';
 
+// Use the actual types from the types file
 interface UtilitiesData {
-  electricity: any[]; // Array of electricity entries
-  gas: any[]; // Array of gas entries
-  water: any[]; // Array of water entries (not optional)
-  bills: any[];
-  totals: {
+  electricity: any[];
+  gas: any[];
+  water: any[];
+  bills?: any[];
+  totals?: {
     electricity: number;
     gas: number;
+    water: number;
     electricity_cost: number;
     gas_cost: number;
+    water_cost?: number;
+    cost: number;
   };
+  trends?: any;
+  processed_counts?: any;
+  total_bills_found?: number;
+  debug_info?: any;
 }
-
-type ViewMode = 'kwh' | 'cost' | 'eur' | 'room' | 'efficiency' | 'demand' | 'carbon';
 
 export function useUtilitiesData(hotelId: string | undefined) {
   console.log('🚀 NEW UPDATED HOOK RUNNING!!! Version 2.0');
@@ -26,14 +32,17 @@ export function useUtilitiesData(hotelId: string | undefined) {
     totals: {
       electricity: 0,
       gas: 0,
+      water: 0,
       electricity_cost: 0,
       gas_cost: 0,
+      water_cost: 0,
+      cost: 0,
     }
   });
   
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState(2025);
-  const [viewMode, setViewMode] = useState<ViewMode>('kwh');
+  const [viewMode, setViewMode] = useState<'kwh' | 'eur' | 'room'>('kwh');
 
   useEffect(() => {
     async function fetchUtilitiesData() {
@@ -406,8 +415,11 @@ export function useUtilitiesData(hotelId: string | undefined) {
           totals: {
             electricity: electricityTotal,
             gas: gasTotal,
+            water: 0,
             electricity_cost: electricityTotal * 0.25,
             gas_cost: gasTotal * 0.08,
+            water_cost: 0,
+            cost: (electricityTotal * 0.25) + (gasTotal * 0.08),
           }
         });
 
