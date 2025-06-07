@@ -42,7 +42,23 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
 
   const fetchAllBills = async () => {
     try {
-      // Fetch bills for multiple years (current year and previous years)
+      // First try the /bills endpoint without year (gets all years)
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Bills fetched (all years):', data.bills?.length || 0);
+          setBills(data.bills || []);
+          return;
+        }
+      } catch (error) {
+        console.warn('Failed to fetch all bills, trying year-by-year:', error);
+      }
+
+      // Fallback: Fetch bills year by year using the other endpoint
       const currentYear = new Date().getFullYear();
       const yearsToFetch = [currentYear, currentYear - 1, currentYear - 2];
       
@@ -50,23 +66,84 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
       
       for (const fetchYear of yearsToFetch) {
         try {
+          // Try the yearly data endpoint
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${fetchYear}`
+            `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/${fetchYear}`
           );
           
           if (response.ok) {
             const data = await response.json();
-            console.log(`Bills fetched for ${fetchYear}:`, data.bills?.length || 0);
-            if (data.bills && Array.isArray(data.bills)) {
-              allBills.push(...data.bills);
+            console.log(`Yearly data fetched for ${fetchYear}:`, data);
+            
+            // This endpoint returns different structure, so we need to convert it
+            // It returns electricity/gas arrays, we need to convert to bills format
+            const yearBills: any[] = [];
+            
+            // Convert electricity data to bill format
+            if (data.electricity && Array.isArray(data.electricity)) {
+              data.electricity.forEach((elecData: any, index: number) => {
+                yearBills.push({
+                  utility_type: 'electricity',
+                  filename: elecData.bill_id || `electricity_${elecData.month || index}`,
+                  summary: {
+                    bill_date: elecData.month ? `${elecData.month}-01` : '',
+                    total_cost: elecData.total_eur || 0,
+                    total_kwh: elecData.total_kwh || 0,
+                    day_kwh: elecData.day_kwh || 0,
+                    night_kwh: elecData.night_kwh || 0
+                  },
+                  raw_data: {
+                    totalAmount: { value: elecData.total_eur || 0 },
+                    consumption: [
+                      { type: 'Day', units: { value: elecData.day_kwh || 0 } },
+                      { type: 'Night', units: { value: elecData.night_kwh || 0 } }
+                    ],
+                    charges: [
+                      {
+                        description: 'Total Electricity Usage',
+                        amount: elecData.total_eur || 0,
+                        quantity: { value: elecData.total_kwh || 0 }
+                      }
+                    ]
+                  }
+                });
+              });
             }
+            
+            // Convert gas data to bill format
+            if (data.gas && Array.isArray(data.gas)) {
+              data.gas.forEach((gasData: any, index: number) => {
+                yearBills.push({
+                  utility_type: 'gas',
+                  filename: gasData.bill_id || `gas_${gasData.period || index}`,
+                  summary: {
+                    bill_date: gasData.period ? `${gasData.period}-01` : '',
+                    total_cost: gasData.total_eur || 0,
+                    consumption_kwh: gasData.total_kwh || 0
+                  },
+                  raw_data: {
+                    billSummary: { currentBillAmount: gasData.total_eur || 0 },
+                    consumptionDetails: { consumptionValue: gasData.total_kwh || 0 },
+                    lineItems: [
+                      {
+                        description: 'Total Gas Usage',
+                        amount: gasData.total_eur || 0,
+                        units: gasData.total_kwh || 0
+                      }
+                    ]
+                  }
+                });
+              });
+            }
+            
+            allBills.push(...yearBills);
           }
         } catch (error) {
-          console.warn(`Failed to fetch bills for ${fetchYear}:`, error);
+          console.warn(`Failed to fetch data for ${fetchYear}:`, error);
         }
       }
       
-      console.log('Total bills fetched:', allBills.length);
+      console.log('Total bills fetched (converted):', allBills.length);
       setBills(allBills);
     } catch (error) {
       console.error('Failed to fetch bills:', error);
