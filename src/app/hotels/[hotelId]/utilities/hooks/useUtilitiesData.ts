@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 interface UtilitiesData {
   electricity: any[]; // Array of electricity entries
   gas: any[]; // Array of gas entries
+  water?: any[]; // Optional array of water entries
   bills: any[];
   totals: {
     electricity: number;
@@ -20,6 +21,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
   const [data, setData] = useState<UtilitiesData>({
     electricity: [],
     gas: [],
+    water: [],
     bills: [],
     totals: {
       electricity: 0,
@@ -399,6 +401,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
         setData({
           electricity: electricityArray,
           gas: gasArray,
+          water: [], // Empty water array for now
           bills: rawData.bills || [],
           totals: {
             electricity: electricityTotal,
