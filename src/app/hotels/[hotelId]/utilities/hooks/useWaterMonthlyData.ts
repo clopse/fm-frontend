@@ -5,7 +5,6 @@ export interface WaterMonthEntry {
   cubic_meters: number;
   total_eur: number;
   per_room_m3: number;
-  days: number;
   device_breakdown?: { [key: string]: number };
 }
 
@@ -20,6 +19,17 @@ export interface WaterSummary {
     start: string | null;
     end: string | null;
   };
+}
+
+interface SmartFlowRawData {
+  device_id: number;
+  dl_id: number;
+  d_uuid: string;
+  time_unit: string;
+  time_value: number;
+  Usage: number;
+  AvgUsage: number;
+  Year: number;
 }
 
 export function useWaterMonthlyData(
@@ -42,24 +52,100 @@ export function useWaterMonthlyData(
       
       console.log(`Fetching water data for hotel: ${hotelId}, year: ${selectedYear}`);
       
-      // Fetch monthly data
-      const monthlyResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/water/${hotelId}/monthly?rooms=${rooms}`
-      );
+      let fetchedData: WaterMonthEntry[] = [];
+      
+      // First try API endpoint
+      try {
+        console.log("Attempting to fetch via API endpoint...");
+        const monthlyResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/water/${hotelId}/monthly?rooms=${rooms}`
+        );
+        
+        if (monthlyResponse.ok) {
+          console.log("API endpoint successful!");
+          fetchedData = await monthlyResponse.json();
+          
+          // Also try to fetch summary
+          try {
+            const summaryResponse = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/water/${hotelId}/summary?rooms=${rooms}`
+            );
+            
+            if (summaryResponse.ok) {
+              const summaryData: WaterSummary = await summaryResponse.json();
+              setSummary(summaryData);
+            }
+          } catch (summaryErr) {
+            console.warn("Could not fetch summary from API:", summaryErr);
+          }
+        } else {
+          throw new Error(`API endpoint returned ${monthlyResponse.status}`);
+        }
+      } catch (apiError) {
+        console.warn("API endpoint failed, falling back to S3 proxy:", apiError);
+        
+        // Fall back to direct S3 access
+        console.log("Attempting to fetch via S3 proxy...");
+        const s3Response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/s3-proxy/utilities/${hotelId}/smartflow-usage.json`
+        );
+        
+        if (!s3Response.ok) {
+          throw new Error(`S3 proxy failed: ${s3Response.status}`);
+        }
+        
+        const rawJson = await s3Response.json();
+        if (!Array.isArray(rawJson.usage_data)) {
+          throw new Error("Invalid SmartFlow data format");
+        }
+        
+        const rawData: SmartFlowRawData[] = rawJson.usage_data;
+        const monthsMap = new Map<string, WaterMonthEntry>();
+        
+        rawData.forEach(entry => {
+          if (
+            typeof entry.Usage !== "number" ||
+            typeof entry.time_value !== "number" ||
+            entry.time_value < 1 ||
+            entry.time_value > 12
+          ) {
+            return; // skip invalid entry
+          }
 
-      if (!monthlyResponse.ok) {
-        const errorText = await monthlyResponse.text();
-        console.error(`API error response: ${errorText}`);
-        throw new Error(`Failed to fetch monthly water data: ${monthlyResponse.status}`);
+          const monthKey = `${entry.Year}-${entry.time_value.toString().padStart(2, "0")}`;
+          const deviceId = entry.device_id.toString();
+          const usageM3 = entry.Usage / 1000;
+
+          if (!monthsMap.has(monthKey)) {
+            monthsMap.set(monthKey, {
+              month: monthKey,
+              cubic_meters: 0,
+              total_eur: 0,
+              per_room_m3: 0,
+              device_breakdown: {}
+            });
+          }
+
+          const monthData = monthsMap.get(monthKey)!;
+          monthData.cubic_meters += usageM3;
+          monthData.device_breakdown![deviceId] =
+            (monthData.device_breakdown![deviceId] || 0) + usageM3;
+        });
+
+        fetchedData = Array.from(monthsMap.values()).map(month => ({
+          ...month,
+          cubic_meters: Math.round(month.cubic_meters * 100) / 100,
+          per_room_m3: Math.round((month.cubic_meters / rooms) * 100) / 100,
+          total_eur: Math.round(month.cubic_meters * 2.5 * 100) / 100
+        }));
       }
-
-      const monthlyData: WaterMonthEntry[] = await monthlyResponse.json();
-      console.log(`Received ${monthlyData.length} water data entries`);
+      
+      console.log(`Successfully fetched ${fetchedData.length} water data entries`);
       
       // Filter by year if needed
-      let filteredData = monthlyData;
+      let filteredData = fetchedData;
       if (selectedYear) {
-        filteredData = monthlyData.filter(entry => 
+        filteredData = fetchedData.filter(entry => 
           entry.month.startsWith(selectedYear.toString())
         );
         console.log(`Filtered to ${filteredData.length} entries for year ${selectedYear}`);
@@ -69,22 +155,8 @@ export function useWaterMonthlyData(
       const sortedData = filteredData.sort((a, b) => a.month.localeCompare(b.month));
       setData(sortedData);
       
-      // Fetch summary data
-      try {
-        const summaryResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/water/${hotelId}/summary?rooms=${rooms}`
-        );
-        
-        if (summaryResponse.ok) {
-          const summaryData: WaterSummary = await summaryResponse.json();
-          setSummary(summaryData);
-          console.log("Water summary data received:", summaryData);
-        } else {
-          console.warn("Could not fetch summary, calculating locally");
-          calculateAndSetSummary(sortedData);
-        }
-      } catch (summaryErr) {
-        console.warn("Error fetching summary, calculating locally:", summaryErr);
+      // Calculate summary if we don't have one yet
+      if (!summary && sortedData.length > 0) {
         calculateAndSetSummary(sortedData);
       }
 
