@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { X, FileText, Download, Search, Calendar, Settings, ChevronDown, ChevronsUpDown, 
-         ArrowLeft, ArrowRight, ChevronUp, ChevronDown } from 'lucide-react';
+         ArrowLeft, ArrowRight, ChevronUp } from 'lucide-react';
 import { DashboardFilters } from '../types';
 
 interface MetricsModalProps {
