@@ -1,8 +1,11 @@
+I'll rewrite the MetricsModal component with your suggestions. Here's an improved implementation addressing your feedback:
+
+```javascript
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { X, FileText, Download, Search, Calendar, Settings, ChevronDown, ChevronsUpDown, 
-         ArrowLeft, ArrowRight, ChevronUp } from 'lucide-react';
+import { X, FileText, Download, Search, Calendar, Settings, ChevronDown, 
+         ChevronsUpDown, ArrowLeft, ArrowRight, ChevronUp, Filter } from 'lucide-react';
 import { DashboardFilters } from '../types';
 
 interface MetricsModalProps {
@@ -26,6 +29,8 @@ interface BillRow {
   total_kwh?: number;
   mic_value?: number;
   max_demand?: number;
+  mic_excess?: number;
+  mic_excess_cost?: number;
   standing_charge?: number;
   total_cost: number;
   vat_amount?: number;
@@ -50,8 +55,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   const [bills, setBills] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [showSearch, setShowSearch] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'electricity' | 'gas'>('all');
   const [dateFrom, setDateFrom] = useState(`${year - 2}-01-01`);
   const [dateTo, setDateTo] = useState(`${new Date().getFullYear()}-12-31`);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -65,11 +70,11 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   // UI Control state
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [rowHeight, setRowHeight] = useState(18); // 0-30 range
-  const [horizontalScroll, setHorizontalScroll] = useState(0); // 0-100 range
   const tableRef = useRef<HTMLDivElement>(null);
   const columnMenuRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Column visibility state - separate for gas and electricity
+  // Column visibility state
   const [electricityColumns, setElectricityColumns] = useState({
     checkbox: true,
     date: true,
@@ -81,6 +86,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     total_kwh: true,
     mic_value: true,
     max_demand: true,
+    mic_excess: true,
+    mic_excess_cost: true,
     standing_charge: true,
     total_cost: true,
     vat_amount: true,
@@ -117,6 +124,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     total_kwh: "Total kWh",
     mic_value: "MIC Value",
     max_demand: "Max Demand",
+    mic_excess: "MIC Excess",
+    mic_excess_cost: "Excess Cost",
     standing_charge: "Standing Charge",
     total_cost: "Total Cost",
     vat_amount: "VAT",
@@ -144,7 +153,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   // Define which columns are sortable
   const sortableColumns = [
     'date', 'meter_number', 'mprn', 'gprn', 'day_kwh', 
-    'night_kwh', 'total_kwh', 'mic_value', 'max_demand',
+    'night_kwh', 'total_kwh', 'mic_value', 'max_demand', 'mic_excess', 'mic_excess_cost',
     'consumption_kwh', 'units_consumed', 'conversion_factor',
     'carbon_tax', 'standing_charge', 'commodity_cost',
     'total_cost', 'vat_amount', 'electricity_tax'
@@ -155,15 +164,6 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     fetchAllBills();
   }, [hotelId, year]);
   
-  // Handle horizontal scroll
-  useEffect(() => {
-    if (tableRef.current) {
-      const maxScrollLeft = tableRef.current.scrollWidth - tableRef.current.clientWidth;
-      const scrollPosition = (maxScrollLeft * horizontalScroll) / 100;
-      tableRef.current.scrollLeft = scrollPosition;
-    }
-  }, [horizontalScroll, tableRef.current?.scrollWidth]);
-
   // Close column menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -177,6 +177,13 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [columnMenuRef]);
+
+  // Focus search input when search is shown
+  useEffect(() => {
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearch]);
 
   // Function to request sorting by a column
   const requestSort = (key: string) => {
@@ -237,7 +244,9 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                     total_cost: elecData.total_eur || 0,
                     total_kwh: elecData.total_kwh || 0,
                     day_kwh: elecData.day_kwh || 0,
-                    night_kwh: elecData.night_kwh || 0
+                    night_kwh: elecData.night_kwh || 0,
+                    mic_value: elecData.mic_value || 0,
+                    max_demand: elecData.max_demand || 0
                   },
                   raw_data: {
                     totalAmount: { value: elecData.total_eur || 0 },
@@ -299,7 +308,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     }
   };
 
-  // Transform bills into rows for display
+  // Transform bills into rows for display with MIC calculations
   const billRows = useMemo(() => {
     const rows: BillRow[] = [];
     
@@ -336,6 +345,18 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
 
       if (bill.utility_type === 'electricity') {
         // ELECTRICITY BILL
+        const micValue = summary.mic_value || rawData.meterDetails?.mic?.value || 0;
+        const maxDemand = summary.max_demand || rawData.meterDetails?.maxDemand?.value || 0;
+        
+        // Calculate MIC excess and cost
+        const micExcess = Math.max(0, maxDemand - micValue);
+        
+        // Approximate MIC excess cost (typically 2-3x the standard MIC rate)
+        // This would be replaced with actual values from the bill when available
+        const micRate = 0.7; // Example: €0.7 per kVA per month
+        const micExcessRate = 2.1; // Example: 3x standard rate
+        const micExcessCost = micExcess > 0 ? micExcess * micExcessRate : 0;
+        
         rows.push({
           id: `elec-${billIndex}`,
           type: 'electricity',
@@ -347,8 +368,10 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
           day_kwh: summary.day_kwh || 0,
           night_kwh: summary.night_kwh || 0,
           total_kwh: summary.total_kwh || (summary.day_kwh || 0) + (summary.night_kwh || 0),
-          mic_value: summary.mic_value || rawData.meterDetails?.mic?.value || 0,
-          max_demand: summary.max_demand || rawData.meterDetails?.maxDemand?.value || 0,
+          mic_value: micValue,
+          max_demand: maxDemand,
+          mic_excess: micExcess,
+          mic_excess_cost: micExcessCost,
           standing_charge: findChargeByType(rawData.charges, 'standing') || 0,
           total_cost: summary.total_cost || rawData.totalAmount?.value || 0,
           vat_amount: summary.vat_amount || rawData.taxDetails?.vatAmount || 0,
@@ -387,28 +410,29 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   }, [bills, hotelId]);
   
   function findChargeByType(charges: any[] = [], type: string): number {
-  if (!Array.isArray(charges)) return 0;
-  const charge = charges.find((c: any) => 
-    c?.description && c.description.toLowerCase().includes(type.toLowerCase())
-  );
-  return charge && typeof charge.amount === 'number' ? charge.amount : 0;
-}
+    if (!Array.isArray(charges)) return 0;
+    const charge = charges.find((c: any) => 
+      c?.description && c.description.toLowerCase().includes(type.toLowerCase())
+    );
+    return charge && typeof charge.amount === 'number' ? charge.amount : 0;
+  }
   
   // Helper function to find line item by type in gas bills
- function findLineItemByType(lineItems: any[] = [], type: string): number {
-  if (!Array.isArray(lineItems)) return 0;
-  const item = lineItems.find((i: any) => 
-    i?.description && i.description.toLowerCase().includes(type.toLowerCase())
-  );
-  return item && typeof item.amount === 'number' ? item.amount : 0;
-}
+  function findLineItemByType(lineItems: any[] = [], type: string): number {
+    if (!Array.isArray(lineItems)) return 0;
+    const item = lineItems.find((i: any) => 
+      i?.description && i.description.toLowerCase().includes(type.toLowerCase())
+    );
+    return item && typeof item.amount === 'number' ? item.amount : 0;
+  }
 
   // Filter and sort rows based on user selections
   const filteredRows = useMemo(() => {
     // First filter the rows
     let filteredData = billRows.filter(row => {
       // Bill type filter
-      if (typeFilter !== 'all' && row.type !== typeFilter) return false;
+      if (activeTab === 'electricity' && row.type !== 'electricity') return false;
+      if (activeTab === 'gas' && row.type !== 'gas') return false;
       
       // Date range filter
       if (dateFrom && row.date && row.date < dateFrom) return false;
@@ -473,7 +497,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     }
     
     return filteredData;
-  }, [billRows, typeFilter, dateFrom, dateTo, searchTerm, sortConfig]);
+  }, [billRows, activeTab, dateFrom, dateTo, searchTerm, sortConfig]);
 
   // Calculate totals for selected rows
   const totals = useMemo(() => {
@@ -492,6 +516,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
         totalKwh: elecRows.reduce((sum, r) => sum + (r.total_kwh || 0), 0),
         dayKwh: elecRows.reduce((sum, r) => sum + (r.day_kwh || 0), 0),
         nightKwh: elecRows.reduce((sum, r) => sum + (r.night_kwh || 0), 0),
+        micExcessCost: elecRows.reduce((sum, r) => sum + (r.mic_excess_cost || 0), 0)
       },
       gas: {
         count: gasRows.length,
@@ -500,14 +525,16 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
       }
     };
   }, [filteredRows, selectedRows]);
-// Helper function to generate S3 PDF URL
+
+  // Helper function to generate S3 PDF URL
   const getS3PdfUrl = (row: BillRow) => {
-  // Extract year from date
-  const year = row.date ? row.date.substring(0, 4) : "2024"; // Default to 2024 if no date
-  
-  // Construct the URL for the PDF
-  return `${process.env.NEXT_PUBLIC_API_URL}/utilities/bill-pdf/${hotelId}/${row.type}/${year}/${encodeURIComponent(row.filename)}`;
-};
+    // Extract year from date
+    const year = row.date ? row.date.substring(0, 4) : "2024"; // Default to 2024 if no date
+    
+    // Construct the URL for the PDF
+    return `${process.env.NEXT_PUBLIC_API_URL}/utilities/bill-pdf/${hotelId}/${row.type}/${year}/${encodeURIComponent(row.filename)}`;
+  };
+
   // Row selection functions
   const toggleRow = (rowId: string) => {
     setSelectedRows(prev => {
@@ -578,6 +605,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
       total_kwh: true,
       mic_value: true,
       max_demand: true,
+      mic_excess: true,
+      mic_excess_cost: true,
       standing_charge: true,
       total_cost: true,
       vat_amount: true,
@@ -603,7 +632,6 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     });
     
     setRowHeight(18);
-    setHorizontalScroll(0);
     setSortConfig({
       key: 'date',
       direction: 'desc'
@@ -637,7 +665,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     // Handle electricity bills
     if (electricityRows.length > 0) {
       csvContent += 'ELECTRICITY BILLS\n';
-      csvContent += 'Bill Date,Billing Period,Meter Number,MPRN,Day kWh,Night kWh,Total kWh,MIC Value,Max Demand,Standing Charge,Total Cost,VAT,Electricity Tax,Filename\n';
+      csvContent += 'Bill Date,Billing Period,Meter Number,MPRN,Day kWh,Night kWh,Total kWh,MIC Value,Max Demand,MIC Excess,MIC Excess Cost,Standing Charge,Total Cost,VAT,Electricity Tax,Filename\n';
       
       electricityRows.forEach(row => {
         csvContent += [
@@ -650,6 +678,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
           formatField(row.total_kwh),
           formatField(row.mic_value),
           formatField(row.max_demand),
+          formatField(row.mic_excess),
+          formatField(row.mic_excess_cost),
           formatField(row.standing_charge),
           formatField(row.total_cost),
           formatField(row.vat_amount),
@@ -740,12 +770,12 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
               <div>
                 <h3 className="text-xl font-bold text-slate-900">Utility Bill Details</h3>
                 <p className="text-slate-600 text-sm">
-                  {typeFilter === 'electricity' && totals.electricity.count > 0 ? (
+                  {activeTab === 'electricity' && totals.electricity.count > 0 ? (
                     <>
                       {totals.electricity.count} Electricity Bills • €{totals.electricity.totalCost.toLocaleString()} • {totals.electricity.totalKwh.toLocaleString()} kWh
                       {selectedRows.size > 0 && ` (${selectedRows.size} selected)`}
                     </>
-                  ) : typeFilter === 'gas' && totals.gas.count > 0 ? (
+                  ) : activeTab === 'gas' && totals.gas.count > 0 ? (
                     <>
                       {totals.gas.count} Gas Bills • €{totals.gas.totalCost.toLocaleString()} • {totals.gas.totalKwh.toLocaleString()} kWh
                       {selectedRows.size > 0 && ` (${selectedRows.size} selected)`}
@@ -774,209 +804,244 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
           </div>
         </div>
 
-        {/* Filters & Quick Select */}
+        {/* Tabs & Filters */}
         <div className="border-b bg-slate-50 px-6 py-3 flex-shrink-0">
-          <div className="grid grid-cols-12 gap-4 items-center">
-            {/* Search */}
-            <div className="col-span-3 relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search meters, suppliers..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            </div>
-
-            {/* Date Range */}
-            <div className="col-span-3 flex items-center space-x-2">
-              <Calendar className="w-4 h-4 text-slate-400" />
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="px-2 py-1 border border-slate-300 rounded text-sm"
-              />
-              <span className="text-slate-400">to</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="px-2 py-1 border border-slate-300 rounded text-sm"
-              />
-            </div>
-
-            {/* Type Filter */}
-            <div className="col-span-2">
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+          <div className="flex flex-col space-y-3">
+            {/* Tabs */}
+            <div className="flex items-center space-x-1">
+              <button 
+                onClick={() => setActiveTab('all')}
+                className={`px-4 py-2 rounded-t-md text-sm font-medium ${
+                  activeTab === 'all' 
+                    ? 'bg-white border border-b-0 border-slate-300 text-blue-600' 
+                    : 'text-slate-600 hover:bg-slate-200'
+                }`}
               >
-                <option value="all">All Types</option>
-                <option value="electricity">Electricity</option>
-                <option value="gas">Gas</option>
-              </select>
-            </div>
-
-            {/* Column Config Button */}
-            <div className="col-span-2 relative" ref={columnMenuRef}>
-              <button
-                onClick={() => setShowColumnMenu(!showColumnMenu)}
-                className="w-full px-3 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 flex items-center justify-between text-sm"
-              >
-                <div className="flex items-center">
-                  <Settings className="w-4 h-4 mr-2" />
-                  <span>Columns</span>
-                </div>
-                <ChevronDown className="w-3 h-3" />
+                All Bills
               </button>
+              <button 
+                onClick={() => setActiveTab('electricity')}
+                className={`px-4 py-2 rounded-t-md text-sm font-medium ${
+                  activeTab === 'electricity' 
+                    ? 'bg-white border border-b-0 border-slate-300 text-blue-600' 
+                    : 'text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Electricity
+              </button>
+              <button 
+                onClick={() => setActiveTab('gas')}
+                className={`px-4 py-2 rounded-t-md text-sm font-medium ${
+                  activeTab === 'gas' 
+                    ? 'bg-white border border-b-0 border-slate-300 text-blue-600' 
+                    : 'text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Gas
+              </button>
+              <div className="flex-grow"></div>
               
-              {/* Column configuration dropdown */}
-              {showColumnMenu && (
-                <div className="absolute right-0 mt-1 w-72 bg-white rounded-lg shadow-lg border z-50">
-                  <div className="p-3 border-b">
-                    <h4 className="font-medium text-slate-900">Show, hide or reorder columns</h4>
-                  </div>
-                  
-                  <div className="p-3 border-b flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <input 
-                        type="checkbox" 
-                        id="select-all-columns"
-                        checked={typeFilter === 'gas' ? 
-                          Object.values(gasColumns).every(v => v) : 
-                          Object.values(electricityColumns).every(v => v)}
-                        onChange={(e) => {
-                          if (typeFilter === 'gas') {
-                            toggleAllGasColumns(e.target.checked);
-                          } else {
-                            toggleAllElectricityColumns(e.target.checked);
-                          }
-                        }}
-                        className="rounded"
-                      />
-                      <label htmlFor="select-all-columns" className="text-sm">Select all</label>
-                    </div>
-                    <div className="border-r border-slate-300 h-4 mx-2"></div>
-                    <button 
-                      onClick={resetToDefault}
-                      className="text-sm text-blue-600 hover:text-blue-800"
+              {/* Filter controls */}
+              <div className="flex items-center space-x-3">
+                {/* Search Button/Input */}
+                {showSearch ? (
+                  <div className="relative">
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      placeholder="Search meters, suppliers..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
+                    <button
+                      onClick={() => {
+                        setShowSearch(false);
+                        setSearchTerm('');
+                      }}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-slate-200 rounded"
                     >
-                      Reset to default
+                      <X className="w-4 h-4 text-slate-500" />
                     </button>
                   </div>
-                  
-                  <div className="max-h-64 overflow-y-auto">
-                    {typeFilter === 'gas' ? (
-                      // Gas column configuration
-                      Object.keys(gasColumns).map(col => {
-                        if (['checkbox', 'actions'].includes(col)) return null;
-                        
-                        return (
-                          <div key={col} className="flex items-center px-3 py-2 hover:bg-slate-50 border-b border-slate-100">
-                            <input
-                              type="checkbox"
-                              id={`col-${col}`}
-                              checked={gasColumns[col as keyof typeof gasColumns]}
-                              onChange={() => toggleGasColumn(col)}
-                              className="mr-2"
-                            />
-                            <label htmlFor={`col-${col}`} className="text-sm flex-grow cursor-pointer">
-                              {gasColumnLabels[col as keyof typeof gasColumnLabels]}
-                            </label>
-                            <div className="text-slate-400 cursor-move">
-                              <ChevronsUpDown className="w-4 h-4" />
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      // Electricity column configuration
-                      Object.keys(electricityColumns).map(col => {
-                        if (['checkbox', 'actions'].includes(col)) return null;
-                        
-                        return (
-                          <div key={col} className="flex items-center px-3 py-2 hover:bg-slate-50 border-b border-slate-100">
-                            <input
-                              type="checkbox"
-                              id={`col-${col}`}
-                              checked={electricityColumns[col as keyof typeof electricityColumns]}
-                              onChange={() => toggleElectricityColumn(col)}
-                              className="mr-2"
-                            />
-                            <label htmlFor={`col-${col}`} className="text-sm flex-grow cursor-pointer">
-                              {electricityColumnLabels[col as keyof typeof electricityColumnLabels]}
-                            </label>
-                            <div className="text-slate-400 cursor-move">
-                              <ChevronsUpDown className="w-4 h-4" />
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                  
-                  <div className="p-3 border-t">
-                    <div className="mb-1 text-sm font-medium">Row height</div>
-                    <div className="flex space-x-3 items-center justify-center mt-2">
-                      {/* Row height controls */}
-                      <button 
-                        className={`p-1 border rounded ${rowHeight < 10 ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-100'}`}
-                        onClick={() => setRowHeight(5)}
-                        title="Small"
-                        aria-label="Small row height"
-                      >
-                        <svg width="16" height="8" viewBox="0 0 16 8" fill="none">
-                          <line x1="3" y1="2" x2="13" y2="2" stroke="currentColor" strokeWidth="1.5" />
-                          <line x1="3" y1="6" x2="13" y2="6" stroke="currentColor" strokeWidth="1.5" />
-                        </svg>
-                      </button>
-                      <button 
-                        className={`p-1 border rounded ${rowHeight >= 10 && rowHeight < 20 ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-100'}`}
-                        onClick={() => setRowHeight(15)}
-                        title="Medium"
-                        aria-label="Medium row height"
-                      >
-                        <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-                          <line x1="3" y1="2" x2="13" y2="2" stroke="currentColor" strokeWidth="1.5" />
-                          <line x1="3" y1="10" x2="13" y2="10" stroke="currentColor" strokeWidth="1.5" />
-                        </svg>
-                      </button>
-                      <button 
-                        className={`p-1 border rounded ${rowHeight >= 20 ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-100'}`}
-                        onClick={() => setRowHeight(25)}
-                        title="Large"
-                        aria-label="Large row height"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                          <line x1="3" y1="2" x2="13" y2="2" stroke="currentColor" strokeWidth="1.5" />
-                          <line x1="3" y1="14" x2="13" y2="14" stroke="currentColor" strokeWidth="1.5" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowSearch(true)}
+                    className="p-2 hover:bg-slate-200 rounded-lg text-slate-600"
+                    title="Search"
+                  >
+                    <Search className="w-4 h-4" />
+                  </button>
+                )}
+                
+                {/* Date Range dropdown */}
+                <div className="flex items-center px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                  <Calendar className="w-4 h-4 text-slate-500 mr-2" />
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-32 border-none p-0 focus:ring-0 focus:outline-none"
+                  />
+                  <span className="mx-2 text-slate-400">to</span>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-32 border-none p-0 focus:ring-0 focus:outline-none"
+                  />
                 </div>
-              )}
-            </div>
-            
-            {/* Bulk Actions */}
-            <div className="col-span-2 flex items-center space-x-2">
-              <button
-                onClick={selectAll}
-                className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs hover:bg-blue-200"
-              >
-                Select All
-              </button>
-              {selectedRows.size > 0 && (
-                <button
-                  onClick={clearSelection}
-                  className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs hover:bg-gray-200"
-                >
-                  Clear ({selectedRows.size})
-                </button>
-              )}
+                
+                {/* Column Config Button */}
+                <div className="relative" ref={columnMenuRef}>
+                  <button
+                    onClick={() => setShowColumnMenu(!showColumnMenu)}
+                    className="px-3 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 flex items-center space-x-2 text-sm"
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span>Columns</span>
+                  </button>
+                  
+                  {/* Column configuration dropdown */}
+                  {showColumnMenu && (
+                    <div className="absolute right-0 mt-1 w-72 bg-white rounded-lg shadow-lg border z-50">
+                      <div className="p-3 border-b">
+                        <h4 className="font-medium text-slate-900">Customize Table</h4>
+                      </div>
+                      
+                      <div className="p-3 border-b flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <input 
+                            type="checkbox" 
+                            id="select-all-columns"
+                            checked={activeTab === 'gas' ? 
+                              Object.values(gasColumns).every(v => v) : 
+                              Object.values(electricityColumns).every(v => v)}
+                            onChange={(e) => {
+                              if (activeTab === 'gas') {
+                                toggleAllGasColumns(e.target.checked);
+                              } else {
+                                toggleAllElectricityColumns(e.target.checked);
+                              }
+                            }}
+                            className="rounded"
+                          />
+                          <label htmlFor="select-all-columns" className="text-sm">Select all</label>
+                        </div>
+                        <button 
+                          onClick={resetToDefault}
+                          className="text-sm text-blue-600 hover:text-blue-800"
+                        >
+                          Reset to default
+                        </button>
+                      </div>
+                      
+                      <div className="max-h-64 overflow-y-auto">
+                        {activeTab === 'gas' ? (
+                          // Gas column configuration
+                          Object.keys(gasColumns).map(col => {
+                            if (['checkbox', 'actions'].includes(col)) return null;
+                            
+                            return (
+                              <div key={col} className="flex items-center px-3 py-2 hover:bg-slate-50 border-b border-slate-100">
+                                <input
+                                  type="checkbox"
+                                  id={`col-${col}`}
+                                  checked={gasColumns[col as keyof typeof gasColumns]}
+                                  onChange={() => toggleGasColumn(col)}
+                                  className="mr-2"
+                                />
+                                <label htmlFor={`col-${col}`} className="text-sm flex-grow cursor-pointer">
+                                  {gasColumnLabels[col as keyof typeof gasColumnLabels]}
+                                </label>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          // Electricity column configuration
+                          Object.keys(electricityColumns).map(col => {
+                            if (['checkbox', 'actions'].includes(col)) return null;
+                            
+                            return (
+                              <div key={col} className="flex items-center px-3 py-2 hover:bg-slate-50 border-b border-slate-100">
+                                <input
+                                  type="checkbox"
+                                  id={`col-${col}`}
+                                  checked={electricityColumns[col as keyof typeof electricityColumns]}
+                                  onChange={() => toggleElectricityColumn(col)}
+                                  className="mr-2"
+                                />
+                                <label htmlFor={`col-${col}`} className="text-sm flex-grow cursor-pointer">
+                                  {electricityColumnLabels[col as keyof typeof electricityColumnLabels]}
+                                </label>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                      
+                      <div className="p-3 border-t">
+                        <div className="mb-1 text-sm font-medium">Row height</div>
+                        <div className="flex space-x-3 items-center justify-center mt-2">
+                          {/* Row height controls */}
+                          <button 
+                            className={`p-1 border rounded ${rowHeight < 10 ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-100'}`}
+                            onClick={() => setRowHeight(5)}
+                            title="Small"
+                            aria-label="Small row height"
+                          >
+                            <svg width="16" height="8" viewBox="0 0 16 8" fill="none">
+                              <line x1="3" y1="2" x2="13" y2="2" stroke="currentColor" strokeWidth="1.5" />
+                              <line x1="3" y1="6" x2="13" y2="6" stroke="currentColor" strokeWidth="1.5" />
+                            </svg>
+                          </button>
+                          <button 
+                            className={`p-1 border rounded ${rowHeight >= 10 && rowHeight < 20 ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-100'}`}
+                            onClick={() => setRowHeight(15)}
+                            title="Medium"
+                            aria-label="Medium row height"
+                          >
+                            <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+                              <line x1="3" y1="2" x2="13" y2="2" stroke="currentColor" strokeWidth="1.5" />
+                              <line x1="3" y1="10" x2="13" y2="10" stroke="currentColor" strokeWidth="1.5" />
+                            </svg>
+                          </button>
+                          <button 
+                            className={`p-1 border rounded ${rowHeight >= 20 ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-100'}`}
+                            onClick={() => setRowHeight(25)}
+                            title="Large"
+                            aria-label="Large row height"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                              <line x1="3" y1="2" x2="13" y2="2" stroke="currentColor" strokeWidth="1.5" />
+                              <line x1="3" y1="14" x2="13" y2="14" stroke="currentColor" strokeWidth="1.5" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Bulk Actions */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={selectAll}
+                    className="px-3 py-2 bg-blue-100 text-blue-800 rounded-lg text-sm hover:bg-blue-200"
+                  >
+                    Select All
+                  </button>
+                  {selectedRows.size > 0 && (
+                    <button
+                      onClick={clearSelection}
+                      className="px-3 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm hover:bg-gray-200"
+                    >
+                      Clear ({selectedRows.size})
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -993,277 +1058,331 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
             </div>
           ) : (
             <>
-              {/* Table with horizontal scroll */}
+              {/* Table with auto-scroll */}
               <div 
                 ref={tableRef} 
                 className="flex-grow overflow-x-auto overflow-y-auto"
-                style={{ scrollBehavior: 'smooth' }}
               >
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-slate-200 border-b z-10">
-                    <tr>
-                      {/* Render appropriate column headers based on bill type */}
-                      {typeFilter === 'gas' ? (
-                        // Gas bill columns
-                        Object.entries(gasColumns).map(([key, visible]) => {
-                          if (!visible) return null;
-                          
-                          const isSortable = sortableColumns.includes(key);
-                          
-                          return (
-                            <th 
-                              key={key}
-                              className={`p-2 border-r ${
-                                key === 'checkbox' ? 'w-8 text-center' :
-                                key === 'actions' ? 'w-16 text-center' :
-                                ['total_cost', 'vat_amount', 'carbon_tax', 'standing_charge', 'commodity_cost', 'consumption_kwh', 'units_consumed', 'conversion_factor'].includes(key) 
-                                  ? 'text-right' : 'text-left'
-                              }`}
-                            >
-                              {key === 'checkbox' ? (
-                                <input
-                                  type="checkbox"
-                                  onChange={(e) => {
-                                    if (e.target.checked) selectAll();
-                                    else clearSelection();
-                                  }}
-                                  checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
-                                />
-                              ) : isSortable ? (
-                                <SortableHeader 
-                                  column={key} 
-                                  label={gasColumnLabels[key as keyof typeof gasColumnLabels]} 
-                                />
-                              ) : (
-                                gasColumnLabels[key as keyof typeof gasColumnLabels]
-                              )}
-                            </th>
-                          );
-                        })
-                      ) : (
-                        // Electricity bill columns or both types
-                        Object.entries(electricityColumns).map(([key, visible]) => {
-                          if (!visible) return null;
-                          
-                          const isSortable = sortableColumns.includes(key);
-                          
-                          return (
-                            <th 
-                              key={key}
-                              className={`p-2 border-r ${
-                                key === 'checkbox' ? 'w-8 text-center' :
-                                key === 'actions' ? 'w-16 text-center' :
-                                ['total_cost', 'vat_amount', 'electricity_tax', 'standing_charge', 'day_kwh', 'night_kwh', 'total_kwh', 'mic_value', 'max_demand'].includes(key) 
-                                  ? 'text-right' : 'text-left'
-                              }`}
-                            >
-                              {key === 'checkbox' ? (
-                                <input
-                                  type="checkbox"
-                                  onChange={(e) => {
-                                    if (e.target.checked) selectAll();
-                                    else clearSelection();
-                                  }}
-                                  checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
-                                />
-                              ) : isSortable ? (
-                                <SortableHeader 
-                                  column={key} 
-                                  label={electricityColumnLabels[key as keyof typeof electricityColumnLabels]} 
-                                />
-                              ) : (
-                                electricityColumnLabels[key as keyof typeof electricityColumnLabels]
-                              )}
-                            </th>
-                          );
-                        })
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRows.map((row) => (
-                      <tr
-                        key={row.id}
-                        className={`border-b hover:bg-slate-50 ${
-                          selectedRows.has(row.id) ? 'bg-blue-50' : ''
-                        }`}
-                        style={{ height: `${getRowHeightPx()}px` }}
-                      >
-                        {row.type === 'gas' ? (
-                          // Gas bill rows
-                          Object.entries(gasColumns).map(([key, visible]) => {
+                {/* Electricity Bills Table */}
+                {(activeTab === 'all' || activeTab === 'electricity') && 
+                 filteredRows.some(row => row.type === 'electricity') && (
+                  <div className="mb-4">
+                    {activeTab === 'all' && (
+                      <div className="sticky left-0 bg-blue-50 px-4 py-2 text-blue-800 font-medium border-b border-blue-200">
+                        Electricity Bills ({filteredRows.filter(r => r.type === 'electricity').length})
+                      </div>
+                    )}
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-slate-200 border-b z-10">
+                        <tr>
+                          {Object.entries(electricityColumns).map(([key, visible]) => {
                             if (!visible) return null;
                             
-                            if (key === 'checkbox') {
-                              return (
-                                <td key={key} className="text-center border-r">
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedRows.has(row.id)}
-                                    onChange={() => toggleRow(row.id)}
-                                  />
-                                </td>
-                              );
-                            }
-                            
-                            if (key === 'actions') {
-                             return (
-                               <td key={key} className="text-center border-r p-2">
-                                 <div className="flex justify-center space-x-2">
-                                   <a
-                                     href={getS3PdfUrl(row)}
-                                     target="_blank"
-                                     rel="noopener noreferrer"
-                                     className="p-1 text-blue-500 hover:text-blue-700"
-                                   >
-                                     <Download className="w-4 h-4" />
-                                   </a>
-                                 </div>
-                               </td>
-                             );
-                           }
-                            
-                            // Format cell content based on column type
-                            let content = row[key as keyof BillRow];
-                            
-                            if (key === 'date') {
-                              content = row.date ? new Date(row.date).toLocaleDateString() : 'N/A';
-                            } else if (['total_cost', 'vat_amount', 'carbon_tax', 'standing_charge', 'commodity_cost'].includes(key)) {
-                              content = typeof row[key as keyof BillRow] === 'number' ? `€${(row[key as keyof BillRow] as number).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-';
-                            } else if (['consumption_kwh', 'units_consumed', 'total_kwh'].includes(key)) {
-                              content = typeof row[key as keyof BillRow] === 'number' ? (row[key as keyof BillRow] as number).toLocaleString() : '-';
-                            } else if (key === 'conversion_factor') {
-                              content = typeof row[key as keyof BillRow] === 'number' ? (row[key as keyof BillRow] as number).toFixed(4) : '-';
-                            }
+                            const isSortable = sortableColumns.includes(key);
                             
                             return (
-                              <td 
-                                key={key} 
+                              <th 
+                                key={key}
                                 className={`p-2 border-r ${
-                                  ['total_cost', 'vat_amount', 'carbon_tax', 'standing_charge', 'commodity_cost', 'consumption_kwh', 'units_consumed', 'conversion_factor'].includes(key) 
-                                    ? 'text-right font-mono' : ''
+                                  key === 'checkbox' ? 'w-8 text-center sticky left-0 bg-slate-200' :
+                                  key === 'actions' ? 'w-16 text-center' :
+                                  ['total_cost', 'vat_amount', 'electricity_tax', 'standing_charge', 'day_kwh', 
+                                   'night_kwh', 'total_kwh', 'mic_value', 'max_demand', 'mic_excess', 'mic_excess_cost'].includes(key) 
+                                    ? 'text-right' : 'text-left'
                                 }`}
-                                onClick={() => toggleRow(row.id)}
                               >
-                                {content}
-                              </td>
+                                {key === 'checkbox' ? (
+                                  <input
+                                    type="checkbox"
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        // Select only electricity rows
+                                        setSelectedRows(new Set(
+                                          filteredRows
+                                            .filter(r => r.type === 'electricity')
+                                            .map(r => r.id)
+                                        ));
+                                      } else {
+                                        // Clear only electricity selections
+                                        setSelectedRows(prev => {
+                                          const newSet = new Set(prev);
+                                          filteredRows
+                                            .filter(r => r.type === 'electricity')
+                                            .forEach(r => newSet.delete(r.id));
+                                          return newSet;
+                                        });
+                                      }
+                                    }}
+                                    checked={
+                                      filteredRows.filter(r => r.type === 'electricity').length > 0 &&
+                                      filteredRows.filter(r => r.type === 'electricity')
+                                        .every(r => selectedRows.has(r.id))
+                                    }
+                                  />
+                                ) : isSortable ? (
+                                  <SortableHeader 
+                                    column={key} 
+                                    label={electricityColumnLabels[key as keyof typeof electricityColumnLabels]} 
+                                  />
+                                ) : (
+                                  electricityColumnLabels[key as keyof typeof electricityColumnLabels]
+                                )}
+                              </th>
                             );
-                          })
-                        ) : (
-                          // Electricity bill rows
-                          Object.entries(electricityColumns).map(([key, visible]) => {
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredRows.filter(row => row.type === 'electricity').map((row) => (
+                          <tr
+                            key={row.id}
+                            className={`border-b hover:bg-slate-50 ${
+                              selectedRows.has(row.id) ? 'bg-blue-50' : ''
+                            }`}
+                            style={{ height: `${getRowHeightPx()}px` }}
+                          >
+                            {Object.entries(electricityColumns).map(([key, visible]) => {
+                              if (!visible) return null;
+                              
+                              if (key === 'checkbox') {
+                                return (
+                                  <td key={key} className="text-center border-r sticky left-0 bg-inherit">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedRows.has(row.id)}
+                                      onChange={() => toggleRow(row.id)}
+                                    />
+                                  </td>
+                                );
+                              }
+                              
+                              if (key === 'actions') {
+                                return (
+                                  <td key={key} className="text-center border-r p-2">
+                                    <div className="flex justify-center space-x-2">
+                                      <a
+                                        href={getS3PdfUrl(row)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-1 text-blue-500 hover:text-blue-700"
+                                      >
+                                        <Download className="w-4 h-4" />
+                                      </a>
+                                    </div>
+                                  </td>
+                                );
+                              }
+                              
+                              // Format cell content based on column type
+                              let content = row[key as keyof BillRow];
+                              
+                              if (key === 'date') {
+                                content = row.date ? new Date(row.date).toLocaleDateString() : 'N/A';
+                              } else if (['total_cost', 'vat_amount', 'electricity_tax', 'standing_charge', 'mic_excess_cost'].includes(key)) {
+                                content = typeof row[key as keyof BillRow] === 'number' ? `€${(row[key as keyof BillRow] as number).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-';
+                              } else if (['day_kwh', 'night_kwh', 'total_kwh', 'mic_value', 'max_demand', 'mic_excess'].includes(key)) {
+                                content = typeof row[key as keyof BillRow] === 'number' ? (row[key as keyof BillRow] as number).toLocaleString() : '-';
+                              }
+                              
+                              return (
+                                <td 
+                                  key={key} 
+                                  className={`p-2 border-r ${
+                                    ['total_cost', 'vat_amount', 'electricity_tax', 'standing_charge', 'day_kwh', 
+                                     'night_kwh', 'total_kwh', 'mic_value', 'max_demand', 'mic_excess', 'mic_excess_cost'].includes(key) 
+                                      ? 'text-right font-mono' : ''
+                                  }`}
+                                  onClick={() => toggleRow(row.id)}
+                                >
+                                  {content}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Gas Bills Table */}
+                {(activeTab === 'all' || activeTab === 'gas') && 
+                 filteredRows.some(row => row.type === 'gas') && (
+                  <div>
+                    {activeTab === 'all' && (
+                      <div className="sticky left-0 bg-green-50 px-4 py-2 text-green-800 font-medium border-b border-green-200">
+                        Gas Bills ({filteredRows.filter(r => r.type === 'gas').length})
+                      </div>
+                    )}
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-slate-200 border-b z-10">
+                        <tr>
+                          {Object.entries(gasColumns).map(([key, visible]) => {
                             if (!visible) return null;
                             
-                            if (key === 'checkbox') {
-                              return (
-                                <td key={key} className="text-center border-r">
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedRows.has(row.id)}
-                                    onChange={() => toggleRow(row.id)}
-                                  />
-                                </td>
-                              );
-                            }
-                            
-                            if (key === 'actions') {
-                             return (
-                               <td key={key} className="text-center border-r p-2">
-                                 <div className="flex justify-center space-x-2">
-                                   <a
-                                     href={getS3PdfUrl(row)}
-                                     target="_blank"
-                                     rel="noopener noreferrer"
-                                     className="p-1 text-blue-500 hover:text-blue-700"
-                                   >
-                                     <Download className="w-4 h-4" />
-                                   </a>
-                                 </div>
-                               </td>
-                             );
-                           }
-                            
-                            // Format cell content based on column type
-                            let content = row[key as keyof BillRow];
-                            
-                            if (key === 'date') {
-                              content = row.date ? new Date(row.date).toLocaleDateString() : 'N/A';
-                            } else if (['total_cost', 'vat_amount', 'electricity_tax', 'standing_charge'].includes(key)) {
-                              content = typeof row[key as keyof BillRow] === 'number' ? `€${(row[key as keyof BillRow] as number).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-';
-                            } else if (['day_kwh', 'night_kwh', 'total_kwh', 'mic_value', 'max_demand'].includes(key)) {
-                              content = typeof row[key as keyof BillRow] === 'number' ? (row[key as keyof BillRow] as number).toLocaleString() : '-';
-                            }
+                            const isSortable = sortableColumns.includes(key);
                             
                             return (
-                              <td 
-                                key={key} 
+                              <th 
+                                key={key}
                                 className={`p-2 border-r ${
-                                  ['total_cost', 'vat_amount', 'electricity_tax', 'standing_charge', 'day_kwh', 'night_kwh', 'total_kwh', 'mic_value', 'max_demand'].includes(key) 
-                                    ? 'text-right font-mono' : ''
+                                  key === 'checkbox' ? 'w-8 text-center sticky left-0 bg-slate-200' :
+                                  key === 'actions' ? 'w-16 text-center' :
+                                  ['total_cost', 'vat_amount', 'carbon_tax', 'standing_charge', 'commodity_cost', 
+                                   'consumption_kwh', 'units_consumed', 'conversion_factor'].includes(key) 
+                                    ? 'text-right' : 'text-left'
                                 }`}
-                                onClick={() => toggleRow(row.id)}
                               >
-                                {content}
-                              </td>
+                                {key === 'checkbox' ? (
+                                  <input
+                                    type="checkbox"
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        // Select only gas rows
+                                        setSelectedRows(new Set(
+                                          filteredRows
+                                            .filter(r => r.type === 'gas')
+                                            .map(r => r.id)
+                                        ));
+                                      } else {
+                                        // Clear only gas selections
+                                        setSelectedRows(prev => {
+                                          const newSet = new Set(prev);
+                                          filteredRows
+                                            .filter(r => r.type === 'gas')
+                                            .forEach(r => newSet.delete(r.id));
+                                          return newSet;
+                                        });
+                                      }
+                                    }}
+                                    checked={
+                                      filteredRows.filter(r => r.type === 'gas').length > 0 &&
+                                      filteredRows.filter(r => r.type === 'gas')
+                                        .every(r => selectedRows.has(r.id))
+                                    }
+                                  />
+                                ) : isSortable ? (
+                                  <SortableHeader 
+                                    column={key} 
+                                    label={gasColumnLabels[key as keyof typeof gasColumnLabels]} 
+                                  />
+                                ) : (
+                                  gasColumnLabels[key as keyof typeof gasColumnLabels]
+                                )}
+                              </th>
                             );
-                          })
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredRows.filter(row => row.type === 'gas').map((row) => (
+                          <tr
+                            key={row.id}
+                            className={`border-b hover:bg-slate-50 ${
+                              selectedRows.has(row.id) ? 'bg-blue-50' : ''
+                            }`}
+                            style={{ height: `${getRowHeightPx()}px` }}
+                          >
+                            {Object.entries(gasColumns).map(([key, visible]) => {
+                              if (!visible) return null;
+                              
+                              if (key === 'checkbox') {
+                                return (
+                                  <td key={key} className="text-center border-r sticky left-0 bg-inherit">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedRows.has(row.id)}
+                                      onChange={() => toggleRow(row.id)}
+                                    />
+                                  </td>
+                                );
+                              }
+                              
+                              if (key === 'actions') {
+                                return (
+                                  <td key={key} className="text-center border-r p-2">
+                                    <div className="flex justify-center space-x-2">
+                                      <a
+                                        href={getS3PdfUrl(row)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-1 text-blue-500 hover:text-blue-700"
+                                      >
+                                        <Download className="w-4 h-4" />
+                                      </a>
+                                    </div>
+                                  </td>
+                                );
+                              }
+                              
+                              // Format cell content based on column type
+                              let content = row[key as keyof BillRow];
+                              
+                              if (key === 'date') {
+                                content = row.date ? new Date(row.date).toLocaleDateString() : 'N/A';
+                              } else if (['total_cost', 'vat_amount', 'carbon_tax', 'standing_charge', 'commodity_cost'].includes(key)) {
+                                content = typeof row[key as keyof BillRow] === 'number' ? `€${(row[key as keyof BillRow] as number).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-';
+                              } else if (['consumption_kwh', 'units_consumed', 'total_kwh'].includes(key)) {
+                                content = typeof row[key as keyof BillRow] === 'number' ? (row[key as keyof BillRow] as number).toLocaleString() : '-';
+                              } else if (key === 'conversion_factor') {
+                                content = typeof row[key as keyof BillRow] === 'number' ? (row[key as keyof BillRow] as number).toFixed(4) : '-';
+                              }
+                              
+                              return (
+                                <td 
+                                  key={key} 
+                                  className={`p-2 border-r ${
+                                    ['total_cost', 'vat_amount', 'carbon_tax', 'standing_charge', 'commodity_cost', 
+                                     'consumption_kwh', 'units_consumed', 'conversion_factor'].includes(key) 
+                                      ? 'text-right font-mono' : ''
+                                  }`}
+                                  onClick={() => toggleRow(row.id)}
+                                >
+                                  {content}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
               
-              {/* Horizontal scroll slider */}
-              <div className="flex items-center justify-between px-6 py-3 bg-slate-100 border-t">
-                <div className="flex items-center space-x-2">
-                  <button
-                    className="p-1 rounded hover:bg-slate-200"
-                    onClick={() => setHorizontalScroll(Math.max(0, horizontalScroll - 10))}
-                    aria-label="Scroll left"
-                  >
-                    <ArrowLeft size={16} />
-                  </button>
-                  <div className="w-64 relative">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={horizontalScroll}
-                      onChange={(e) => setHorizontalScroll(parseInt(e.target.value))}
-                      className="w-full accent-blue-500"
-                      aria-label="Horizontal scroll"
-                    />
-                  </div>
-                  <button
-                    className="p-1 rounded hover:bg-slate-200"
-                    onClick={() => setHorizontalScroll(Math.min(100, horizontalScroll + 10))}
-                    aria-label="Scroll right"
-                  >
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-                
-                <div className="flex items-center space-x-6">
-                  <div className="text-sm">
-                    {typeFilter === 'electricity' ? (
-                      <>Total: <span className="font-bold">{totals.electricity.totalKwh.toLocaleString()} kWh</span></>
-                    ) : typeFilter === 'gas' ? (
-                      <>Total: <span className="font-bold">{totals.gas.totalKwh.toLocaleString()} kWh</span></>
-                    ) : (
-                      <>Total: <span className="font-bold">€{(totals.electricity.totalCost + totals.gas.totalCost).toLocaleString()}</span></>
+              {/* Footer with summary info */}
+              <div className="bg-slate-100 border-t px-6 py-3 flex items-center justify-between">
+                <div className="text-sm">
+                  {activeTab === 'electricity' ? (
+                    <>
+                      <span className="font-semibold">Total:</span> {totals.electricity.totalKwh.toLocaleString()} kWh • 
+                      €{totals.electricity.totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      {totals.electricity.micExcessCost > 0 && (
+                        <> • <span className="text-amber-600">MIC Excess: €{totals.electricity.micExcessCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>                      </>
                     )}
-                  </div>
-                  <div className="text-sm font-medium">
-                    {filteredRows.length} {filteredRows.length === 1 ? 'bill' : 'bills'} • 
-                    {selectedRows.size > 0 && ` ${selectedRows.size} selected`}
-                  </div>
-                </div>
+                  </> 
+                ) : activeTab === 'gas' ? (
+                  <>
+                    <span className="font-semibold">Total:</span> {totals.gas.totalKwh.toLocaleString()} kWh • 
+                    €{totals.gas.totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </>
+                ) : (
+                  <>
+                    <span className="font-semibold">Combined:</span> {(totals.electricity.totalKwh + totals.gas.totalKwh).toLocaleString()} kWh • 
+                    €{(totals.electricity.totalCost + totals.gas.totalCost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </>
+                )}
               </div>
-            </>
-          )}
-        </div>
+              
+              <div className="text-slate-600 text-sm">
+                {filteredRows.length} {filteredRows.length === 1 ? 'bill' : 'bills'} 
+                {selectedRows.size > 0 && ` • ${selectedRows.size} selected`}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
-  );
+  </div>
+);
 }
