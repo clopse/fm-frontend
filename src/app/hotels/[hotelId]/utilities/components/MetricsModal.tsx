@@ -32,8 +32,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
-  const [dateFrom, setDateFrom] = useState(`${year}-01-01`);
-  const [dateTo, setDateTo] = useState(`${year}-12-31`);
+  const [dateFrom, setDateFrom] = useState(`${year - 2}-01-01`);
+  const [dateTo, setDateTo] = useState(`${new Date().getFullYear()}-12-31`);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -42,12 +42,32 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
 
   const fetchAllBills = async () => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${year}`
-      );
-      const data = await response.json();
-      console.log('Bills fetched:', data.bills?.length || 0);
-      setBills(data.bills || []);
+      // Fetch bills for multiple years (current year and previous years)
+      const currentYear = new Date().getFullYear();
+      const yearsToFetch = [currentYear, currentYear - 1, currentYear - 2];
+      
+      const allBills: any[] = [];
+      
+      for (const fetchYear of yearsToFetch) {
+        try {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${fetchYear}`
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log(`Bills fetched for ${fetchYear}:`, data.bills?.length || 0);
+            if (data.bills && Array.isArray(data.bills)) {
+              allBills.push(...data.bills);
+            }
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch bills for ${fetchYear}:`, error);
+        }
+      }
+      
+      console.log('Total bills fetched:', allBills.length);
+      setBills(allBills);
     } catch (error) {
       console.error('Failed to fetch bills:', error);
     } finally {
@@ -344,7 +364,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${hotelId}_utility_breakdown_${year}.csv`;
+    a.download = `${hotelId}_utility_breakdown_all_years.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -360,7 +380,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
             <div className="flex items-center space-x-3">
               <FileText className="w-6 h-6 text-slate-600" />
               <div>
-                <h3 className="text-xl font-bold text-slate-900">Utility Bill Breakdown - {year}</h3>
+                <h3 className="text-xl font-bold text-slate-900">Utility Bill Breakdown - All Years</h3>
                 <p className="text-slate-600 text-sm">
                   {totals.count} line items • €{totals.amount.toLocaleString()} total
                   {selectedRows.size > 0 && ` (${selectedRows.size} selected)`}
