@@ -500,7 +500,14 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
       }
     };
   }, [filteredRows, selectedRows]);
-
+// Helper function to generate S3 PDF URL
+  const getS3PdfUrl = (row: BillRow) => {
+  // Extract year from date
+  const year = row.date ? row.date.substring(0, 4) : "2024"; // Default to 2024 if no date
+  
+  // Construct the URL for the PDF
+  return `${process.env.NEXT_PUBLIC_API_URL}/utilities/bill-pdf/${hotelId}/${row.type}/${year}/${encodeURIComponent(row.filename)}`;
+};
   // Row selection functions
   const toggleRow = (rowId: string) => {
     setSelectedRows(prev => {
@@ -1100,21 +1107,21 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                             }
                             
                             if (key === 'actions') {
-                              return (
-                                <td key={key} className="text-center border-r p-2">
-                                  <div className="flex justify-center space-x-2">
-                                    <a
-                                      href={`/api/utilities/bill-pdf/${row.billId}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="p-1 text-blue-500 hover:text-blue-700"
-                                    >
-                                      <Download className="w-4 h-4" />
-                                    </a>
-                                  </div>
-                                </td>
-                              );
-                            }
+                             return (
+                               <td key={key} className="text-center border-r p-2">
+                                 <div className="flex justify-center space-x-2">
+                                   <a
+                                     href={getS3PdfUrl(row)}
+                                     target="_blank"
+                                     rel="noopener noreferrer"
+                                     className="p-1 text-blue-500 hover:text-blue-700"
+                                   >
+                                     <Download className="w-4 h-4" />
+                                   </a>
+                                 </div>
+                               </td>
+                             );
+                           }
                             
                             // Format cell content based on column type
                             let content = row[key as keyof BillRow];
@@ -1160,21 +1167,21 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                             }
                             
                             if (key === 'actions') {
-                              return (
-                                <td key={key} className="text-center border-r p-2">
-                                  <div className="flex justify-center space-x-2">
-                                    <a
-                                      href={`/api/utilities/bill-pdf/${row.billId}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="p-1 text-blue-500 hover:text-blue-700"
-                                    >
-                                      <Download className="w-4 h-4" />
-                                    </a>
-                                  </div>
-                                </td>
-                              );
-                            }
+                             return (
+                               <td key={key} className="text-center border-r p-2">
+                                 <div className="flex justify-center space-x-2">
+                                   <a
+                                     href={getS3PdfUrl(row)}
+                                     target="_blank"
+                                     rel="noopener noreferrer"
+                                     className="p-1 text-blue-500 hover:text-blue-700"
+                                   >
+                                     <Download className="w-4 h-4" />
+                                   </a>
+                                 </div>
+                               </td>
+                             );
+                           }
                             
                             // Format cell content based on column type
                             let content = row[key as keyof BillRow];
