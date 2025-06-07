@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import { Droplets, Loader2, MousePointer2 } from "lucide-react";
 import React from "react";
-import type { WaterMonthEntry } from "@/hooks/useWaterMonthlyData";
+import type { WaterMonthEntry } from "../hooks/useWaterMonthlyData";
 
 interface WaterChartProps {
   data: WaterMonthEntry[];
