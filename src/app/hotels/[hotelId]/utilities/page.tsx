@@ -149,8 +149,6 @@ export default function UtilitiesDashboard() {
         year={year}
         billsCount={data.bills?.length || 0}
         onShowBills={() => handleShowBills()}
-        onShowMetrics={() => setShowMetricsModal(true)}
-        onShowFilters={() => setShowFiltersModal(true)}
         onUpload={() => setShowUploadModal(true)}
       />
 
