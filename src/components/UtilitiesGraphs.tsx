@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
   LineChart, Line, PieChart, Pie, Cell
 } from "recharts";
 import { ChevronDown, Filter, TrendingUp, Zap, Flame, Droplets, Users, Calendar, Euro } from 'lucide-react';
 import { hotels } from '@/lib/hotels';
+import { startOfMonth, endOfMonth, eachDayOfInterval, format, parse, isValid, parseISO } from 'date-fns';
 
 interface UtilityBill {
   hotelId: string;
@@ -14,6 +15,18 @@ interface UtilityBill {
   month: string;
   year: string;
   data: any; // The parsed JSON data from your utility bills
+}
+
+interface MonthlyUtilityData {
+  hotelId: string;
+  billType: 'electricity' | 'gas' | 'water';
+  year: string;
+  month: string;
+  monthKey: string; // Format: "YYYY-MM"
+  totalKwh: number;
+  totalCost: number;
+  dayCount: number;
+  metrics: Record<string, number>;
 }
 
 // Enhanced metrics that match your real JSON structure
@@ -64,6 +77,7 @@ const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#0
 
 export function UtilitiesGraphs() {
   const [utilityData, setUtilityData] = useState<UtilityBill[]>([]);
+  const [proportionalData, setProportionalData] = useState<MonthlyUtilityData[]>([]);
   const [loading, setLoading] = useState(false);
   
   // Filter states
@@ -79,73 +93,17 @@ export function UtilitiesGraphs() {
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
 
-  // Real data fetching from your S3-based API
-  useEffect(() => {
-    const fetchUtilityData = async () => {
-      setLoading(true);
-      try {
-        const billsPromises = selectedHotels.map(async (hotelId) => {
-          const bills: UtilityBill[] = [];
-          
-          for (const year of selectedYears) {
-            try {
-              const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${year}`
-              );
-              
-              if (response.ok) {
-                const data = await response.json();
-                
-                // Transform S3 data to UtilityBill format
-                for (const bill of data.bills || []) {
-                  const summary = bill.summary || {};
-                  const billDate = summary.bill_date || '';
-                  
-                  if (billDate) {
-                    const [billYear, billMonth] = billDate.split('-');
-                    const monthName = MONTHS[parseInt(billMonth) - 1];
-                    
-                    // Filter by selected months and utility type
-                    if (selectedMonths.includes(monthName) && 
-                        bill.utility_type === selectedUtilityType) {
-                      bills.push({
-                        hotelId,
-                        billType: bill.utility_type as 'electricity' | 'gas' | 'water',
-                        month: monthName,
-                        year: billYear,
-                        data: bill.raw_data || bill // Use raw_data if available, fallback to bill
-                      });
-                    }
-                  }
-                }
-              }
-            } catch (error) {
-              console.error(`Error fetching ${hotelId} ${year}:`, error);
-            }
-          }
-          
-          return bills;
-        });
-        
-        const allBills = (await Promise.all(billsPromises)).flat();
-        setUtilityData(allBills);
-        
-      } catch (error) {
-        console.error('Error fetching utility data:', error);
-        setUtilityData([]);
-      }
-      setLoading(false);
-    };
-
-    if (selectedHotels.length > 0 && selectedMonths.length > 0 && selectedYears.length > 0) {
-      fetchUtilityData();
-    } else {
-      setUtilityData([]);
-      setLoading(false);
-    }
-  }, [selectedHotels, selectedUtilityType, selectedMonths, selectedYears]);
-
-  // Updated metric extraction function to match your real JSON structures
+  // Helper function to get month number from name
+  const getMonthNumber = (monthName: string): number => {
+    return MONTHS.findIndex(m => m === monthName) + 1;
+  };
+  
+  // Helper function to format month number to name
+  const getMonthName = (monthNumber: number): string => {
+    return MONTHS[monthNumber - 1] || '';
+  };
+  
+  // Extract metric value from bill
   const extractMetricValue = (bill: UtilityBill, metric: string): number => {
     const data = bill.data;
     
@@ -273,52 +231,291 @@ export function UtilitiesGraphs() {
     return 0;
   };
 
-  // Generate chart data based on comparison mode
+  // Real data fetching from your S3-based API
+  useEffect(() => {
+    const fetchUtilityData = async () => {
+      setLoading(true);
+      try {
+        const billsPromises = selectedHotels.map(async (hotelId) => {
+          const bills: UtilityBill[] = [];
+          
+          // Fetch data from all years, not just the selected ones
+          // This is important for bills that span across years
+          const yearsToFetch = [...YEARS];
+          
+          for (const year of yearsToFetch) {
+            try {
+              const response = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${year}`
+              );
+              
+              if (response.ok) {
+                const data = await response.json();
+                
+                // Transform S3 data to UtilityBill format - get all bills regardless of month
+                for (const bill of data.bills || []) {
+                  const summary = bill.summary || {};
+                  const billDate = summary.bill_date || '';
+                  
+                  if (billDate) {
+                    const [billYear, billMonth] = billDate.split('-');
+                    const monthName = MONTHS[parseInt(billMonth) - 1];
+                    
+                    // Include all utility bills for later proportional distribution
+                    if (bill.utility_type === selectedUtilityType) {
+                      bills.push({
+                        hotelId,
+                        billType: bill.utility_type as 'electricity' | 'gas' | 'water',
+                        month: monthName,
+                        year: billYear,
+                        data: bill.raw_data || bill
+                      });
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.error(`Error fetching ${hotelId} ${year}:`, error);
+            }
+          }
+          
+          return bills;
+        });
+        
+        const allBills = (await Promise.all(billsPromises)).flat();
+        setUtilityData(allBills);
+        
+      } catch (error) {
+        console.error('Error fetching utility data:', error);
+        setUtilityData([]);
+      }
+      setLoading(false);
+    };
+
+    if (selectedHotels.length > 0 && selectedUtilityType) {
+      fetchUtilityData();
+    } else {
+      setUtilityData([]);
+      setLoading(false);
+    }
+  }, [selectedHotels, selectedUtilityType]);
+  
+  // Process utility data to distribute bills proportionally across months
+  useEffect(() => {
+    if (utilityData.length > 0) {
+      const proportionalMonthlyData = generateProportionalMonthlyData(utilityData);
+      
+      // Filter out months/years that are not in our selections
+      const filteredData = proportionalMonthlyData.filter(data => {
+        const isSelectedHotel = selectedHotels.includes(data.hotelId);
+        const isSelectedYear = selectedYears.includes(data.year);
+        const isSelectedMonth = selectedMonths.includes(data.month);
+        
+        return isSelectedHotel && isSelectedYear && isSelectedMonth;
+      });
+      
+      setProportionalData(filteredData);
+    } else {
+      setProportionalData([]);
+    }
+  }, [utilityData, selectedHotels, selectedMonths, selectedYears]);
+
+  // Generate proportional monthly data
+  const generateProportionalMonthlyData = (bills: UtilityBill[]): MonthlyUtilityData[] => {
+    // Structure to store aggregated data by month
+    const monthlyDataMap: Record<string, MonthlyUtilityData> = {};
+    
+    // Process each bill and distribute its data proportionally
+    bills.forEach(bill => {
+      try {
+        // Extract billing period dates from bill data
+        let startDate: Date | null = null;
+        let endDate: Date | null = null;
+        
+        // Try to extract billing period from raw data
+        if (bill.data) {
+          try {
+            // Try to get billing period from structured data
+            if (bill.data.billingPeriod) {
+              startDate = parseISO(bill.data.billingPeriod.startDate);
+              endDate = parseISO(bill.data.billingPeriod.endDate);
+            } else if (bill.data.billSummary && bill.data.billSummary.billingPeriodStartDate) {
+              startDate = parseISO(bill.data.billSummary.billingPeriodStartDate);
+              endDate = parseISO(bill.data.billSummary.billingPeriodEndDate);
+            } else if (bill.data.summary?.billing_period_start) {
+              startDate = parseISO(bill.data.summary.billing_period_start);
+              endDate = parseISO(bill.data.summary.billing_period_end);
+            }
+          } catch (error) {
+            console.warn("Failed to parse billing period dates:", error);
+            startDate = null;
+            endDate = null;
+          }
+        }
+        
+        // If we couldn't extract from raw data, use the bill month/year as fallback
+        if (!startDate || !endDate || !isValid(startDate) || !isValid(endDate)) {
+          const monthIndex = getMonthNumber(bill.month) - 1;
+          if (monthIndex >= 0) {
+            startDate = new Date(parseInt(bill.year), monthIndex, 1);
+            endDate = endOfMonth(startDate);
+          } else {
+            console.warn('Could not determine billing period for bill:', bill);
+            return; // Skip this bill
+          }
+        }
+        
+        // Ensure dates are valid
+        if (!isValid(startDate) || !isValid(endDate) || startDate > endDate) {
+          console.warn('Invalid billing period dates:', startDate, endDate);
+          return; // Skip this bill
+        }
+
+        // Get all days in the billing period
+        const daysInPeriod = eachDayOfInterval({ start: startDate, end: endDate });
+        const totalDays = daysInPeriod.length;
+        
+        if (totalDays <= 0) {
+          console.warn('Empty billing period:', startDate, endDate);
+          return; // Skip this bill
+        }
+        
+        // Extract metric values from bill
+        const metricValues: Record<string, number> = {};
+        AVAILABLE_METRICS[bill.billType].forEach(metric => {
+          metricValues[metric.key] = extractMetricValue(bill, metric.key);
+        });
+        
+        // Get total kWh and cost based on bill type
+        const totalKwh = bill.billType === 'electricity' 
+          ? extractMetricValue(bill, 'total_consumption')
+          : bill.billType === 'gas'
+            ? extractMetricValue(bill, 'total_consumption')
+            : extractMetricValue(bill, 'total_consumption');
+            
+        const totalCost = extractMetricValue(bill, 'total_cost');
+        
+        // Group days by month
+        const daysByMonth: Record<string, number> = {};
+        
+        daysInPeriod.forEach(day => {
+          const monthKey = format(day, 'yyyy-MM');
+          daysByMonth[monthKey] = (daysByMonth[monthKey] || 0) + 1;
+        });
+        
+        // Distribute bill values to each month
+        Object.entries(daysByMonth).forEach(([monthKey, dayCount]) => {
+          const proportion = dayCount / totalDays;
+          const [year, month] = monthKey.split('-');
+          const monthName = getMonthName(parseInt(month));
+          
+          // Create a unique key for this hotel-month-bill type
+          const dataKey = `${bill.hotelId}-${monthKey}-${bill.billType}`;
+          
+          // Initialize or update month data
+          if (!monthlyDataMap[dataKey]) {
+            monthlyDataMap[dataKey] = {
+              hotelId: bill.hotelId,
+              billType: bill.billType,
+              year,
+              month: monthName,
+              monthKey,
+              totalKwh: 0,
+              totalCost: 0,
+              dayCount: 0,
+              metrics: {}
+            };
+            
+            // Initialize metric values
+            AVAILABLE_METRICS[bill.billType].forEach(metric => {
+              monthlyDataMap[dataKey].metrics[metric.key] = 0;
+            });
+          }
+          
+          // Add proportional values to the month
+          monthlyDataMap[dataKey].totalKwh += totalKwh * proportion;
+          monthlyDataMap[dataKey].totalCost += totalCost * proportion;
+          monthlyDataMap[dataKey].dayCount += dayCount;
+          
+          // Add proportional values for all metrics
+          Object.entries(metricValues).forEach(([metricKey, value]) => {
+            monthlyDataMap[dataKey].metrics[metricKey] = 
+              (monthlyDataMap[dataKey].metrics[metricKey] || 0) + (value * proportion);
+          });
+        });
+      } catch (error) {
+        console.warn('Error processing bill for proportional distribution:', error);
+      }
+    });
+    
+    // Convert to array format
+    return Object.values(monthlyDataMap);
+  };
+
+  // Generate chart data based on comparison mode using proportional data
   const getChartData = () => {
     const currentMetric = AVAILABLE_METRICS[selectedUtilityType].find(m => m.key === selectedMetric);
     
     if (comparisonMode === 'hotels') {
       return selectedHotels.map(hotelId => {
         const hotel = hotels.find(h => h.id === hotelId);
-        const hotelBills = utilityData.filter(bill => bill.hotelId === hotelId);
-        const totalValue = hotelBills.reduce((sum, bill) => sum + extractMetricValue(bill, selectedMetric), 0);
-        const avgValue = hotelBills.length > 0 ? totalValue / hotelBills.length : 0;
+        const hotelData = proportionalData.filter(data => data.hotelId === hotelId);
+        
+        // Sum the metric values across all months for this hotel
+        let totalValue = 0;
+        hotelData.forEach(data => {
+          totalValue += data.metrics[selectedMetric] || 0;
+        });
+        
+        const avgValue = hotelData.length > 0 ? totalValue / hotelData.length : 0;
         
         return {
           name: hotel?.name || hotelId,
           value: Math.round(avgValue * 100) / 100,
           total: Math.round(totalValue * 100) / 100,
-          billsCount: hotelBills.length
+          billsCount: hotelData.length
         };
       });
     }
     
     if (comparisonMode === 'months') {
       return selectedMonths.map(month => {
-        const monthBills = utilityData.filter(bill => bill.month === month);
-        const totalValue = monthBills.reduce((sum, bill) => sum + extractMetricValue(bill, selectedMetric), 0);
-        const avgValue = monthBills.length > 0 ? totalValue / monthBills.length : 0;
+        const monthData = proportionalData.filter(data => data.month === month);
+        
+        // Sum the metric values across all hotels for this month
+        let totalValue = 0;
+        monthData.forEach(data => {
+          totalValue += data.metrics[selectedMetric] || 0;
+        });
+        
+        const avgValue = monthData.length > 0 ? totalValue / selectedHotels.length : 0;
         
         return {
           name: month,
           value: Math.round(avgValue * 100) / 100,
           total: Math.round(totalValue * 100) / 100,
-          billsCount: monthBills.length
+          billsCount: monthData.length
         };
       });
     }
     
     if (comparisonMode === 'years') {
       return selectedYears.map(year => {
-        const yearBills = utilityData.filter(bill => bill.year === year);
-        const totalValue = yearBills.reduce((sum, bill) => sum + extractMetricValue(bill, selectedMetric), 0);
-        const avgValue = yearBills.length > 0 ? totalValue / yearBills.length : 0;
+        const yearData = proportionalData.filter(data => data.year === year);
+        
+        // Sum the metric values across all hotels and months for this year
+        let totalValue = 0;
+        yearData.forEach(data => {
+          totalValue += data.metrics[selectedMetric] || 0;
+        });
+        
+        const avgValue = yearData.length > 0 ? totalValue / yearData.length : 0;
         
         return {
           name: year,
           value: Math.round(avgValue * 100) / 100,
           total: Math.round(totalValue * 100) / 100,
-          billsCount: yearBills.length
+          billsCount: yearData.length
         };
       });
     }
@@ -328,7 +525,9 @@ export function UtilitiesGraphs() {
 
   const toggleSelection = (item: string, currentList: string[], setter: (list: string[]) => void) => {
     if (currentList.includes(item)) {
-      setter(currentList.filter(i => i !== item));
+      if (currentList.length > 1) { // Prevent deselecting all
+        setter(currentList.filter(i => i !== item));
+      }
     } else {
       setter([...currentList, item]);
     }
@@ -336,9 +535,9 @@ export function UtilitiesGraphs() {
 
   const selectAll = (allItems: string[], currentList: string[], setter: (list: string[]) => void) => {
     if (currentList.length === allItems.length) {
-      setter([]);
+      setter([allItems[0]]); // Keep at least one selected
     } else {
-      setter(allItems);
+      setter([...allItems]);
     }
   };
 
@@ -546,7 +745,7 @@ export function UtilitiesGraphs() {
           <div className="flex items-center justify-center h-64 text-gray-500">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-              <p>Loading real utility data from S3...</p>
+              <p>Loading utility data with proportional distribution...</p>
             </div>
           </div>
         ) : chartData.length === 0 ? (
@@ -580,7 +779,8 @@ export function UtilitiesGraphs() {
                         <p className="font-medium">{`${comparisonMode.slice(0, -1)}: ${label}`}</p>
                         <p className="text-blue-600">{`Average: ${payload[0].value} ${currentMetric?.unit}`}</p>
                         <p className="text-green-600">{`Total: ${data.total} ${currentMetric?.unit}`}</p>
-                        <p className="text-gray-500 text-sm">{`Bills: ${data.billsCount}`}</p>
+                        <p className="text-gray-500 text-sm">{`Data Points: ${data.billsCount}`}</p>
+                        <p className="text-gray-400 text-xs mt-1">Using proportional distribution</p>
                       </div>
                     );
                   }
@@ -616,7 +816,7 @@ export function UtilitiesGraphs() {
                     Total {currentMetric?.label}
                   </th>
                   <th className="px-4 py-2 text-right font-medium text-gray-700">
-                    Bills Count
+                    Data Points
                   </th>
                 </tr>
               </thead>
@@ -642,10 +842,11 @@ export function UtilitiesGraphs() {
           {/* Data Quality Indicator */}
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-blue-700 font-medium">Data Source: Real utility bills from S3</span>
+              <span className="text-blue-700 font-medium">
+                Data Source: Proportionally distributed utility bills
+              </span>
               <span className="text-blue-600">
-                Total bills analyzed: {utilityData.length} | 
-                Selected type: {selectedUtilityType.charAt(0).toUpperCase() + selectedUtilityType.slice(1)}
+                Total bills: {utilityData.length} | Data points: {proportionalData.length}
               </span>
             </div>
           </div>
