@@ -1,4 +1,3 @@
-// app/[hotelId]/utilities/electricity/page.tsx
 'use client';
 
 import { useParams } from "next/navigation";
