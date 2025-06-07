@@ -185,7 +185,7 @@ export default function UtilitiesDashboard() {
         hotelName={hotelNames[hotelId] || hotelId.toUpperCase()}
         selectedYears={selectedYears}
         selectedMonths={selectedMonths}
-        onShowMetrics={() => setShowMetricsModal(true)}
+        onShowMetrics={() => setShowFiltersModal(true)}
         onUpload={() => setShowUploadModal(true)}
         onYearChange={handleYearChange}
         onMonthChange={handleMonthChange}
