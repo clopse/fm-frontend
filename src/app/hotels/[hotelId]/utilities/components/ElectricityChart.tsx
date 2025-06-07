@@ -1,13 +1,14 @@
 "use client";
 
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Zap, Loader2 } from 'lucide-react';
+import { Zap, Loader2, MousePointer2 } from 'lucide-react';
 import { ElectricityEntry, ViewMode } from '../types';
 
 interface ElectricityChartProps {
   data: ElectricityEntry[];
   viewMode: ViewMode;
   loading: boolean;
+  onMonthClick?: (month: string) => void;  // ✅ Added click handler
 }
 
 const COLORS = {
@@ -16,7 +17,7 @@ const COLORS = {
   total: '#ef4444'
 };
 
-export default function ElectricityChart({ data, viewMode, loading }: ElectricityChartProps) {
+export default function ElectricityChart({ data, viewMode, loading, onMonthClick }: ElectricityChartProps) {
   const getUnitLabel = () => {
     switch(viewMode) {
       case 'eur': return '€';
@@ -46,7 +47,9 @@ export default function ElectricityChart({ data, viewMode, loading }: Electricit
         night_kwh: e.night_kwh,
         total_kwh: e.total_kwh,
         total_eur: e.total_eur,
-        per_room_kwh: e.per_room_kwh
+        per_room_kwh: e.per_room_kwh,
+        // ✅ Add period info for multi-month bill support
+        period_info: e.period_info
       };
     });
   };
@@ -60,14 +63,44 @@ export default function ElectricityChart({ data, viewMode, loading }: Electricit
     }
   };
 
+  // ✅ Handle chart clicks
+  const handleChartClick = (data: any) => {
+    if (onMonthClick && data && data.activePayload && data.activePayload[0]) {
+      const clickedMonth = data.activePayload[0].payload.month;
+      // Extract month number for filtering (e.g., "2025-01" -> "1")
+      const monthNumber = clickedMonth.split('-')[1];
+      onMonthClick(monthNumber);
+    }
+  };
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
         <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg">
-          <p className="font-semibold text-slate-900 mb-2">
-            {formatMonth(label)}
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-semibold text-slate-900">
+              {formatMonth(label)}
+            </p>
+            {/* ✅ Click hint if handler provided */}
+            {onMonthClick && (
+              <span className="text-xs text-blue-600 flex items-center">
+                <MousePointer2 className="w-3 h-3 mr-1" />
+                Click for bills
+              </span>
+            )}
+          </div>
+          
+          {/* ✅ Multi-month period indicator */}
+          {data.period_info?.is_multi_month && (
+            <div className="mb-2 p-2 bg-amber-50 rounded text-xs">
+              <p className="text-amber-800 font-medium">Multi-month period</p>
+              <p className="text-amber-600">
+                {data.period_info.start_date} to {data.period_info.end_date}
+              </p>
+            </div>
+          )}
+          
           <div className="space-y-1 text-sm">
             <div className="flex items-center justify-between">
               <span className="flex items-center">
@@ -155,7 +188,16 @@ export default function ElectricityChart({ data, viewMode, loading }: Electricit
               <Zap className="w-5 h-5 mr-2 text-blue-600" />
               Electricity Consumption ({getUnitLabel()})
             </h3>
-            <p className="text-sm text-slate-600 mt-1">Day vs Night usage patterns</p>
+            <div className="flex items-center space-x-4 mt-1">
+              <p className="text-sm text-slate-600">Day vs Night usage patterns</p>
+              {/* ✅ Click instruction */}
+              {onMonthClick && (
+                <span className="text-xs text-blue-600 flex items-center">
+                  <MousePointer2 className="w-3 h-3 mr-1" />
+                  Click months to view bills
+                </span>
+              )}
+            </div>
           </div>
           
           {/* Summary stats */}
@@ -172,7 +214,12 @@ export default function ElectricityChart({ data, viewMode, loading }: Electricit
       
       <div className="p-6">
         <ResponsiveContainer width="100%" height={320}>
-          <ComposedChart data={formatData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <ComposedChart 
+            data={formatData()} 
+            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+            onClick={handleChartClick}  // ✅ Add click handler
+            className={onMonthClick ? "cursor-pointer" : ""}  // ✅ Show pointer cursor if clickable
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis 
               dataKey="month" 
@@ -198,6 +245,7 @@ export default function ElectricityChart({ data, viewMode, loading }: Electricit
               name="Day Usage"
               radius={[2, 2, 0, 0]}
               stackId="usage"
+              className={onMonthClick ? "cursor-pointer" : ""}  // ✅ Clickable styling
             />
             
             {/* Night usage bars */}
@@ -207,6 +255,7 @@ export default function ElectricityChart({ data, viewMode, loading }: Electricit
               name="Night Usage"
               radius={[2, 2, 0, 0]}
               stackId="usage"
+              className={onMonthClick ? "cursor-pointer" : ""}  // ✅ Clickable styling
             />
             
             {/* Total line */}
@@ -218,6 +267,7 @@ export default function ElectricityChart({ data, viewMode, loading }: Electricit
               name="Total"
               dot={{ fill: COLORS.total, strokeWidth: 2, r: 4 }}
               activeDot={{ r: 6, stroke: COLORS.total, strokeWidth: 2 }}
+              className={onMonthClick ? "cursor-pointer" : ""}  // ✅ Clickable styling
             />
           </ComposedChart>
         </ResponsiveContainer>
