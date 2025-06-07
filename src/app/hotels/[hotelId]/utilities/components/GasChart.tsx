@@ -1,23 +1,23 @@
-// components/GasChart.tsx - Add onMonthClick support
 "use client";
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Flame, Loader2, MousePointer2 } from 'lucide-react';
-import { GasEntry, ViewMode } from '../types';
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Zap, Loader2, MousePointer2 } from 'lucide-react';
+import { ElectricityEntry, ViewMode } from '../types';
 
-interface GasChartProps {
-  data: GasEntry[];
+interface ElectricityChartProps {
+  data: ElectricityEntry[];
   viewMode: ViewMode;
   loading: boolean;
-  onMonthClick?: (month: string) => void;  // ✅ Added click handler
+  onMonthClick?: (month: string) => void;
 }
 
 const COLORS = {
-  gas: '#10b981',
-  gasLight: '#6ee7b7'
+  day: '#f59e0b',
+  night: '#6366f1',
+  total: '#ef4444'
 };
 
-export default function GasChart({ data, viewMode, loading, onMonthClick }: GasChartProps) {
+export default function ElectricityChart({ data, viewMode, loading, onMonthClick }: ElectricityChartProps) {
   const getUnitLabel = () => {
     switch(viewMode) {
       case 'eur': return '€';
@@ -27,34 +27,48 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
   };
 
   const formatData = () => {
-    return data.map((g) => ({
-      period: g.period,
-      value: viewMode === 'eur' ? g.total_eur : 
-             viewMode === 'room' ? g.per_room_kwh : g.total_kwh,
-      // Additional data for tooltip
-      total_kwh: g.total_kwh,
-      total_eur: g.total_eur,
-      per_room_kwh: g.per_room_kwh,
-      // ✅ Add period info for multi-month bill support
-      period_info: g.period_info
-    }));
+    return data.map((e) => {
+      const getValue = (kwh: number) => {
+        switch(viewMode) {
+          case 'eur': return (kwh * e.total_eur) / e.total_kwh;
+          case 'room': return kwh / 100; // Assuming 100 rooms, adjust as needed
+          default: return kwh;
+        }
+      };
+
+      return {
+        month: e.month,
+        day_value: getValue(e.day_kwh),
+        night_value: getValue(e.night_kwh),
+        total_value: viewMode === 'eur' ? e.total_eur : 
+                    viewMode === 'room' ? e.per_room_kwh : e.total_kwh,
+        // Additional data for tooltip
+        day_kwh: e.day_kwh,
+        night_kwh: e.night_kwh,
+        total_kwh: e.total_kwh,
+        total_eur: e.total_eur,
+        per_room_kwh: e.per_room_kwh,
+        // Add period info for multi-month bill support
+        period_info: e.period_info
+      };
+    });
   };
 
-  const formatMonth = (period: string) => {
+  const formatMonth = (month: string) => {
     try {
-      const date = new Date(period + '-01');
+      const date = new Date(month + '-01');
       return date.toLocaleDateString('en-IE', { month: 'short', year: '2-digit' });
     } catch {
-      return period;
+      return month;
     }
   };
 
-  // ✅ Handle chart clicks
+  // Handle chart clicks
   const handleChartClick = (data: any) => {
     if (onMonthClick && data && data.activePayload && data.activePayload[0]) {
-      const clickedPeriod = data.activePayload[0].payload.period;
+      const clickedMonth = data.activePayload[0].payload.month;
       // Extract month number for filtering (e.g., "2025-01" -> "1")
-      const monthNumber = clickedPeriod.split('-')[1];
+      const monthNumber = clickedMonth.split('-')[1];
       onMonthClick(monthNumber);
     }
   };
@@ -68,7 +82,7 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
             <p className="font-semibold text-slate-900">
               {formatMonth(label)}
             </p>
-            {/* ✅ Click hint if handler provided */}
+            {/* Click hint if handler provided */}
             {onMonthClick && (
               <span className="text-xs text-blue-600 flex items-center">
                 <MousePointer2 className="w-3 h-3 mr-1" />
@@ -76,8 +90,8 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
               </span>
             )}
           </div>
-
-          {/* ✅ Multi-month period indicator */}
+          
+          {/* Multi-month period indicator */}
           {data.period_info?.is_multi_month && (
             <div className="mb-2 p-2 bg-amber-50 rounded text-xs">
               <p className="text-amber-800 font-medium">Multi-month period</p>
@@ -86,27 +100,37 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
               </p>
             </div>
           )}
-
+          
           <div className="space-y-1 text-sm">
             <div className="flex items-center justify-between">
               <span className="flex items-center">
-                <div className="w-3 h-3 rounded bg-emerald-500 mr-2"></div>
-                Gas Usage:
+                <div className="w-3 h-3 rounded bg-amber-500 mr-2"></div>
+                Day Usage:
               </span>
               <span className="font-medium">
-                {data.total_kwh.toLocaleString()} kWh
+                {data.day_kwh.toLocaleString()} kWh
+                {viewMode === 'eur' && ` (€${Math.round(data.day_value).toLocaleString()})`}
               </span>
             </div>
-            <div className="flex items-center justify-between font-semibold">
-              <span>Total Cost:</span>
-              <span>€{data.total_eur.toLocaleString()}</span>
+            <div className="flex items-center justify-between">
+              <span className="flex items-center">
+                <div className="w-3 h-3 rounded bg-indigo-500 mr-2"></div>
+                Night Usage:
+              </span>
+              <span className="font-medium">
+                {data.night_kwh.toLocaleString()} kWh
+                {viewMode === 'eur' && ` (€${Math.round(data.night_value).toLocaleString()})`}
+              </span>
             </div>
-            {viewMode === 'room' && (
-              <div className="flex items-center justify-between text-slate-600">
-                <span>Per Room:</span>
-                <span>{data.per_room_kwh.toFixed(1)} kWh/room</span>
-              </div>
-            )}
+            <hr className="my-2" />
+            <div className="flex items-center justify-between font-semibold">
+              <span>Total:</span>
+              <span>
+                {viewMode === 'eur' ? `€${data.total_eur.toLocaleString()}` :
+                 viewMode === 'room' ? `${data.per_room_kwh.toFixed(1)} kWh/room` :
+                 `${data.total_kwh.toLocaleString()} kWh`}
+              </span>
+            </div>
           </div>
         </div>
       );
@@ -117,17 +141,17 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
   if (loading) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-slate-200">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-slate-200">
           <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-            <Flame className="w-5 h-5 mr-2 text-green-600" />
-            Gas Consumption ({getUnitLabel()})
+            <Zap className="w-5 h-5 mr-2 text-blue-600" />
+            Electricity Consumption ({getUnitLabel()})
           </h3>
-          <p className="text-sm text-slate-600 mt-1">Monthly gas usage and costs</p>
+          <p className="text-sm text-slate-600 mt-1">Day vs Night usage patterns</p>
         </div>
         <div className="p-6 flex items-center justify-center h-80">
           <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-green-600 mx-auto mb-4" />
-            <p className="text-slate-600">Loading gas data...</p>
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-slate-600">Loading electricity data...</p>
           </div>
         </div>
       </div>
@@ -137,18 +161,18 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
   if (data.length === 0) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-slate-200">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-slate-200">
           <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-            <Flame className="w-5 h-5 mr-2 text-green-600" />
-            Gas Consumption ({getUnitLabel()})
+            <Zap className="w-5 h-5 mr-2 text-blue-600" />
+            Electricity Consumption ({getUnitLabel()})
           </h3>
-          <p className="text-sm text-slate-600 mt-1">Monthly gas usage and costs</p>
+          <p className="text-sm text-slate-600 mt-1">Day vs Night usage patterns</p>
         </div>
         <div className="p-6 flex items-center justify-center h-80">
           <div className="text-center">
-            <Flame className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-            <p className="text-slate-600">No gas data available</p>
-            <p className="text-sm text-slate-500 mt-1">Upload some gas bills to see consumption patterns</p>
+            <Zap className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-600">No electricity data available</p>
+            <p className="text-sm text-slate-500 mt-1">Upload some electricity bills to see consumption patterns</p>
           </div>
         </div>
       </div>
@@ -157,16 +181,16 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-slate-200">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-slate-200">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-              <Flame className="w-5 h-5 mr-2 text-green-600" />
-              Gas Consumption ({getUnitLabel()})
+              <Zap className="w-5 h-5 mr-2 text-blue-600" />
+              Electricity Consumption ({getUnitLabel()})
             </h3>
             <div className="flex items-center space-x-4 mt-1">
-              <p className="text-sm text-slate-600">Monthly gas usage and costs</p>
-              {/* ✅ Click instruction */}
+              <p className="text-sm text-slate-600">Day vs Night usage patterns</p>
+              {/* Click instruction */}
               {onMonthClick && (
                 <span className="text-xs text-blue-600 flex items-center">
                   <MousePointer2 className="w-3 h-3 mr-1" />
@@ -182,7 +206,7 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
               {data.length} month{data.length !== 1 ? 's' : ''} of data
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              Latest: {formatMonth(data[data.length - 1]?.period)}
+              Latest: {formatMonth(data[data.length - 1]?.month)}
             </div>
           </div>
         </div>
@@ -190,15 +214,15 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
       
       <div className="p-6">
         <ResponsiveContainer width="100%" height={320}>
-          <BarChart 
+          <ComposedChart 
             data={formatData()} 
             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-            onClick={handleChartClick}  // ✅ Add click handler
-            className={onMonthClick ? "cursor-pointer" : ""}  // ✅ Show pointer cursor if clickable
+            onClick={handleChartClick}
+            className={onMonthClick ? "cursor-pointer" : ""}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
             <XAxis 
-              dataKey="period" 
+              dataKey="month" 
               stroke="#64748b"
               tick={{ fontSize: 12 }}
               tickFormatter={formatMonth}
@@ -214,26 +238,64 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
             <Tooltip content={<CustomTooltip />} />
             <Legend />
             
+            {/* Day usage bars */}
             <Bar 
-              dataKey="value" 
-              fill={COLORS.gas} 
-              name="Gas Usage"
-              radius={[4, 4, 0, 0]}
-              className={onMonthClick ? "cursor-pointer" : ""}  // ✅ Clickable styling
+              dataKey="day_value" 
+              fill={COLORS.day} 
+              name="Day Usage"
+              radius={[2, 2, 0, 0]}
+              stackId="usage"
+              className={onMonthClick ? "cursor-pointer" : ""}
             />
-          </BarChart>
+            
+            {/* Night usage bars */}
+            <Bar 
+              dataKey="night_value" 
+              fill={COLORS.night} 
+              name="Night Usage"
+              radius={[2, 2, 0, 0]}
+              stackId="usage"
+              className={onMonthClick ? "cursor-pointer" : ""}
+            />
+            
+            {/* Total line */}
+            <Line 
+              type="monotone" 
+              dataKey="total_value" 
+              stroke={COLORS.total} 
+              strokeWidth={3} 
+              name="Total"
+              dot={{ fill: COLORS.total, strokeWidth: 2, r: 4 }}
+              activeDot={{ r: 6, stroke: COLORS.total, strokeWidth: 2 }}
+              className={onMonthClick ? "cursor-pointer" : ""}
+            />
+          </ComposedChart>
         </ResponsiveContainer>
         
         {/* Chart insights */}
-        <div className="mt-4 p-3 bg-green-50 rounded-lg">
-          <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center">
-              <div className="w-3 h-3 rounded bg-green-500 mr-2"></div>
-              <span className="font-medium text-green-800">Average Monthly Usage</span>
+        <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+          <div className="bg-amber-50 p-3 rounded-lg">
+            <div className="flex items-center mb-1">
+              <div className="w-3 h-3 rounded bg-amber-500 mr-2"></div>
+              <span className="font-medium text-amber-800">Day Usage</span>
             </div>
-            <span className="text-green-700 font-semibold">
-              {Math.round(data.reduce((sum, g) => sum + g.total_kwh, 0) / data.length).toLocaleString()} kWh
-            </span>
+            <p className="text-amber-700">
+              {Math.round((data.reduce((sum, e) => sum + e.day_kwh, 0) / 
+                          data.reduce((sum, e) => sum + e.total_kwh, 0)) * 100)}%
+              of total consumption
+            </p>
+          </div>
+          
+          <div className="bg-indigo-50 p-3 rounded-lg">
+            <div className="flex items-center mb-1">
+              <div className="w-3 h-3 rounded bg-indigo-500 mr-2"></div>
+              <span className="font-medium text-indigo-800">Night Usage</span>
+            </div>
+            <p className="text-indigo-700">
+              {Math.round((data.reduce((sum, e) => sum + e.night_kwh, 0) / 
+                          data.reduce((sum, e) => sum + e.total_kwh, 0)) * 100)}%
+              of total consumption
+            </p>
           </div>
         </div>
       </div>
