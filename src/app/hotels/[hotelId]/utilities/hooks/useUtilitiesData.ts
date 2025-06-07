@@ -234,12 +234,34 @@ function distributeGasByMonth(gasEntries: GasEntry[], bills: any[]): GasEntry[] 
 
     console.log('✅ Found matching bill:', bill.filename);
 
-    // Get billing period from bill.billSummary (gas structure)
-    const startDate = bill.billSummary?.billingPeriodStartDate;
-    const endDate = bill.billSummary?.billingPeriodEndDate;
+    // Get billing period from gas bill (multiple possible structures)
+    let startDate = null;
+    let endDate = null;
+
+    // Try different gas bill structures
+    if (bill.billSummary?.billingPeriodStartDate && bill.billSummary?.billingPeriodEndDate) {
+      startDate = bill.billSummary.billingPeriodStartDate;
+      endDate = bill.billSummary.billingPeriodEndDate;
+    } else if (bill.summary?.billing_period_start && bill.summary?.billing_period_end) {
+      startDate = bill.summary.billing_period_start;
+      endDate = bill.summary.billing_period_end;
+    } else if (bill.billing_period_start && bill.billing_period_end) {
+      startDate = bill.billing_period_start;
+      endDate = bill.billing_period_end;
+    }
+
+    console.log('🔍 Gas bill structure check:', {
+      hasBillSummary: !!bill.billSummary,
+      billSummaryKeys: bill.billSummary ? Object.keys(bill.billSummary) : [],
+      hasSummary: !!bill.summary,
+      summaryKeys: bill.summary ? Object.keys(bill.summary) : [],
+      topLevelKeys: Object.keys(bill),
+      foundStartDate: startDate,
+      foundEndDate: endDate
+    });
 
     if (!startDate || !endDate) {
-      console.log('❌ No billing period in billSummary, using entry period');
+      console.log('❌ No billing period found in any structure, using entry period');
       addOrCombineGasEntry(monthlyData, entry.period, entry, 1.0);
       return;
     }
