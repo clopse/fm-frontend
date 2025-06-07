@@ -173,7 +173,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
         }) || [];
 
         console.log('🔍 Cross-year gas bills found:', crossYearGasBills.length);
-        crossYearGasBills.forEach(bill => {
+        crossYearGasBills.forEach((bill: any) => {
           console.log('📋 Cross-year bill:', {
             filename: bill.filename,
             start: bill.summary?.billing_period_start || bill.raw_data?.billSummary?.billingPeriodStartDate,
@@ -183,7 +183,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
         });
 
         // Process cross-year gas bills that weren't captured in the gas entries
-        crossYearGasBills.forEach(bill => {
+        crossYearGasBills.forEach((bill: any) => {
           // Check if this bill is already processed in filteredGas
           const alreadyProcessed = filteredGas.some(gasEntry => 
             gasEntry.bill_id === bill.filename
@@ -271,7 +271,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
 
         // Process electricity entries
         console.log('⚡ Processing electricity entries:', filteredElectricity.length);
-        filteredElectricity.forEach((entry, index) => {
+        filteredElectricity.forEach((entry: any, index: number) => {
           console.log(`\n⚡ Entry ${index + 1}:`, entry);
           
           const matchingBill = rawData.bills.find(bill => bill.filename === entry.bill_id);
@@ -345,7 +345,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
           });
         }
 
-        filteredGas.forEach((entry, index) => {
+        filteredGas.forEach((entry: any, index: number) => {
           console.log(`\n🔥 Entry ${index + 1}:`, entry);
           
           const matchingBill = rawData.bills.find(bill => bill.filename === entry.bill_id);
