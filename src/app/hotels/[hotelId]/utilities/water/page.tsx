@@ -9,7 +9,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, BarChart, Bar, ComposedChart
 } from "recharts";
-import { useWaterMonthlyData } from "./hooks/useWaterMonthlyData";
+import { useWaterMonthlyData } from "../hooks/useWaterMonthlyData";
 
 export default function WaterPage() {
   const { hotelId } = useParams<{ hotelId: string }>();
