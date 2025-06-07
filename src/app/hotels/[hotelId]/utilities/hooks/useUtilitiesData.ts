@@ -12,7 +12,7 @@ interface UtilitiesData {
   };
 }
 
-type ViewMode = 'kwh' | 'cost' | 'eur';
+type ViewMode = 'kwh' | 'cost' | 'eur' | 'room' | 'efficiency' | 'demand' | 'carbon';
 
 export function useUtilitiesData(hotelId: string | undefined) {
   console.log('🚀 NEW UPDATED HOOK RUNNING!!! Version 2.0');
