@@ -1,4 +1,3 @@
-// hooks/useWaterData.ts
 import { useEffect, useState } from "react";
 
 export interface WaterUsageEntry {
