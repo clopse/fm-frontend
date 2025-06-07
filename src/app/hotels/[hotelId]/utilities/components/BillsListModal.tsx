@@ -9,6 +9,25 @@ interface BillsListModalProps {
   onClose: () => void;
 }
 
+// Extended interface for bills with full summary data
+interface ExtendedBillSummary {
+  supplier?: string;
+  bill_date?: string;
+  account_number?: string;
+  total_cost?: number;
+  total_kwh?: number;
+  consumption_kwh?: number;
+  billing_period_start?: string;
+  billing_period_end?: string;
+  meter_number?: string;
+  [key: string]: any; // Allow for additional fields
+}
+
+interface ExtendedBillEntry extends Omit<BillEntry, 'summary'> {
+  summary?: ExtendedBillSummary;
+  raw_data?: any;
+}
+
 export default function BillsListModal({ bills, onClose }: BillsListModalProps) {
   const [downloadingBills, setDownloadingBills] = useState<Set<string>>(new Set());
 
@@ -44,58 +63,79 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
     return `${consumption.toLocaleString()} ${unit}`;
   };
 
-  const getSupplierName = (bill: BillEntry) => {
+  const getSupplierName = (bill: ExtendedBillEntry) => {
     return bill.summary?.supplier || bill.supplier || 'Unknown Supplier';
   };
 
-  const getBillDate = (bill: BillEntry) => {
+  const getBillDate = (bill: ExtendedBillEntry) => {
     return bill.summary?.bill_date || bill.upload_date;
   };
 
-  const generatePdfFilename = (bill: BillEntry) => {
+  const generatePdfFilename = (bill: ExtendedBillEntry) => {
     const utilityType = bill.utility_type.toUpperCase();
     const supplier = getSupplierName(bill).replace(/[^a-zA-Z0-9]/g, '');
     
-    // Get billing period dates
-    const startDate = bill.summary?.billing_period_start;
-    const endDate = bill.summary?.billing_period_end || bill.summary?.bill_date;
+    // Get billing period dates - handle both summary and raw_data structures
+    let startDate = bill.summary?.billing_period_start;
+    let endDate = bill.summary?.billing_period_end || bill.summary?.bill_date;
+    
+    // Fallback to raw_data if summary doesn't have the fields
+    if (!startDate && bill.raw_data) {
+      if (bill.raw_data.billingPeriod) {
+        startDate = bill.raw_data.billingPeriod.startDate;
+        endDate = bill.raw_data.billingPeriod.endDate;
+      } else if (bill.raw_data.billSummary) {
+        startDate = bill.raw_data.billSummary.billingPeriodStartDate;
+        endDate = bill.raw_data.billSummary.billingPeriodEndDate;
+      }
+    }
     
     if (startDate && endDate) {
-      // Format dates for filename (e.g., Dec24-Jan25)
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      
-      const startFormatted = start.toLocaleDateString('en-US', { 
-        month: 'short', 
-        year: '2-digit' 
-      }).replace(/\s/g, '');
-      
-      const endFormatted = end.toLocaleDateString('en-US', { 
-        month: 'short', 
-        year: '2-digit' 
-      }).replace(/\s/g, '');
-      
-      // If same month, just use one date
-      if (startFormatted === endFormatted) {
-        return `${utilityType}_${supplier}_${startFormatted}.pdf`;
-      } else {
-        return `${utilityType}_${supplier}_${startFormatted}-${endFormatted}.pdf`;
+      try {
+        // Format dates for filename (e.g., Dec24-Jan25)
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        const startFormatted = start.toLocaleDateString('en-US', { 
+          month: 'short', 
+          year: '2-digit' 
+        }).replace(/\s/g, '');
+        
+        const endFormatted = end.toLocaleDateString('en-US', { 
+          month: 'short', 
+          year: '2-digit' 
+        }).replace(/\s/g, '');
+        
+        // If same month, just use one date
+        if (startFormatted === endFormatted) {
+          return `${utilityType}_${supplier}_${startFormatted}.pdf`;
+        } else {
+          return `${utilityType}_${supplier}_${startFormatted}-${endFormatted}.pdf`;
+        }
+      } catch (error) {
+        console.warn('Error formatting dates for filename:', error);
       }
-    } else if (endDate) {
-      // Fallback to just end date
-      const end = new Date(endDate);
-      const endFormatted = end.toLocaleDateString('en-US', { 
-        month: 'short', 
-        year: '2-digit' 
-      }).replace(/\s/g, '');
-      return `${utilityType}_${supplier}_${endFormatted}.pdf`;
-    } else {
-      // Fallback to original filename
-      return bill.filename || `${utilityType}_${supplier}_bill.pdf`;
     }
+    
+    // Fallback: use bill period or end date
+    if (endDate) {
+      try {
+        const end = new Date(endDate);
+        const endFormatted = end.toLocaleDateString('en-US', { 
+          month: 'short', 
+          year: '2-digit' 
+        }).replace(/\s/g, '');
+        return `${utilityType}_${supplier}_${endFormatted}.pdf`;
+      } catch (error) {
+        console.warn('Error formatting end date for filename:', error);
+      }
+    }
+    
+    // Final fallback to original filename or generic
+    return bill.filename || `${utilityType}_${supplier}_bill.pdf`;
   };
 
-  const downloadPdf = async (bill: BillEntry) => {
+  const downloadPdf = async (bill: ExtendedBillEntry) => {
     const billId = bill.id || `${bill.hotel_id}_${bill.utility_type}_${bill.bill_period}`;
     
     if (downloadingBills.has(billId)) return;
@@ -147,7 +187,7 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
     }
   };
 
-  const viewBillDetails = async (bill: BillEntry) => {
+  const viewBillDetails = async (bill: ExtendedBillEntry) => {
     try {
       const billId = bill.id || `${bill.hotel_id}_${bill.utility_type}_${bill.bill_period}`;
       
@@ -189,7 +229,7 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
     }
   };
 
-  const getBillStatus = (bill: BillEntry) => {
+  const getBillStatus = (bill: ExtendedBillEntry) => {
     if (bill.raw_data || bill.parsed_status === 'success') {
       return { label: 'Processed', color: 'bg-green-100 text-green-800' };
     } else if (bill.parsed_status === 'error') {
@@ -198,6 +238,24 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
       return { label: 'Pending', color: 'bg-yellow-100 text-yellow-800' };
     }
   };
+
+  const getBillingPeriodDisplay = (bill: ExtendedBillEntry) => {
+    const startDate = bill.summary?.billing_period_start;
+    const endDate = bill.summary?.billing_period_end;
+    
+    if (startDate && endDate) {
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    } else if (endDate) {
+      return formatDate(endDate);
+    } else if (bill.summary?.bill_date) {
+      return formatDate(bill.summary.bill_date);
+    } else {
+      return bill.bill_period || 'Unknown Period';
+    }
+  };
+
+  // Cast bills to extended type for internal use
+  const extendedBills = bills as ExtendedBillEntry[];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -232,7 +290,7 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
             </div>
           ) : (
             <div className="space-y-4">
-              {bills.map((bill, index) => {
+              {extendedBills.map((bill, index) => {
                 const billId = bill.id || `${bill.hotel_id}_${bill.utility_type}_${bill.bill_period}`;
                 const isDownloading = downloadingBills.has(billId);
                 const status = getBillStatus(bill);
@@ -268,15 +326,9 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
                             <div className="flex items-center space-x-2">
                               <Calendar className="w-4 h-4 text-slate-400" />
                               <span>
-                                <span className="font-medium">Period:</span> {bill.bill_period}
+                                <span className="font-medium">Period:</span> {getBillingPeriodDisplay(bill)}
                               </span>
                             </div>
-                            
-                            {bill.summary?.billing_period_start && bill.summary?.billing_period_end && (
-                              <div className="text-xs">
-                                <span className="font-medium">Billing:</span> {formatDate(bill.summary.billing_period_start)} - {formatDate(bill.summary.billing_period_end)}
-                              </div>
-                            )}
                             
                             {bill.summary?.account_number && (
                               <div>
