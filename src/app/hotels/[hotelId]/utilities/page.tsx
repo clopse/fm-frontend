@@ -8,7 +8,6 @@ import { hotelNames } from "@/data/hotelMetadata";
 // Components
 import UtilitiesUploadBox from "@/components/UtilitiesUploadBox";
 import DashboardHeader from "./components/DashboardHeader";
-import UtilitiesFilters from "./components/UtilitiesFilters";
 import UtilitiesKPICards from "./components/UtilitiesKPICards";
 import ElectricityChart from "./components/ElectricityChart";
 import GasChart from "./components/GasChart";
@@ -37,7 +36,6 @@ export default function UtilitiesDashboard() {
 
   // State
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [showBillsList, setShowBillsList] = useState(false);
   const [showMetricsModal, setShowMetricsModal] = useState(false);
   
@@ -199,7 +197,7 @@ export default function UtilitiesDashboard() {
         hotelName={hotelNames[hotelId] || hotelId.toUpperCase()}
         selectedYears={selectedYears}
         selectedMonths={selectedMonths}
-        onShowMetrics={() => setShowFiltersModal(true)}
+        onShowMetrics={() => setShowMetricsModal(true)}
         onUpload={() => setShowUploadModal(true)}
         onYearChange={handleYearChange}
         onMonthChange={handleMonthChange}
@@ -331,20 +329,6 @@ export default function UtilitiesDashboard() {
       </div>
 
       {/* Modals */}
-      <UtilitiesFilters
-        isOpen={showFiltersModal}
-        year={year}
-        viewMode={viewMode}
-        filters={filters}
-        availableMonths={availableMonths}
-        onClose={() => setShowFiltersModal(false)}
-        onYearChange={setYear}
-        onViewModeChange={setViewMode}
-        onFilterChange={updateFilter}
-        onExport={handleExport}
-        onReset={handleResetFilters}
-      />
-
       {showBillsList && (
         <BillsListModal
           bills={getFilteredBills()}
