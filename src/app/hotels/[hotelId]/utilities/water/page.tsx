@@ -13,7 +13,7 @@ import { useWaterMonthlyData } from "../hooks/useWaterMonthlyData";
 
 export default function WaterPage() {
   const { hotelId } = useParams<{ hotelId: string }>();
-  const { data: waterData, loading, year, setYear } = useWaterMonthlyData(hotelId);
+  const { data: waterData, loading, year, setYear, availableYears } = useWaterMonthlyData(hotelId);
 
   // Loader if missing ID
   if (!hotelId) {
@@ -59,9 +59,16 @@ export default function WaterPage() {
 
   // Benchmarks (litres/room/day)
   const benchmarks = { excellent: 150, good: 200, average: 250, poor: 300 };
-  const avgDailyPerRoom = waterData.length > 0
-    ? (totalConsumption * 1000) / (waterData.length * 30 * 100)
-    : 0; // rough: 100 rooms, 30 days
+  
+  // FIX 1: Use correct room count of 198 instead of hardcoded 100
+  const roomCount = 198;
+  
+  // FIX 2: Use actual days from the data instead of fixed 30 days
+  const totalDays = waterData.reduce((sum, entry) => sum + entry.days, 0);  
+  
+  const avgDailyPerRoom = waterData.length > 0 && totalDays > 0
+    ? (totalConsumption * 1000) / (totalDays * roomCount)
+    : 0;
 
   const getEfficiencyRating = (usage: number) => {
     if (usage <= benchmarks.excellent) return { rating: "Excellent", color: "green", icon: "🌟" };
@@ -102,9 +109,20 @@ export default function WaterPage() {
                   onChange={e => setYear(Number(e.target.value))}
                   className="bg-transparent text-white font-medium focus:outline-none"
                 >
-                  <option value="2023" className="text-slate-900">2023</option>
-                  <option value="2024" className="text-slate-900">2024</option>
-                  <option value="2025" className="text-slate-900">2025</option>
+                  {/* FIX 3: Use available years from data instead of hardcoded years */}
+                  {availableYears && availableYears.length > 0 ? (
+                    availableYears.map(yearValue => (
+                      <option key={yearValue} value={yearValue} className="text-slate-900">
+                        {yearValue}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="2023" className="text-slate-900">2023</option>
+                      <option value="2024" className="text-slate-900">2024</option>
+                      <option value="2025" className="text-slate-900">2025</option>
+                    </>
+                  )}
                 </select>
               </div>
             </div>
@@ -122,7 +140,7 @@ export default function WaterPage() {
               <div>
                 <h3 className="font-semibold text-amber-800">No Water Data Available</h3>
                 <p className="text-amber-700 mt-1">
-                  Water usage data is not currently tracked. Consider adding water meters or uploading water bills to monitor consumption.
+                  No water data available for the selected year. Please select a different year or ensure water usage data is being tracked.
                 </p>
               </div>
             </div>
@@ -283,6 +301,15 @@ export default function WaterPage() {
                           ? (waterData.reduce((sum, w) => sum + (w.per_room_m3 || 0), 0) / waterData.length).toFixed(2)
                           : "0"} m³
                       </span>
+                    </div>
+                    {/* FIX 4: Add days information */}
+                    <div className="flex justify-between">
+                      <span className="text-sm text-slate-600">Period Days</span>
+                      <span className="font-medium">{totalDays} days</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-slate-600">Room Count</span>
+                      <span className="font-medium">{roomCount} rooms</span>
                     </div>
                   </div>
                 </div>
