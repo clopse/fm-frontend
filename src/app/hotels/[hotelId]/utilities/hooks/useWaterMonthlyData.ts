@@ -21,7 +21,21 @@ export interface WaterSummary {
   };
 }
 
-// Mock data generator function
+interface SmartFlowRawData {
+  device_id: number;
+  dl_id: number;
+  d_uuid: string;
+  time_unit: string;
+  time_value: number;
+  Usage: number;
+  AvgUsage: number;
+  Year: number;
+}
+
+// S3 base URL for direct access
+const S3_BASE_URL = "https://jmk-project-uploads.s3.amazonaws.com";
+
+// Mock data generator function (same as before)
 const generateMockWaterData = (year: number, roomCount: number = 198) => {
   const months: WaterMonthEntry[] = [];
   
@@ -126,6 +140,9 @@ export function useWaterMonthlyData(
   const [error, setError] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(year || new Date().getFullYear());
   
+  // Always use "hiex" for water data
+  const waterHotelId = "hiex";
+  
   useEffect(() => {
     const fetchWaterData = async () => {
       try {
@@ -134,22 +151,88 @@ export function useWaterMonthlyData(
         
         console.log(`Fetching water data for year: ${selectedYear}`);
         
-        // First try the S3 proxy 
+        // Try directly accessing the S3 file
         try {
-          const s3Response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/s3-proxy/utilities/hiex/smartflow-usage.json`
-          );
+          // Use direct S3 access pattern matching your existing code
+          const s3Url = `${S3_BASE_URL}/utilities/${waterHotelId}/smartflow-usage.json`;
+          console.log(`Attempting to fetch from S3 directly: ${s3Url}`);
+          
+          const s3Response = await fetch(s3Url);
           
           if (s3Response.ok) {
             // Process real data from S3
-            // ... (original S3 processing code)
+            const rawJson = await s3Response.json();
             console.log("S3 data retrieval successful!");
+            
+            if (!rawJson.usage_data || !Array.isArray(rawJson.usage_data)) {
+              console.error("Invalid data format:", rawJson);
+              throw new Error("Invalid SmartFlow data format (expected usage_data array)");
+            }
+            
+            const rawData: SmartFlowRawData[] = rawJson.usage_data;
+            console.log(`Processing ${rawData.length} raw water entries`);
+            
+            const monthsMap = new Map<string, WaterMonthEntry>();
+            
+            rawData.forEach(entry => {
+              if (
+                typeof entry.Usage !== "number" ||
+                typeof entry.time_value !== "number" ||
+                entry.time_value < 1 ||
+                entry.time_value > 12
+              ) {
+                return; // skip invalid entry
+              }
+
+              const monthKey = `${entry.Year}-${entry.time_value.toString().padStart(2, '0')}`;
+              const deviceId = entry.device_id.toString();
+              const usageM3 = entry.Usage / 1000;
+
+              if (!monthsMap.has(monthKey)) {
+                monthsMap.set(monthKey, {
+                  month: monthKey,
+                  cubic_meters: 0,
+                  total_eur: 0,
+                  per_room_m3: 0,
+                  days: new Date(entry.Year, entry.time_value, 0).getDate(),
+                  device_breakdown: {}
+                });
+              }
+
+              const monthData = monthsMap.get(monthKey)!;
+              monthData.cubic_meters += usageM3;
+              monthData.device_breakdown![deviceId] =
+                (monthData.device_breakdown![deviceId] || 0) + usageM3;
+            });
+
+            const processedData = Array.from(monthsMap.values()).map(month => ({
+              ...month,
+              cubic_meters: Math.round(month.cubic_meters * 100) / 100,
+              per_room_m3: Math.round((month.cubic_meters / rooms) * 100) / 100,
+              total_eur: Math.round(month.cubic_meters * 2.5 * 100) / 100
+            }));
+            
+            // Filter by year if needed
+            let filteredData = processedData;
+            if (selectedYear) {
+              filteredData = processedData.filter(entry => 
+                entry.month.startsWith(selectedYear.toString())
+              );
+            }
+            
+            // Sort data by month
+            const sortedData = filteredData.sort((a, b) => a.month.localeCompare(b.month));
+            
+            console.log(`Filtered to ${sortedData.length} entries for year ${selectedYear}`);
+            setData(sortedData);
+            setSummary(calculateSummary(sortedData));
+            
           } else {
-            throw new Error("S3 data not available");
+            throw new Error(`S3 fetch failed with status: ${s3Response.status}`);
           }
         } catch (e) {
           // Fall back to mock data since S3 failed
-          console.log("S3 data not available, using mock data instead");
+          console.warn("S3 data not available, using mock data instead:", e);
           
           // Get 2-3 years of mock data
           const currentYear = new Date().getFullYear();
@@ -163,12 +246,18 @@ export function useWaterMonthlyData(
           // Filter to selected year
           const yearData = allData.filter(entry => entry.month.startsWith(selectedYear.toString()));
           
+          console.log(`Generated ${yearData.length} mock entries for year ${selectedYear}`);
           setData(yearData);
           setSummary(calculateSummary(yearData));
         }
       } catch (err) {
         console.error("Failed to fetch water data:", err);
         setError(err instanceof Error ? err.message : "Failed to fetch water data");
+        
+        // Even when there's an error, provide mock data for visualization
+        const mockData = generateMockWaterData(selectedYear, rooms);
+        setData(mockData);
+        setSummary(calculateSummary(mockData));
       } finally {
         setLoading(false);
       }
