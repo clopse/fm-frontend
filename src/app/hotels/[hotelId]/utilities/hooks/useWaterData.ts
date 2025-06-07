@@ -36,7 +36,7 @@ export interface DeviceBreakdownResponse {
   total_m3: number;
 }
 
-export const useWaterData = (hotelId: string, rooms: number = 100) => {
+export const useWaterData = (hotelId: string, rooms: number = 198) => {
   const [monthlyData, setMonthlyData] = useState<WaterMonthEntry[]>([]);
   const [summary, setSummary] = useState<WaterSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -148,7 +148,7 @@ interface WaterDashboardProps {
   rooms?: number;
 }
 
-export default function WaterDashboard({ hotelId, rooms = 100 }: WaterDashboardProps) {
+export default function WaterDashboard({ hotelId, rooms = 198 }: WaterDashboardProps) {
   const { 
     monthlyData, 
     summary, 
@@ -257,7 +257,7 @@ export async function GET(
   { params }: { params: { hotelId: string } }
 ) {
   const { searchParams } = new URL(request.url);
-  const rooms = parseInt(searchParams.get('rooms') || '100');
+  const rooms = parseInt(searchParams.get('rooms') || '198');
   
   try {
     // Your backend URL
