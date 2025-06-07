@@ -185,7 +185,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
         // Process cross-year gas bills that weren't captured in the gas entries
         crossYearGasBills.forEach((bill: any) => {
           // Check if this bill is already processed in filteredGas
-          const alreadyProcessed = filteredGas.some(gasEntry => 
+          const alreadyProcessed = filteredGas.some((gasEntry: any) => 
             gasEntry.bill_id === bill.filename
           );
           
