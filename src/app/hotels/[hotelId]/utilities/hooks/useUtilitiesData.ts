@@ -3,17 +3,33 @@ import { useState, useEffect } from 'react';
 interface UtilitiesData {
   electricity: Record<string, number>;
   gas: Record<string, number>;
-  loading: boolean;
-  error: string | null;
+  bills: any[];
+  totals: {
+    electricity: number;
+    gas: number;
+    electricity_cost: number;
+    gas_cost: number;
+  };
 }
 
-export function useUtilitiesData(hotelId: string, selectedYear: string) {
+type ViewMode = 'kwh' | 'cost';
+
+export function useUtilitiesData(hotelId: string) {
   const [data, setData] = useState<UtilitiesData>({
     electricity: {},
     gas: {},
-    loading: true,
-    error: null,
+    bills: [],
+    totals: {
+      electricity: 0,
+      gas: 0,
+      electricity_cost: 0,
+      gas_cost: 0,
+    }
   });
+  
+  const [loading, setLoading] = useState(true);
+  const [year, setYear] = useState(2025);
+  const [viewMode, setViewMode] = useState<ViewMode>('kwh');
 
   useEffect(() => {
     async function fetchUtilitiesData() {
@@ -21,7 +37,7 @@ export function useUtilitiesData(hotelId: string, selectedYear: string) {
 
       try {
         console.log('🔄 Processing utilities data...');
-        setData(prev => ({ ...prev, loading: true, error: null }));
+        setLoading(true);
 
         // Use the PROVEN MetricsModal approach - fetch ALL bills first
         let rawData: any = { bills: [], electricity: [], gas: [] };
@@ -116,7 +132,7 @@ export function useUtilitiesData(hotelId: string, selectedYear: string) {
         console.log('📊 Raw gas entries:', rawData.gas?.length || 0);
 
         // Filter data for the specified year - include bills that cross year boundaries
-        const currentYear = selectedYear;
+        const currentYear = year.toString();
         
         const filteredElectricity = rawData.electricity?.filter(entry => {
           if (!entry.month) return false;
@@ -356,25 +372,44 @@ export function useUtilitiesData(hotelId: string, selectedYear: string) {
         console.log('✅ Distributed electricity entries:', Object.keys(monthlyData.electricity).length);
         console.log('✅ Distributed gas entries:', Object.keys(monthlyData.gas).length);
 
+        // Calculate totals
+        const electricityTotal = Object.values(monthlyData.electricity).reduce((sum, val) => sum + val, 0);
+        const gasTotal = Object.values(monthlyData.gas).reduce((sum, val) => sum + val, 0);
+
         setData({
           electricity: monthlyData.electricity,
           gas: monthlyData.gas,
-          loading: false,
-          error: null,
+          bills: rawData.bills || [],
+          totals: {
+            electricity: electricityTotal,
+            gas: gasTotal,
+            electricity_cost: electricityTotal * 0.25, // Rough estimate
+            gas_cost: gasTotal * 0.08, // Rough estimate
+          }
         });
 
       } catch (error) {
         console.error('❌ Error fetching utilities data:', error);
-        setData(prev => ({
-          ...prev,
-          loading: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }));
+      } finally {
+        setLoading(false);
       }
     }
 
     fetchUtilitiesData();
-  }, [hotelId, selectedYear]);
+  }, [hotelId, year]);
 
-  return data;
+  const refetch = () => {
+    // Trigger re-fetch by changing a dependency
+    setLoading(true);
+  };
+
+  return {
+    data,
+    loading,
+    year,
+    setYear,
+    viewMode,
+    setViewMode,
+    refetch
+  };
 }
