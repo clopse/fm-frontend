@@ -1,21 +1,57 @@
-// components/WaterChart.tsx
-"use client";
-
+import React, { useState } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  LineChart, Line, PieChart, Pie, Cell
 } from "recharts";
-import { Droplets, Loader2, MousePointer2 } from "lucide-react";
-import React from "react";
-import type { WaterMonthEntry } from "../hooks/useWaterMonthlyData";
+import { Droplets, Loader2, MousePointer2, TrendingUp, TrendingDown, Activity } from "lucide-react";
+
+// Enhanced interface for the new data structure
+interface WaterMonthEntry {
+  month: string;
+  cubic_meters: number;
+  per_room_m3: number;
+  days: number;
+  device_breakdown?: { [key: string]: number };
+}
+
+interface DeviceBreakdown {
+  device_id: string;
+  usage_liters: number;
+  usage_m3: number;
+  avg_usage_liters?: number;
+  avg_usage_m3?: number;
+}
+
+interface WaterSummary {
+  total_usage_m3: number;
+  avg_monthly_m3: number;
+  avg_per_room_m3: number;
+  months_of_data: number;
+  trend: "increasing" | "decreasing" | "stable";
+  latest_month: WaterMonthEntry | null;
+  date_range: {
+    start: string | null;
+    end: string | null;
+  };
+}
 
 interface WaterChartProps {
   data: WaterMonthEntry[];
   loading: boolean;
+  summary?: WaterSummary;
   onMonthClick?: (month: string) => void;
 }
 
-export default function WaterChart({ data, loading, onMonthClick }: WaterChartProps) {
-  // Loading
+export default function WaterChart({ data, loading, summary, onMonthClick }: WaterChartProps) {
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [deviceBreakdown, setDeviceBreakdown] = useState<{
+    month: string;
+    devices: DeviceBreakdown[];
+    total_m3: number;
+  } | null>(null);
+  const [chartType, setChartType] = useState<"bar" | "line">("bar");
+
+  // Loading state
   if (loading) {
     return (
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
@@ -33,7 +69,7 @@ export default function WaterChart({ data, loading, onMonthClick }: WaterChartPr
     );
   }
 
-  // No Data
+  // No data state
   if (!data || data.length === 0) {
     return (
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
@@ -51,25 +87,56 @@ export default function WaterChart({ data, loading, onMonthClick }: WaterChartPr
     );
   }
 
-  // Click handler for bars
-  const handleBarClick = (data: any) => {
-    if (onMonthClick && data && data.month) {
-      onMonthClick(data.month); // Pass full string, e.g. "2025-06"
+  // Handle bar/month click
+  const handleBarClick = async (clickData: any) => {
+    const month = clickData?.month;
+    if (!month) return;
+
+    setSelectedMonth(month);
+    
+    if (onMonthClick) {
+      onMonthClick(month);
+    }
+
+    // Simulate API call to get device breakdown
+    // In real implementation, you'd call your backend API
+    try {
+      // This would be: const response = await fetch(`/api/water/hiex-dublincc/device-breakdown/${month}`);
+      // const breakdown = await response.json();
+      
+      // For demo, use the device_breakdown from the data if available
+      const monthData = data.find(d => d.month === month);
+      if (monthData?.device_breakdown) {
+        const devices = Object.entries(monthData.device_breakdown).map(([deviceId, usage]) => ({
+          device_id: deviceId,
+          usage_liters: usage * 1000, // Convert back to liters for display
+          usage_m3: usage
+        }));
+        
+        setDeviceBreakdown({
+          month,
+          devices,
+          total_m3: monthData.cubic_meters
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch device breakdown:", error);
     }
   };
 
   // Tooltip formatter
   const formatTooltip = (value: any, name: string) => {
-    if (name === "cubic_meters") return [`${value} m³`, "Water Usage"];
+    if (name === "cubic_meters") return [`${value} m³`, "Total Usage"];
     if (name === "per_room_m3") return [`${value} m³`, "Per Room"];
     return [value, name];
   };
 
+  // Custom tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-medium text-gray-900 mb-2">{label}</p>
+          <p className="font-medium text-gray-900 mb-2">{formatMonth(label)}</p>
           {payload.map((entry: any, idx: number) => (
             <p key={idx} style={{ color: entry.color }} className="text-sm">
               {formatTooltip(entry.value, entry.dataKey)[1]}: {formatTooltip(entry.value, entry.dataKey)[0]}
@@ -79,7 +146,7 @@ export default function WaterChart({ data, loading, onMonthClick }: WaterChartPr
             <div className="mt-2 pt-2 border-t border-gray-100">
               <div className="flex items-center gap-1 text-xs text-gray-500">
                 <MousePointer2 className="w-3 h-3" />
-                <span>Click for bills</span>
+                <span>Click for details</span>
               </div>
             </div>
           )}
@@ -89,52 +156,240 @@ export default function WaterChart({ data, loading, onMonthClick }: WaterChartPr
     return null;
   };
 
+  // Format month for display
+  const formatMonth = (monthStr: string) => {
+    try {
+      const [year, month] = monthStr.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1);
+      return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    } catch {
+      return monthStr;
+    }
+  };
+
+  // Get trend icon and color
+  const getTrendDisplay = () => {
+    if (!summary) return null;
+    
+    const trendConfig = {
+      increasing: { icon: TrendingUp, color: "text-red-500", text: "Increasing" },
+      decreasing: { icon: TrendingDown, color: "text-green-500", text: "Decreasing" },
+      stable: { icon: Activity, color: "text-gray-500", text: "Stable" }
+    };
+    
+    const config = trendConfig[summary.trend];
+    const Icon = config.icon;
+    
+    return (
+      <div className={`flex items-center gap-1 ${config.color}`}>
+        <Icon className="w-4 h-4" />
+        <span className="text-sm">{config.text}</span>
+      </div>
+    );
+  };
+
+  // Prepare data for charts
+  const chartData = data.map(d => ({
+    ...d,
+    monthLabel: formatMonth(d.month)
+  }));
+
+  // Colors for pie chart
+  const COLORS = ['#3B82F6', '#93C5FD', '#DBEAFE', '#1E40AF'];
+
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-      <div className="flex items-center gap-2 mb-4">
-        <Droplets className="w-5 h-5 text-blue-600" />
-        <h3 className="text-lg font-semibold text-gray-900">Water Usage</h3>
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      {summary && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="text-sm text-gray-500">Total Usage</div>
+            <div className="text-2xl font-bold text-gray-900">{summary.total_usage_m3} m³</div>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="text-sm text-gray-500">Monthly Average</div>
+            <div className="text-2xl font-bold text-gray-900">{summary.avg_monthly_m3} m³</div>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="text-sm text-gray-500">Per Room Average</div>
+            <div className="text-2xl font-bold text-gray-900">{summary.avg_per_room_m3} m³</div>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="text-sm text-gray-500">Trend</div>
+            <div className="text-xl font-bold">{getTrendDisplay()}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Chart */}
+      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Droplets className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Water Usage</h3>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setChartType("bar")}
+              className={`px-3 py-1 text-sm rounded ${
+                chartType === "bar" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Bar Chart
+            </button>
+            <button
+              onClick={() => setChartType("line")}
+              className={`px-3 py-1 text-sm rounded ${
+                chartType === "line" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Line Chart
+            </button>
+          </div>
+        </div>
+        
+        <div className="h-80">
+          <ResponsiveContainer width="100%" height="100%">
+            {chartType === "bar" ? (
+              <BarChart
+                data={chartData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="monthLabel"
+                  tick={{ fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Bar
+                  dataKey="cubic_meters"
+                  fill="#3B82F6"
+                  name="Total Usage (m³)"
+                  onClick={handleBarClick}
+                  style={{ cursor: onMonthClick ? "pointer" : "default" }}
+                />
+                <Bar
+                  dataKey="per_room_m3"
+                  fill="#93C5FD"
+                  name="Per Room (m³)"
+                  onClick={handleBarClick}
+                  style={{ cursor: onMonthClick ? "pointer" : "default" }}
+                />
+              </BarChart>
+            ) : (
+              <LineChart
+                data={chartData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="monthLabel"
+                  tick={{ fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis tick={{ fontSize: 12 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="cubic_meters"
+                  stroke="#3B82F6"
+                  strokeWidth={2}
+                  name="Total Usage (m³)"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="per_room_m3"
+                  stroke="#93C5FD"
+                  strokeWidth={2}
+                  name="Per Room (m³)"
+                />
+              </LineChart>
+            )}
+          </ResponsiveContainer>
+        </div>
       </div>
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={data}
-            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-            style={{ cursor: onMonthClick ? "pointer" : "default" }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis
-              dataKey="month"
-              tick={{ fontSize: 12 }}
-              tickFormatter={value => {
-                try {
-                  const date = new Date(value + "-01");
-                  return date.toLocaleDateString("en-US", { month: "short" });
-                } catch {
-                  return value;
-                }
-              }}
-            />
-            <YAxis tick={{ fontSize: 12 }} />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Bar
-              dataKey="cubic_meters"
-              fill="#3B82F6"
-              name="Water (m³)"
-              onClick={handleBarClick}
-              style={{ cursor: onMonthClick ? "pointer" : "default" }}
-            />
-            <Bar
-              dataKey="per_room_m3"
-              fill="#93C5FD"
-              name="Per Room (m³)"
-              onClick={handleBarClick}
-              style={{ cursor: onMonthClick ? "pointer" : "default" }}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+
+      {/* Device Breakdown */}
+      {deviceBreakdown && (
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Device Breakdown - {formatMonth(deviceBreakdown.month)}
+            </h3>
+            <button
+              onClick={() => setDeviceBreakdown(null)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              ×
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Device Table */}
+            <div>
+              <h4 className="font-medium text-gray-900 mb-3">Usage by Device</h4>
+              <div className="space-y-2">
+                {deviceBreakdown.devices.map((device, idx) => (
+                  <div key={device.device_id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                    <div>
+                      <div className="font-medium">Device {device.device_id}</div>
+                      {device.avg_usage_m3 && (
+                        <div className="text-sm text-gray-500">
+                          Avg: {device.avg_usage_m3} m³
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold">{device.usage_m3} m³</div>
+                      <div className="text-sm text-gray-500">
+                        {device.usage_liters.toLocaleString()} L
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Pie Chart */}
+            <div>
+              <h4 className="font-medium text-gray-900 mb-3">Distribution</h4>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={deviceBreakdown.devices.map((device, idx) => ({
+                        name: `Device ${device.device_id}`,
+                        value: device.usage_m3,
+                        fill: COLORS[idx % COLORS.length]
+                      }))}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                    >
+                      {deviceBreakdown.devices.map((device, idx) => (
+                        <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: any) => [`${value} m³`, "Usage"]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
