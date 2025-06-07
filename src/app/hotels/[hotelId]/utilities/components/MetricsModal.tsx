@@ -386,23 +386,22 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     return rows;
   }, [bills, hotelId]);
   
-  // Helper function to find charge by type in electricity bills
-  function findChargeByType(charges = [], type: string): number {
-    if (!Array.isArray(charges)) return 0;
-    const charge = charges.find((c: any) => 
-      c.description && c.description.toLowerCase().includes(type.toLowerCase())
-    );
-    return charge ? charge.amount : 0;
-  }
+  function findChargeByType(charges: any[] = [], type: string): number {
+  if (!Array.isArray(charges)) return 0;
+  const charge = charges.find((c: any) => 
+    c?.description && c.description.toLowerCase().includes(type.toLowerCase())
+  );
+  return charge && typeof charge.amount === 'number' ? charge.amount : 0;
+}
   
   // Helper function to find line item by type in gas bills
-  function findLineItemByType(lineItems = [], type: string): number {
-    if (!Array.isArray(lineItems)) return 0;
-    const item = lineItems.find((i: any) => 
-      i.description && i.description.toLowerCase().includes(type.toLowerCase())
-    );
-    return item ? item.amount : 0;
-  }
+ function findLineItemByType(lineItems: any[] = [], type: string): number {
+  if (!Array.isArray(lineItems)) return 0;
+  const item = lineItems.find((i: any) => 
+    i?.description && i.description.toLowerCase().includes(type.toLowerCase())
+  );
+  return item && typeof item.amount === 'number' ? item.amount : 0;
+}
 
   // Filter and sort rows based on user selections
   const filteredRows = useMemo(() => {
