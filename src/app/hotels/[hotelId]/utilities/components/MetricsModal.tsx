@@ -360,12 +360,12 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
         
         // Find the MIC excess charge
         const micExcessCharge = Array.isArray(rawData.charges) ? 
-          rawData.charges.find(c => c?.description?.toLowerCase().includes('mic excess') ||
+          rawData.charges.find((c: any) => c?.description?.toLowerCase().includes('mic excess') ||
                                    c?.description?.toLowerCase().includes('excess charge')) : null;
                                    
         // Find standard MIC/capacity charge                       
         const micStandardCharge = Array.isArray(rawData.charges) ? 
-          rawData.charges.find(c => (c?.description?.toLowerCase().includes('capacity charge') || 
+          rawData.charges.find((c: any) => (c?.description?.toLowerCase().includes('capacity charge') || 
                                     c?.description?.toLowerCase().includes('mic charge')) && 
                                    !c?.description?.toLowerCase().includes('excess')) : null;
         
@@ -446,7 +446,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     const charge = charges.find((c: any) => {
       if (!c?.description) return false;
       const description = c.description.toLowerCase();
-      return searchTerms.every(term => description.includes(term));
+      return searchTerms.every((term: string) => description.includes(term));
     });
     
     return charge && typeof charge.amount === 'number' ? charge.amount : 0;
@@ -462,7 +462,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     const item = lineItems.find((i: any) => {
       if (!i?.description) return false;
       const description = i.description.toLowerCase();
-      return searchTerms.every(term => description.includes(term));
+      return searchTerms.every((term: string) => description.includes(term));
     });
     
     return item && typeof item.amount === 'number' ? item.amount : 0;
@@ -1366,7 +1366,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                               if (key === 'actions') {
                                 return (
                                   <td key={key} className="text-center border-r p-2">
-                                    <div className="flex justify-center space-x-2">                                      <a
+                                    <div className="flex justify-center space-x-2">
+                                      <a
                                         href={getS3PdfUrl(row)}
                                         target="_blank"
                                         rel="noopener noreferrer"
