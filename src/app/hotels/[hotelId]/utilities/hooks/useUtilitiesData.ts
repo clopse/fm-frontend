@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 
 interface UtilitiesData {
-  electricity: Record<string, number>;
-  gas: Record<string, number>;
+  electricity: any[]; // Array of electricity entries
+  gas: any[]; // Array of gas entries
   bills: any[];
   totals: {
     electricity: number;
@@ -15,9 +15,11 @@ interface UtilitiesData {
 type ViewMode = 'kwh' | 'cost';
 
 export function useUtilitiesData(hotelId: string | undefined) {
+  console.log('🚀 NEW UPDATED HOOK RUNNING!!! Version 2.0');
+  
   const [data, setData] = useState<UtilitiesData>({
-    electricity: {},
-    gas: {},
+    electricity: [],
+    gas: [],
     bills: [],
     totals: {
       electricity: 0,
@@ -379,15 +381,30 @@ export function useUtilitiesData(hotelId: string | undefined) {
         const electricityTotal = Object.values(monthlyData.electricity).reduce((sum, val) => sum + val, 0);
         const gasTotal = Object.values(monthlyData.gas).reduce((sum, val) => sum + val, 0);
 
+        // Convert monthly data back to array format that the app expects
+        const electricityArray = Object.entries(monthlyData.electricity).map(([month, kwh]) => ({
+          month,
+          total_kwh: kwh,
+          total_eur: kwh * 0.25, // Rough estimate
+          bill_id: `electricity_${month}`
+        }));
+
+        const gasArray = Object.entries(monthlyData.gas).map(([period, kwh]) => ({
+          period,
+          total_kwh: kwh,
+          total_eur: kwh * 0.08, // Rough estimate
+          bill_id: `gas_${period}`
+        }));
+
         setData({
-          electricity: monthlyData.electricity,
-          gas: monthlyData.gas,
+          electricity: electricityArray,
+          gas: gasArray,
           bills: rawData.bills || [],
           totals: {
             electricity: electricityTotal,
             gas: gasTotal,
-            electricity_cost: electricityTotal * 0.25, // Rough estimate
-            gas_cost: gasTotal * 0.08, // Rough estimate
+            electricity_cost: electricityTotal * 0.25,
+            gas_cost: gasTotal * 0.08,
           }
         });
 
