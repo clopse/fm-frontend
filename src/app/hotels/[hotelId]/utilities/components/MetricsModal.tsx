@@ -1,6 +1,3 @@
-I'll rewrite the MetricsModal component with your suggestions. Here's an improved implementation addressing your feedback:
-
-```javascript
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from 'react';
