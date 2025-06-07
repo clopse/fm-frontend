@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { X, FileText, Download, Search, Calendar, Settings, ChevronDown, 
-         ChevronsUpDown, ArrowLeft, ArrowRight, ChevronUp, Filter } from 'lucide-react';
+         ChevronsUpDown, ArrowLeft, ArrowRight, ChevronUp } from 'lucide-react';
 import { DashboardFilters } from '../types';
 
 interface MetricsModalProps {
@@ -28,6 +28,8 @@ interface BillRow {
   max_demand?: number;
   mic_excess?: number;
   mic_excess_cost?: number;
+  mic_excess_rate?: number;
+  mic_standard_rate?: number;
   standing_charge?: number;
   total_cost: number;
   vat_amount?: number;
@@ -85,6 +87,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     max_demand: true,
     mic_excess: true,
     mic_excess_cost: true,
+    mic_excess_rate: true,
+    mic_standard_rate: true,
     standing_charge: true,
     total_cost: true,
     vat_amount: true,
@@ -123,6 +127,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     max_demand: "Max Demand",
     mic_excess: "MIC Excess",
     mic_excess_cost: "Excess Cost",
+    mic_excess_rate: "Excess Rate",
+    mic_standard_rate: "MIC Rate",
     standing_charge: "Standing Charge",
     total_cost: "Total Cost",
     vat_amount: "VAT",
@@ -150,7 +156,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   // Define which columns are sortable
   const sortableColumns = [
     'date', 'meter_number', 'mprn', 'gprn', 'day_kwh', 
-    'night_kwh', 'total_kwh', 'mic_value', 'max_demand', 'mic_excess', 'mic_excess_cost',
+    'night_kwh', 'total_kwh', 'mic_value', 'max_demand', 'mic_excess', 
+    'mic_excess_cost', 'mic_excess_rate', 'mic_standard_rate',
     'consumption_kwh', 'units_consumed', 'conversion_factor',
     'carbon_tax', 'standing_charge', 'commodity_cost',
     'total_cost', 'vat_amount', 'electricity_tax'
@@ -345,14 +352,36 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
         const micValue = summary.mic_value || rawData.meterDetails?.mic?.value || 0;
         const maxDemand = summary.max_demand || rawData.meterDetails?.maxDemand?.value || 0;
         
-        // Calculate MIC excess and cost
-        const micExcess = Math.max(0, maxDemand - micValue);
+        // Get MIC excess directly from charges
+        let micExcess = 0;
+        let micExcessRate = 0;
+        let micExcessCost = 0;
+        let micStandardRate = 0;
         
-        // Approximate MIC excess cost (typically 2-3x the standard MIC rate)
-        // This would be replaced with actual values from the bill when available
-        const micRate = 0.7; // Example: €0.7 per kVA per month
-        const micExcessRate = 2.1; // Example: 3x standard rate
-        const micExcessCost = micExcess > 0 ? micExcess * micExcessRate : 0;
+        // Find the MIC excess charge
+        const micExcessCharge = Array.isArray(rawData.charges) ? 
+          rawData.charges.find(c => c?.description?.toLowerCase().includes('mic excess') ||
+                                   c?.description?.toLowerCase().includes('excess charge')) : null;
+                                   
+        // Find standard MIC/capacity charge                       
+        const micStandardCharge = Array.isArray(rawData.charges) ? 
+          rawData.charges.find(c => (c?.description?.toLowerCase().includes('capacity charge') || 
+                                    c?.description?.toLowerCase().includes('mic charge')) && 
+                                   !c?.description?.toLowerCase().includes('excess')) : null;
+        
+        if (micExcessCharge) {
+          micExcess = micExcessCharge.quantity?.value || Math.max(0, maxDemand - micValue);
+          micExcessRate = micExcessCharge.rate?.value || 0;
+          micExcessCost = micExcessCharge.amount || 0;
+        } else {
+          // Calculate if not found
+          micExcess = Math.max(0, maxDemand - micValue);
+        }
+        
+        // Get standard MIC rate
+        if (micStandardCharge) {
+          micStandardRate = micStandardCharge.rate?.value || 0;
+        }
         
         rows.push({
           id: `elec-${billIndex}`,
@@ -369,6 +398,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
           max_demand: maxDemand,
           mic_excess: micExcess,
           mic_excess_cost: micExcessCost,
+          mic_excess_rate: micExcessRate,
+          mic_standard_rate: micStandardRate,
           standing_charge: findChargeByType(rawData.charges, 'standing') || 0,
           total_cost: summary.total_cost || rawData.totalAmount?.value || 0,
           vat_amount: summary.vat_amount || rawData.taxDetails?.vatAmount || 0,
@@ -408,18 +439,32 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   
   function findChargeByType(charges: any[] = [], type: string): number {
     if (!Array.isArray(charges)) return 0;
-    const charge = charges.find((c: any) => 
-      c?.description && c.description.toLowerCase().includes(type.toLowerCase())
-    );
+    
+    const searchTerms = type.toLowerCase().split(' ');
+    
+    // Find the first charge that contains all search terms in its description
+    const charge = charges.find((c: any) => {
+      if (!c?.description) return false;
+      const description = c.description.toLowerCase();
+      return searchTerms.every(term => description.includes(term));
+    });
+    
     return charge && typeof charge.amount === 'number' ? charge.amount : 0;
   }
   
   // Helper function to find line item by type in gas bills
   function findLineItemByType(lineItems: any[] = [], type: string): number {
     if (!Array.isArray(lineItems)) return 0;
-    const item = lineItems.find((i: any) => 
-      i?.description && i.description.toLowerCase().includes(type.toLowerCase())
-    );
+    
+    const searchTerms = type.toLowerCase().split(' ');
+    
+    // Find the first item that contains all search terms in its description
+    const item = lineItems.find((i: any) => {
+      if (!i?.description) return false;
+      const description = i.description.toLowerCase();
+      return searchTerms.every(term => description.includes(term));
+    });
+    
     return item && typeof item.amount === 'number' ? item.amount : 0;
   }
 
@@ -513,7 +558,12 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
         totalKwh: elecRows.reduce((sum, r) => sum + (r.total_kwh || 0), 0),
         dayKwh: elecRows.reduce((sum, r) => sum + (r.day_kwh || 0), 0),
         nightKwh: elecRows.reduce((sum, r) => sum + (r.night_kwh || 0), 0),
-        micExcessCost: elecRows.reduce((sum, r) => sum + (r.mic_excess_cost || 0), 0)
+        micExcessCost: elecRows.reduce((sum, r) => sum + (r.mic_excess_cost || 0), 0),
+        averageMicRate: elecRows.length ? 
+          elecRows.reduce((sum, r) => sum + (r.mic_standard_rate || 0), 0) / elecRows.length : 0,
+        averageMicExcessRate: elecRows.filter(r => r.mic_excess_rate).length ? 
+          elecRows.reduce((sum, r) => sum + (r.mic_excess_rate || 0), 0) / 
+          elecRows.filter(r => r.mic_excess_rate).length : 0
       },
       gas: {
         count: gasRows.length,
@@ -546,7 +596,17 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   };
   
   const selectAll = () => {
-    setSelectedRows(new Set(filteredRows.map(row => row.id)));
+    if (activeTab === 'electricity') {
+      setSelectedRows(new Set(
+        filteredRows.filter(r => r.type === 'electricity').map(row => row.id)
+      ));
+    } else if (activeTab === 'gas') {
+      setSelectedRows(new Set(
+        filteredRows.filter(r => r.type === 'gas').map(row => row.id)
+      ));
+    } else {
+      setSelectedRows(new Set(filteredRows.map(row => row.id)));
+    }
   };
   
   const clearSelection = () => {
@@ -604,6 +664,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
       max_demand: true,
       mic_excess: true,
       mic_excess_cost: true,
+      mic_excess_rate: true,
+      mic_standard_rate: true,
       standing_charge: true,
       total_cost: true,
       vat_amount: true,
@@ -662,7 +724,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     // Handle electricity bills
     if (electricityRows.length > 0) {
       csvContent += 'ELECTRICITY BILLS\n';
-      csvContent += 'Bill Date,Billing Period,Meter Number,MPRN,Day kWh,Night kWh,Total kWh,MIC Value,Max Demand,MIC Excess,MIC Excess Cost,Standing Charge,Total Cost,VAT,Electricity Tax,Filename\n';
+      csvContent += 'Bill Date,Billing Period,Meter Number,MPRN,Day kWh,Night kWh,Total kWh,MIC Value,Max Demand,MIC Excess,MIC Excess Cost,MIC Excess Rate,MIC Standard Rate,Standing Charge,Total Cost,VAT,Electricity Tax,Filename\n';
       
       electricityRows.forEach(row => {
         csvContent += [
@@ -677,6 +739,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
           formatField(row.max_demand),
           formatField(row.mic_excess),
           formatField(row.mic_excess_cost),
+          formatField(row.mic_excess_rate),
+          formatField(row.mic_standard_rate),
           formatField(row.standing_charge),
           formatField(row.total_cost),
           formatField(row.vat_amount),
@@ -1084,7 +1148,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                                   key === 'checkbox' ? 'w-8 text-center sticky left-0 bg-slate-200' :
                                   key === 'actions' ? 'w-16 text-center' :
                                   ['total_cost', 'vat_amount', 'electricity_tax', 'standing_charge', 'day_kwh', 
-                                   'night_kwh', 'total_kwh', 'mic_value', 'max_demand', 'mic_excess', 'mic_excess_cost'].includes(key) 
+                                   'night_kwh', 'total_kwh', 'mic_value', 'max_demand', 'mic_excess', 
+                                   'mic_excess_cost', 'mic_excess_rate', 'mic_standard_rate'].includes(key) 
                                     ? 'text-right' : 'text-left'
                                 }`}
                               >
@@ -1179,6 +1244,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                                 content = typeof row[key as keyof BillRow] === 'number' ? `€${(row[key as keyof BillRow] as number).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-';
                               } else if (['day_kwh', 'night_kwh', 'total_kwh', 'mic_value', 'max_demand', 'mic_excess'].includes(key)) {
                                 content = typeof row[key as keyof BillRow] === 'number' ? (row[key as keyof BillRow] as number).toLocaleString() : '-';
+                              } else if (['mic_excess_rate', 'mic_standard_rate'].includes(key)) {
+                                content = typeof row[key as keyof BillRow] === 'number' ? `€${(row[key as keyof BillRow] as number).toFixed(4)}/kVA/day` : '-';
                               }
                               
                               return (
@@ -1186,7 +1253,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                                   key={key} 
                                   className={`p-2 border-r ${
                                     ['total_cost', 'vat_amount', 'electricity_tax', 'standing_charge', 'day_kwh', 
-                                     'night_kwh', 'total_kwh', 'mic_value', 'max_demand', 'mic_excess', 'mic_excess_cost'].includes(key) 
+                                     'night_kwh', 'total_kwh', 'mic_value', 'max_demand', 'mic_excess', 
+                                     'mic_excess_cost', 'mic_excess_rate', 'mic_standard_rate'].includes(key) 
                                       ? 'text-right font-mono' : ''
                                   }`}
                                   onClick={() => toggleRow(row.id)}
@@ -1298,8 +1366,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                               if (key === 'actions') {
                                 return (
                                   <td key={key} className="text-center border-r p-2">
-                                    <div className="flex justify-center space-x-2">
-                                      <a
+                                    <div className="flex justify-center space-x-2">                                      <a
                                         href={getS3PdfUrl(row)}
                                         target="_blank"
                                         rel="noopener noreferrer"
@@ -1319,7 +1386,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                                 content = row.date ? new Date(row.date).toLocaleDateString() : 'N/A';
                               } else if (['total_cost', 'vat_amount', 'carbon_tax', 'standing_charge', 'commodity_cost'].includes(key)) {
                                 content = typeof row[key as keyof BillRow] === 'number' ? `€${(row[key as keyof BillRow] as number).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-';
-                              } else if (['consumption_kwh', 'units_consumed', 'total_kwh'].includes(key)) {
+                              } else if (['consumption_kwh', 'units_consumed'].includes(key)) {
                                 content = typeof row[key as keyof BillRow] === 'number' ? (row[key as keyof BillRow] as number).toLocaleString() : '-';
                               } else if (key === 'conversion_factor') {
                                 content = typeof row[key as keyof BillRow] === 'number' ? (row[key as keyof BillRow] as number).toFixed(4) : '-';
@@ -1355,31 +1422,31 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                       <span className="font-semibold">Total:</span> {totals.electricity.totalKwh.toLocaleString()} kWh • 
                       €{totals.electricity.totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       {totals.electricity.micExcessCost > 0 && (
-                        <> • <span className="text-amber-600">MIC Excess: €{totals.electricity.micExcessCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>                      </>
-                    )}
-                  </> 
-                ) : activeTab === 'gas' ? (
-                  <>
-                    <span className="font-semibold">Total:</span> {totals.gas.totalKwh.toLocaleString()} kWh • 
-                    €{totals.gas.totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                  </>
-                ) : (
-                  <>
-                    <span className="font-semibold">Combined:</span> {(totals.electricity.totalKwh + totals.gas.totalKwh).toLocaleString()} kWh • 
-                    €{(totals.electricity.totalCost + totals.gas.totalCost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                  </>
-                )}
+                        <> • <span className="text-amber-600">MIC Excess: €{totals.electricity.micExcessCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></>
+                      )}
+                    </>
+                  ) : activeTab === 'gas' ? (
+                    <>
+                      <span className="font-semibold">Total:</span> {totals.gas.totalKwh.toLocaleString()} kWh • 
+                      €{totals.gas.totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-semibold">Combined:</span> {(totals.electricity.totalKwh + totals.gas.totalKwh).toLocaleString()} kWh • 
+                      €{(totals.electricity.totalCost + totals.gas.totalCost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    </>
+                  )}
+                </div>
+                
+                <div className="text-slate-600 text-sm">
+                  {filteredRows.length} {filteredRows.length === 1 ? 'bill' : 'bills'} 
+                  {selectedRows.size > 0 && ` • ${selectedRows.size} selected`}
+                </div>
               </div>
-              
-              <div className="text-slate-600 text-sm">
-                {filteredRows.length} {filteredRows.length === 1 ? 'bill' : 'bills'} 
-                {selectedRows.size > 0 && ` • ${selectedRows.size} selected`}
-              </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 }
