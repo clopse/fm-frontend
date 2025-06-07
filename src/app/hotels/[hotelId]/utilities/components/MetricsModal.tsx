@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { X, FileText, Download, Search, Filter, Calendar } from 'lucide-react';
+import { X, FileText, Download, Search, Calendar } from 'lucide-react';
 import { DashboardFilters } from '../types';
 
 interface MetricsModalProps {
@@ -11,7 +11,7 @@ interface MetricsModalProps {
   onClose: () => void;
 }
 
-interface BillRow {
+interface ExcelRow {
   id: string;
   date: string;
   type: string;
@@ -22,6 +22,7 @@ interface BillRow {
   units?: number;
   rate?: number;
   filename: string;
+  billId: string;
   selected: boolean;
 }
 
@@ -30,6 +31,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState(`${year}-01-01`);
   const [dateTo, setDateTo] = useState(`${year}-12-31`);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -44,6 +46,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
         `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${year}`
       );
       const data = await response.json();
+      console.log('Bills fetched:', data.bills?.length || 0);
       setBills(data.bills || []);
     } catch (error) {
       console.error('Failed to fetch bills:', error);
@@ -52,132 +55,209 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     }
   };
 
-  // Transform bills into Excel-like rows
+  // Transform bills into Excel-like rows using REAL data structure
   const allRows = useMemo(() => {
-    const rows: BillRow[] = [];
+    const rows: ExcelRow[] = [];
     
     bills.forEach((bill, billIndex) => {
-      const summary = bill.summary || {};
       const rawData = bill.raw_data || {};
-      const billDate = summary.bill_date || bill.upload_date || '';
-      const supplier = summary.supplier || bill.supplier || 'Unknown';
+      const summary = bill.summary || {};
+      const filename = bill.filename || `bill_${billIndex}`;
+      const billId = `${bill.hotel_id}_${bill.utility_type}_${billIndex}`;
       
-      // Main bill amount
-      rows.push({
-        id: `${billIndex}-main`,
-        date: billDate,
-        type: bill.utility_type,
-        supplier: supplier,
-        description: `${bill.utility_type.toUpperCase()} Bill Total`,
-        category: 'Total Bill',
-        amount: bill.total_cost || 0,
-        units: summary.total_kwh,
-        rate: summary.total_kwh ? (bill.total_cost / summary.total_kwh) : undefined,
-        filename: bill.filename,
-        selected: false
-      });
+      // Get bill date from multiple possible locations
+      const billDate = summary.bill_date || 
+                       rawData.billingPeriod?.endDate || 
+                       rawData.billSummary?.billingPeriodEndDate || 
+                       bill.uploaded_at || '';
 
-      // MIC Charges (for electricity)
-      if (bill.utility_type === 'electricity' && summary.mic_value) {
-        // Extract MIC charges from raw data or estimate
-        const micCharges = rawData.lineItems?.find((item: any) => 
-          item.description?.toLowerCase().includes('mic') || 
-          item.description?.toLowerCase().includes('maximum import')
-        )?.amount || (summary.mic_value * 30); // Estimate if not found
+      const supplier = summary.supplier || 
+                       rawData.supplier || 
+                       rawData.supplierInfo?.name || 
+                       'Unknown';
 
-        if (micCharges > 0) {
+      if (bill.utility_type === 'electricity') {
+        // ELECTRICITY BILLS (Arden Energy structure)
+        const totalAmount = rawData.totalAmount?.value || summary.total_cost || 0;
+        
+        // Main bill total
+        rows.push({
+          id: `${billIndex}-total`,
+          date: billDate,
+          type: 'electricity',
+          supplier: supplier,
+          description: 'Electricity Bill Total',
+          category: 'Total Bill',
+          amount: totalAmount,
+          units: summary.total_kwh,
+          rate: summary.total_kwh ? (totalAmount / summary.total_kwh) : undefined,
+          filename: filename,
+          billId: billId,
+          selected: false
+        });
+
+        // Break down charges array (real structure from your data)
+        if (rawData.charges && Array.isArray(rawData.charges)) {
+          rawData.charges.forEach((charge: any, chargeIndex: number) => {
+            const description = charge.description || 'Unknown Charge';
+            const amount = charge.amount || 0;
+            const quantity = charge.quantity?.value || 0;
+            const rate = charge.rate?.value || 0;
+
+            // Categorize by description
+            let category = 'Other Charges';
+            if (description.toLowerCase().includes('mic excess')) {
+              category = 'MIC Excess Charges';
+            } else if (description.toLowerCase().includes('capacity')) {
+              category = 'Capacity Charges';
+            } else if (description.toLowerCase().includes('standing')) {
+              category = 'Standing Charges';
+            } else if (description.toLowerCase().includes('day units')) {
+              category = 'Day Usage';
+            } else if (description.toLowerCase().includes('night units')) {
+              category = 'Night Usage';
+            } else if (description.toLowerCase().includes('pso')) {
+              category = 'PSO Levy';
+            }
+
+            rows.push({
+              id: `${billIndex}-charge-${chargeIndex}`,
+              date: billDate,
+              type: 'electricity',
+              supplier: supplier,
+              description: description,
+              category: category,
+              amount: amount,
+              units: quantity,
+              rate: rate,
+              filename: filename,
+              billId: billId,
+              selected: false
+            });
+          });
+        }
+
+        // Tax details
+        if (rawData.taxDetails) {
+          if (rawData.taxDetails.vatAmount) {
+            rows.push({
+              id: `${billIndex}-vat`,
+              date: billDate,
+              type: 'electricity',
+              supplier: supplier,
+              description: 'VAT',
+              category: 'Tax',
+              amount: rawData.taxDetails.vatAmount,
+              filename: filename,
+              billId: billId,
+              selected: false
+            });
+          }
+
+          if (rawData.taxDetails.electricityTax?.amount) {
+            rows.push({
+              id: `${billIndex}-elec-tax`,
+              date: billDate,
+              type: 'electricity',
+              supplier: supplier,
+              description: 'Electricity Tax',
+              category: 'Tax',
+              amount: rawData.taxDetails.electricityTax.amount,
+              units: rawData.taxDetails.electricityTax.quantity?.value,
+              rate: rawData.taxDetails.electricityTax.rate?.value,
+              filename: filename,
+              billId: billId,
+              selected: false
+            });
+          }
+        }
+
+      } else if (bill.utility_type === 'gas') {
+        // GAS BILLS (Flogas structure)
+        const totalAmount = rawData.billSummary?.currentBillAmount || summary.total_cost || 0;
+        
+        // Main bill total
+        rows.push({
+          id: `${billIndex}-total`,
+          date: billDate,
+          type: 'gas',
+          supplier: supplier,
+          description: 'Gas Bill Total',
+          category: 'Total Bill',
+          amount: totalAmount,
+          units: rawData.consumptionDetails?.consumptionValue,
+          filename: filename,
+          billId: billId,
+          selected: false
+        });
+
+        // Break down line items (real structure from your gas bill)
+        if (rawData.lineItems && Array.isArray(rawData.lineItems)) {
+          rawData.lineItems.forEach((item: any, itemIndex: number) => {
+            const description = item.description || 'Unknown Item';
+            const amount = item.amount || 0;
+            const units = item.units || 0;
+            const rate = item.rate || 0;
+
+            // Categorize by description
+            let category = 'Other Charges';
+            if (description.toLowerCase().includes('carbon tax')) {
+              category = 'Carbon Tax';
+            } else if (description.toLowerCase().includes('standing')) {
+              category = 'Standing Charges';
+            } else if (description.toLowerCase().includes('commodity') || description.toLowerCase().includes('tariff')) {
+              category = 'Gas Commodity';
+            } else if (description.toLowerCase().includes('capacity')) {
+              category = 'Gas Capacity';
+            }
+
+            rows.push({
+              id: `${billIndex}-item-${itemIndex}`,
+              date: billDate,
+              type: 'gas',
+              supplier: supplier,
+              description: description,
+              category: category,
+              amount: amount,
+              units: units,
+              rate: rate,
+              filename: filename,
+              billId: billId,
+              selected: false
+            });
+          });
+        }
+
+        // VAT from bill summary
+        if (rawData.billSummary?.totalVatAmount) {
           rows.push({
-            id: `${billIndex}-mic`,
+            id: `${billIndex}-vat`,
             date: billDate,
-            type: bill.utility_type,
+            type: 'gas',
             supplier: supplier,
-            description: 'MIC Charges',
-            category: 'MIC Charges',
-            amount: micCharges,
-            units: summary.mic_value,
-            rate: summary.mic_value ? (micCharges / summary.mic_value) : undefined,
-            filename: bill.filename,
+            description: 'VAT',
+            category: 'Tax',
+            amount: rawData.billSummary.totalVatAmount,
+            filename: filename,
+            billId: billId,
             selected: false
           });
         }
-      }
-
-      // Carbon Tax (for gas)
-      if (bill.utility_type === 'gas' && summary.carbon_tax) {
-        rows.push({
-          id: `${billIndex}-carbon`,
-          date: billDate,
-          type: bill.utility_type,
-          supplier: supplier,
-          description: 'Carbon Tax',
-          category: 'Carbon Tax',
-          amount: summary.carbon_tax,
-          units: summary.consumption_kwh,
-          rate: summary.consumption_kwh ? (summary.carbon_tax / summary.consumption_kwh) : undefined,
-          filename: bill.filename,
-          selected: false
-        });
-      }
-
-      // Standing Charges
-      if (summary.standing_charge) {
-        rows.push({
-          id: `${billIndex}-standing`,
-          date: billDate,
-          type: bill.utility_type,
-          supplier: supplier,
-          description: 'Standing Charge',
-          category: 'Standing Charges',
-          amount: summary.standing_charge,
-          filename: bill.filename,
-          selected: false
-        });
-      }
-
-      // Day/Night Usage (for electricity)
-      if (bill.utility_type === 'electricity' && summary.day_kwh && summary.night_kwh) {
-        const dayRate = rawData.consumption?.find((c: any) => c.type === 'Day')?.rate || 0;
-        const nightRate = rawData.consumption?.find((c: any) => c.type === 'Night')?.rate || 0;
-
-        rows.push({
-          id: `${billIndex}-day`,
-          date: billDate,
-          type: bill.utility_type,
-          supplier: supplier,
-          description: 'Day Usage',
-          category: 'Day Usage',
-          amount: summary.day_kwh * dayRate,
-          units: summary.day_kwh,
-          rate: dayRate,
-          filename: bill.filename,
-          selected: false
-        });
-
-        rows.push({
-          id: `${billIndex}-night`,
-          date: billDate,
-          type: bill.utility_type,
-          supplier: supplier,
-          description: 'Night Usage',
-          category: 'Night Usage',
-          amount: summary.night_kwh * nightRate,
-          units: summary.night_kwh,
-          rate: nightRate,
-          filename: bill.filename,
-          selected: false
-        });
       }
     });
 
     return rows;
   }, [bills]);
 
-  // Filter and search rows
+  // Filter rows
   const filteredRows = useMemo(() => {
     return allRows.filter(row => {
       // Date range filter
-      if (dateFrom && row.date < dateFrom) return false;
-      if (dateTo && row.date > dateTo) return false;
+      if (dateFrom && row.date && row.date < dateFrom) return false;
+      if (dateTo && row.date && row.date > dateTo) return false;
+      
+      // Type filter
+      if (typeFilter !== 'all' && row.type !== typeFilter) return false;
       
       // Category filter
       if (categoryFilter !== 'all' && row.category !== categoryFilter) return false;
@@ -195,9 +275,9 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
       
       return true;
     });
-  }, [allRows, dateFrom, dateTo, categoryFilter, searchTerm]);
+  }, [allRows, dateFrom, dateTo, typeFilter, categoryFilter, searchTerm]);
 
-  // Calculate totals for selected or filtered rows
+  // Calculate totals
   const totals = useMemo(() => {
     const rowsToTotal = selectedRows.size > 0 
       ? filteredRows.filter(row => selectedRows.has(row.id))
@@ -236,6 +316,11 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
       ? filteredRows.filter(row => selectedRows.has(row.id))
       : filteredRows;
 
+    if (rowsToExport.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
     const csvData = rowsToExport.map(row => ({
       Date: row.date,
       Type: row.type,
@@ -250,14 +335,16 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
 
     const csv = [
       Object.keys(csvData[0]).join(','),
-      ...csvData.map(row => Object.values(row).join(','))
+      ...csvData.map(row => Object.values(row).map(val => 
+        typeof val === 'string' && val.includes(',') ? `"${val}"` : val
+      ).join(','))
     ].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${hotelId}_detailed_utility_data_${year}.csv`;
+    a.download = `${hotelId}_utility_breakdown_${year}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -273,9 +360,9 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
             <div className="flex items-center space-x-3">
               <FileText className="w-6 h-6 text-slate-600" />
               <div>
-                <h3 className="text-xl font-bold text-slate-900">Utility Data Analysis - {year}</h3>
+                <h3 className="text-xl font-bold text-slate-900">Utility Bill Breakdown - {year}</h3>
                 <p className="text-slate-600 text-sm">
-                  {totals.count} items • €{totals.amount.toLocaleString()} total
+                  {totals.count} line items • €{totals.amount.toLocaleString()} total
                   {selectedRows.size > 0 && ` (${selectedRows.size} selected)`}
                 </p>
               </div>
@@ -303,7 +390,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
               <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search descriptions, suppliers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
@@ -328,6 +415,19 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
               />
             </div>
 
+            {/* Type Filter */}
+            <div className="col-span-2">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="electricity">Electricity</option>
+                <option value="gas">Gas</option>
+              </select>
+            </div>
+
             {/* Category Filter */}
             <div className="col-span-2">
               <select
@@ -343,12 +443,12 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
             </div>
 
             {/* Quick Select Buttons */}
-            <div className="col-span-4 flex items-center space-x-2">
+            <div className="col-span-2 flex flex-wrap gap-1">
               <button
-                onClick={() => selectCategory('MIC Charges')}
-                className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs hover:bg-blue-200"
+                onClick={() => selectCategory('MIC Excess Charges')}
+                className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs hover:bg-red-200"
               >
-                MIC Charges
+                MIC Excess
               </button>
               <button
                 onClick={() => selectCategory('Carbon Tax')}
@@ -375,7 +475,13 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
         {/* Excel-like Table */}
         <div className="overflow-auto max-h-[60vh]">
           {loading ? (
-            <div className="p-8 text-center">Loading...</div>
+            <div className="p-8 text-center">Loading bills...</div>
+          ) : filteredRows.length === 0 ? (
+            <div className="p-8 text-center">
+              <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500">No line items found</p>
+              <p className="text-slate-400 text-sm mt-2">Try adjusting your filters</p>
+            </div>
           ) : (
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-slate-200 border-b">
@@ -421,7 +527,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                         onClick={(e) => e.stopPropagation()}
                       />
                     </td>
-                    <td className="p-2 border-r">{row.date}</td>
+                    <td className="p-2 border-r">{row.date ? new Date(row.date).toLocaleDateString() : 'N/A'}</td>
                     <td className="p-2 border-r">
                       <span className={`px-1 py-0.5 rounded text-xs ${
                         row.type === 'electricity' ? 'bg-blue-100 text-blue-800' : 'bg-orange-100 text-orange-800'
@@ -433,9 +539,11 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                     <td className="p-2 border-r font-medium">{row.description}</td>
                     <td className="p-2 border-r">
                       <span className={`px-1 py-0.5 rounded text-xs ${
-                        row.category === 'MIC Charges' ? 'bg-blue-100 text-blue-800' :
+                        row.category === 'MIC Excess Charges' ? 'bg-red-100 text-red-800' :
                         row.category === 'Carbon Tax' ? 'bg-green-100 text-green-800' :
                         row.category === 'Standing Charges' ? 'bg-purple-100 text-purple-800' :
+                        row.category === 'Day Usage' ? 'bg-yellow-100 text-yellow-800' :
+                        row.category === 'Night Usage' ? 'bg-indigo-100 text-indigo-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
                         {row.category}
@@ -456,7 +564,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
         <div className="bg-slate-100 border-t px-6 py-3">
           <div className="flex items-center justify-between text-sm">
             <div className="font-medium">
-              {selectedRows.size > 0 ? `${selectedRows.size} selected` : `${filteredRows.length} items`}
+              {selectedRows.size > 0 ? `${selectedRows.size} selected` : `${filteredRows.length} line items`}
             </div>
             <div className="flex items-center space-x-6">
               <div>Total Amount: <span className="font-bold">€{totals.amount.toLocaleString()}</span></div>
