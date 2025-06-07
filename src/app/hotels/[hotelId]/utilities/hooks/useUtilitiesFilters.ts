@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 interface UtilitiesData {
   electricity: any[];
   gas: any[];
-  water?: any[];
+  water: any[]; // Not optional
   bills: any[];
   totals?: any;
   trends?: any;
