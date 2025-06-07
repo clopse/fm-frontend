@@ -1,4 +1,10 @@
-// app/[hotelId]/utilities/page.tsx
+{/* Bills List Modal */}
+      {showBillsList && (
+        <BillsListModal
+          bills={getFilteredBills()}
+          onClose={() => setShowBillsList(false)}
+        />
+      )}// app/[hotelId]/utilities/page.tsx
 'use client';
 
 import { useEffect, useState } from "react";
@@ -41,8 +47,12 @@ export default function UtilitiesDashboard() {
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [showBillsList, setShowBillsList] = useState(false);
   const [showMetricsModal, setShowMetricsModal] = useState(false);
+  
+  // New filter states for header
+  const [selectedYears, setSelectedYears] = useState<number[]>([2025]);
+  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
 
-  // Custom hooks
+  // Custom hooks - using first selected year as primary year
   const {
     data,
     loading,
@@ -59,6 +69,25 @@ export default function UtilitiesDashboard() {
     filteredData,
     availableMonths
   } = useUtilitiesFilters(data);
+
+  // Sync selected years with the primary year
+  useEffect(() => {
+    if (selectedYears.length > 0 && selectedYears[0] !== year) {
+      setYear(selectedYears[0]);
+    }
+  }, [selectedYears, year, setYear]);
+
+  // Update month filters when selectedMonths changes
+  useEffect(() => {
+    if (selectedMonths.length === 0) {
+      updateFilter('month', 'all');
+    } else if (selectedMonths.length === 1) {
+      updateFilter('month', selectedMonths[0].toString());
+    } else {
+      // For multiple months, we might need to enhance the filtering logic
+      updateFilter('month', 'all'); // For now, show all when multiple selected
+    }
+  }, [selectedMonths, updateFilter]);
 
   if (!hotelId) {
     return (
@@ -105,57 +134,102 @@ export default function UtilitiesDashboard() {
     updateFilter('month', 'all');
     updateFilter('billType', 'all');
     setViewMode('kwh');
+    setSelectedYears([2025]);
+    setSelectedMonths([]);
     // Note: Year is not reset as it's a primary navigation parameter
+  };
+
+  const handleYearChange = (years: number[]) => {
+    setSelectedYears(years);
+    // Set primary year to first selected year, or current year if none selected
+    if (years.length > 0) {
+      setYear(years[0]);
+    }
+  };
+
+  const handleMonthChange = (months: number[]) => {
+    setSelectedMonths(months);
   };
 
   const handleShowBills = (monthFilter?: string) => {
     // If a specific month is provided (e.g., from clicking a chart), filter bills
     if (monthFilter && monthFilter !== 'all') {
       updateFilter('month', monthFilter);
+      // Also update selectedMonths to reflect this
+      const monthNum = parseInt(monthFilter);
+      if (!selectedMonths.includes(monthNum)) {
+        setSelectedMonths([monthNum]);
+      }
     }
     setShowBillsList(true);
   };
 
-  // Filter bills based on current filters for the modal
-  const getFilteredBills = () => {
-    if (!data.bills) return [];
+  // Enhanced filtered data based on selected years and months
+  const getEnhancedFilteredData = () => {
+    // Start with the existing filtered data
+    let enhanced = { ...filteredData };
+
+    // If multiple years are selected, we might need to fetch and combine data
+    // For now, we'll work with the primary year data
     
-    let filtered = data.bills;
-    
-    // Filter by month if specific month selected
-    if (filters.month && filters.month !== 'all') {
-      const targetMonth = parseInt(filters.month);
-      filtered = filtered.filter(bill => {
-        const billDate = bill.summary?.bill_date || bill.upload_date;
-        if (!billDate) return false;
-        const billMonth = new Date(billDate).getMonth() + 1; // JS months are 0-indexed
-        return billMonth === targetMonth;
-      });
+    // Filter by selected months if any are specified
+    if (selectedMonths.length > 0 && selectedMonths.length < 12) {
+      const filterByMonths = (entries: any[]) => {
+        return entries.filter(entry => {
+          const entryDate = new Date(entry.month + '-01');
+          const entryMonth = entryDate.getMonth() + 1;
+          return selectedMonths.includes(entryMonth);
+        });
+      };
+
+      enhanced = {
+        ...enhanced,
+        electricity: filterByMonths(enhanced.electricity || []),
+        gas: filterByMonths(enhanced.gas || []),
+        water: filterByMonths(enhanced.water || []),
+      };
+
+      // Recalculate totals for filtered months
+      const calculateTotals = () => {
+        const electricityTotal = enhanced.electricity?.reduce((sum, entry) => sum + (entry.total_kwh || 0), 0) || 0;
+        const gasTotal = enhanced.gas?.reduce((sum, entry) => sum + (entry.total_kwh || 0), 0) || 0;
+        const electricityCost = enhanced.electricity?.reduce((sum, entry) => sum + (entry.total_cost || 0), 0) || 0;
+        const gasCost = enhanced.gas?.reduce((sum, entry) => sum + (entry.total_cost || 0), 0) || 0;
+
+        return {
+          electricity: electricityTotal,
+          gas: gasTotal,
+          electricity_cost: electricityCost,
+          gas_cost: gasCost,
+        };
+      };
+
+      enhanced.totals = calculateTotals();
     }
-    
-    // Filter by bill type
-    if (filters.billType && filters.billType !== 'all') {
-      filtered = filtered.filter(bill => bill.utility_type === filters.billType);
-    }
-    
-    return filtered;
+
+    return enhanced;
   };
+
+  const enhancedData = getEnhancedFilteredData();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Clean Header */}
+      {/* Updated Header */}
       <DashboardHeader
         hotelName={hotelNames[hotelId] || hotelId.toUpperCase()}
-        year={year}
-        billsCount={data.bills?.length || 0}
-        onShowBills={() => handleShowBills()}
+        selectedYears={selectedYears}
+        selectedMonths={selectedMonths}
         onShowMetrics={() => setShowMetricsModal(true)}
         onUpload={() => setShowUploadModal(true)}
+        onYearChange={handleYearChange}
+        onMonthChange={handleMonthChange}
+        onResetFilters={handleResetFilters}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Active Filters Indicator */}
-        {(filters.month !== 'all' || filters.billType !== 'all' || filters.metric !== 'overview') && (
+        {/* Enhanced Active Filters Indicator */}
+        {(filters.month !== 'all' || filters.billType !== 'all' || filters.metric !== 'overview' || 
+          selectedYears.length !== 1 || selectedMonths.length > 0) && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4 text-sm">
@@ -163,6 +237,16 @@ export default function UtilitiesDashboard() {
                 {filters.month !== 'all' && (
                   <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
                     Month: {new Date(0, parseInt(filters.month) - 1).toLocaleString('default', { month: 'long' })}
+                  </span>
+                )}
+                {selectedYears.length > 1 && (
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                    Comparing {selectedYears.length} years
+                  </span>
+                )}
+                {selectedMonths.length > 0 && selectedMonths.length < 12 && (
+                  <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                    {selectedMonths.length} month(s) selected
                   </span>
                 )}
                 {filters.billType !== 'all' && (
@@ -232,6 +316,11 @@ export default function UtilitiesDashboard() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">
             {year} Summary {filters.month !== 'all' && `• ${new Date(0, parseInt(filters.month) - 1).toLocaleString('default', { month: 'long' })}`}
+            {selectedYears.length > 1 && (
+              <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
+                Comparison View
+              </span>
+            )}
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div>
@@ -276,14 +365,6 @@ export default function UtilitiesDashboard() {
         onExport={handleExport}
         onReset={handleResetFilters}
       />
-
-      {/* Bills List Modal */}
-      {showBillsList && (
-        <BillsListModal
-          bills={getFilteredBills()}
-          onClose={() => setShowBillsList(false)}
-        />
-      )}
 
       {/* Metrics Modal */}
       {showMetricsModal && (
