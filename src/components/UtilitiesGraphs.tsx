@@ -7,7 +7,10 @@ import {
 } from "recharts";
 import { ChevronDown, Filter, TrendingUp, Zap, Flame, Droplets, Users, Calendar, Euro } from 'lucide-react';
 import { hotels } from '@/lib/hotels';
-import { startOfMonth, endOfMonth, eachDayOfInterval, format, parse, isValid, parseISO } from 'date-fns';
+import { 
+  startOfMonth, endOfMonth, eachDayOfInterval, 
+  format, isValid, parseISO 
+} from 'date-fns';
 
 interface UtilityBill {
   hotelId: string;
