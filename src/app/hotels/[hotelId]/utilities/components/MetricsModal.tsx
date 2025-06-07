@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { X, FileText, Download, Search, Calendar, Settings, ChevronDown, ChevronsUpDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { X, FileText, Download, Search, Calendar, Settings, ChevronDown, ChevronsUpDown, 
+         ArrowLeft, ArrowRight, ChevronUp, ChevronDown } from 'lucide-react';
 import { DashboardFilters } from '../types';
 
 interface MetricsModalProps {
@@ -9,6 +10,39 @@ interface MetricsModalProps {
   year: number;
   filters: DashboardFilters;
   onClose: () => void;
+}
+
+interface BillRow {
+  id: string;
+  type: 'electricity' | 'gas';
+  date: string;
+  billing_period: string;
+  supplier: string;
+  meter_number: string;
+  mprn?: string;
+  gprn?: string;
+  day_kwh?: number;
+  night_kwh?: number;
+  total_kwh?: number;
+  mic_value?: number;
+  max_demand?: number;
+  standing_charge?: number;
+  total_cost: number;
+  vat_amount?: number;
+  electricity_tax?: number;
+  consumption_kwh?: number;
+  units_consumed?: number;
+  conversion_factor?: number;
+  carbon_tax?: number;
+  commodity_cost?: number;
+  filename: string;
+  billId: string;
+  raw: any;
+}
+
+interface SortConfig {
+  key: string;
+  direction: 'asc' | 'desc';
 }
 
 export default function MetricsModal({ hotelId, year, filters, onClose }: MetricsModalProps) {
@@ -21,6 +55,12 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   const [dateFrom, setDateFrom] = useState(`${year - 2}-01-01`);
   const [dateTo, setDateTo] = useState(`${new Date().getFullYear()}-12-31`);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  
+  // Sorting state
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: 'date',
+    direction: 'desc'
+  });
   
   // UI Control state
   const [showColumnMenu, setShowColumnMenu] = useState(false);
@@ -101,6 +141,15 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     actions: "Actions"
   };
 
+  // Define which columns are sortable
+  const sortableColumns = [
+    'date', 'meter_number', 'mprn', 'gprn', 'day_kwh', 
+    'night_kwh', 'total_kwh', 'mic_value', 'max_demand',
+    'consumption_kwh', 'units_consumed', 'conversion_factor',
+    'carbon_tax', 'standing_charge', 'commodity_cost',
+    'total_cost', 'vat_amount', 'electricity_tax'
+  ];
+
   // Fetch bills on component mount
   useEffect(() => {
     fetchAllBills();
@@ -117,8 +166,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
 
   // Close column menu when clicking outside
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (columnMenuRef.current && !columnMenuRef.current.contains(event.target)) {
+    function handleClickOutside(event: MouseEvent) {
+      if (columnMenuRef.current && event.target instanceof Node && !columnMenuRef.current.contains(event.target)) {
         setShowColumnMenu(false);
       }
     }
@@ -128,6 +177,15 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [columnMenuRef]);
+
+  // Function to request sorting by a column
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   // Fetch bill data from API
   const fetchAllBills = async () => {
@@ -243,7 +301,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
 
   // Transform bills into rows for display
   const billRows = useMemo(() => {
-    const rows = [];
+    const rows: BillRow[] = [];
     
     bills.forEach((bill, billIndex) => {
       const rawData = bill.raw_data || {};
@@ -297,8 +355,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
           electricity_tax: summary.electricity_tax || rawData.taxDetails?.electricityTax?.amount || 0,
           filename: filename,
           billId: billId,
-          selected: false,
-          raw: bill // Keep full raw data for access to any other fields if needed
+          raw: bill
         });
       } 
       else if (bill.utility_type === 'gas') {
@@ -321,8 +378,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
           vat_amount: summary.vat_amount || rawData.billSummary?.totalVatAmount || 0,
           filename: filename,
           billId: billId,
-          selected: false,
-          raw: bill // Keep full raw data for access to any other fields if needed
+          raw: bill
         });
       }
     });
@@ -331,26 +387,27 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   }, [bills, hotelId]);
   
   // Helper function to find charge by type in electricity bills
-  function findChargeByType(charges = [], type) {
+  function findChargeByType(charges = [], type: string): number {
     if (!Array.isArray(charges)) return 0;
-    const charge = charges.find(c => 
+    const charge = charges.find((c: any) => 
       c.description && c.description.toLowerCase().includes(type.toLowerCase())
     );
     return charge ? charge.amount : 0;
   }
   
   // Helper function to find line item by type in gas bills
-  function findLineItemByType(lineItems = [], type) {
+  function findLineItemByType(lineItems = [], type: string): number {
     if (!Array.isArray(lineItems)) return 0;
-    const item = lineItems.find(i => 
+    const item = lineItems.find((i: any) => 
       i.description && i.description.toLowerCase().includes(type.toLowerCase())
     );
     return item ? item.amount : 0;
   }
 
-  // Filter rows based on user selections
+  // Filter and sort rows based on user selections
   const filteredRows = useMemo(() => {
-    return billRows.filter(row => {
+    // First filter the rows
+    let filteredData = billRows.filter(row => {
       // Bill type filter
       if (typeFilter !== 'all' && row.type !== typeFilter) return false;
       
@@ -372,7 +429,52 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
       
       return true;
     });
-  }, [billRows, typeFilter, dateFrom, dateTo, searchTerm]);
+    
+    // Then sort the filtered data
+    if (sortConfig.key) {
+      filteredData.sort((a, b) => {
+        // Get the values to compare
+        let aValue = a[sortConfig.key as keyof BillRow];
+        let bValue = b[sortConfig.key as keyof BillRow];
+        
+        // Handle special cases for formatted display values
+        if (['date', 'billing_period'].includes(sortConfig.key)) {
+          // Sort dates correctly
+          aValue = a.date || '';
+          bValue = b.date || '';
+        }
+        
+        // Perform the comparison based on types
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          // Case-insensitive string comparison
+          return sortConfig.direction === 'asc' 
+            ? aValue.localeCompare(bValue) 
+            : bValue.localeCompare(aValue);
+        }
+        
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return sortConfig.direction === 'asc' 
+            ? aValue - bValue 
+            : bValue - aValue;
+        }
+        
+        // Handle undefined/null values
+        if (aValue === undefined || aValue === null) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (bValue === undefined || bValue === null) return sortConfig.direction === 'asc' ? 1 : -1;
+        
+        // Default comparison
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    
+    return filteredData;
+  }, [billRows, typeFilter, dateFrom, dateTo, searchTerm, sortConfig]);
 
   // Calculate totals for selected rows
   const totals = useMemo(() => {
@@ -401,7 +503,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   }, [filteredRows, selectedRows]);
 
   // Row selection functions
-  const toggleRow = (rowId) => {
+  const toggleRow = (rowId: string) => {
     setSelectedRows(prev => {
       const newSet = new Set(prev);
       if (newSet.has(rowId)) {
@@ -422,24 +524,24 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   };
 
   // Column configuration functions
-  const toggleElectricityColumn = (column) => {
+  const toggleElectricityColumn = (column: string) => {
     setElectricityColumns(prev => ({
       ...prev,
-      [column]: !prev[column]
+      [column]: !prev[column as keyof typeof prev]
     }));
   };
   
-  const toggleGasColumn = (column) => {
+  const toggleGasColumn = (column: string) => {
     setGasColumns(prev => ({
       ...prev,
-      [column]: !prev[column]
+      [column]: !prev[column as keyof typeof prev]
     }));
   };
   
-  const toggleAllElectricityColumns = (value) => {
-    const newConfig = {};
+  const toggleAllElectricityColumns = (value: boolean) => {
+    const newConfig = {...electricityColumns};
     Object.keys(electricityColumns).forEach(col => {
-      newConfig[col] = value;
+      newConfig[col as keyof typeof electricityColumns] = value;
     });
     // Always keep checkbox and actions visible
     newConfig.checkbox = true;
@@ -447,10 +549,10 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     setElectricityColumns(newConfig);
   };
   
-  const toggleAllGasColumns = (value) => {
-    const newConfig = {};
+  const toggleAllGasColumns = (value: boolean) => {
+    const newConfig = {...gasColumns};
     Object.keys(gasColumns).forEach(col => {
-      newConfig[col] = value;
+      newConfig[col as keyof typeof gasColumns] = value;
     });
     // Always keep checkbox and actions visible
     newConfig.checkbox = true;
@@ -496,6 +598,10 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     
     setRowHeight(18);
     setHorizontalScroll(0);
+    setSortConfig({
+      key: 'date',
+      direction: 'desc'
+    });
   };
   
   // Calculate row height in pixels based on slider value
@@ -583,13 +689,39 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
   };
   
   // Helper function for CSV formatting
-  function formatField(value) {
+  function formatField(value: any): string {
     if (value === undefined || value === null) return '';
     if (typeof value === 'string' && value.includes(',')) {
       return `"${value}"`;
     }
-    return value;
+    return String(value);
   }
+
+  // Render a sortable header
+  const SortableHeader = ({ column, label }: { column: string, label: string }) => {
+    const isSortedByThisColumn = sortConfig.key === column;
+    
+    return (
+      <div 
+        className="flex items-center cursor-pointer"
+        onClick={() => requestSort(column)}
+      >
+        <span>{label}</span>
+        <div className="ml-1 flex flex-col">
+          {isSortedByThisColumn && sortConfig.direction === 'asc' ? (
+            <ChevronUp className="w-3 h-3 text-blue-500" />
+          ) : isSortedByThisColumn && sortConfig.direction === 'desc' ? (
+            <ChevronDown className="w-3 h-3 text-blue-500" />
+          ) : (
+            <div className="flex flex-col">
+              <ChevronUp className="w-3 h-3 text-gray-300" />
+              <ChevronDown className="w-3 h-3 text-gray-300" style={{ marginTop: -2 }} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -721,7 +853,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                       />
                       <label htmlFor="select-all-columns" className="text-sm">Select all</label>
                     </div>
-                    <div className="h-4 mx-2 border-r border-slate-300"></div>
+                    <div className="border-r border-slate-300 h-4 mx-2"></div>
                     <button 
                       onClick={resetToDefault}
                       className="text-sm text-blue-600 hover:text-blue-800"
@@ -741,12 +873,12 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                             <input
                               type="checkbox"
                               id={`col-${col}`}
-                              checked={gasColumns[col]}
+                              checked={gasColumns[col as keyof typeof gasColumns]}
                               onChange={() => toggleGasColumn(col)}
                               className="mr-2"
                             />
                             <label htmlFor={`col-${col}`} className="text-sm flex-grow cursor-pointer">
-                              {gasColumnLabels[col]}
+                              {gasColumnLabels[col as keyof typeof gasColumnLabels]}
                             </label>
                             <div className="text-slate-400 cursor-move">
                               <ChevronsUpDown className="w-4 h-4" />
@@ -764,12 +896,12 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                             <input
                               type="checkbox"
                               id={`col-${col}`}
-                              checked={electricityColumns[col]}
+                              checked={electricityColumns[col as keyof typeof electricityColumns]}
                               onChange={() => toggleElectricityColumn(col)}
                               className="mr-2"
                             />
                             <label htmlFor={`col-${col}`} className="text-sm flex-grow cursor-pointer">
-                              {electricityColumnLabels[col]}
+                              {electricityColumnLabels[col as keyof typeof electricityColumnLabels]}
                             </label>
                             <div className="text-slate-400 cursor-move">
                               <ChevronsUpDown className="w-4 h-4" />
@@ -781,50 +913,43 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                   </div>
                   
                   <div className="p-3 border-t">
-                    <div className="mb-2 flex items-center justify-between">
-                      <div className="text-sm font-medium">Row height</div>
-                      <div className="flex space-x-3 items-center">
-                        {/* Row height controls */}
-                        <button 
-                          className={`p-1 border rounded ${rowHeight < 10 ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-100'}`}
-                          onClick={() => setRowHeight(5)}
-                          title="Small"
-                        >
-                          <svg width="16" height="8" viewBox="0 0 16 8" fill="none">
-                            <line x1="2" y1="2" x2="14" y2="2" stroke="currentColor" strokeWidth="1.5" />
-                            <line x1="2" y1="6" x2="14" y2="6" stroke="currentColor" strokeWidth="1.5" />
-                          </svg>
-                        </button>
-                        <button 
-                          className={`p-1 border rounded ${rowHeight >= 10 && rowHeight < 20 ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-100'}`}
-                          onClick={() => setRowHeight(15)}
-                          title="Medium"
-                        >
-                          <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
-                            <line x1="2" y1="2" x2="14" y2="2" stroke="currentColor" strokeWidth="1.5" />
-                            <line x1="2" y1="10" x2="14" y2="10" stroke="currentColor" strokeWidth="1.5" />
-                          </svg>
-                        </button>
-                        <button 
-                          className={`p-1 border rounded ${rowHeight >= 20 ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-100'}`}
-                          onClick={() => setRowHeight(25)}
-                          title="Large"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                            <line x1="2" y1="2" x2="14" y2="2" stroke="currentColor" strokeWidth="1.5" />
-                            <line x1="2" y1="14" x2="14" y2="14" stroke="currentColor" strokeWidth="1.5" />
-                          </svg>
-                        </button>
-                      </div>
+                    <div className="mb-1 text-sm font-medium">Row height</div>
+                    <div className="flex space-x-3 items-center justify-center mt-2">
+                      {/* Row height controls */}
+                      <button 
+                        className={`p-1 border rounded ${rowHeight < 10 ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-100'}`}
+                        onClick={() => setRowHeight(5)}
+                        title="Small"
+                        aria-label="Small row height"
+                      >
+                        <svg width="16" height="8" viewBox="0 0 16 8" fill="none">
+                          <line x1="3" y1="2" x2="13" y2="2" stroke="currentColor" strokeWidth="1.5" />
+                          <line x1="3" y1="6" x2="13" y2="6" stroke="currentColor" strokeWidth="1.5" />
+                        </svg>
+                      </button>
+                      <button 
+                        className={`p-1 border rounded ${rowHeight >= 10 && rowHeight < 20 ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-100'}`}
+                        onClick={() => setRowHeight(15)}
+                        title="Medium"
+                        aria-label="Medium row height"
+                      >
+                        <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+                          <line x1="3" y1="2" x2="13" y2="2" stroke="currentColor" strokeWidth="1.5" />
+                          <line x1="3" y1="10" x2="13" y2="10" stroke="currentColor" strokeWidth="1.5" />
+                        </svg>
+                      </button>
+                      <button 
+                        className={`p-1 border rounded ${rowHeight >= 20 ? 'bg-blue-50 border-blue-300' : 'hover:bg-slate-100'}`}
+                        onClick={() => setRowHeight(25)}
+                        title="Large"
+                        aria-label="Large row height"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <line x1="3" y1="2" x2="13" y2="2" stroke="currentColor" strokeWidth="1.5" />
+                          <line x1="3" y1="14" x2="13" y2="14" stroke="currentColor" strokeWidth="1.5" />
+                        </svg>
+                      </button>
                     </div>
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max="30" 
-                      value={rowHeight} 
-                      onChange={(e) => setRowHeight(parseInt(e.target.value))} 
-                      className="w-full accent-blue-500"
-                    />
                   </div>
                 </div>
               )}
@@ -876,6 +1001,9 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                         // Gas bill columns
                         Object.entries(gasColumns).map(([key, visible]) => {
                           if (!visible) return null;
+                          
+                          const isSortable = sortableColumns.includes(key);
+                          
                           return (
                             <th 
                               key={key}
@@ -895,7 +1023,14 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                                   }}
                                   checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
                                 />
-                              ) : gasColumnLabels[key]}
+                              ) : isSortable ? (
+                                <SortableHeader 
+                                  column={key} 
+                                  label={gasColumnLabels[key as keyof typeof gasColumnLabels]} 
+                                />
+                              ) : (
+                                gasColumnLabels[key as keyof typeof gasColumnLabels]
+                              )}
                             </th>
                           );
                         })
@@ -903,6 +1038,9 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                         // Electricity bill columns or both types
                         Object.entries(electricityColumns).map(([key, visible]) => {
                           if (!visible) return null;
+                          
+                          const isSortable = sortableColumns.includes(key);
+                          
                           return (
                             <th 
                               key={key}
@@ -922,7 +1060,14 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                                   }}
                                   checked={selectedRows.size === filteredRows.length && filteredRows.length > 0}
                                 />
-                              ) : electricityColumnLabels[key]}
+                              ) : isSortable ? (
+                                <SortableHeader 
+                                  column={key} 
+                                  label={electricityColumnLabels[key as keyof typeof electricityColumnLabels]} 
+                                />
+                              ) : (
+                                electricityColumnLabels[key as keyof typeof electricityColumnLabels]
+                              )}
                             </th>
                           );
                         })
@@ -973,16 +1118,16 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                             }
                             
                             // Format cell content based on column type
-                            let content = row[key];
+                            let content = row[key as keyof BillRow];
                             
                             if (key === 'date') {
                               content = row.date ? new Date(row.date).toLocaleDateString() : 'N/A';
                             } else if (['total_cost', 'vat_amount', 'carbon_tax', 'standing_charge', 'commodity_cost'].includes(key)) {
-                              content = typeof row[key] === 'number' ? `€${row[key].toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-';
+                              content = typeof row[key as keyof BillRow] === 'number' ? `€${(row[key as keyof BillRow] as number).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-';
                             } else if (['consumption_kwh', 'units_consumed', 'total_kwh'].includes(key)) {
-                              content = typeof row[key] === 'number' ? row[key].toLocaleString() : '-';
+                              content = typeof row[key as keyof BillRow] === 'number' ? (row[key as keyof BillRow] as number).toLocaleString() : '-';
                             } else if (key === 'conversion_factor') {
-                              content = typeof row[key] === 'number' ? row[key].toFixed(4) : '-';
+                              content = typeof row[key as keyof BillRow] === 'number' ? (row[key as keyof BillRow] as number).toFixed(4) : '-';
                             }
                             
                             return (
@@ -1033,14 +1178,14 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                             }
                             
                             // Format cell content based on column type
-                            let content = row[key];
+                            let content = row[key as keyof BillRow];
                             
                             if (key === 'date') {
                               content = row.date ? new Date(row.date).toLocaleDateString() : 'N/A';
                             } else if (['total_cost', 'vat_amount', 'electricity_tax', 'standing_charge'].includes(key)) {
-                              content = typeof row[key] === 'number' ? `€${row[key].toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-';
+                              content = typeof row[key as keyof BillRow] === 'number' ? `€${(row[key as keyof BillRow] as number).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-';
                             } else if (['day_kwh', 'night_kwh', 'total_kwh', 'mic_value', 'max_demand'].includes(key)) {
-                              content = typeof row[key] === 'number' ? row[key].toLocaleString() : '-';
+                              content = typeof row[key as keyof BillRow] === 'number' ? (row[key as keyof BillRow] as number).toLocaleString() : '-';
                             }
                             
                             return (
@@ -1069,6 +1214,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                   <button
                     className="p-1 rounded hover:bg-slate-200"
                     onClick={() => setHorizontalScroll(Math.max(0, horizontalScroll - 10))}
+                    aria-label="Scroll left"
                   >
                     <ArrowLeft size={16} />
                   </button>
@@ -1080,11 +1226,13 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                       value={horizontalScroll}
                       onChange={(e) => setHorizontalScroll(parseInt(e.target.value))}
                       className="w-full accent-blue-500"
+                      aria-label="Horizontal scroll"
                     />
                   </div>
                   <button
                     className="p-1 rounded hover:bg-slate-200"
                     onClick={() => setHorizontalScroll(Math.min(100, horizontalScroll + 10))}
+                    aria-label="Scroll right"
                   >
                     <ArrowRight size={16} />
                   </button>
