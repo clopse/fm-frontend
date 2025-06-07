@@ -139,21 +139,21 @@ export function useUtilitiesData(hotelId: string | undefined) {
         // Filter data for the specified year - include bills that cross year boundaries
         const currentYear = year.toString();
         
-        const filteredElectricity = rawData.electricity?.filter(entry => {
+        const filteredElectricity = rawData.electricity?.filter((entry: any) => {
           if (!entry.month) return false;
           const entryYear = entry.month.split('-')[0];
           return entryYear === currentYear;
         }) || [];
 
         // For gas, we need to be more flexible about year boundaries
-        const filteredGas = rawData.gas?.filter(entry => {
+        const filteredGas = rawData.gas?.filter((entry: any) => {
           if (!entry.period) return false;
           const entryYear = entry.period.split('-')[0];
           return entryYear === currentYear;
         }) || [];
 
         // CRITICAL: Also check bills directly for cross-year gas bills
-        const crossYearGasBills = rawData.bills?.filter(bill => {
+        const crossYearGasBills = rawData.bills?.filter((bill: any) => {
           if (bill.utility_type !== 'gas') return false;
           
           const startDate = bill.summary?.billing_period_start || 
