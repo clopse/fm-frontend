@@ -9,25 +9,6 @@ interface BillsListModalProps {
   onClose: () => void;
 }
 
-// Extended interface for bills with full summary data
-interface ExtendedBillSummary {
-  supplier?: string;
-  bill_date?: string;
-  account_number?: string;
-  total_cost?: number;
-  total_kwh?: number;
-  consumption_kwh?: number;
-  billing_period_start?: string;
-  billing_period_end?: string;
-  meter_number?: string;
-  [key: string]: any; // Allow for additional fields
-}
-
-interface ExtendedBillEntry extends Omit<BillEntry, 'summary'> {
-  summary?: ExtendedBillSummary;
-  raw_data?: any;
-}
-
 export default function BillsListModal({ bills, onClose }: BillsListModalProps) {
   const [downloadingBills, setDownloadingBills] = useState<Set<string>>(new Set());
 
@@ -63,38 +44,37 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
     return `${consumption.toLocaleString()} ${unit}`;
   };
 
-  const getSupplierName = (bill: ExtendedBillEntry) => {
+  const getSupplierName = (bill: BillEntry) => {
     return bill.summary?.supplier || bill.supplier || 'Unknown Supplier';
   };
 
-  const getBillDate = (bill: ExtendedBillEntry) => {
-    return bill.summary?.bill_date || bill.upload_date;
-  };
-
-  const generatePdfFilename = (bill: ExtendedBillEntry) => {
+  const generatePdfFilename = (bill: BillEntry) => {
     const utilityType = bill.utility_type.toUpperCase();
     const supplier = getSupplierName(bill).replace(/[^a-zA-Z0-9]/g, '');
     
-    // Get billing period dates - handle both summary and raw_data structures
-    let startDate = bill.summary?.billing_period_start;
-    let endDate = bill.summary?.billing_period_end || bill.summary?.bill_date;
+    // Get billing period dates - now with proper types!
+    const startDate = bill.summary?.billing_period_start;
+    const endDate = bill.summary?.billing_period_end || bill.summary?.bill_date;
     
     // Fallback to raw_data if summary doesn't have the fields
+    let fallbackStartDate, fallbackEndDate;
     if (!startDate && bill.raw_data) {
       if (bill.raw_data.billingPeriod) {
-        startDate = bill.raw_data.billingPeriod.startDate;
-        endDate = bill.raw_data.billingPeriod.endDate;
+        fallbackStartDate = bill.raw_data.billingPeriod.startDate;
+        fallbackEndDate = bill.raw_data.billingPeriod.endDate;
       } else if (bill.raw_data.billSummary) {
-        startDate = bill.raw_data.billSummary.billingPeriodStartDate;
-        endDate = bill.raw_data.billSummary.billingPeriodEndDate;
+        fallbackStartDate = bill.raw_data.billSummary.billingPeriodStartDate;
+        fallbackEndDate = bill.raw_data.billSummary.billingPeriodEndDate;
       }
     }
     
-    if (startDate && endDate) {
+    const finalStartDate = startDate || fallbackStartDate;
+    const finalEndDate = endDate || fallbackEndDate;
+    
+    if (finalStartDate && finalEndDate) {
       try {
-        // Format dates for filename (e.g., Dec24-Jan25)
-        const start = new Date(startDate);
-        const end = new Date(endDate);
+        const start = new Date(finalStartDate);
+        const end = new Date(finalEndDate);
         
         const startFormatted = start.toLocaleDateString('en-US', { 
           month: 'short', 
@@ -106,7 +86,6 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
           year: '2-digit' 
         }).replace(/\s/g, '');
         
-        // If same month, just use one date
         if (startFormatted === endFormatted) {
           return `${utilityType}_${supplier}_${startFormatted}.pdf`;
         } else {
@@ -117,10 +96,9 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
       }
     }
     
-    // Fallback: use bill period or end date
-    if (endDate) {
+    if (finalEndDate) {
       try {
-        const end = new Date(endDate);
+        const end = new Date(finalEndDate);
         const endFormatted = end.toLocaleDateString('en-US', { 
           month: 'short', 
           year: '2-digit' 
@@ -131,11 +109,10 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
       }
     }
     
-    // Final fallback to original filename or generic
     return bill.filename || `${utilityType}_${supplier}_bill.pdf`;
   };
 
-  const downloadPdf = async (bill: ExtendedBillEntry) => {
+  const downloadPdf = async (bill: BillEntry) => {
     const billId = bill.id || `${bill.hotel_id}_${bill.utility_type}_${bill.bill_period}`;
     
     if (downloadingBills.has(billId)) return;
@@ -143,7 +120,6 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
     setDownloadingBills(prev => new Set(prev).add(billId));
     
     try {
-      // Call your backend API to get the PDF
       const response = await fetch(`/api/utilities/bill-pdf/${billId}`, {
         method: 'GET',
         headers: {
@@ -155,23 +131,17 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
         throw new Error(`Failed to download PDF: ${response.statusText}`);
       }
       
-      // Get the PDF blob
       const blob = await response.blob();
-      
-      // Generate appropriate filename
       const filename = generatePdfFilename(bill);
       
-      // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = filename;
       
-      // Trigger download
       document.body.appendChild(link);
       link.click();
       
-      // Cleanup
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
@@ -187,11 +157,10 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
     }
   };
 
-  const viewBillDetails = async (bill: ExtendedBillEntry) => {
+  const viewBillDetails = async (bill: BillEntry) => {
     try {
       const billId = bill.id || `${bill.hotel_id}_${bill.utility_type}_${bill.bill_period}`;
       
-      // Fetch detailed bill data from your API
       const response = await fetch(`/api/utilities/bill-details/${billId}`);
       
       if (!response.ok) {
@@ -199,12 +168,7 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
       }
       
       const data = await response.json();
-      
-      // Create a detailed view modal or navigate to details page
       console.log('Bill details:', data);
-      
-      // For now, just show an alert with some key details
-      const details = data.parsed_data || data.summary;
       
       const detailsText = [
         `Utility Type: ${bill.utility_type}`,
@@ -221,15 +185,13 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
       
       alert(`Bill Details:\n\n${detailsText}`);
       
-      // TODO: Replace this with a proper details modal component
-      
     } catch (error) {
       console.error('Error fetching bill details:', error);
       alert('Failed to load bill details');
     }
   };
 
-  const getBillStatus = (bill: ExtendedBillEntry) => {
+  const getBillStatus = (bill: BillEntry) => {
     if (bill.raw_data || bill.parsed_status === 'success') {
       return { label: 'Processed', color: 'bg-green-100 text-green-800' };
     } else if (bill.parsed_status === 'error') {
@@ -239,7 +201,7 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
     }
   };
 
-  const getBillingPeriodDisplay = (bill: ExtendedBillEntry) => {
+  const getBillingPeriodDisplay = (bill: BillEntry) => {
     const startDate = bill.summary?.billing_period_start;
     const endDate = bill.summary?.billing_period_end;
     
@@ -253,9 +215,6 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
       return bill.bill_period || 'Unknown Period';
     }
   };
-
-  // Cast bills to extended type for internal use
-  const extendedBills = bills as ExtendedBillEntry[];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -290,7 +249,7 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
             </div>
           ) : (
             <div className="space-y-4">
-              {extendedBills.map((bill, index) => {
+              {bills.map((bill, index) => {
                 const billId = bill.id || `${bill.hotel_id}_${bill.utility_type}_${bill.bill_period}`;
                 const isDownloading = downloadingBills.has(billId);
                 const status = getBillStatus(bill);
@@ -303,12 +262,10 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
                     <div className="flex items-start justify-between">
                       {/* Left side - Bill info */}
                       <div className="flex items-start space-x-4 flex-1">
-                        {/* Icon */}
                         <div className="flex-shrink-0 mt-1">
                           {getUtilityIcon(bill.utility_type)}
                         </div>
                         
-                        {/* Main info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-3 mb-2">
                             <h4 className="font-semibold text-slate-900 capitalize">
@@ -341,7 +298,6 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
                             </div>
                           </div>
 
-                          {/* Filename with expected PDF name */}
                           <div className="mt-2 space-y-1">
                             <div className="text-xs text-slate-500 font-mono">
                               Original: {bill.filename}
@@ -372,7 +328,6 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
                           <p className="text-sm text-slate-500">Consumption</p>
                         </div>
                         
-                        {/* Action buttons */}
                         <div className="flex space-x-2">
                           <button 
                             onClick={() => viewBillDetails(bill)}
@@ -398,7 +353,6 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
                       </div>
                     </div>
                     
-                    {/* Additional info if available */}
                     {(bill.summary?.bill_date) && (
                       <div className="mt-4 pt-4 border-t border-slate-100">
                         <div className="flex items-center justify-between text-sm text-slate-500">
