@@ -1,4 +1,3 @@
-// app/[hotelId]/utilities/gas/page.tsx
 'use client';
 
 import { useParams } from "next/navigation";
