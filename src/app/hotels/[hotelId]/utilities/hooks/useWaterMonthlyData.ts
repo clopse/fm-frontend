@@ -156,7 +156,11 @@ export function useWaterMonthlyData(
           }
           
           const monthData = monthDataMap.get(monthKey)!;
-          monthData.usages[deviceId] = entry.Usage / 1000; // Convert to m³
+          
+          // Note: Multiplying Usage by 10 to correct for known data scaling issue in the source data
+          const correctedUsageM3 = (entry.Usage * 10) / 1000;
+          
+          monthData.usages[deviceId] = correctedUsageM3;
         });
         
         // Convert to WaterMonthEntry array
