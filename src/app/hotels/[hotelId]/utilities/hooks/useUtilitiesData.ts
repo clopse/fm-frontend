@@ -5,7 +5,7 @@ interface UtilitiesData {
   electricity: any[];
   gas: any[];
   water: any[];
-  bills?: any[];
+  bills: any[]; // Make it required, not optional
   totals?: {
     electricity: number;
     gas: number;
@@ -411,7 +411,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
           electricity: electricityArray,
           gas: gasArray,
           water: [], // Empty water array for now
-          bills: rawData.bills || [],
+          bills: rawData.bills || [], // Ensure it's always an array
           totals: {
             electricity: electricityTotal,
             gas: gasTotal,
