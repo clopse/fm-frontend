@@ -1,7 +1,7 @@
 // DashboardHeader.tsx - Enhanced and visually appealing
 "use client";
 
-import { Zap, Filter, FileText, BarChart3, Upload, Calendar, Building2, TrendingUp } from 'lucide-react';
+import { Zap, FileText, BarChart3, Upload, Building2 } from 'lucide-react';
 
 interface DashboardHeaderProps {
   hotelName: string;
@@ -50,16 +50,8 @@ export default function DashboardHeader({
                 </div>
                 <div className="flex items-center space-x-6 mt-2">
                   <div className="flex items-center space-x-2 text-slate-300">
-                    <Calendar className="w-4 h-4" />
-                    <span className="text-sm font-medium">{year} Analytics</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-slate-300">
                     <FileText className="w-4 h-4" />
                     <span className="text-sm font-medium">{billsCount} Bills Processed</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-green-400">
-                    <TrendingUp className="w-4 h-4" />
-                    <span className="text-sm font-medium">Live Data</span>
                   </div>
                 </div>
               </div>
@@ -108,25 +100,15 @@ export default function DashboardHeader({
         {/* Bottom status bar */}
         <div className="border-t border-slate-700 py-3">
           <div className="flex items-center justify-between text-sm">
-            <div className="flex items-center space-x-6 text-slate-400">
-              <span>Utilities Dashboard</span>
-              <span>•</span>
-              <span>Real-time Processing</span>
-              <span>•</span>
-              <span>Auto-sync Enabled</span>
+            <div className="text-slate-400">
+              Utilities Dashboard
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-slate-400">System Online</span>
-              </div>
-              <div className="text-slate-500">
-                Last updated: {new Date().toLocaleTimeString('en-US', { 
-                  hour12: false, 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
-              </div>
+            <div className="text-slate-500">
+              Last updated: {new Date().toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              })}
             </div>
           </div>
         </div>
