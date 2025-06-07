@@ -260,7 +260,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
           console.log(`📊 Daily breakdown (${totalDays} total days):`, daysByMonth);
           
           // Calculate proportional distribution
-          Object.entries(daysByMonth).forEach(([month, days]) => {
+          Object.entries(daysByMonth).forEach(([month, days]: [string, number]) => {
             const proportion = days / totalDays;
             distribution[month] = proportion;
           });
@@ -274,7 +274,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
         filteredElectricity.forEach((entry: any, index: number) => {
           console.log(`\n⚡ Entry ${index + 1}:`, entry);
           
-          const matchingBill = rawData.bills.find(bill => bill.filename === entry.bill_id);
+          const matchingBill = rawData.bills.find((bill: any) => bill.filename === entry.bill_id);
           if (!matchingBill) {
             console.log('❌ No matching bill found for:', entry.bill_id);
             return;
@@ -297,7 +297,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
           
           const distribution = distributeDailyConsumption(billingPeriod.start, billingPeriod.end, entry.total_kwh);
           
-          Object.entries(distribution).forEach(([month, proportion]) => {
+          Object.entries(distribution).forEach(([month, proportion]: [string, number]) => {
             if (!monthlyData.electricity[month]) {
               monthlyData.electricity[month] = 0;
             }
@@ -308,7 +308,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
         });
 
         console.log('⚡ Final electricity distribution:');
-        Object.entries(monthlyData.electricity).forEach(([month, total]) => {
+        Object.entries(monthlyData.electricity).forEach(([month, total]: [string, number]) => {
           console.log(`   ${month}: ${Math.round(total)} kWh`);
         });
 
@@ -340,7 +340,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
           
           const distribution = distributeDailyConsumption(billingPeriod.start, billingPeriod.end, entry.total_kwh);
           
-          Object.entries(distribution).forEach(([month, proportion]) => {
+          Object.entries(distribution).forEach(([month, proportion]: [string, number]) => {
             addOrCombineGasEntry(monthlyData, month, entry, proportion);
           });
         }
@@ -348,7 +348,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
         filteredGas.forEach((entry: any, index: number) => {
           console.log(`\n🔥 Entry ${index + 1}:`, entry);
           
-          const matchingBill = rawData.bills.find(bill => bill.filename === entry.bill_id);
+          const matchingBill = rawData.bills.find((bill: any) => bill.filename === entry.bill_id);
           if (!matchingBill) {
             console.log('❌ No matching bill found for:', entry.bill_id);
             return;
@@ -370,7 +370,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
         });
 
         console.log('🔥 Final gas distribution:');
-        Object.entries(monthlyData.gas).forEach(([month, total]) => {
+        Object.entries(monthlyData.gas).forEach(([month, total]: [string, number]) => {
           console.log(`   ${month}: ${Math.round(total)} kWh`);
         });
 
@@ -382,14 +382,14 @@ export function useUtilitiesData(hotelId: string | undefined) {
         const gasTotal = Object.values(monthlyData.gas).reduce((sum, val) => sum + val, 0);
 
         // Convert monthly data back to array format that the app expects
-        const electricityArray = Object.entries(monthlyData.electricity).map(([month, kwh]) => ({
+        const electricityArray = Object.entries(monthlyData.electricity).map(([month, kwh]: [string, number]) => ({
           month,
           total_kwh: kwh,
           total_eur: kwh * 0.25, // Rough estimate
           bill_id: `electricity_${month}`
         }));
 
-        const gasArray = Object.entries(monthlyData.gas).map(([period, kwh]) => ({
+        const gasArray = Object.entries(monthlyData.gas).map(([period, kwh]: [string, number]) => ({
           period,
           total_kwh: kwh,
           total_eur: kwh * 0.08, // Rough estimate
