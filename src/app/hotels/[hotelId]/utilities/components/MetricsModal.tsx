@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, FileText, Filter, Download, Search, Calendar, Euro, Zap } from 'lucide-react';
 import { DashboardFilters } from '../types';
 
-interface SimpleDataViewerProps {
+interface MetricsModalProps {
   hotelId: string;
   year: number;
   filters: DashboardFilters;
@@ -21,7 +21,7 @@ interface BillData {
   raw_data: any;
 }
 
-export default function SimpleDataViewer({ hotelId, year, filters, onClose }: SimpleDataViewerProps) {
+export default function MetricsModal({ hotelId, year, filters, onClose }: MetricsModalProps) {
   const [bills, setBills] = useState<BillData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -109,10 +109,6 @@ export default function SimpleDataViewer({ hotelId, year, filters, onClose }: Si
     URL.revokeObjectURL(url);
   };
 
-  const printData = () => {
-    window.print();
-  };
-
   const totalCosts = {
     electricity: filteredBills.filter(b => b.utility_type === 'electricity').reduce((sum, b) => sum + b.total_cost, 0),
     gas: filteredBills.filter(b => b.utility_type === 'gas').reduce((sum, b) => sum + b.total_cost, 0),
@@ -123,7 +119,7 @@ export default function SimpleDataViewer({ hotelId, year, filters, onClose }: Si
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-slate-100 border-b px-6 py-4 print:hidden">
+        <div className="bg-slate-100 border-b px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <FileText className="w-6 h-6 text-slate-600" />
@@ -140,12 +136,6 @@ export default function SimpleDataViewer({ hotelId, year, filters, onClose }: Si
                 <Download className="w-4 h-4" />
                 <span>Export CSV</span>
               </button>
-              <button
-                onClick={printData}
-                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Print
-              </button>
               <button 
                 onClick={onClose}
                 className="p-2 hover:bg-slate-200 rounded-lg"
@@ -157,7 +147,7 @@ export default function SimpleDataViewer({ hotelId, year, filters, onClose }: Si
         </div>
 
         {/* Filters */}
-        <div className="border-b bg-slate-50 px-6 py-4 print:hidden">
+        <div className="border-b bg-slate-50 px-6 py-4">
           <div className="flex items-center space-x-4">
             <div className="flex-1 relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" />
@@ -212,24 +202,24 @@ export default function SimpleDataViewer({ hotelId, year, filters, onClose }: Si
         </div>
 
         {/* Data Table */}
-        <div className="overflow-auto max-h-[500px] print:max-h-none">
+        <div className="overflow-auto max-h-[500px]">
           {loading ? (
             <div className="p-8 text-center">Loading bills...</div>
           ) : (
             <table className="w-full">
-              <thead className="sticky top-0 bg-slate-100 border-b print:bg-white">
+              <thead className="sticky top-0 bg-slate-100 border-b">
                 <tr>
                   <th className="text-left p-3 font-semibold text-slate-700">Date</th>
                   <th className="text-left p-3 font-semibold text-slate-700">Type</th>
                   <th className="text-left p-3 font-semibold text-slate-700">Supplier</th>
                   <th className="text-right p-3 font-semibold text-slate-700">Cost</th>
                   <th className="text-left p-3 font-semibold text-slate-700">Key Data</th>
-                  <th className="text-left p-3 font-semibold text-slate-700 print:hidden">Actions</th>
+                  <th className="text-left p-3 font-semibold text-slate-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredBills.map((bill, index) => (
-                  <tr key={index} className="border-b hover:bg-slate-50 print:hover:bg-white">
+                  <tr key={index} className="border-b hover:bg-slate-50">
                     <td className="p-3 text-slate-900">
                       {new Date(bill.bill_date).toLocaleDateString()}
                     </td>
@@ -266,7 +256,7 @@ export default function SimpleDataViewer({ hotelId, year, filters, onClose }: Si
                         </div>
                       )}
                     </td>
-                    <td className="p-3 print:hidden">
+                    <td className="p-3">
                       <button
                         onClick={() => {
                           // Toggle detailed view
@@ -283,7 +273,7 @@ export default function SimpleDataViewer({ hotelId, year, filters, onClose }: Si
                   </tr>
                   
                   {/* Expandable details row */}
-                  <tr id={`details-${index}`} style={{ display: 'none' }} className="bg-slate-50 print:bg-white">
+                  <tr id={`details-${index}`} style={{ display: 'none' }} className="bg-slate-50">
                     <td colSpan={6} className="p-4">
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
@@ -310,11 +300,6 @@ export default function SimpleDataViewer({ hotelId, year, filters, onClose }: Si
               </tbody>
             </table>
           )}
-        </div>
-
-        {/* Print footer */}
-        <div className="hidden print:block p-4 text-center text-sm text-slate-600 border-t">
-          Generated on {new Date().toLocaleDateString()} • Hotel {hotelId} • {year} Utility Data
         </div>
       </div>
     </div>
