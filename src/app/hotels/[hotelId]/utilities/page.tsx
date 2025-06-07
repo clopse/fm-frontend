@@ -45,7 +45,7 @@ export default function UtilitiesDashboard() {
   const [selectedYears, setSelectedYears] = useState<number[]>([2025]);
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
 
-  // Custom hooks - using first selected year as primary year
+  // Custom hooks
   const {
     data,
     loading,
@@ -129,12 +129,10 @@ export default function UtilitiesDashboard() {
     setViewMode('kwh');
     setSelectedYears([2025]);
     setSelectedMonths([]);
-    // Note: Year is not reset as it's a primary navigation parameter
   };
 
   const handleYearChange = (years: number[]) => {
     setSelectedYears(years);
-    // Set primary year to first selected year, or current year if none selected
     if (years.length > 0) {
       setYear(years[0]);
     }
@@ -145,10 +143,8 @@ export default function UtilitiesDashboard() {
   };
 
   const handleShowBills = (monthFilter?: string) => {
-    // If a specific month is provided (e.g., from clicking a chart), filter bills
     if (monthFilter && monthFilter !== 'all') {
       updateFilter('month', monthFilter);
-      // Also update selectedMonths to reflect this
       const monthNum = parseInt(monthFilter);
       if (!selectedMonths.includes(monthNum)) {
         setSelectedMonths([monthNum]);
@@ -184,7 +180,7 @@ export default function UtilitiesDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Updated Header */}
+      {/* Header */}
       <DashboardHeader
         hotelName={hotelNames[hotelId] || hotelId.toUpperCase()}
         selectedYears={selectedYears}
@@ -197,7 +193,7 @@ export default function UtilitiesDashboard() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Enhanced Active Filters Indicator */}
+        {/* Active Filters Indicator */}
         {(filters.month !== 'all' || filters.billType !== 'all' || filters.metric !== 'overview' || 
           selectedYears.length !== 1 || selectedMonths.length > 0) && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
