@@ -1,4 +1,4 @@
-// app/[hotelId]/utilities/hooks/useUtilitiesData.ts - FIXED VERSION
+// app/[hotelId]/utilities/hooks/useUtilitiesData.ts - FINAL FIX
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { UtilitiesData, ViewMode, ElectricityEntry, GasEntry } from '../types';
 
@@ -8,14 +8,13 @@ export function useUtilitiesData(hotelId: string | undefined) {
     gas: [],
     water: [],
     bills: [],
-    // ✅ Fixed: Add all required totals fields
     totals: {
       electricity: 0,
       gas: 0,
       water: 0,
-      electricity_cost: 0,  // ✅ Added
-      gas_cost: 0,          // ✅ Added
-      water_cost: 0,        // ✅ Added
+      electricity_cost: 0,
+      gas_cost: 0,
+      water_cost: 0,
       cost: 0
     },
     trends: {
@@ -64,7 +63,6 @@ export function useUtilitiesData(hotelId: string | undefined) {
       const totalWaterCost = water.reduce((sum: number, w: any) => 
         sum + (w.total_eur || 0), 0);
 
-      // ✅ Calculate separate cost totals
       const electricityCost = electricity.reduce((sum: number, e: ElectricityEntry) => 
         sum + e.total_eur, 0);
       
@@ -90,15 +88,14 @@ export function useUtilitiesData(hotelId: string | undefined) {
       const gasTrend = calculateTrend(gas, getGasValue);
       const waterTrend = calculateTrend(water, (w) => w.cubic_meters || 0);
 
-      // ✅ Return object with all required fields
       return {
         totals: {
           electricity: totalElectricity,
           gas: totalGas,
           water: totalWater,
-          electricity_cost: electricityCost,    // ✅ Added
-          gas_cost: gasCost,                    // ✅ Added
-          water_cost: totalWaterCost,           // ✅ Added
+          electricity_cost: electricityCost,
+          gas_cost: gasCost,
+          water_cost: totalWaterCost,
           cost: currentViewMode === 'eur' ? totalElectricity + totalGas + totalWaterCost :
                 electricityCost + gasCost + totalWaterCost
         },
@@ -131,7 +128,6 @@ export function useUtilitiesData(hotelId: string | undefined) {
       
       const billsData = billsResponse.ok ? await billsResponse.json() : { bills: [] };
 
-      // ✅ Process and set data with proper structure
       const calculatedData = calculateTotalsAndTrends(utilitiesData, viewMode);
       
       setData({
@@ -139,7 +135,6 @@ export function useUtilitiesData(hotelId: string | undefined) {
         gas: utilitiesData.gas || [],
         water: utilitiesData.water || [],
         bills: billsData.bills || [],
-        // ✅ Pass through backend totals if available, otherwise use calculated
         totals: {
           electricity: utilitiesData.totals?.electricity || calculatedData.totals.electricity,
           gas: utilitiesData.totals?.gas || calculatedData.totals.gas,
@@ -150,7 +145,6 @@ export function useUtilitiesData(hotelId: string | undefined) {
           cost: utilitiesData.totals?.cost || calculatedData.totals.cost
         },
         trends: calculatedData.trends,
-        // ✅ Pass through additional backend fields
         processed_counts: utilitiesData.processed_counts,
         total_bills_found: utilitiesData.total_bills_found,
         debug_info: utilitiesData.debug_info
@@ -158,7 +152,6 @@ export function useUtilitiesData(hotelId: string | undefined) {
 
     } catch (err) {
       console.error("Fetch failed:", err);
-      // ✅ Set empty data on error with proper structure
       setData({
         electricity: [],
         gas: [],
@@ -189,7 +182,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
     fetchData();
   }, [fetchData]);
 
-  // Recalculate totals when view mode changes
+  // ✅ FIXED: Recalculate totals when view mode changes - ensure all fields are numbers
   useEffect(() => {
     if (data.electricity.length > 0 || data.gas.length > 0) {
       const newTotalsAndTrends = calculateTotalsAndTrends({
@@ -201,13 +194,14 @@ export function useUtilitiesData(hotelId: string | undefined) {
       setData(prevData => ({
         ...prevData,
         totals: {
-          ...prevData.totals,
-          // ✅ Update only the calculated fields, keep backend totals
+          // ✅ Ensure all fields are numbers, not undefined
           electricity: newTotalsAndTrends.totals.electricity,
           gas: newTotalsAndTrends.totals.gas,
           water: newTotalsAndTrends.totals.water,
+          electricity_cost: prevData.totals?.electricity_cost || 0,  // Keep original or default to 0
+          gas_cost: prevData.totals?.gas_cost || 0,                  // Keep original or default to 0
+          water_cost: prevData.totals?.water_cost || 0,              // Keep original or default to 0
           cost: newTotalsAndTrends.totals.cost
-          // Keep the cost fields from backend/initial calculation
         },
         trends: newTotalsAndTrends.trends
       }));
