@@ -4,6 +4,8 @@ export interface WaterMonthEntry {
   month: string;
   cubic_meters: number;
   total_eur: number;
+  water_supply_eur: number;
+  wastewater_eur: number;
   per_room_m3: number;
   days: number;
   device_breakdown: { [deviceId: string]: number };
@@ -20,6 +22,10 @@ export interface WaterSummary {
     start: string | null;
     end: string | null;
   };
+  // Add pricing information
+  water_rate: number;
+  wastewater_rate: number;
+  total_cost: number;
 }
 
 interface SmartFlowRawData {
@@ -36,6 +42,29 @@ interface SmartFlowRawData {
 // S3 base URL for direct access
 const S3_BASE_URL = "https://jmk-project-uploads.s3.amazonaws.com";
 
+// Water rate pricing based on actual billing
+interface WaterRates {
+  before_oct_2024: {
+    water_supply: number;
+    wastewater: number;
+  };
+  after_oct_2024: {
+    water_supply: number;
+    wastewater: number;
+  };
+}
+
+const WATER_RATES: WaterRates = {
+  before_oct_2024: {
+    water_supply: 1.26, // €/m³
+    wastewater: 1.38    // €/m³
+  },
+  after_oct_2024: {
+    water_supply: 1.68, // €/m³
+    wastewater: 2.28    // €/m³
+  }
+};
+
 const calculateSummary = (data: WaterMonthEntry[]): WaterSummary => {
   if (!data.length) return {
     total_usage_m3: 0,
@@ -44,12 +73,23 @@ const calculateSummary = (data: WaterMonthEntry[]): WaterSummary => {
     months_of_data: 0,
     trend: "stable",
     latest_month: null,
-    date_range: { start: null, end: null }
+    date_range: { start: null, end: null },
+    water_rate: 0,
+    wastewater_rate: 0,
+    total_cost: 0
   };
   
   const totalUsage = data.reduce((sum, entry) => sum + entry.cubic_meters, 0);
+  const totalWaterCost = data.reduce((sum, entry) => sum + entry.water_supply_eur, 0);
+  const totalWastewaterCost = data.reduce((sum, entry) => sum + entry.wastewater_eur, 0);
+  const totalCost = totalWaterCost + totalWastewaterCost;
+  
   const avgMonthly = totalUsage / data.length;
   const avgPerRoom = data.reduce((sum, entry) => sum + entry.per_room_m3, 0) / data.length;
+  
+  // Calculate average rates
+  const avgWaterRate = totalWaterCost / totalUsage;
+  const avgWastewaterRate = totalWastewaterCost / totalUsage;
   
   // Determine trend (last 3 months vs previous 3 months)
   let trend: "increasing" | "decreasing" | "stable" = "stable";
@@ -78,8 +118,23 @@ const calculateSummary = (data: WaterMonthEntry[]): WaterSummary => {
     date_range: {
       start: sortedData[0]?.month || null,
       end: sortedData[sortedData.length - 1]?.month || null
-    }
+    },
+    water_rate: Math.round(avgWaterRate * 100) / 100,
+    wastewater_rate: Math.round(avgWastewaterRate * 100) / 100,
+    total_cost: Math.round(totalCost * 100) / 100
   };
+};
+
+// Helper function to get water rates for a specific date
+const getWaterRates = (dateStr: string) => {
+  const date = new Date(dateStr);
+  
+  // Check if date is after Oct 1, 2024
+  if (date >= new Date('2024-10-01')) {
+    return WATER_RATES.after_oct_2024;
+  }
+  
+  return WATER_RATES.before_oct_2024;
 };
 
 export function useWaterMonthlyData(
@@ -171,14 +226,21 @@ export function useWaterMonthlyData(
           const deviceBreakdown = data.usages;
           const totalCubicMeters = Object.values(deviceBreakdown).reduce((sum, usage) => sum + usage, 0);
           const perRoomM3 = totalCubicMeters / rooms;
-          const waterRate = 2.5; // €2.50 per m³
-          const totalEur = totalCubicMeters * waterRate;
           const days = new Date(data.year, data.month, 0).getDate();
+          
+          // Calculate actual cost based on the billing rates at that time
+          const dateStr = `${data.year}-${data.month.toString().padStart(2, '0')}-15`; // middle of month
+          const rates = getWaterRates(dateStr);
+          const waterSupplyCost = totalCubicMeters * rates.water_supply;
+          const wastewaterCost = totalCubicMeters * rates.wastewater;
+          const totalCost = waterSupplyCost + wastewaterCost;
           
           processedData.push({
             month: monthKey,
             cubic_meters: Math.round(totalCubicMeters * 100) / 100,
-            total_eur: Math.round(totalEur * 100) / 100,
+            water_supply_eur: Math.round(waterSupplyCost * 100) / 100,
+            wastewater_eur: Math.round(wastewaterCost * 100) / 100,
+            total_eur: Math.round(totalCost * 100) / 100,
             per_room_m3: Math.round(perRoomM3 * 100) / 100,
             days: days,
             device_breakdown: deviceBreakdown
