@@ -209,7 +209,7 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
   const years = [...new Set(data.map(d => d.month.split('-')[0]))].sort();
   
   // Colors for different years and pie chart
-  const yearColors = {
+  const yearColors: Record<string, string> = {
     '2023': '#F59E0B', // Yellow/Orange
     '2024': '#3B82F6', // Blue  
     '2025': '#10B981', // Green
