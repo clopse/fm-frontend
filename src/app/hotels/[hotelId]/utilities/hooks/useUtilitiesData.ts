@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 interface UtilitiesData {
   electricity: any[]; // Array of electricity entries
   gas: any[]; // Array of gas entries
-  water?: any[]; // Optional array of water entries
+  water: any[]; // Array of water entries (not optional)
   bills: any[];
   totals: {
     electricity: number;
