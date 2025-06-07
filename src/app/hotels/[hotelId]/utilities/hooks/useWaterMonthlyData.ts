@@ -1,12 +1,11 @@
-// src/app/hotels/[hotelId]/utilities/hooks/useWaterMonthlyData.ts
 import { useState, useEffect } from "react";
 
 export interface WaterMonthEntry {
-  month: string;           // e.g. "2025-03"
-  cubic_meters: number;    // total m3 for the month
-  total_eur: number;       // cost for the month
-  per_room_m3: number;     // m3 per room for the month
-  device_breakdown?: { [key: string]: number }; // Added for device breakdown
+  month: string;
+  cubic_meters: number;
+  total_eur: number;
+  per_room_m3: number;
+  device_breakdown?: { [key: string]: number };
 }
 
 export interface WaterSummary {
@@ -22,7 +21,6 @@ export interface WaterSummary {
   };
 }
 
-// Raw data from your S3 file
 interface SmartFlowRawData {
   device_id: number;
   dl_id: number;
@@ -34,7 +32,11 @@ interface SmartFlowRawData {
   Year: number;
 }
 
-export function useWaterMonthlyData(hotelId: string | undefined, year?: number, rooms: number = 198) {
+export function useWaterMonthlyData(
+  hotelId: string | undefined,
+  year?: number,
+  rooms: number = 198
+) {
   const [data, setData] = useState<WaterMonthEntry[]>([]);
   const [summary, setSummary] = useState<WaterSummary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -43,33 +45,47 @@ export function useWaterMonthlyData(hotelId: string | undefined, year?: number, 
 
   const fetchWaterDataFromS3 = async () => {
     if (!hotelId) return;
-    
+
     try {
       setLoading(true);
       setError(null);
 
-      // Use your existing S3 configuration (like your other utilities)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/s3-proxy/utilities/${hotelId}/smartflow-usage.json`);
-      
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/s3-proxy/utilities/${hotelId}/smartflow-usage.json`
+      );
+
       if (!response.ok) {
         throw new Error(`Failed to fetch water data: ${response.status}`);
       }
 
-      const rawData: SmartFlowRawData[] = await response.json();
+      const rawJson = await response.json();
+      if (!Array.isArray(rawJson)) {
+        throw new Error("Invalid SmartFlow data format (expected array)");
+      }
 
-      // Process the raw data into monthly aggregates
+      const rawData: SmartFlowRawData[] = rawJson;
+
       const monthsMap = new Map<string, WaterMonthEntry>();
 
       rawData.forEach(entry => {
-        const monthKey = `${entry.Year}-${entry.time_value.toString().padStart(2, '0')}`;
+        if (
+          typeof entry.Usage !== "number" ||
+          typeof entry.time_value !== "number" ||
+          entry.time_value < 1 ||
+          entry.time_value > 12
+        ) {
+          return; // skip invalid entry
+        }
+
+        const monthKey = `${entry.Year}-${entry.time_value.toString().padStart(2, "0")}`;
         const deviceId = entry.device_id.toString();
-        const usageM3 = entry.Usage / 1000; // Convert liters to m³
+        const usageM3 = entry.Usage / 1000;
 
         if (!monthsMap.has(monthKey)) {
           monthsMap.set(monthKey, {
             month: monthKey,
             cubic_meters: 0,
-            total_eur: 0, // You can calculate cost later if needed
+            total_eur: 0,
             per_room_m3: 0,
             device_breakdown: {}
           });
@@ -77,38 +93,30 @@ export function useWaterMonthlyData(hotelId: string | undefined, year?: number, 
 
         const monthData = monthsMap.get(monthKey)!;
         monthData.cubic_meters += usageM3;
-        
-        if (!monthData.device_breakdown) {
-          monthData.device_breakdown = {};
-        }
-        monthData.device_breakdown[deviceId] = (monthData.device_breakdown[deviceId] || 0) + usageM3;
+        monthData.device_breakdown![deviceId] =
+          (monthData.device_breakdown![deviceId] || 0) + usageM3;
       });
 
-      // Calculate per-room usage and round values
       const processedData = Array.from(monthsMap.values()).map(month => ({
         ...month,
         cubic_meters: Math.round(month.cubic_meters * 100) / 100,
         per_room_m3: Math.round((month.cubic_meters / rooms) * 100) / 100,
-        total_eur: Math.round(month.cubic_meters * 2.5 * 100) / 100 // Rough estimate: €2.50 per m³
+        total_eur: Math.round(month.cubic_meters * 2.5 * 100) / 100
       }));
 
-      // Filter by year if specified
       let filteredData = processedData;
       if (year) {
         filteredData = processedData.filter(entry => entry.month.startsWith(year.toString()));
       }
 
-      // Sort by month
       const sortedData = filteredData.sort((a, b) => a.month.localeCompare(b.month));
       setData(sortedData);
 
-      // Generate summary
       if (sortedData.length > 0) {
-        const totalUsage = sortedData.reduce((sum, month) => sum + month.cubic_meters, 0);
+        const totalUsage = sortedData.reduce((sum, m) => sum + m.cubic_meters, 0);
         const avgMonthly = totalUsage / sortedData.length;
-        const avgPerRoom = sortedData.reduce((sum, month) => sum + month.per_room_m3, 0) / sortedData.length;
+        const avgPerRoom = sortedData.reduce((sum, m) => sum + m.per_room_m3, 0) / sortedData.length;
 
-        // Calculate trend (last 3 months vs previous 3 months)
         let trend: "increasing" | "decreasing" | "stable" = "stable";
         if (sortedData.length >= 6) {
           const recent = sortedData.slice(-3);
@@ -132,11 +140,13 @@ export function useWaterMonthlyData(hotelId: string | undefined, year?: number, 
             end: sortedData[sortedData.length - 1].month
           }
         });
+      } else {
+        console.warn(`No water data found for ${hotelId} in ${selectedYear}`);
+        setSummary(null);
       }
-
     } catch (err) {
-      console.error('Failed to fetch water data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch water data');
+      console.error("Failed to fetch water data:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch water data");
     } finally {
       setLoading(false);
     }
