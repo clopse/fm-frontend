@@ -1,10 +1,3 @@
-{/* Bills List Modal */}
-      {showBillsList && (
-        <BillsListModal
-          bills={getFilteredBills()}
-          onClose={() => setShowBillsList(false)}
-        />
-      )}// app/[hotelId]/utilities/page.tsx
 'use client';
 
 import { useEffect, useState } from "react";
@@ -164,53 +157,30 @@ export default function UtilitiesDashboard() {
     setShowBillsList(true);
   };
 
-  // Enhanced filtered data based on selected years and months
-  const getEnhancedFilteredData = () => {
-    // Start with the existing filtered data
-    let enhanced = { ...filteredData };
-
-    // If multiple years are selected, we might need to fetch and combine data
-    // For now, we'll work with the primary year data
+  // Filter bills based on current filters for the modal
+  const getFilteredBills = () => {
+    if (!data.bills) return [];
     
-    // Filter by selected months if any are specified
-    if (selectedMonths.length > 0 && selectedMonths.length < 12) {
-      const filterByMonths = (entries: any[]) => {
-        return entries.filter(entry => {
-          const entryDate = new Date(entry.month + '-01');
-          const entryMonth = entryDate.getMonth() + 1;
-          return selectedMonths.includes(entryMonth);
-        });
-      };
-
-      enhanced = {
-        ...enhanced,
-        electricity: filterByMonths(enhanced.electricity || []),
-        gas: filterByMonths(enhanced.gas || []),
-        water: filterByMonths(enhanced.water || []),
-      };
-
-      // Recalculate totals for filtered months
-      const calculateTotals = () => {
-        const electricityTotal = enhanced.electricity?.reduce((sum, entry) => sum + (entry.total_kwh || 0), 0) || 0;
-        const gasTotal = enhanced.gas?.reduce((sum, entry) => sum + (entry.total_kwh || 0), 0) || 0;
-        const electricityCost = enhanced.electricity?.reduce((sum, entry) => sum + (entry.total_cost || 0), 0) || 0;
-        const gasCost = enhanced.gas?.reduce((sum, entry) => sum + (entry.total_cost || 0), 0) || 0;
-
-        return {
-          electricity: electricityTotal,
-          gas: gasTotal,
-          electricity_cost: electricityCost,
-          gas_cost: gasCost,
-        };
-      };
-
-      enhanced.totals = calculateTotals();
+    let filtered = data.bills;
+    
+    // Filter by month if specific month selected
+    if (filters.month && filters.month !== 'all') {
+      const targetMonth = parseInt(filters.month);
+      filtered = filtered.filter(bill => {
+        const billDate = bill.summary?.bill_date || bill.upload_date;
+        if (!billDate) return false;
+        const billMonth = new Date(billDate).getMonth() + 1; // JS months are 0-indexed
+        return billMonth === targetMonth;
+      });
     }
-
-    return enhanced;
+    
+    // Filter by bill type
+    if (filters.billType && filters.billType !== 'all') {
+      filtered = filtered.filter(bill => bill.utility_type === filters.billType);
+    }
+    
+    return filtered;
   };
-
-  const enhancedData = getEnhancedFilteredData();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -365,6 +335,14 @@ export default function UtilitiesDashboard() {
         onExport={handleExport}
         onReset={handleResetFilters}
       />
+
+      {/* Bills List Modal */}
+      {showBillsList && (
+        <BillsListModal
+          bills={getFilteredBills()}
+          onClose={() => setShowBillsList(false)}
+        />
+      )}
 
       {/* Metrics Modal */}
       {showMetricsModal && (
