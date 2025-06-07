@@ -1,4 +1,4 @@
-// app/[hotelId]/utilities/hooks/useUtilitiesData.ts
+// app/[hotelId]/utilities/hooks/useUtilitiesData.ts - FIXED VERSION
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { UtilitiesData, ViewMode, ElectricityEntry, GasEntry } from '../types';
 
@@ -7,7 +7,22 @@ export function useUtilitiesData(hotelId: string | undefined) {
     electricity: [],
     gas: [],
     water: [],
-    bills: []
+    bills: [],
+    // ✅ Fixed: Add all required totals fields
+    totals: {
+      electricity: 0,
+      gas: 0,
+      water: 0,
+      electricity_cost: 0,  // ✅ Added
+      gas_cost: 0,          // ✅ Added
+      water_cost: 0,        // ✅ Added
+      cost: 0
+    },
+    trends: {
+      electricity: 0,
+      gas: 0,
+      water: 0
+    }
   });
   const [loading, setLoading] = useState(false);
   const [year, setYear] = useState(2025);
@@ -49,6 +64,13 @@ export function useUtilitiesData(hotelId: string | undefined) {
       const totalWaterCost = water.reduce((sum: number, w: any) => 
         sum + (w.total_eur || 0), 0);
 
+      // ✅ Calculate separate cost totals
+      const electricityCost = electricity.reduce((sum: number, e: ElectricityEntry) => 
+        sum + e.total_eur, 0);
+      
+      const gasCost = gas.reduce((sum: number, g: GasEntry) => 
+        sum + g.total_eur, 0);
+
       // Calculate trends (month-over-month change)
       const calculateTrend = (data: any[], getValue: (item: any) => number) => {
         if (data.length < 2) return 0;
@@ -68,14 +90,17 @@ export function useUtilitiesData(hotelId: string | undefined) {
       const gasTrend = calculateTrend(gas, getGasValue);
       const waterTrend = calculateTrend(water, (w) => w.cubic_meters || 0);
 
+      // ✅ Return object with all required fields
       return {
         totals: {
           electricity: totalElectricity,
           gas: totalGas,
           water: totalWater,
+          electricity_cost: electricityCost,    // ✅ Added
+          gas_cost: gasCost,                    // ✅ Added
+          water_cost: totalWaterCost,           // ✅ Added
           cost: currentViewMode === 'eur' ? totalElectricity + totalGas + totalWaterCost :
-                (electricity.reduce((sum: number, e: ElectricityEntry) => sum + e.total_eur, 0) +
-                 gas.reduce((sum: number, g: GasEntry) => sum + g.total_eur, 0) + totalWaterCost)
+                electricityCost + gasCost + totalWaterCost
         },
         trends: {
           electricity: electricityTrend,
@@ -106,23 +131,53 @@ export function useUtilitiesData(hotelId: string | undefined) {
       
       const billsData = billsResponse.ok ? await billsResponse.json() : { bills: [] };
 
-      // Process and set data
+      // ✅ Process and set data with proper structure
+      const calculatedData = calculateTotalsAndTrends(utilitiesData, viewMode);
+      
       setData({
         electricity: utilitiesData.electricity || [],
         gas: utilitiesData.gas || [],
         water: utilitiesData.water || [],
         bills: billsData.bills || [],
-        ...calculateTotalsAndTrends(utilitiesData, viewMode)
+        // ✅ Pass through backend totals if available, otherwise use calculated
+        totals: {
+          electricity: utilitiesData.totals?.electricity || calculatedData.totals.electricity,
+          gas: utilitiesData.totals?.gas || calculatedData.totals.gas,
+          water: utilitiesData.totals?.water || calculatedData.totals.water,
+          electricity_cost: utilitiesData.totals?.electricity_cost || calculatedData.totals.electricity_cost,
+          gas_cost: utilitiesData.totals?.gas_cost || calculatedData.totals.gas_cost,
+          water_cost: utilitiesData.totals?.water_cost || calculatedData.totals.water_cost,
+          cost: utilitiesData.totals?.cost || calculatedData.totals.cost
+        },
+        trends: calculatedData.trends,
+        // ✅ Pass through additional backend fields
+        processed_counts: utilitiesData.processed_counts,
+        total_bills_found: utilitiesData.total_bills_found,
+        debug_info: utilitiesData.debug_info
       });
 
     } catch (err) {
       console.error("Fetch failed:", err);
-      // Set empty data on error
+      // ✅ Set empty data on error with proper structure
       setData({
         electricity: [],
         gas: [],
         water: [],
-        bills: []
+        bills: [],
+        totals: {
+          electricity: 0,
+          gas: 0,
+          water: 0,
+          electricity_cost: 0,
+          gas_cost: 0,
+          water_cost: 0,
+          cost: 0
+        },
+        trends: {
+          electricity: 0,
+          gas: 0,
+          water: 0
+        }
       });
     } finally {
       setLoading(false);
@@ -145,7 +200,16 @@ export function useUtilitiesData(hotelId: string | undefined) {
       
       setData(prevData => ({
         ...prevData,
-        ...newTotalsAndTrends
+        totals: {
+          ...prevData.totals,
+          // ✅ Update only the calculated fields, keep backend totals
+          electricity: newTotalsAndTrends.totals.electricity,
+          gas: newTotalsAndTrends.totals.gas,
+          water: newTotalsAndTrends.totals.water,
+          cost: newTotalsAndTrends.totals.cost
+          // Keep the cost fields from backend/initial calculation
+        },
+        trends: newTotalsAndTrends.trends
       }));
     }
   }, [viewMode, data.electricity, data.gas, data.water, calculateTotalsAndTrends]);
