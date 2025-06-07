@@ -5,6 +5,7 @@ export interface WaterMonthEntry {
   cubic_meters: number;
   total_eur: number;
   per_room_m3: number;
+  days: number; // Added this property
   device_breakdown?: { [key: string]: number };
 }
 
@@ -35,7 +36,7 @@ interface SmartFlowRawData {
 // S3 base URL for direct access
 const S3_BASE_URL = "https://jmk-project-uploads.s3.amazonaws.com";
 
-// Mock data generator function (same as before)
+// Mock data generator function
 const generateMockWaterData = (year: number, roomCount: number = 198) => {
   const months: WaterMonthEntry[] = [];
   
