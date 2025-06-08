@@ -1,38 +1,50 @@
 // src/components/HotelSelectorModal.tsx
 'use client';
-
+import React, { useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import HotelImage from './HotelImage';
+import { hotels } from '@/lib/hotels'; // Import from existing hotels file
 import styles from '@/styles/HotelSelectorModal.module.css';
 
-const hotels = [
-  { name: 'Holiday Inn Express', id: 'hiex' },
-  { name: 'Moxy Cork', id: 'moxy' },
-  { name: 'Holiday Inn Dublin Airport', id: 'hida' },
-  { name: 'Hampton Dublin', id: 'hbhdcc' },
-  { name: 'Hampton Ealing', id: 'hbhe' },
-  { name: 'Seraphine', id: 'sera' },
-  { name: 'Waterford Marina', id: 'marina' },
-  { name: 'Telephone House', id: 'hiltonth' },
-  { name: 'Hamilton Dock', id: 'belfast' },
-];
+interface HotelSelectorModalProps {
+  isOpen: boolean;
+  setIsOpen: (val: boolean) => void;
+  onSelectHotel?: (hotelName: string) => void;
+}
 
-export default function HotelSelectorModal({
+const HotelSelectorModal = ({
   isOpen,
   setIsOpen,
   onSelectHotel,
-}: {
-  isOpen: boolean;
-  setIsOpen: (val: boolean) => void;
-  onSelectHotel?: (hotelName: string) => void; // <-- added optional
-}) {
+}: HotelSelectorModalProps) => {
+  
+  // Memoize event handlers
+  const closeModal = useCallback(() => {
+    setIsOpen(false);
+  }, [setIsOpen]);
+
+  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      closeModal();
+    }
+  }, [closeModal]);
+
+  const handleModalClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  // Memoize hotel selection handler
+  const handleHotelSelect = useCallback((hotelName: string) => {
+    onSelectHotel?.(hotelName);
+    closeModal();
+  }, [onSelectHotel, closeModal]);
+
+  // Early return if not open (prevent unnecessary renders)
   if (!isOpen) return null;
 
-  const closeModal = () => setIsOpen(false);
-
   return (
-    <div className={styles.overlay} onClick={closeModal}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+    <div className={styles.overlay} onClick={handleOverlayClick}>
+      <div className={styles.modal} onClick={handleModalClick}>
         <div className={styles.header}>
           <button className={styles.closeButton} onClick={closeModal}>
             ✕
@@ -40,15 +52,39 @@ export default function HotelSelectorModal({
         </div>
         <div className={styles.grid}>
           {hotels.map((hotel) => (
-            <Link key={hotel.id} href={`/hotels/${hotel.id}`} onClick={() => onSelectHotel?.(hotel.name)}>
-              <div className={styles.card} onClick={closeModal}>
-                <HotelImage hotelId={hotel.id} alt={hotel.name} />
-                <span className={styles.name}>{hotel.name}</span>
-              </div>
-            </Link>
+            <HotelCard
+              key={hotel.id}
+              hotel={hotel}
+              onSelect={handleHotelSelect}
+            />
           ))}
         </div>
       </div>
     </div>
   );
+};
+
+// Extract HotelCard into separate component for better performance
+interface HotelCardProps {
+  hotel: { name: string; id: string };
+  onSelect: (hotelName: string) => void;
 }
+
+const HotelCard = React.memo<HotelCardProps>(({ hotel, onSelect }) => {
+  const handleClick = useCallback(() => {
+    onSelect(hotel.name);
+  }, [onSelect, hotel.name]);
+
+  return (
+    <Link href={`/hotels/${hotel.id}`} onClick={handleClick}>
+      <div className={styles.card}>
+        <HotelImage hotelId={hotel.id} alt={hotel.name} />
+        <span className={styles.name}>{hotel.name}</span>
+      </div>
+    </Link>
+  );
+});
+
+HotelCard.displayName = 'HotelCard';
+
+export default React.memo(HotelSelectorModal);
