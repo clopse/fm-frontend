@@ -78,14 +78,24 @@ export interface BillEntry {
     standing_charge?: number;
     commodity_cost?: number;
   };
-  raw_data?: unknown;
+  raw_data?: {
+    billingPeriod?: {
+      startDate?: string;
+      endDate?: string;
+    };
+    billSummary?: {
+      billingPeriodStartDate?: string;
+      billingPeriodEndDate?: string;
+    };
+    [key: string]: any; // allow extra fallback fields
+  };
 }
 
 export interface UtilitiesData {
   electricity: ElectricityEntry[];
   gas: GasEntry[];
   water: WaterEntry[];
-  bills: BillEntry[]; // ✅ MUST be required to fix your type error
+  bills: BillEntry[];
   totals: {
     electricity: number;
     gas: number;
@@ -167,13 +177,10 @@ export interface AnalyticsData {
       night: number;
     };
     day_percentage: number;
-    monthly_breakdown: Record<
-      string,
-      {
-        day: number;
-        night: number;
-      }
-    >;
+    monthly_breakdown: Record<string, {
+      day: number;
+      night: number;
+    }>;
   };
 }
 
