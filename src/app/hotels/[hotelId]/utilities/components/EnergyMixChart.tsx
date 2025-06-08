@@ -1,9 +1,10 @@
 "use client";
 
 // app/[hotelId]/utilities/components/EnergyMixChart.tsx
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipProps } from 'recharts';
 import { Gauge, Loader2, Calendar, AlertTriangle } from 'lucide-react';
 import { ViewMode, ElectricityEntry, GasEntry } from '../types';
+import { ReactNode } from 'react';
 
 interface EnergyMixChartProps {
   electricityTotal: number;
@@ -13,6 +14,15 @@ interface EnergyMixChartProps {
   electricityData?: ElectricityEntry[];
   gasData?: GasEntry[];
   incompleteMonths?: string[];
+}
+
+// Define types for chart data to avoid any 'any'
+interface EnergyMixDataEntry {
+  name: string;
+  value: number;
+  color: string;
+  percentage: number;
+  sourceBills: Array<{ id: string }>;
 }
 
 const COLORS = {
@@ -30,7 +40,7 @@ export default function EnergyMixChart({
   incompleteMonths = []
 }: EnergyMixChartProps) {
   
-  const getUnitLabel = () => {
+  const getUnitLabel = (): string => {
     switch(viewMode) {
       case 'eur': return '€';
       case 'room': return 'kWh/room';
@@ -43,14 +53,14 @@ export default function EnergyMixChart({
   // Get unique bill ids from electricity data
   const electricityBillIds = electricityData
     .map(entry => entry.bill_id)
-    .filter(Boolean) as string[];
+    .filter((id): id is string => id !== undefined && id !== null);
 
   // Get unique bill ids from gas data
   const gasBillIds = gasData
     .map(entry => entry.bill_id)
-    .filter(Boolean) as string[];
+    .filter((id): id is string => id !== undefined && id !== null);
 
-  const energyMixData = [
+  const energyMixData: EnergyMixDataEntry[] = [
     { 
       name: 'Electricity', 
       value: electricityTotal,
@@ -69,67 +79,82 @@ export default function EnergyMixChart({
     }
   ];
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      const uniqueBillCount = (data.sourceBills || []).length;
-      
-      return (
-        <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg max-w-xs">
-          <div className="flex items-center space-x-2 mb-2">
-            <div 
-              className="w-4 h-4 rounded" 
-              style={{ backgroundColor: data.color }}
-            ></div>
-            <span className="font-semibold text-slate-900">{data.name}</span>
-          </div>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span>Value:</span>
-              <span className="font-medium">
-                {viewMode === 'eur' ? '€' : ''}{Math.round(data.value).toLocaleString()} {getUnitLabel()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Percentage:</span>
-              <span className="font-medium">{data.percentage.toFixed(1)}%</span>
-            </div>
-            
-            {uniqueBillCount > 0 && (
-              <div className="mt-2 pt-2 border-t border-slate-100">
-                <div className="flex items-center text-xs text-slate-600">
-                  <Calendar className="w-3 h-3 mr-1" />
-                  <span>
-                    Based on {uniqueBillCount} {uniqueBillCount === 1 ? 'bill' : 'bills'}
-                  </span>
-                </div>
-              </div>
-            )}
-            
-            {hasIncompleteData && (
-              <div className="mt-2 pt-2 border-t border-slate-100">
-                <div className="flex items-center text-xs text-amber-600">
-                  <AlertTriangle className="w-3 h-3 mr-1" />
-                  <span>
-                    Some months have incomplete data
-                  </span>
-                </div>
-              </div>
-            )}
-          </div>
+  // Define proper types for the tooltip props
+  interface CustomTooltipProps {
+    active?: boolean;
+    payload?: Array<{ payload: EnergyMixDataEntry }>;
+  }
+
+  const CustomTooltip = ({ active, payload }: CustomTooltipProps): ReactNode => {
+    if (!active || !payload || payload.length === 0) return null;
+    
+    const data = payload[0].payload;
+    const uniqueBillCount = data.sourceBills.length;
+    
+    return (
+      <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg max-w-xs">
+        <div className="flex items-center space-x-2 mb-2">
+          <div 
+            className="w-4 h-4 rounded" 
+            style={{ backgroundColor: data.color }}
+          ></div>
+          <span className="font-semibold text-slate-900">{data.name}</span>
         </div>
-      );
-    }
-    return null;
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span>Value:</span>
+            <span className="font-medium">
+              {viewMode === 'eur' ? '€' : ''}{Math.round(data.value).toLocaleString()} {getUnitLabel()}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>Percentage:</span>
+            <span className="font-medium">{data.percentage.toFixed(1)}%</span>
+          </div>
+          
+          {uniqueBillCount > 0 && (
+            <div className="mt-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center text-xs text-slate-600">
+                <Calendar className="w-3 h-3 mr-1" />
+                <span>
+                  Based on {uniqueBillCount} {uniqueBillCount === 1 ? 'bill' : 'bills'}
+                </span>
+              </div>
+            </div>
+          )}
+          
+          {hasIncompleteData && (
+            <div className="mt-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center text-xs text-amber-600">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                <span>
+                  Some months have incomplete data
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
-  const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  // Define proper types for the label props
+  interface CustomLabelProps {
+    cx: number;
+    cy: number;
+    midAngle: number;
+    innerRadius: number;
+    outerRadius: number;
+    percent: number;
+  }
+
+  const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: CustomLabelProps): ReactNode => {
+    if (percent < 0.05) return null; // Don't show label for very small slices
+
     const RADIAN = Math.PI / 180;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    if (percent < 0.05) return null; // Don't show label for very small slices
 
     return (
       <text 
@@ -247,7 +272,7 @@ export default function EnergyMixChart({
           <div className="flex-1 pl-6">
             <div className="space-y-4">
               {energyMixData.map((entry, index) => {
-                const uniqueBillCount = (entry.sourceBills || []).length;
+                const uniqueBillCount = entry.sourceBills.length;
                 
                 return (
                   <div key={index} className="flex items-center justify-between p-4 rounded-lg border border-slate-100">
