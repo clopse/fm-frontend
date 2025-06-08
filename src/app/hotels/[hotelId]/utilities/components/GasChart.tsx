@@ -26,8 +26,26 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
     }
   };
 
+  // Sort data chronologically by date
+  const getSortedData = () => {
+    if (!data || data.length === 0) return [];
+    
+    // Create a deep copy to avoid mutating the original data
+    const sortableData = [...data];
+    
+    // Sort by date (chronological order - oldest to newest)
+    return sortableData.sort((a, b) => {
+      // Convert period strings "YYYY-MM" to Date objects
+      const dateA = new Date(a.period + "-01");
+      const dateB = new Date(b.period + "-01");
+      return dateA.getTime() - dateB.getTime();
+    });
+  };
+
   const formatData = () => {
-    return data.map((g) => ({
+    const sortedData = getSortedData();
+    
+    return sortedData.map((g) => ({
       period: g.period,
       value: viewMode === 'eur' ? g.total_eur : 
              viewMode === 'room' ? g.per_room_kwh : g.total_kwh,
@@ -182,7 +200,7 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
               {data.length} month{data.length !== 1 ? 's' : ''} of data
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              Latest: {formatMonth(data[data.length - 1]?.period)}
+              Latest: {formatMonth(getSortedData().slice(-1)[0]?.period || '')}
             </div>
           </div>
         </div>
