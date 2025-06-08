@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { ElectricityEntry, GasEntry, WaterEntry, BillEntry, UtilitiesData as UtilitiesDataType, ViewMode } from '../types';
+import { ElectricityEntry, GasEntry, BillEntry, UtilitiesData as UtilitiesDataType, ViewMode } from '../types';
 
 // Internal types for our calculations
 interface DailyUtilityData {
@@ -10,11 +10,9 @@ interface DailyUtilityData {
   electricity_eur: number;
   gas_kwh: number;
   gas_eur: number;
-  water_kwh: number;
-  water_eur: number;
   source_bills: Array<{
     id: string;
-    type: 'electricity' | 'gas' | 'water';
+    type: 'electricity' | 'gas';
     original_kwh?: number;
     original_eur?: number;
     days_covered?: number;
@@ -31,8 +29,6 @@ interface MonthData {
   electricity_eur: number;
   gas_kwh: number;
   gas_eur: number;
-  water_kwh: number;
-  water_eur: number;
   days_covered: number;
   days_in_month: number;
   is_complete: boolean;
@@ -122,15 +118,12 @@ export function useUtilitiesData(hotelId: string | undefined): {
     const emptyData: UtilitiesDataType = {
       electricity: [],
       gas: [],
-      water: [],
       bills: [],
       totals: {
         electricity: 0,
         gas: 0,
-        water: 0,
         electricity_cost: 0,
         gas_cost: 0,
-        water_cost: 0,
         cost: 0,
       }
     };
@@ -172,8 +165,8 @@ export function useUtilitiesData(hotelId: string | undefined): {
         }
         
         // Filter for the relevant bill type
-        const type = bill.utility_type as 'electricity' | 'gas' | 'water';
-        if (!type || !['electricity', 'gas', 'water'].includes(type)) {
+        const type = bill.utility_type as 'electricity' | 'gas';
+        if (!type || !['electricity', 'gas'].includes(type)) {
           return;
         }
         
@@ -202,10 +195,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
         } else if (type === 'gas') {
           kwh = Number(summary.consumption_kwh || bill.consumption) || 0;
           eur = Number(summary.total_cost || bill.total_amount) || 0;
-        } else if (type === 'water') {
-          // For water, just use the bill.consumption directly
-          kwh = Number(bill.consumption) || 0;
-          eur = Number(summary.total_cost || bill.total_amount) || 0;
         }
         
         // Calculate daily values
@@ -229,8 +218,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
               electricity_eur: 0,
               gas_kwh: 0,
               gas_eur: 0,
-              water_kwh: 0,
-              water_eur: 0,
               source_bills: []
             };
           }
@@ -244,9 +231,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
           } else if (type === 'gas') {
             dailyData[dateStr].gas_kwh += dailyKwh;
             dailyData[dateStr].gas_eur += dailyEur;
-          } else if (type === 'water') {
-            dailyData[dateStr].water_kwh += dailyKwh;
-            dailyData[dateStr].water_eur += dailyEur;
           }
           
           // Add bill reference
@@ -301,8 +285,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
           electricity_eur: 0,
           gas_kwh: 0,
           gas_eur: 0,
-          water_kwh: 0,
-          water_eur: 0,
           days_covered: 0,
           days_in_month: daysInMonth[monthKey] || 30, // Fallback to 30 days
           is_complete: false,
@@ -318,8 +300,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
       monthData.electricity_eur += dayData.electricity_eur;
       monthData.gas_kwh += dayData.gas_kwh;
       monthData.gas_eur += dayData.gas_eur;
-      monthData.water_kwh += dayData.water_kwh || 0;
-      monthData.water_eur += dayData.water_eur || 0;
       monthData.days_covered += 1;
       
       // Track source bills
@@ -351,11 +331,9 @@ export function useUtilitiesData(hotelId: string | undefined): {
     // Calculate totals for the year
     const electricityTotal = monthlyData.reduce((sum: number, m: MonthData) => sum + m.electricity_kwh, 0);
     const gasTotal = monthlyData.reduce((sum: number, m: MonthData) => sum + m.gas_kwh, 0);
-    const waterTotal = monthlyData.reduce((sum: number, m: MonthData) => sum + m.water_kwh, 0);
     
     const electricityCost = monthlyData.reduce((sum: number, m: MonthData) => sum + m.electricity_eur, 0);
     const gasCost = monthlyData.reduce((sum: number, m: MonthData) => sum + m.gas_eur, 0);
-    const waterCost = monthlyData.reduce((sum: number, m: MonthData) => sum + m.water_eur, 0);
     
     // Format data for charts that match your type definitions
     const electricityChartData: ElectricityEntry[] = monthlyData.map(month => ({
@@ -391,15 +369,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
         total_days: month.days_in_month
       }
     }));
-
-    // Create the water data (or an empty array if no water data)
-    const waterChartData: WaterEntry[] = monthlyData.map(month => ({
-      month: month.month,
-      cubic_meters: month.water_kwh,
-      total_eur: month.water_eur,
-      per_room_m3: month.water_kwh / 100, // Assuming 100 rooms
-      bill_id: month.source_bills.find(b => b.type === 'water')?.id
-    }));
     
     // Filter bills for current year
     const filteredBills = rawData.filter((b: BillEntry) => {
@@ -426,16 +395,13 @@ export function useUtilitiesData(hotelId: string | undefined): {
     return {
       electricity: electricityChartData,
       gas: gasChartData,
-      water: waterChartData,
       bills: filteredBills,
       totals: {
         electricity: electricityTotal,
         gas: gasTotal,
-        water: waterTotal,
         electricity_cost: electricityCost,
         gas_cost: gasCost,
-        water_cost: waterCost,
-        cost: electricityCost + gasCost + waterCost,
+        cost: electricityCost + gasCost,
       },
       incomplete_months: incompleteMonths,
       // Add key new fields for debugging/transparency
