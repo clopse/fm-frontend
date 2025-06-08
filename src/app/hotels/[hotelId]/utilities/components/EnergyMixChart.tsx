@@ -2,7 +2,7 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Gauge, Loader2, Calendar, AlertTriangle } from 'lucide-react';
-import { ViewMode } from '../types';
+import { ViewMode, ElectricityEntry, GasEntry } from '../types';
 import { useMemo, memo } from 'react';
 
 interface EnergyMixChartProps {
