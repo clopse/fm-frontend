@@ -1,4 +1,5 @@
 // app/[hotelId]/utilities/types.ts
+
 export interface ElectricityEntry {
   month: string;
   day_kwh: number;
@@ -6,8 +7,8 @@ export interface ElectricityEntry {
   total_kwh: number;
   total_eur: number;
   per_room_kwh: number;
-  bill_id?: string;  // ✅ Added for bill identification
-  period_info?: {    // ✅ Added for multi-month bills
+  bill_id?: string;
+  period_info?: {
     is_multi_month?: boolean;
     start_date?: string;
     end_date?: string;
@@ -21,8 +22,8 @@ export interface GasEntry {
   total_kwh: number;
   total_eur: number;
   per_room_kwh: number;
-  bill_id?: string;  // ✅ Added for bill identification
-  period_info?: {    // ✅ Added for multi-month bills
+  bill_id?: string;
+  period_info?: {
     is_multi_month?: boolean;
     start_date?: string;
     end_date?: string;
@@ -36,7 +37,7 @@ export interface WaterEntry {
   cubic_meters: number;
   total_eur: number;
   per_room_m3: number;
-  bill_id?: string;  // ✅ Added for bill identification
+  bill_id?: string;
 }
 
 export interface BillEntry {
@@ -50,7 +51,7 @@ export interface BillEntry {
   total_amount: number;
   consumption: number;
   consumption_unit: string;
-  parsed_status?: string;  // ✅ Added for processing status
+  parsed_status?: string;
   summary?: {
     supplier?: string;
     bill_date?: string;
@@ -58,7 +59,6 @@ export interface BillEntry {
     total_cost?: number;
     total_kwh?: number;
     consumption_kwh?: number;
-    // ✅ Added missing billing period fields
     billing_period_start?: string;
     billing_period_end?: string;
     meter_number?: string;
@@ -78,40 +78,43 @@ export interface BillEntry {
     standing_charge?: number;
     commodity_cost?: number;
   };
-  raw_data?: any;
+  raw_data?: unknown;
 }
 
 export interface UtilitiesData {
   electricity: ElectricityEntry[];
   gas: GasEntry[];
   water: WaterEntry[];
-  bills?: BillEntry[];
-  totals?: {
+  bills: BillEntry[]; // ✅ MUST be required to fix your type error
+  totals: {
     electricity: number;
     gas: number;
     water: number;
-    electricity_cost: number;  // ✅ Added separate cost tracking
-    gas_cost: number;          // ✅ Added separate cost tracking
-    water_cost?: number;       // ✅ Added separate cost tracking
-    cost: number;              // Keep your existing field too
+    electricity_cost: number;
+    gas_cost: number;
+    water_cost?: number;
+    cost: number;
   };
   trends?: {
     electricity: number;
     gas: number;
     water: number;
   };
-  processed_counts?: {         // ✅ Added from your backend response
+  processed_counts?: {
     electricity: number;
     gas: number;
     water: number;
   };
-  total_bills_found?: number;  // ✅ Added from your backend response
-  debug_info?: {               // ✅ Added from your backend response
+  total_bills_found?: number;
+  debug_info?: {
     months_processed?: {
       electricity: string[];
       gas: string[];
     };
   };
+  incomplete_months?: string[];
+  daily_data?: Record<string, unknown>;
+  monthly_data?: Record<string, unknown>;
 }
 
 export interface DashboardFilters {
@@ -164,14 +167,16 @@ export interface AnalyticsData {
       night: number;
     };
     day_percentage: number;
-    monthly_breakdown: Record<string, {
-      day: number;
-      night: number;
-    }>;
+    monthly_breakdown: Record<
+      string,
+      {
+        day: number;
+        night: number;
+      }
+    >;
   };
 }
 
-// ✅ Added for the new components
 export interface FilterModalProps {
   isOpen: boolean;
   year: number;
