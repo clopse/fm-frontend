@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { 
   CheckCircle, 
   Clock, 
@@ -39,14 +39,31 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
   const [loading, setLoading] = useState(true);
   const [confirmingTasks, setConfirmingTasks] = useState<Set<string>>(new Set());
 
-  const now = new Date();
-  const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const endOfThisMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  const lastMonthName = lastMonth.toLocaleString('default', { month: 'long' });
-  const deadline = endOfThisMonth.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'long',
-  });
+  // Memoize date calculations - these don't need to recalculate on every render
+  const dateInfo = useMemo(() => {
+    const now = new Date();
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfThisMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    
+    return {
+      lastMonthName: lastMonth.toLocaleString('default', { month: 'long' }),
+      deadline: endOfThisMonth.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+      })
+    };
+  }, []); // Empty dependency array - dates are calculated once per component mount
+
+  // Memoize tasks summary to avoid recalculating on every render
+  const tasksSummary = useMemo(() => ({
+    count: tasks.length,
+    hasMultiple: tasks.length !== 1,
+    totalPoints: tasks.reduce((sum, task) => {
+      const taskPoints = task.points || 0;
+      const subtaskPoints = task.subtasks?.reduce((subSum, sub) => subSum + (sub.points || 0), 0) || 0;
+      return sum + taskPoints + subtaskPoints;
+    }, 0)
+  }), [tasks]);
 
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly-checklist/${hotelId}`)
@@ -59,7 +76,8 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
       .catch(() => setLoading(false));
   }, [hotelId]);
 
-  const confirmTask = async (taskId: string) => {
+  // Use useCallback to prevent function recreation on every render
+  const confirmTask = useCallback(async (taskId: string) => {
     setConfirmingTasks(prev => new Set(prev).add(taskId));
     
     try {
@@ -80,7 +98,12 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
         return newSet;
       });
     }
-  };
+  }, [hotelId, userEmail, onConfirm]);
+
+  // Memoize the info popup handler
+  const showTaskInfo = useCallback((infoPopup: string) => {
+    alert(infoPopup);
+  }, []);
 
   if (loading) {
     return (
@@ -99,18 +122,18 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
           <Calendar className="w-5 h-5 text-blue-600 mt-0.5" />
           <div>
             <p className="text-sm text-blue-800">
-              Confirm that your <span className="font-semibold">{lastMonthName}</span> tasks were completed.
+              Confirm that your <span className="font-semibold">{dateInfo.lastMonthName}</span> tasks were completed.
             </p>
             <p className="text-sm text-blue-600 mt-1 flex items-center">
               <Clock className="w-4 h-4 mr-1" />
-              Deadline: <span className="font-semibold ml-1">{deadline}</span>
+              Deadline: <span className="font-semibold ml-1">{dateInfo.deadline}</span>
             </p>
           </div>
         </div>
       </div>
 
       {/* Tasks List */}
-      {tasks.length === 0 ? (
+      {tasksSummary.count === 0 ? (
         <div className="text-center py-8">
           <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
           <p className="text-lg font-medium text-slate-900 mb-1">All Done!</p>
@@ -129,7 +152,7 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
                   <div className="flex items-center space-x-2 mb-2">
                     <h3 className="font-medium text-slate-900 truncate">{task.label}</h3>
                     <button
-                      onClick={() => alert(task.info_popup)}
+                      onClick={() => showTaskInfo(task.info_popup)}
                       className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
                       title="More information"
                     >
@@ -197,16 +220,21 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
           ))}
 
           {/* Summary */}
-          {tasks.length > 0 && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <AlertTriangle className="w-5 h-5 text-yellow-600" />
                 <p className="text-sm text-yellow-800">
-                  <span className="font-semibold">{tasks.length}</span> task{tasks.length !== 1 ? 's' : ''} pending confirmation
+                  <span className="font-semibold">{tasksSummary.count}</span> task{tasksSummary.hasMultiple ? 's' : ''} pending confirmation
                 </p>
               </div>
+              {tasksSummary.totalPoints > 0 && (
+                <div className="text-sm text-yellow-700 font-medium">
+                  {tasksSummary.totalPoints} points available
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
