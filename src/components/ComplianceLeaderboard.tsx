@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
 import { hotels } from '@/lib/hotels';
@@ -18,6 +18,19 @@ export default function ComplianceLeaderboard({ data }: Props) {
   const [sortedData, setSortedData] = useState<LeaderboardEntry[]>([]);
   const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Create hotel lookup map to avoid repeated .find() calls
+  const hotelMap = useMemo(() => 
+    Object.fromEntries(hotels.map(h => [h.id, h])),
+    [] // hotels is static, so empty dependency array
+  );
+
+  // Memoize score color calculation
+  const getScoreColor = useMemo(() => (score: number) => {
+    if (score >= 85) return '#10b981'; // green-500
+    if (score >= 70) return '#f59e0b'; // amber-500
+    return '#ef4444'; // red-500
+  }, []);
 
   // On first load, pull hotel filters from localStorage or default to all
   useEffect(() => {
@@ -55,7 +68,8 @@ export default function ComplianceLeaderboard({ data }: Props) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownOpen]);
 
-  const toggleHotel = (id: string) => {
+  // Memoize the toggle function to prevent unnecessary re-renders
+  const toggleHotel = useCallback((id: string) => {
     const updated = selectedHotels.includes(id)
       ? selectedHotels.filter((h) => h !== id)
       : [...selectedHotels, id];
@@ -63,10 +77,12 @@ export default function ComplianceLeaderboard({ data }: Props) {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('selectedHotels', JSON.stringify(updated));
     }
-  };
+  }, [selectedHotels]);
 
-  const filteredData = sortedData.filter((entry) =>
-    selectedHotels.includes(entry.hotel)
+  // Memoize filtered data - this is the most important optimization
+  const filteredData = useMemo(() => 
+    sortedData.filter((entry) => selectedHotels.includes(entry.hotel)),
+    [sortedData, selectedHotels]
   );
 
   return (
@@ -110,8 +126,9 @@ export default function ComplianceLeaderboard({ data }: Props) {
       ) : (
         <div className="space-y-5">
           {filteredData.map((entry) => {
-            const hotel = hotels.find((h) => h.id === entry.hotel);
+            const hotel = hotelMap[entry.hotel]; // Use memoized lookup
             const hotelName = hotel?.name || entry.hotel;
+            const scoreColor = getScoreColor(entry.score);
 
             return (
               <div key={entry.hotel} className="flex items-center gap-4">
@@ -131,12 +148,7 @@ export default function ComplianceLeaderboard({ data }: Props) {
                     className="h-full transition-all duration-500 ease-out"
                     style={{
                       width: `${entry.score}%`,
-                      backgroundColor:
-                        entry.score >= 85
-                          ? '#10b981' // green-500
-                          : entry.score >= 70
-                          ? '#f59e0b' // amber-500
-                          : '#ef4444', // red-500
+                      backgroundColor: scoreColor,
                     }}
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
