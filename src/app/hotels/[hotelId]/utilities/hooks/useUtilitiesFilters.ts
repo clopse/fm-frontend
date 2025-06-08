@@ -1,4 +1,4 @@
-// app/[hotelId]/utilities/hooks/useUtilitiesFilters.ts - FIXED VERSION
+// app/[hotelId]/utilities/hooks/useUtilitiesFilters.ts - FINAL FIXED VERSION
 import { useState, useMemo } from 'react';
 
 import type { UtilitiesData, DashboardFilters } from '../types';
@@ -19,11 +19,7 @@ export function useUtilitiesFilters(data: UtilitiesData) {
 
     [data.electricity, data.gas, data.water].forEach(list => {
       (list || []).forEach(entry => {
-        let rawDate: string | undefined;
-
-        if ('month' in entry) rawDate = entry.month;
-        else if ('period' in entry) rawDate = entry.period;
-
+        const rawDate = (entry as any).month || (entry as any).period;
         if (rawDate) {
           try {
             const date = new Date(rawDate + '-01');
@@ -88,8 +84,9 @@ export function useUtilitiesFilters(data: UtilitiesData) {
       electricity_cost: electricity.reduce((sum, e) => sum + (e.total_eur || 0), 0),
       gas_cost: gas.reduce((sum, g) => sum + (g.total_eur || 0), 0),
       water_cost: water.reduce((sum, w) => sum + (w.total_eur || 0), 0),
+      cost: 0
     };
-    totals['cost'] = totals.electricity_cost + totals.gas_cost + totals.water_cost;
+    totals.cost = totals.electricity_cost + totals.gas_cost + totals.water_cost;
 
     return {
       electricity,
