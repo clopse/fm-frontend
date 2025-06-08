@@ -16,19 +16,25 @@ export function useUtilitiesFilters(data: UtilitiesData) {
 
   const availableMonths = useMemo(() => {
     const months = new Set<number>();
+
     [data.electricity, data.gas, data.water].forEach(list => {
       (list || []).forEach(entry => {
-        const rawDate = entry.month || entry.period;
-        try {
-          if (rawDate) {
+        let rawDate: string | undefined;
+
+        if ('month' in entry) rawDate = entry.month;
+        else if ('period' in entry) rawDate = entry.period;
+
+        if (rawDate) {
+          try {
             const date = new Date(rawDate + '-01');
             if (!isNaN(date.getTime())) {
               months.add(date.getMonth() + 1);
             }
-          }
-        } catch {}
+          } catch {}
+        }
       });
     });
+
     return Array.from(months).sort();
   }, [data]);
 
