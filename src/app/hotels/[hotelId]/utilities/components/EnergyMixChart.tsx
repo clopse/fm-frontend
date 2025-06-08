@@ -1,9 +1,9 @@
 "use client";
 
+// app/[hotelId]/utilities/components/EnergyMixChart.tsx
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Gauge, Loader2, Calendar, AlertTriangle } from 'lucide-react';
 import { ViewMode, ElectricityEntry, GasEntry } from '../types';
-import { useMemo, memo } from 'react';
 
 interface EnergyMixChartProps {
   electricityTotal: number;
@@ -20,99 +20,7 @@ const COLORS = {
   gas: '#10b981'
 };
 
-// Memoized tooltip component
-const CustomTooltip = memo(({ active, payload, hasIncompleteData, viewMode }: any) => {
-  if (!active || !payload || !payload.length) return null;
-  
-  const data = payload[0].payload;
-  const uniqueBillCount = new Set(
-    (data.sourceBills || []).map((bill: any) => bill.id)
-  ).size;
-  
-  const getUnitLabel = () => {
-    switch(viewMode) {
-      case 'eur': return '€';
-      case 'room': return 'kWh/room';
-      default: return 'kWh';
-    }
-  };
-  
-  return (
-    <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg max-w-xs">
-      <div className="flex items-center space-x-2 mb-2">
-        <div 
-          className="w-4 h-4 rounded" 
-          style={{ backgroundColor: data.color }}
-        ></div>
-        <span className="font-semibold text-slate-900">{data.name}</span>
-      </div>
-      <div className="space-y-1 text-sm">
-        <div className="flex justify-between">
-          <span>Value:</span>
-          <span className="font-medium">
-            {viewMode === 'eur' ? '€' : ''}{Math.round(data.value).toLocaleString()} {getUnitLabel()}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span>Percentage:</span>
-          <span className="font-medium">{data.percentage.toFixed(1)}%</span>
-        </div>
-        
-        {data.sourceBills && data.sourceBills.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-slate-100">
-            <div className="flex items-center text-xs text-slate-600">
-              <Calendar className="w-3 h-3 mr-1" />
-              <span>
-                Based on {uniqueBillCount} {uniqueBillCount === 1 ? 'bill' : 'bills'}
-              </span>
-            </div>
-          </div>
-        )}
-        
-        {hasIncompleteData && (
-          <div className="mt-2 pt-2 border-t border-slate-100">
-            <div className="flex items-center text-xs text-amber-600">
-              <AlertTriangle className="w-3 h-3 mr-1" />
-              <span>
-                Some months have incomplete data
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-});
-
-CustomTooltip.displayName = 'CustomTooltip';
-
-// Memoized label component
-const CustomLabel = memo(({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-  if (percent < 0.05) return null; // Don't show label for very small slices
-  
-  const RADIAN = Math.PI / 180;
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-  return (
-    <text 
-      x={x} 
-      y={y} 
-      fill="white" 
-      textAnchor={x > cx ? 'start' : 'end'} 
-      dominantBaseline="central"
-      className="font-semibold text-sm"
-    >
-      {`${(percent * 100).toFixed(0)}%`}
-    </text>
-  );
-});
-
-CustomLabel.displayName = 'CustomLabel';
-
-// Memo the entire chart component
-const EnergyMixChart = memo(({ 
+export default function EnergyMixChart({ 
   electricityTotal, 
   gasTotal, 
   viewMode, 
@@ -120,7 +28,7 @@ const EnergyMixChart = memo(({
   electricityData = [],
   gasData = [],
   incompleteMonths = []
-}: EnergyMixChartProps) => {
+}: EnergyMixChartProps) {
   
   const getUnitLabel = () => {
     switch(viewMode) {
@@ -132,15 +40,24 @@ const EnergyMixChart = memo(({
 
   const hasIncompleteData = incompleteMonths.length > 0;
 
-  // Memoize chart data calculation
-  const energyMixData = useMemo(() => [
+  // Get unique bill ids from electricity data
+  const electricityBillIds = electricityData
+    .map(entry => entry.bill_id)
+    .filter(Boolean) as string[];
+
+  // Get unique bill ids from gas data
+  const gasBillIds = gasData
+    .map(entry => entry.bill_id)
+    .filter(Boolean) as string[];
+
+  const energyMixData = [
     { 
       name: 'Electricity', 
       value: electricityTotal,
       color: COLORS.electricity,
       percentage: electricityTotal + gasTotal > 0 ? 
         (electricityTotal / (electricityTotal + gasTotal)) * 100 : 0,
-      sourceBills: electricityData.flatMap(entry => entry.source_bills || [])
+      sourceBills: electricityBillIds.map(id => ({ id })) 
     },
     { 
       name: 'Gas', 
@@ -148,9 +65,85 @@ const EnergyMixChart = memo(({
       color: COLORS.gas,
       percentage: electricityTotal + gasTotal > 0 ? 
         (gasTotal / (electricityTotal + gasTotal)) * 100 : 0,
-      sourceBills: gasData.flatMap(entry => entry.source_bills || [])
+      sourceBills: gasBillIds.map(id => ({ id }))
     }
-  ], [electricityTotal, gasTotal, electricityData, gasData]);
+  ];
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const uniqueBillCount = (data.sourceBills || []).length;
+      
+      return (
+        <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg max-w-xs">
+          <div className="flex items-center space-x-2 mb-2">
+            <div 
+              className="w-4 h-4 rounded" 
+              style={{ backgroundColor: data.color }}
+            ></div>
+            <span className="font-semibold text-slate-900">{data.name}</span>
+          </div>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span>Value:</span>
+              <span className="font-medium">
+                {viewMode === 'eur' ? '€' : ''}{Math.round(data.value).toLocaleString()} {getUnitLabel()}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Percentage:</span>
+              <span className="font-medium">{data.percentage.toFixed(1)}%</span>
+            </div>
+            
+            {uniqueBillCount > 0 && (
+              <div className="mt-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center text-xs text-slate-600">
+                  <Calendar className="w-3 h-3 mr-1" />
+                  <span>
+                    Based on {uniqueBillCount} {uniqueBillCount === 1 ? 'bill' : 'bills'}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {hasIncompleteData && (
+              <div className="mt-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center text-xs text-amber-600">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  <span>
+                    Some months have incomplete data
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    if (percent < 0.05) return null; // Don't show label for very small slices
+
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill="white" 
+        textAnchor={x > cx ? 'start' : 'end'} 
+        dominantBaseline="central"
+        className="font-semibold text-sm"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
 
   if (loading) {
     return (
@@ -234,7 +227,7 @@ const EnergyMixChart = memo(({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={(props) => <CustomLabel {...props} />}
+                  label={CustomLabel}
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="value"
@@ -245,7 +238,7 @@ const EnergyMixChart = memo(({
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip content={(props) => <CustomTooltip {...props} hasIncompleteData={hasIncompleteData} viewMode={viewMode} />} />
+                <Tooltip content={CustomTooltip} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -254,9 +247,7 @@ const EnergyMixChart = memo(({
           <div className="flex-1 pl-6">
             <div className="space-y-4">
               {energyMixData.map((entry, index) => {
-                const uniqueBillCount = new Set(
-                  (entry.sourceBills || []).map((bill: any) => bill.id)
-                ).size;
+                const uniqueBillCount = (entry.sourceBills || []).length;
                 
                 return (
                   <div key={index} className="flex items-center justify-between p-4 rounded-lg border border-slate-100">
@@ -308,8 +299,4 @@ const EnergyMixChart = memo(({
       </div>
     </div>
   );
-});
-
-EnergyMixChart.displayName = 'EnergyMixChart';
-
-export default EnergyMixChart;
+}
