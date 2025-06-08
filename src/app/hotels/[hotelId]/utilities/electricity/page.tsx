@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from "next/navigation";
-import { Zap, TrendingUp, TrendingDown, Clock, DollarSign, BarChart3, Calendar } from 'lucide-react';
+import { Zap, TrendingUp, TrendingDown, Clock, Euro, BarChart3, Calendar } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
 import { useUtilitiesData } from "../hooks/useUtilitiesData";
 import { ViewMode } from "../types";
@@ -135,7 +135,7 @@ export default function ElectricityPage() {
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <DollarSign className="w-8 h-8 text-green-600" />
+              <Euro className="w-8 h-8 text-green-600" />
             </div>
             <h3 className="text-sm font-medium text-slate-600 mb-1">Total Cost</h3>
             <p className="text-2xl font-bold text-slate-900">€{totalCost.toLocaleString()}</p>
