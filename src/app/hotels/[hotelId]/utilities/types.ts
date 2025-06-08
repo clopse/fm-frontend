@@ -1,5 +1,3 @@
-// app/[hotelId]/utilities/types.ts
-
 export interface ElectricityEntry {
   month: string;
   day_kwh: number;
@@ -121,9 +119,12 @@ export interface UtilitiesData {
     water: number;
     electricity_cost: number;
     gas_cost: number;
-    water_cost?: number;
+    water_cost: number;
     cost: number;
   };
+  incomplete_months?: string[];
+  daily_data?: Record<string, unknown>;
+  monthly_data?: MonthData[];
   trends?: {
     electricity: number;
     gas: number;
@@ -141,9 +142,6 @@ export interface UtilitiesData {
       gas: string[];
     };
   };
-  incomplete_months?: string[];
-  daily_data?: Record<string, unknown>;
-  monthly_data?: MonthData[];
 }
 
 export interface DashboardFilters {
