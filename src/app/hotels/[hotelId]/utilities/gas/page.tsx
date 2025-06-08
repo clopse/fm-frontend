@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { Flame, TrendingUp, TrendingDown, Thermometer, Euro, BarChart3, Calendar } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ComposedChart } from 'recharts';
 import { useUtilitiesData } from "../hooks/useUtilitiesData";
-import { ViewMode } from "../types";
+import { ViewMode, GasEntry } from "../types";
 
 export default function GasPage() {
   const rawParams = useParams();
@@ -26,20 +26,20 @@ export default function GasPage() {
   const gasData = data.gas || [];
   
   // Calculate detailed stats
-  const totalConsumption = gasData.reduce((sum, g) => sum + g.total_kwh, 0);
-  const totalCost = gasData.reduce((sum, g) => sum + g.total_eur, 0);
+  const totalConsumption = gasData.reduce((sum: number, g: GasEntry) => sum + g.total_kwh, 0);
+  const totalCost = gasData.reduce((sum: number, g: GasEntry) => sum + g.total_eur, 0);
   const avgMonthlyConsumption = gasData.length > 0 ? totalConsumption / gasData.length : 0;
   const avgMonthlyCost = gasData.length > 0 ? totalCost / gasData.length : 0;
   
   // Peak usage analysis
-  const peakMonth = gasData.reduce((peak, current) => 
+  const peakMonth = gasData.reduce((peak: GasEntry, current: GasEntry) => 
     current.total_kwh > peak.total_kwh ? current : peak, 
-    gasData[0] || { total_kwh: 0, period: '' }
+    gasData[0] || { total_kwh: 0, period: '', total_eur: 0, per_room_kwh: 0 }
   );
 
   // Rate analysis
   const avgRate = totalConsumption > 0 ? totalCost / totalConsumption : 0;
-  const rateData = gasData.map(g => ({
+  const rateData = gasData.map((g: GasEntry) => ({
     period: g.period,
     rate: g.total_kwh > 0 ? g.total_eur / g.total_kwh : 0,
     consumption: g.total_kwh,
@@ -47,7 +47,7 @@ export default function GasPage() {
   }));
 
   // Seasonal analysis (assuming winter = higher usage)
-  const seasonalData = gasData.map(g => {
+  const seasonalData = gasData.map((g: GasEntry) => {
     const month = new Date(g.period + '-01').getMonth();
     const season = month >= 10 || month <= 2 ? 'Winter' : 
                    month >= 3 && month <= 5 ? 'Spring' :
@@ -56,7 +56,7 @@ export default function GasPage() {
   });
 
   // Trend analysis
-  const calculateTrend = () => {
+  const calculateTrend = (): number => {
     if (gasData.length < 2) return 0;
     const sorted = [...gasData].sort((a, b) => a.period.localeCompare(b.period));
     const recent = sorted[sorted.length - 1]?.total_kwh || 0;
@@ -67,14 +67,14 @@ export default function GasPage() {
   const trend = calculateTrend();
 
   // Efficiency metrics
-  const efficiencyData = gasData.map(g => ({
+  const efficiencyData = gasData.map((g: GasEntry) => ({
     period: g.period,
     efficiency: g.per_room_kwh, // kWh per room
     cost_per_room: g.total_eur / 100, // Assuming 100 rooms
     total_kwh: g.total_kwh
   }));
 
-  const formatMonth = (period: string) => {
+  const formatMonth = (period: string): string => {
     try {
       const date = new Date(period + '-01');
       return date.toLocaleDateString('en-IE', { month: 'short', year: '2-digit' });
@@ -171,7 +171,7 @@ export default function GasPage() {
             <h3 className="text-sm font-medium text-slate-600 mb-1">Efficiency</h3>
             <p className="text-2xl font-bold text-slate-900">
               {gasData.length > 0 ? 
-                (gasData.reduce((sum, g) => sum + g.per_room_kwh, 0) / gasData.length).toFixed(1) : 
+                (gasData.reduce((sum: number, g: GasEntry) => sum + g.per_room_kwh, 0) / gasData.length).toFixed(1) : 
                 '0'
               }
             </p>
@@ -205,7 +205,7 @@ export default function GasPage() {
                       name === 'total_kwh' ? `${value.toLocaleString()} kWh` : `€${value.toLocaleString()}`,
                       name === 'total_kwh' ? 'Consumption' : 'Cost'
                     ]}
-                    labelFormatter={(label) => formatMonth(label)}
+                    labelFormatter={(label) => formatMonth(String(label))}
                   />
                   <Area
                     yAxisId="left"
@@ -236,7 +236,7 @@ export default function GasPage() {
               <div className="space-y-3">
                 {['Winter', 'Spring', 'Summer', 'Autumn'].map(season => {
                   const seasonData = seasonalData.filter(d => d.season === season);
-                  const seasonTotal = seasonData.reduce((sum, d) => sum + d.total_kwh, 0);
+                  const seasonTotal = seasonData.reduce((sum: number, d) => sum + d.total_kwh, 0);
                   const seasonPercent = totalConsumption > 0 ? (seasonTotal / totalConsumption) * 100 : 0;
                   
                   return (
@@ -322,8 +322,8 @@ export default function GasPage() {
                   <XAxis dataKey="period" tickFormatter={formatMonth} />
                   <YAxis tickFormatter={(value) => `€${value.toFixed(3)}`} />
                   <Tooltip 
-                    formatter={(value: any) => [`€${value.toFixed(3)}/kWh`, 'Gas Rate']}
-                    labelFormatter={(label) => formatMonth(label)}
+                    formatter={(value: any) => [`€${value.toFixed(3)}/kWh`, 'Rate']}
+                    labelFormatter={(label) => formatMonth(String(label))}
                   />
                   <Line 
                     type="monotone" 
@@ -354,7 +354,7 @@ export default function GasPage() {
                       name === 'efficiency' ? `${value.toFixed(1)} kWh/room` : `€${value.toFixed(2)}/room`,
                       name === 'efficiency' ? 'Usage per Room' : 'Cost per Room'
                     ]}
-                    labelFormatter={(label) => formatMonth(label)}
+                    labelFormatter={(label) => formatMonth(String(label))}
                   />
                   <Bar dataKey="efficiency" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
                 </BarChart>
