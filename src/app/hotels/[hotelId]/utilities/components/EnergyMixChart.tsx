@@ -1,6 +1,5 @@
 "use client";
 
-// app/[hotelId]/utilities/components/EnergyMixChart.tsx
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, TooltipProps } from 'recharts';
 import { Gauge, Loader2, Calendar, AlertTriangle } from 'lucide-react';
 import { ViewMode, ElectricityEntry, GasEntry } from '../types';
@@ -16,7 +15,7 @@ interface EnergyMixChartProps {
   incompleteMonths?: string[];
 }
 
-// Define types for chart data to avoid any 'any'
+// Define types for chart data
 interface EnergyMixDataEntry {
   name: string;
   value: number;
@@ -79,17 +78,13 @@ export default function EnergyMixChart({
     }
   ];
 
-  // Define proper types for the tooltip props
-  interface CustomTooltipProps {
-    active?: boolean;
-    payload?: Array<{ payload: EnergyMixDataEntry }>;
-  }
-
-  const CustomTooltip = ({ active, payload }: CustomTooltipProps): ReactNode => {
+  // Fix the tooltip component to match Recharts' expected types
+  const CustomTooltip = ({ active, payload }: TooltipProps<number, string>): JSX.Element | null => {
     if (!active || !payload || payload.length === 0) return null;
     
-    const data = payload[0].payload;
-    const uniqueBillCount = data.sourceBills.length;
+    const item = payload[0];
+    const data = item.payload as EnergyMixDataEntry;
+    const uniqueBillCount = data.sourceBills?.length || 0;
     
     return (
       <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg max-w-xs">
