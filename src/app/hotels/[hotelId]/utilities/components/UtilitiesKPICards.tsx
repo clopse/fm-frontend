@@ -94,30 +94,6 @@ export default function UtilitiesKPICards({ data, viewMode, loading }: Utilities
         </div>
       </div>
 
-      {/* Water KPI */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-shadow">
-        <div className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Droplets className="w-8 h-8" />
-            <CheckCircle className="w-5 h-5" />
-          </div>
-        </div>
-        <div className="p-6">
-          <h3 className="text-sm font-medium text-slate-600 mb-1">Water Usage</h3>
-          <p className="text-3xl font-bold text-slate-900 mb-2">
-            {loading ? '...' : Math.round(waterTotal).toLocaleString()}
-          </p>
-          <p className="text-sm text-slate-500">m³</p>
-          {data.water && data.water.length > 0 ? (
-            <div className="mt-3 text-xs text-slate-400">
-              Last updated: {data.water[data.water.length - 1]?.month}
-            </div>
-          ) : (
-            <div className="mt-3 text-xs text-slate-400">No water data available</div>
-          )}
-        </div>
-      </div>
-
       {/* Total Cost KPI */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-lg transition-shadow">
         <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-4">
