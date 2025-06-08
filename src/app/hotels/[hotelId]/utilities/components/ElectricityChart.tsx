@@ -26,8 +26,26 @@ export default function ElectricityChart({ data, viewMode, loading, onMonthClick
     }
   };
 
+  // Sort data chronologically by date
+  const getSortedData = () => {
+    if (!data || data.length === 0) return [];
+    
+    // Create a deep copy to avoid mutating the original data
+    const sortableData = [...data];
+    
+    // Sort by date (chronological order - oldest to newest)
+    return sortableData.sort((a, b) => {
+      // Convert month strings "YYYY-MM" to Date objects
+      const dateA = new Date(a.month + "-01");
+      const dateB = new Date(b.month + "-01");
+      return dateA.getTime() - dateB.getTime();
+    });
+  };
+
   const formatData = () => {
-    return data.map((e) => {
+    const sortedData = getSortedData();
+    
+    return sortedData.map((e) => {
       const getValue = (kwh: number) => {
         switch(viewMode) {
           case 'eur': return (kwh * e.total_eur) / e.total_kwh;
@@ -206,7 +224,7 @@ export default function ElectricityChart({ data, viewMode, loading, onMonthClick
               {data.length} month{data.length !== 1 ? 's' : ''} of data
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              Latest: {formatMonth(data[data.length - 1]?.month)}
+              Latest: {formatMonth(getSortedData().slice(-1)[0]?.month || '')}
             </div>
           </div>
         </div>
