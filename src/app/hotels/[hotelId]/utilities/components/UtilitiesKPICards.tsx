@@ -24,7 +24,6 @@ export default function UtilitiesKPICards({ data, viewMode, loading }: Utilities
 
   const electricityTotal = data.totals?.electricity || 0;
   const gasTotal = data.totals?.gas || 0;
-  const waterTotal = data.totals?.water || 0;
   const totalCost = data.totals?.cost || electricityTotal + gasTotal;
 
   const electricityTrend = data.trends?.electricity || 0;
