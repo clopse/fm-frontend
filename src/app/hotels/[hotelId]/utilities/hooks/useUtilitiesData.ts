@@ -1,13 +1,53 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { ElectricityEntry, GasEntry, WaterEntry, BillEntry, UtilitiesData as UtilitiesDataType, ViewMode } from './types';
 
-// Keep the interface definitions from before
+// Internal types for our calculations
+interface DailyUtilityData {
+  date: string;
+  electricity_kwh: number;
+  electricity_day_kwh: number; // Added for day tracking
+  electricity_night_kwh: number; // Added for night tracking
+  electricity_eur: number;
+  gas_kwh: number;
+  gas_eur: number;
+  water_kwh?: number;
+  water_eur?: number;
+  source_bills: {
+    id: string;
+    type: 'electricity' | 'gas' | 'water';
+    original_kwh?: number;
+    original_eur?: number;
+    days_covered?: number;
+    day_kwh?: number; // Track day kwh
+    night_kwh?: number; // Track night kwh
+  }[];
+}
+
+interface MonthData {
+  month: string;
+  electricity_kwh: number;
+  electricity_day_kwh: number;
+  electricity_night_kwh: number;
+  electricity_eur: number;
+  gas_kwh: number;
+  gas_eur: number;
+  water_kwh: number;
+  water_eur: number;
+  days_covered: number;
+  days_in_month: number;
+  is_complete: boolean;
+  source_bills: {
+    id: string;
+    type: string;
+  }[];
+}
 
 export function useUtilitiesData(hotelId: string | undefined) {
   const [rawData, setRawData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [year, setYear] = useState(2024);
-  const [viewMode, setViewMode] = useState<'kwh' | 'eur' | 'room'>('kwh');
+  const [viewMode, setViewMode] = useState<ViewMode>('kwh');
   
   const isMountedRef = useRef(true);
 
@@ -69,26 +109,26 @@ export function useUtilitiesData(hotelId: string | undefined) {
   }, [hotelId]); // Only re-run when hotelId changes
 
   // Process the bills data - memoized based on rawData and year
-  const data = useMemo(() => {
+  const data = useMemo<UtilitiesDataType>(() => {
+    const emptyData: UtilitiesDataType = {
+      electricity: [],
+      gas: [],
+      water: [],
+      bills: [],
+      totals: {
+        electricity: 0,
+        gas: 0,
+        water: 0,
+        electricity_cost: 0,
+        gas_cost: 0,
+        water_cost: 0,
+        cost: 0,
+      }
+    };
+    
     // Return empty structure if no data
     if (rawData.length === 0) {
-      return {
-        daily_data: {},
-        monthly_data: [],
-        electricity: [],
-        gas: [],
-        water: [],
-        bills: [],
-        totals: {
-          electricity: 0,
-          gas: 0,
-          water: 0,
-          electricity_cost: 0,
-          gas_cost: 0,
-          water_cost: 0,
-          cost: 0,
-        }
-      };
+      return emptyData;
     }
 
     // Process the raw data into daily values
@@ -125,10 +165,22 @@ export function useUtilitiesData(hotelId: string | undefined) {
         // Extract total values
         let kwh = 0;
         let eur = 0;
+        let dayKwh = 0;
+        let nightKwh = 0;
         
         if (type === 'electricity') {
           kwh = Number(enhanced.total_kwh) || 0;
           eur = Number(enhanced.total_cost) || 0;
+          
+          // Extract day/night values if available
+          dayKwh = Number(enhanced.day_kwh) || 0;
+          nightKwh = Number(enhanced.night_kwh) || 0;
+          
+          // If day/night not specified, but we have total, use a 70/30 split
+          if (dayKwh === 0 && nightKwh === 0 && kwh > 0) {
+            dayKwh = kwh * 0.7;
+            nightKwh = kwh * 0.3;
+          }
         } else if (type === 'gas') {
           kwh = Number(enhanced.consumption_kwh) || 0;
           eur = Number(enhanced.total_cost) || 0;
@@ -140,6 +192,8 @@ export function useUtilitiesData(hotelId: string | undefined) {
         // Calculate daily values
         const dailyKwh = kwh / days;
         const dailyEur = eur / days;
+        const dailyDayKwh = dayKwh / days;
+        const dailyNightKwh = nightKwh / days;
         
         // Populate daily data for each day in the bill period
         const currentDate = new Date(startDate);
@@ -151,6 +205,8 @@ export function useUtilitiesData(hotelId: string | undefined) {
             dailyData[dateStr] = {
               date: dateStr,
               electricity_kwh: 0,
+              electricity_day_kwh: 0,
+              electricity_night_kwh: 0,
               electricity_eur: 0,
               gas_kwh: 0,
               gas_eur: 0,
@@ -163,6 +219,8 @@ export function useUtilitiesData(hotelId: string | undefined) {
           // Add utility data based on type
           if (type === 'electricity') {
             dailyData[dateStr].electricity_kwh += dailyKwh;
+            dailyData[dateStr].electricity_day_kwh += dailyDayKwh;
+            dailyData[dateStr].electricity_night_kwh += dailyNightKwh;
             dailyData[dateStr].electricity_eur += dailyEur;
           } else if (type === 'gas') {
             dailyData[dateStr].gas_kwh += dailyKwh;
@@ -178,7 +236,10 @@ export function useUtilitiesData(hotelId: string | undefined) {
             type,
             original_kwh: kwh,
             original_eur: eur,
-            days_covered: days
+            days_covered: days,
+            // Include day/night values for electricity
+            day_kwh: type === 'electricity' ? dayKwh : undefined,
+            night_kwh: type === 'electricity' ? nightKwh : undefined
           });
           
           // Move to next day
@@ -189,7 +250,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
       }
     });
     
-    // 2. Aggregate daily data into monthly data for the selected year
+    // Aggregate daily data into monthly data for the selected year
     const monthlyData: MonthData[] = [];
     const monthMap: Record<string, MonthData> = {};
     
@@ -216,6 +277,8 @@ export function useUtilitiesData(hotelId: string | undefined) {
         monthMap[monthKey] = {
           month: monthKey,
           electricity_kwh: 0,
+          electricity_day_kwh: 0,
+          electricity_night_kwh: 0,
           electricity_eur: 0,
           gas_kwh: 0,
           gas_eur: 0,
@@ -231,6 +294,8 @@ export function useUtilitiesData(hotelId: string | undefined) {
       // Add this day's data to the month
       const monthData = monthMap[monthKey];
       monthData.electricity_kwh += dayData.electricity_kwh;
+      monthData.electricity_day_kwh += dayData.electricity_day_kwh;
+      monthData.electricity_night_kwh += dayData.electricity_night_kwh;
       monthData.electricity_eur += dayData.electricity_eur;
       monthData.gas_kwh += dayData.gas_kwh;
       monthData.gas_eur += dayData.gas_eur;
@@ -264,7 +329,7 @@ export function useUtilitiesData(hotelId: string | undefined) {
     // Sort months chronologically
     monthlyData.sort((a, b) => a.month.localeCompare(b.month));
     
-    // 3. Calculate totals for the year
+    // Calculate totals for the year
     const electricityTotal = monthlyData.reduce((sum, m) => sum + m.electricity_kwh, 0);
     const gasTotal = monthlyData.reduce((sum, m) => sum + m.gas_kwh, 0);
     const waterTotal = monthlyData.reduce((sum, m) => sum + m.water_kwh, 0);
@@ -273,25 +338,39 @@ export function useUtilitiesData(hotelId: string | undefined) {
     const gasCost = monthlyData.reduce((sum, m) => sum + m.gas_eur, 0);
     const waterCost = monthlyData.reduce((sum, m) => sum + m.water_eur, 0);
     
-    // 4. Format data for charts (maintain backward compatibility)
-    const electricityChartData = monthlyData.map(month => ({
+    // Format data for charts that match your type definitions
+    const electricityChartData: ElectricityEntry[] = monthlyData.map(month => ({
       month: month.month,
+      day_kwh: month.electricity_day_kwh,
+      night_kwh: month.electricity_night_kwh,
       total_kwh: month.electricity_kwh,
       total_eur: month.electricity_eur,
-      source_bills: month.source_bills.filter(b => b.type === 'electricity'),
-      is_complete: month.is_complete,
-      days_covered: month.days_covered,
-      days_in_month: month.days_in_month
+      per_room_kwh: 0, // Will be calculated if needed
+      bill_id: month.source_bills.find(b => b.type === 'electricity')?.id,
+      // Add additional period info
+      period_info: {
+        is_multi_month: month.source_bills.filter(b => b.type === 'electricity').length > 1,
+        start_date: `${month.month}-01`,
+        end_date: `${month.month}-${month.days_in_month}`,
+        coverage_breakdown: { [month.month]: month.days_covered / month.days_in_month },
+        total_days: month.days_in_month
+      }
     }));
     
-    const gasChartData = monthlyData.map(month => ({
+    const gasChartData: GasEntry[] = monthlyData.map(month => ({
       period: month.month,
       total_kwh: month.gas_kwh,
       total_eur: month.gas_eur,
-      source_bills: month.source_bills.filter(b => b.type === 'gas'),
-      is_complete: month.is_complete,
-      days_covered: month.days_covered,
-      days_in_month: month.days_in_month
+      per_room_kwh: 0, // Will be calculated if needed
+      bill_id: month.source_bills.find(b => b.type === 'gas')?.id,
+      // Add additional period info
+      period_info: {
+        is_multi_month: month.source_bills.filter(b => b.type === 'gas').length > 1,
+        start_date: `${month.month}-01`,
+        end_date: `${month.month}-${month.days_in_month}`,
+        coverage_breakdown: { [month.month]: month.days_covered / month.days_in_month },
+        total_days: month.days_in_month
+      }
     }));
     
     // Filter bills for current year
@@ -305,13 +384,11 @@ export function useUtilitiesData(hotelId: string | undefined) {
       return false;
     });
     
-    // Create the final data object
+    // Create the final data object that matches your UtilitiesData type
     return {
-      daily_data: dailyData,
-      monthly_data: monthlyData,
       electricity: electricityChartData,
       gas: gasChartData,
-      water: [],
+      water: [], // Will be handled separately
       bills: filteredBills,
       totals: {
         electricity: electricityTotal,
@@ -322,17 +399,18 @@ export function useUtilitiesData(hotelId: string | undefined) {
         water_cost: waterCost,
         cost: electricityCost + gasCost + waterCost,
       },
-      incomplete_months: incompleteMonths
+      incomplete_months: incompleteMonths,
+      // Add key new fields for debugging/transparency
+      daily_data: dailyData,
+      monthly_data: monthlyData
     };
-  }, [rawData, year]); // Only recalculate when rawData or year changes
+  }, [rawData, year]);
 
-  // Memoize the refetch function
   const refetch = useCallback(() => {
     if (isMountedRef.current) {
       setLoading(true);
       setError(null);
       
-      // Trigger a re-fetch by re-running the effect
       const billsUrl = `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills`;
       fetch(billsUrl)
         .then(response => {
