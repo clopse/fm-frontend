@@ -11,16 +11,14 @@ import DashboardHeader from "./components/DashboardHeader";
 import UtilitiesKPICards from "./components/UtilitiesKPICards";
 import ElectricityChart from "./components/ElectricityChart";
 import GasChart from "./components/GasChart";
-import WaterChart from "./components/WaterChart";
 import EnergyMixChart from "./components/EnergyMixChart";
 import BillsListModal from "./components/BillsListModal";
 import MetricsModal from "./components/MetricsModal";
 
 // Types
-import { 
-  ElectricityEntry, 
-  GasEntry, 
-  WaterEntry, 
+import {
+  ElectricityEntry,
+  GasEntry,
   UtilitiesData,
   DashboardFilters,
   ViewMode
@@ -34,16 +32,12 @@ export default function UtilitiesDashboard() {
   const rawParams = useParams();
   const hotelId = rawParams?.hotelId as string | undefined;
 
-  // State
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showBillsList, setShowBillsList] = useState(false);
   const [showMetricsModal, setShowMetricsModal] = useState(false);
-  
-  // Filter states for header
   const [selectedYears, setSelectedYears] = useState<number[]>([2025]);
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
 
-  // Custom hooks
   const {
     data,
     loading,
@@ -61,7 +55,6 @@ export default function UtilitiesDashboard() {
     availableMonths
   } = useUtilitiesFilters(data);
 
-  // Memoized handlers to prevent infinite loops
   const handleYearSync = useCallback(() => {
     if (selectedYears.length > 0 && selectedYears[0] !== year) {
       setYear(selectedYears[0]);
@@ -78,14 +71,8 @@ export default function UtilitiesDashboard() {
     }
   }, [selectedMonths]);
 
-  // Fixed useEffect hooks - removed problematic dependencies
-  useEffect(() => {
-    handleYearSync();
-  }, [selectedYears]);
-
-  useEffect(() => {
-    handleMonthFilterSync();
-  }, [selectedMonths]);
+  useEffect(() => { handleYearSync(); }, [selectedYears]);
+  useEffect(() => { handleMonthFilterSync(); }, [selectedMonths]);
 
   const handleExport = async (format: string, includeRaw: boolean = false) => {
     try {
@@ -95,11 +82,8 @@ export default function UtilitiesDashboard() {
         include_raw: includeRaw.toString(),
         ...(filters.billType !== 'all' && { utility_type: filters.billType })
       });
-      
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/export?${params}`
-      );
-      
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/export?${params}`);
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -125,13 +109,8 @@ export default function UtilitiesDashboard() {
     setSelectedMonths([]);
   }, [updateFilter, setViewMode]);
 
-  const handleYearChange = useCallback((years: number[]) => {
-    setSelectedYears(years);
-  }, []);
-
-  const handleMonthChange = useCallback((months: number[]) => {
-    setSelectedMonths(months);
-  }, []);
+  const handleYearChange = useCallback((years: number[]) => { setSelectedYears(years); }, []);
+  const handleMonthChange = useCallback((months: number[]) => { setSelectedMonths(months); }, []);
 
   const handleShowBills = useCallback((monthFilter?: string) => {
     if (monthFilter && monthFilter !== 'all') {
@@ -144,32 +123,23 @@ export default function UtilitiesDashboard() {
     setShowBillsList(true);
   }, [updateFilter, selectedMonths]);
 
-  // Memoized filtered bills calculation
   const getFilteredBills = useCallback(() => {
     if (!data.bills) return [];
-    
     let filtered = data.bills;
-    
-    // Filter by month if specific month selected
     if (filters.month && filters.month !== 'all') {
       const targetMonth = parseInt(filters.month);
       filtered = filtered.filter(bill => {
         const billDate = bill.summary?.bill_date || bill.upload_date;
         if (!billDate) return false;
-        const billMonth = new Date(billDate).getMonth() + 1;
-        return billMonth === targetMonth;
+        return new Date(billDate).getMonth() + 1 === targetMonth;
       });
     }
-    
-    // Filter by bill type
     if (filters.billType && filters.billType !== 'all') {
       filtered = filtered.filter(bill => bill.utility_type === filters.billType);
     }
-    
     return filtered;
   }, [data.bills, filters.month, filters.billType]);
 
-  // Early return for loading state
   if (!hotelId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
@@ -181,7 +151,6 @@ export default function UtilitiesDashboard() {
     );
   }
 
-  // Check if filters are active
   const hasActiveFilters = (
     filters.month !== 'all' || 
     filters.billType !== 'all' || 
@@ -192,7 +161,6 @@ export default function UtilitiesDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
       <DashboardHeader
         hotelName={hotelNames[hotelId] || hotelId.toUpperCase()}
         selectedYears={selectedYears}
@@ -205,7 +173,6 @@ export default function UtilitiesDashboard() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Active Filters Indicator */}
         {hasActiveFilters && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center justify-between">
@@ -247,14 +214,12 @@ export default function UtilitiesDashboard() {
           </div>
         )}
 
-        {/* KPI Cards */}
         <UtilitiesKPICards
           data={filteredData}
           viewMode={viewMode}
           loading={loading}
         />
 
-        {/* Main Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <ElectricityChart
             data={filteredData.electricity}
@@ -262,7 +227,6 @@ export default function UtilitiesDashboard() {
             loading={loading}
             onMonthClick={handleShowBills}
           />
-          
           <GasChart
             data={filteredData.gas}
             viewMode={viewMode}
@@ -271,16 +235,7 @@ export default function UtilitiesDashboard() {
           />
         </div>
 
-        {/* Secondary Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {filteredData.water && filteredData.water.length > 0 && (
-            <WaterChart
-              data={filteredData.water}
-              loading={loading}
-              onMonthClick={handleShowBills}
-            />
-          )}
-          
           <EnergyMixChart
             electricityTotal={filteredData.totals?.electricity || 0}
             gasTotal={filteredData.totals?.gas || 0}
@@ -289,7 +244,6 @@ export default function UtilitiesDashboard() {
           />
         </div>
 
-        {/* Quick Stats Summary */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">
             {year} Summary {filters.month !== 'all' && `• ${new Date(0, parseInt(filters.month) - 1).toLocaleString('default', { month: 'long' })}`}
@@ -328,7 +282,6 @@ export default function UtilitiesDashboard() {
         </div>
       </div>
 
-      {/* Modals */}
       {showBillsList && (
         <BillsListModal
           bills={getFilteredBills()}
