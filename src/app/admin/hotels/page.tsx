@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { Building, RefreshCw } from 'lucide-react';
 
 import AdminSidebar from '@/components/AdminSidebar';
@@ -34,82 +34,139 @@ export default function HotelManagementPage() {
   const [showAdminSidebar, setShowAdminSidebar] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Cache for hotel data to avoid repeated API calls
+  const hotelDataCache = useRef<Map<string, HotelFacilityData>>(new Map());
+  const abortController = useRef<AbortController | null>(null);
+
+  // Memoize hotel entries to avoid recreation
+  const hotelEntries = useMemo(() => Object.entries(hotelNames), []);
+
+  // Memoize filtered hotels to avoid filtering on every render
+  const filteredHotels = useMemo(() => 
+    hotelData.filter(hotel =>
+      hotel.hotelName.toLowerCase().includes(searchTerm.toLowerCase())
+    ),
+    [hotelData, searchTerm]
+  );
+
+  // Memoize mobile detection
+  const handleResize = useCallback(() => {
+    const mobile = window.innerWidth < 1024;
+    setIsMobile(mobile);
+    setShowAdminSidebar(!mobile);
+  }, []);
+
   useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-      if (!mobile) {
-        setShowAdminSidebar(true);
-      } else {
-        setShowAdminSidebar(false);
-      }
-    };
-    
     handleResize();
     window.addEventListener('resize', handleResize);
     initializeHotelData();
     
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      // Cancel any pending requests
+      if (abortController.current) {
+        abortController.current.abort();
+      }
+    };
+  }, [handleResize]);
 
-  const initializeHotelData = async () => {
+  // Optimized initialization with parallel loading and caching
+  const initializeHotelData = useCallback(async () => {
     setIsLoading(true);
+    
+    // Cancel any existing requests
+    if (abortController.current) {
+      abortController.current.abort();
+    }
+    abortController.current = new AbortController();
+
     try {
       const facilityData: HotelFacilityData[] = [];
       
-      // Load data for each hotel
-      for (const [hotelId, hotelName] of Object.entries(hotelNames)) {
+      // Load all hotels in parallel for much faster initial load
+      const promises = hotelEntries.map(async ([hotelId, hotelName]) => {
         try {
-          const response = await fetch(`${API_BASE}/hotels/facilities/${hotelId}`);
+          // Check cache first
+          if (hotelDataCache.current.has(hotelId)) {
+            return hotelDataCache.current.get(hotelId)!;
+          }
+
+          const response = await fetch(`${API_BASE}/hotels/facilities/${hotelId}`, {
+            signal: abortController.current?.signal
+          });
+          
+          let hotelData: HotelFacilityData;
+          
           if (response.ok) {
             const data = await response.json();
-            facilityData.push({
+            hotelData = {
               ...data.facilities,
               hotelId,
               hotelName
-            });
+            };
           } else {
-            // Create default data if not found
-            facilityData.push(createDefaultHotelData(hotelId, hotelName));
+            hotelData = createDefaultHotelData(hotelId, hotelName);
           }
+          
+          // Cache the result
+          hotelDataCache.current.set(hotelId, hotelData);
+          return hotelData;
         } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') {
+            throw error; // Re-throw abort errors
+          }
           console.error(`Error loading data for ${hotelId}:`, error);
-          facilityData.push(createDefaultHotelData(hotelId, hotelName));
+          const defaultData = createDefaultHotelData(hotelId, hotelName);
+          hotelDataCache.current.set(hotelId, defaultData);
+          return defaultData;
         }
-      }
-      
-      setHotelData(facilityData);
+      });
+
+      const results = await Promise.all(promises);
+      setHotelData(results);
       
       // Auto-select first hotel
-      if (facilityData.length > 0) {
-        await loadHotelDetails(facilityData[0].hotelId);
+      if (results.length > 0) {
+        await loadHotelDetails(results[0].hotelId);
       }
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return; // Ignore aborted requests
+      }
       console.error('Error initializing hotel data:', error);
       setSaveMessage('Error loading hotel data');
       setTimeout(() => setSaveMessage(''), 3000);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [hotelEntries]);
 
-  // 👈 FIXED: Load fresh hotel details from API with better defaults handling
-  const loadHotelDetails = async (hotelId: string) => {
+  // Optimized hotel details loading with caching and debouncing
+  const loadHotelDetails = useCallback(async (hotelId: string) => {
     setIsLoadingHotel(true);
-    setIsEditing(false); // Stop editing when switching hotels
+    setIsEditing(false);
     
     try {
-      // 👈 ALWAYS start with defaults for setup page
+      // Check cache first for instant loading
+      if (hotelDataCache.current.has(hotelId)) {
+        const cachedData = hotelDataCache.current.get(hotelId)!;
+        setSelectedHotel(cachedData);
+        setHotelData(prev => 
+          prev.map(h => h.hotelId === hotelId ? cachedData : h)
+        );
+        setIsLoadingHotel(false);
+        return;
+      }
+
       let hotelData = createDefaultHotelData(hotelId, hotelNames[hotelId] || hotelId);
 
-      // Try to load existing data, but don't fail if none exists
       try {
+        // Load both endpoints in parallel
         const [facilitiesResponse, detailsResponse] = await Promise.all([
           fetch(`${API_BASE}/hotels/facilities/${hotelId}`),
           fetch(`${API_BASE}/hotels/details/${hotelId}`)
         ]);
 
-        // Only merge in data if APIs actually return data
         if (facilitiesResponse.ok) {
           const facilitiesData = await facilitiesResponse.json();
           if (facilitiesData.facilities) {
@@ -132,12 +189,12 @@ export default function HotelManagementPage() {
         }
       } catch (apiError) {
         console.log(`No existing data for ${hotelId}, using defaults`);
-        // hotelData already has defaults, so just continue
       }
 
-      setSelectedHotel(hotelData);
+      // Cache the result
+      hotelDataCache.current.set(hotelId, hotelData);
       
-      // Update the hotel in the list as well
+      setSelectedHotel(hotelData);
       setHotelData(prev => 
         prev.map(h => h.hotelId === hotelId ? hotelData : h)
       );
@@ -145,22 +202,20 @@ export default function HotelManagementPage() {
     } catch (error) {
       console.error(`Error loading hotel details for ${hotelId}:`, error);
       
-      // 👈 FALLBACK: Still provide defaults even on error
       const defaultHotel = createDefaultHotelData(hotelId, hotelNames[hotelId] || hotelId);
       setSelectedHotel(defaultHotel);
       
       setSaveMessage('Using default data - some hotel information may be missing');
       setTimeout(() => setSaveMessage(''), 3000);
     } finally {
-      setIsLoadingHotel(false); // 👈 ALWAYS stop loading
+      setIsLoadingHotel(false);
     }
-  };
+  }, []);
 
-  const handleSave = async (updatedHotel: HotelFacilityData) => {
+  // Memoized save handler
+  const handleSave = useCallback(async (updatedHotel: HotelFacilityData) => {
     setIsSaving(true);
     try {
-      console.log('Saving to API:', `${API_BASE}/hotels/facilities/${updatedHotel.hotelId}`);
-      
       // Update compliance requirements based on equipment
       const updatedCompliance = {
         ...updatedHotel.compliance,
@@ -183,9 +238,6 @@ export default function HotelManagementPage() {
         setupComplete: true
       };
 
-      console.log('Sending data:', finalHotel);
-
-      // Save to backend
       const response = await fetch(`${API_BASE}/hotels/facilities/${finalHotel.hotelId}`, {
         method: 'POST',
         headers: {
@@ -194,18 +246,15 @@ export default function HotelManagementPage() {
         body: JSON.stringify(finalHotel)
       });
 
-      console.log('Response status:', response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Save failed:', errorText);
         throw new Error(`Failed to save data: ${response.status} - ${errorText}`);
       }
 
-      const result = await response.json();
-      console.log('Save successful:', result);
+      // Update cache
+      hotelDataCache.current.set(finalHotel.hotelId, finalHotel);
 
-      // Update in state
+      // Update state
       setHotelData(prev => 
         prev.map(h => h.hotelId === finalHotel.hotelId ? finalHotel : h)
       );
@@ -222,22 +271,52 @@ export default function HotelManagementPage() {
       setIsSaving(false);
       setIsEditing(false);
     }
-  };
+  }, []);
 
-  const handleHotelSelect = async (hotelName: string) => {
+  // Memoized event handlers
+  const handleHotelSelect = useCallback(async (hotelName: string) => {
     const hotel = hotelData.find(h => h.hotelName === hotelName);
     if (hotel) {
-      await loadHotelDetails(hotel.hotelId); // Load fresh data
+      await loadHotelDetails(hotel.hotelId);
     }
     setIsHotelModalOpen(false);
-  };
+  }, [hotelData, loadHotelDetails]);
 
-  const handleHotelSelectFromSidebar = async (hotel: HotelFacilityData) => {
-    await loadHotelDetails(hotel.hotelId); // Load fresh data
-  };
+  const handleHotelSelectFromSidebar = useCallback(async (hotel: HotelFacilityData) => {
+    await loadHotelDetails(hotel.hotelId);
+  }, [loadHotelDetails]);
 
-  const filteredHotels = hotelData.filter(hotel =>
-    hotel.hotelName.toLowerCase().includes(searchTerm.toLowerCase())
+  const handleEditToggle = useCallback(() => {
+    setIsEditing(!isEditing);
+  }, [isEditing]);
+
+  const handleSaveClick = useCallback(() => {
+    if (selectedHotel) {
+      handleSave(selectedHotel);
+    }
+  }, [selectedHotel, handleSave]);
+
+  // Memoized layout handlers
+  const toggleAdminSidebar = useCallback(() => {
+    setShowAdminSidebar(!showAdminSidebar);
+  }, [showAdminSidebar]);
+
+  const openHotelModal = useCallback(() => {
+    setIsHotelModalOpen(true);
+  }, []);
+
+  const openUserPanel = useCallback(() => {
+    setIsUserPanelOpen(true);
+  }, []);
+
+  const closeUserPanel = useCallback(() => {
+    setIsUserPanelOpen(false);
+  }, []);
+
+  // Memoized main layout class
+  const mainLayoutClass = useMemo(() => 
+    `flex-1 transition-all duration-300 ${showAdminSidebar && !isMobile ? 'ml-72' : 'ml-0'}`,
+    [showAdminSidebar, isMobile]
   );
 
   if (isLoading) {
@@ -248,12 +327,12 @@ export default function HotelManagementPage() {
           isOpen={showAdminSidebar}
           onClose={() => setShowAdminSidebar(false)}
         />
-        <div className={`flex-1 transition-all duration-300 ${showAdminSidebar && !isMobile ? 'ml-72' : 'ml-0'}`}>
+        <div className={mainLayoutClass}>
           <AdminHeader 
             showSidebar={showAdminSidebar}
-            onToggleSidebar={() => setShowAdminSidebar(!showAdminSidebar)}
-            onOpenHotelSelector={() => setIsHotelModalOpen(true)}
-            onOpenUserPanel={() => setIsUserPanelOpen(true)}
+            onToggleSidebar={toggleAdminSidebar}
+            onOpenHotelSelector={openHotelModal}
+            onOpenUserPanel={openUserPanel}
             onOpenAccountSettings={() => {}}
             isMobile={isMobile}
           />
@@ -276,14 +355,14 @@ export default function HotelManagementPage() {
         onClose={() => setShowAdminSidebar(false)}
       />
 
-      <div className={`flex-1 transition-all duration-300 ${showAdminSidebar && !isMobile ? 'ml-72' : 'ml-0'}`}>
-        <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
+      <div className={mainLayoutClass}>
+        <UserPanel isOpen={isUserPanelOpen} onClose={closeUserPanel} />
         
         <AdminHeader 
           showSidebar={showAdminSidebar}
-          onToggleSidebar={() => setShowAdminSidebar(!showAdminSidebar)}
-          onOpenHotelSelector={() => setIsHotelModalOpen(true)}
-          onOpenUserPanel={() => setIsUserPanelOpen(true)}
+          onToggleSidebar={toggleAdminSidebar}
+          onOpenHotelSelector={openHotelModal}
+          onOpenUserPanel={openUserPanel}
           onOpenAccountSettings={() => {}}
           isMobile={isMobile}
         />
@@ -306,7 +385,7 @@ export default function HotelManagementPage() {
                 isEditing={isEditing}
                 isSaving={isSaving}
                 saveMessage={saveMessage}
-                onSave={() => selectedHotel && handleSave(selectedHotel)}
+                onSave={handleSaveClick}
               />
             </div>
           </div>
@@ -334,7 +413,7 @@ export default function HotelManagementPage() {
                 <HotelDetailsPanel
                   hotel={selectedHotel}
                   isEditing={isEditing}
-                  onEditToggle={() => setIsEditing(!isEditing)}
+                  onEditToggle={handleEditToggle}
                   onHotelUpdate={setSelectedHotel}
                 />
               ) : (
