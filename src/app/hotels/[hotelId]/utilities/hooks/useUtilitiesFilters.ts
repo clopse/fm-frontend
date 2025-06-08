@@ -1,4 +1,4 @@
-// app/[hotelId]/utilities/hooks/useUtilitiesFilters.ts - FINAL FIXED VERSION
+// app/[hotelId]/utilities/hooks/useUtilitiesFilters.ts - FINAL FIXED VERSION (WATER REMOVED FROM DASHBOARD USAGE)
 import { useState, useMemo } from 'react';
 
 import type { UtilitiesData, DashboardFilters } from '../types';
@@ -17,7 +17,7 @@ export function useUtilitiesFilters(data: UtilitiesData) {
   const availableMonths = useMemo(() => {
     const months = new Set<number>();
 
-    [data.electricity, data.gas, data.water].forEach(list => {
+    [data.electricity, data.gas].forEach(list => {
       (list || []).forEach(entry => {
         const rawDate = (entry as any).month || (entry as any).period;
         if (rawDate) {
@@ -74,24 +74,21 @@ export function useUtilitiesFilters(data: UtilitiesData) {
 
     const electricity = filterByMonth(data.electricity || [], 'month');
     const gas = filterByMonth(data.gas || [], 'period');
-    const water = filterByMonth(data.water || [], 'month');
     const bills = filterBillsByMonth(filterBillsByType(data.bills || []));
 
     const totals = {
       electricity: electricity.reduce((sum, e) => sum + (e.total_kwh || 0), 0),
       gas: gas.reduce((sum, g) => sum + (g.total_kwh || 0), 0),
-      water: water.reduce((sum, w) => sum + (w.cubic_meters || 0), 0),
       electricity_cost: electricity.reduce((sum, e) => sum + (e.total_eur || 0), 0),
       gas_cost: gas.reduce((sum, g) => sum + (g.total_eur || 0), 0),
-      water_cost: water.reduce((sum, w) => sum + (w.total_eur || 0), 0),
       cost: 0
     };
-    totals.cost = totals.electricity_cost + totals.gas_cost + totals.water_cost;
+    totals.cost = totals.electricity_cost + totals.gas_cost;
 
     return {
       electricity,
       gas,
-      water,
+      water: [], // not used in dashboard now
       bills,
       totals,
       trends: data.trends,
