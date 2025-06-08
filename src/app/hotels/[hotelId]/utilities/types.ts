@@ -30,18 +30,10 @@ export interface GasEntry {
   };
 }
 
-export interface WaterEntry {
-  month: string;
-  cubic_meters: number;
-  total_eur: number;
-  per_room_m3: number;
-  bill_id?: string;
-}
-
 export interface BillEntry {
   id: string;
   hotel_id: string;
-  utility_type: 'electricity' | 'gas' | 'water';
+  utility_type: 'electricity' | 'gas';
   filename: string;
   upload_date: string;
   bill_period: string;
@@ -97,8 +89,6 @@ export interface MonthData {
   electricity_eur: number;
   gas_kwh: number;
   gas_eur: number;
-  water_kwh: number;
-  water_eur: number;
   days_covered: number;
   days_in_month: number;
   is_complete: boolean;
@@ -111,15 +101,12 @@ export interface MonthData {
 export interface UtilitiesData {
   electricity: ElectricityEntry[];
   gas: GasEntry[];
-  water: WaterEntry[];
   bills: BillEntry[];
   totals: {
     electricity: number;
     gas: number;
-    water: number;
     electricity_cost: number;
     gas_cost: number;
-    water_cost: number;
     cost: number;
   };
   incomplete_months?: string[];
@@ -128,12 +115,10 @@ export interface UtilitiesData {
   trends?: {
     electricity: number;
     gas: number;
-    water: number;
   };
   processed_counts?: {
     electricity: number;
     gas: number;
-    water: number;
   };
   total_bills_found?: number;
   debug_info?: {
