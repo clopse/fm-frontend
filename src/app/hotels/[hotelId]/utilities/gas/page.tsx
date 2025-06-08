@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from "next/navigation";
-import { Flame, TrendingUp, TrendingDown, Thermometer, Euro, BarChart3, Calendar } from 'lucide-react';
+import { Flame, TrendingUp, TrendingDown, Thermometer, Euro, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ComposedChart } from 'recharts';
 import { useUtilitiesData } from "../hooks/useUtilitiesData";
 import { ViewMode, GasEntry } from "../types";
@@ -25,17 +25,26 @@ export default function GasPage() {
 
   const gasData = data.gas || [];
   
-  // Calculate detailed stats
-  const totalConsumption = gasData.reduce((sum: number, g: GasEntry) => sum + g.total_kwh, 0);
-  const totalCost = gasData.reduce((sum: number, g: GasEntry) => sum + g.total_eur, 0);
+  // Helper function for reduce operations to avoid type errors
+  const sumBy = <T extends Record<K, number>, K extends string>(
+    array: T[],
+    key: K
+  ): number => {
+    return array.reduce((sum: number, item: T) => sum + item[key], 0);
+  };
+  
+  // Calculate detailed stats using our helper
+  const totalConsumption = sumBy(gasData, 'total_kwh');
+  const totalCost = sumBy(gasData, 'total_eur');
   const avgMonthlyConsumption = gasData.length > 0 ? totalConsumption / gasData.length : 0;
   const avgMonthlyCost = gasData.length > 0 ? totalCost / gasData.length : 0;
   
-  // Peak usage analysis
-  const peakMonth = gasData.reduce((peak: GasEntry, current: GasEntry) => 
-    current.total_kwh > peak.total_kwh ? current : peak, 
-    gasData[0] || { total_kwh: 0, period: '', total_eur: 0, per_room_kwh: 0 }
-  );
+  // Peak usage analysis with proper typing
+  const peakMonth = gasData.length > 0 
+    ? gasData.reduce((peak: GasEntry, current: GasEntry) => 
+        current.total_kwh > peak.total_kwh ? current : peak, 
+        gasData[0])
+    : { total_kwh: 0, period: '', total_eur: 0, per_room_kwh: 0 } as GasEntry;
 
   // Rate analysis
   const avgRate = totalConsumption > 0 ? totalCost / totalConsumption : 0;
@@ -82,6 +91,11 @@ export default function GasPage() {
       return period;
     }
   };
+
+  // Get average per_room_kwh with proper typing
+  const avgPerRoomKwh = gasData.length > 0 
+    ? sumBy(gasData, 'per_room_kwh') / gasData.length
+    : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
@@ -170,10 +184,7 @@ export default function GasPage() {
             </div>
             <h3 className="text-sm font-medium text-slate-600 mb-1">Efficiency</h3>
             <p className="text-2xl font-bold text-slate-900">
-              {gasData.length > 0 ? 
-                (gasData.reduce((sum: number, g: GasEntry) => sum + g.per_room_kwh, 0) / gasData.length).toFixed(1) : 
-                '0'
-              }
+              {avgPerRoomKwh.toFixed(1)}
             </p>
             <p className="text-sm text-slate-500">kWh/room avg</p>
           </div>
@@ -236,7 +247,8 @@ export default function GasPage() {
               <div className="space-y-3">
                 {['Winter', 'Spring', 'Summer', 'Autumn'].map(season => {
                   const seasonData = seasonalData.filter(d => d.season === season);
-                  const seasonTotal = seasonData.reduce((sum: number, d) => sum + d.total_kwh, 0);
+                  // Use sumBy helper here too
+                  const seasonTotal = sumBy(seasonData, 'total_kwh');
                   const seasonPercent = totalConsumption > 0 ? (seasonTotal / totalConsumption) * 100 : 0;
                   
                   return (
