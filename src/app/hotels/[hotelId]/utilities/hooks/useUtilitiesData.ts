@@ -42,22 +42,6 @@ interface MonthData {
   }>;
 }
 
-// Define a safe type for summary extraction
-interface EnhancedBillSummary {
-  period_start?: string;
-  period_end?: string;
-  total_kwh?: number;
-  total_cost?: number;
-  day_kwh?: number;
-  night_kwh?: number;
-  consumption_kwh?: number;
-  consumption?: number;
-  account_number?: string;
-  bill_date?: string;
-  meter_number?: string;
-  [key: string]: any;
-}
-
 export function useUtilitiesData(hotelId: string | undefined): {
   data: UtilitiesDataType;
   loading: boolean;
@@ -166,41 +150,24 @@ export function useUtilitiesData(hotelId: string | undefined): {
         // Extract summary safely - only use properties defined in BillEntry
         const summary = bill.summary || {};
         
-        // Get enhanced summary from raw_data if it exists (unknown property access requires type check)
-        let enhancedSummary: EnhancedBillSummary = {};
-        if (bill.raw_data && typeof bill.raw_data === 'object') {
-          // Try to extract enhanced_summary safely
-          enhancedSummary = (bill.raw_data as Record<string, any>).enhanced_summary || {};
-        }
-        
-        // Merge the two summaries, prioritizing the standard summary
-        const enhanced = { 
-          ...enhancedSummary,
-          ...summary,
-          // Get period dates from different potential sources
-          period_start: summary.billing_period_start || enhancedSummary.period_start,
-          period_end: summary.billing_period_end || enhancedSummary.period_end,
-        };
-        
         // Skip if missing essential data
-        if (!enhanced.period_start || !enhanced.period_end) {
-          // Fallback to bill date + 30 days if no period defined
-          if (enhanced.bill_date) {
-            enhanced.period_start = enhanced.bill_date;
-            
-            const endDate = new Date(enhanced.bill_date);
-            endDate.setDate(endDate.getDate() + 30);
-            enhanced.period_end = endDate.toISOString().split('T')[0];
-          } else {
-            return; // Skip if we can't determine a date range
-          }
+        let startDate: Date | null = null;
+        let endDate: Date | null = null;
+        
+        // Try to use billing period from summary
+        if (summary.billing_period_start && summary.billing_period_end) {
+          startDate = new Date(summary.billing_period_start);
+          endDate = new Date(summary.billing_period_end);
+        } 
+        // Fallback to bill_date if available
+        else if (summary.bill_date) {
+          startDate = new Date(summary.bill_date);
+          endDate = new Date(summary.bill_date);
+          endDate.setDate(endDate.getDate() + 30); // Assume 30-day period
         }
         
-        const startDate = new Date(enhanced.period_start);
-        const endDate = new Date(enhanced.period_end);
-        
-        // Skip bills that don't have clear start/end dates
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        // Skip if we still don't have valid dates
+        if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
           return;
         }
         
@@ -220,12 +187,12 @@ export function useUtilitiesData(hotelId: string | undefined): {
         let nightKwh = 0;
         
         if (type === 'electricity') {
-          kwh = Number(enhanced.total_kwh || summary.total_kwh || summary.consumption_kwh || bill.consumption) || 0;
-          eur = Number(enhanced.total_cost || summary.total_cost || bill.total_amount) || 0;
+          kwh = Number(summary.total_kwh || summary.consumption_kwh || bill.consumption) || 0;
+          eur = Number(summary.total_cost || bill.total_amount) || 0;
           
           // Extract day/night values if available
-          dayKwh = Number(enhanced.day_kwh || summary.day_kwh) || 0;
-          nightKwh = Number(enhanced.night_kwh || summary.night_kwh) || 0;
+          dayKwh = Number(summary.day_kwh) || 0;
+          nightKwh = Number(summary.night_kwh) || 0;
           
           // If day/night not specified, but we have total, use a 70/30 split
           if (dayKwh === 0 && nightKwh === 0 && kwh > 0) {
@@ -233,11 +200,12 @@ export function useUtilitiesData(hotelId: string | undefined): {
             nightKwh = kwh * 0.3;
           }
         } else if (type === 'gas') {
-          kwh = Number(enhanced.consumption_kwh || summary.consumption_kwh || bill.consumption) || 0;
-          eur = Number(enhanced.total_cost || summary.total_cost || bill.total_amount) || 0;
+          kwh = Number(summary.consumption_kwh || bill.consumption) || 0;
+          eur = Number(summary.total_cost || bill.total_amount) || 0;
         } else if (type === 'water') {
-          kwh = Number(enhanced.consumption || summary.consumption || bill.consumption) || 0;
-          eur = Number(enhanced.total_cost || summary.total_cost || bill.total_amount) || 0;
+          // For water, just use the bill.consumption directly
+          kwh = Number(bill.consumption) || 0;
+          eur = Number(summary.total_cost || bill.total_amount) || 0;
         }
         
         // Calculate daily values
@@ -437,17 +405,15 @@ export function useUtilitiesData(hotelId: string | undefined): {
     const filteredBills = rawData.filter((b: BillEntry) => {
       try {
         const summary = b.summary || {};
-        const startDate = summary.billing_period_start ? new Date(summary.billing_period_start) : null;
-        const endDate = summary.billing_period_end ? new Date(summary.billing_period_end) : null;
-        
-        if (startDate && endDate) {
+        if (summary.billing_period_start && summary.billing_period_end) {
+          const startDate = new Date(summary.billing_period_start);
+          const endDate = new Date(summary.billing_period_end);
           return startDate.getFullYear() <= year && endDate.getFullYear() >= year;
         }
         
-        // Fallback to bill_date if period not available
         if (summary.bill_date) {
-          const billYear = new Date(summary.bill_date).getFullYear();
-          return billYear === year;
+          const billDate = new Date(summary.bill_date);
+          return billDate.getFullYear() === year;
         }
         
         return false;
