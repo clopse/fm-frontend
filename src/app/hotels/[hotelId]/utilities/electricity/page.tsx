@@ -1,10 +1,10 @@
 'use client';
 
 import { useParams } from "next/navigation";
-import { Zap, TrendingUp, TrendingDown, Clock, Euro, BarChart3, Calendar } from 'lucide-react';
+import { Zap, TrendingUp, TrendingDown, Clock, Euro, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
 import { useUtilitiesData } from "../hooks/useUtilitiesData";
-import { ViewMode } from "../types";
+import { ViewMode, ElectricityEntry } from "../types";
 
 export default function ElectricityPage() {
   const rawParams = useParams();
@@ -26,32 +26,32 @@ export default function ElectricityPage() {
   const electricityData = data.electricity || [];
   
   // Calculate detailed stats
-  const totalConsumption = electricityData.reduce((sum, e) => sum + e.total_kwh, 0);
-  const totalCost = electricityData.reduce((sum, e) => sum + e.total_eur, 0);
+  const totalConsumption = electricityData.reduce((sum: number, e: ElectricityEntry) => sum + e.total_kwh, 0);
+  const totalCost = electricityData.reduce((sum: number, e: ElectricityEntry) => sum + e.total_eur, 0);
   const avgMonthlyConsumption = electricityData.length > 0 ? totalConsumption / electricityData.length : 0;
   const avgMonthlyCost = electricityData.length > 0 ? totalCost / electricityData.length : 0;
   
   // Day/Night split analysis
-  const totalDayUsage = electricityData.reduce((sum, e) => sum + e.day_kwh, 0);
-  const totalNightUsage = electricityData.reduce((sum, e) => sum + e.night_kwh, 0);
+  const totalDayUsage = electricityData.reduce((sum: number, e: ElectricityEntry) => sum + e.day_kwh, 0);
+  const totalNightUsage = electricityData.reduce((sum: number, e: ElectricityEntry) => sum + e.night_kwh, 0);
   const dayPercentage = totalConsumption > 0 ? (totalDayUsage / totalConsumption) * 100 : 0;
   
   // Peak demand analysis
-  const peakMonth = electricityData.reduce((peak, current) => 
+  const peakMonth = electricityData.reduce((peak: ElectricityEntry, current: ElectricityEntry) => 
     current.total_kwh > peak.total_kwh ? current : peak, 
-    electricityData[0] || { total_kwh: 0, month: '' }
+    electricityData[0] || { total_kwh: 0, month: '', day_kwh: 0, night_kwh: 0, total_eur: 0, per_room_kwh: 0 }
   );
 
   // Rate analysis
   const avgRate = totalConsumption > 0 ? totalCost / totalConsumption : 0;
-  const rateData = electricityData.map(e => ({
+  const rateData = electricityData.map((e: ElectricityEntry) => ({
     month: e.month,
     rate: e.total_kwh > 0 ? e.total_eur / e.total_kwh : 0,
     consumption: e.total_kwh
   }));
 
   // Trend analysis
-  const calculateTrend = () => {
+  const calculateTrend = (): number => {
     if (electricityData.length < 2) return 0;
     const sorted = [...electricityData].sort((a, b) => a.month.localeCompare(b.month));
     const recent = sorted[sorted.length - 1]?.total_kwh || 0;
@@ -61,9 +61,9 @@ export default function ElectricityPage() {
 
   const trend = calculateTrend();
 
-  const formatMonth = (month: string) => {
+  const formatMonth = (month: string): string => {
     try {
-      const date = new Date(month + '-01');
+      const date = new Date(`${month}-01`);
       return date.toLocaleDateString('en-IE', { month: 'short', year: '2-digit' });
     } catch {
       return month;
@@ -190,7 +190,7 @@ export default function ElectricityPage() {
                       `${value.toLocaleString()} kWh`, 
                       name === 'day_kwh' ? 'Day Usage' : name === 'night_kwh' ? 'Night Usage' : 'Total'
                     ]}
-                    labelFormatter={(label) => formatMonth(label)}
+                    labelFormatter={(label) => formatMonth(String(label))}
                   />
                   <Area
                     type="monotone"
@@ -260,7 +260,7 @@ export default function ElectricityPage() {
                   <span className="text-sm text-slate-600">Per Room</span>
                   <span className="font-medium">
                     {electricityData.length > 0 ? 
-                      (electricityData.reduce((sum, e) => sum + e.per_room_kwh, 0) / electricityData.length).toFixed(1) : 
+                      (electricityData.reduce((sum: number, e: ElectricityEntry) => sum + e.per_room_kwh, 0) / electricityData.length).toFixed(1) : 
                       '0'
                     } kWh
                   </span>
@@ -308,7 +308,7 @@ export default function ElectricityPage() {
                   <YAxis tickFormatter={(value) => `€${value.toFixed(3)}`} />
                   <Tooltip 
                     formatter={(value: any) => [`€${value.toFixed(3)}/kWh`, 'Rate']}
-                    labelFormatter={(label) => formatMonth(label)}
+                    labelFormatter={(label) => formatMonth(String(label))}
                   />
                   <Line 
                     type="monotone" 
@@ -340,7 +340,7 @@ export default function ElectricityPage() {
                       name === 'total_kwh' ? `${value.toLocaleString()} kWh` : `€${value.toLocaleString()}`,
                       name === 'total_kwh' ? 'Consumption' : 'Cost'
                     ]}
-                    labelFormatter={(label) => formatMonth(label)}
+                    labelFormatter={(label) => formatMonth(String(label))}
                   />
                   <Bar yAxisId="left" dataKey="total_kwh" fill="#8b5cf6" name="total_kwh" />
                   <Line yAxisId="right" type="monotone" dataKey="total_eur" stroke="#ef4444" strokeWidth={3} name="total_eur" />
