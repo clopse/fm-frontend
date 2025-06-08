@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { ElectricityEntry, GasEntry, WaterEntry, BillEntry, UtilitiesData as UtilitiesDataType, ViewMode } from './types';
+import { ElectricityEntry, GasEntry, WaterEntry, BillEntry, UtilitiesData as UtilitiesDataType, ViewMode } from '../types';
 
 // Internal types for our calculations
 interface DailyUtilityData {
