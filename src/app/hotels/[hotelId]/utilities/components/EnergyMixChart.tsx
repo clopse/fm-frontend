@@ -10,8 +10,8 @@ interface EnergyMixChartProps {
   gasTotal: number;
   viewMode: ViewMode;
   loading: boolean;
-  electricityData?: any[];
-  gasData?: any[];
+  electricityData?: ElectricityEntry[];
+  gasData?: GasEntry[];
   incompleteMonths?: string[];
 }
 
