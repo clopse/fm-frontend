@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo, useCallback } from 'react';
 import { 
   LineChart, 
   Line, 
@@ -35,29 +36,54 @@ interface ScoreCardProps {
 }
 
 const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreCardProps) => {
-  const percentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
   
-  const getScoreColor = (percent: number): string => {
-    if (percent >= 90) return 'text-green-600';
-    if (percent >= 70) return 'text-blue-600';
-    if (percent >= 50) return 'text-yellow-600';
-    return 'text-red-600';
-  };
+  // Memoize color helper functions
+  const colorHelpers = useMemo(() => ({
+    getScoreColor: (percent: number): string => {
+      if (percent >= 90) return 'text-green-600';
+      if (percent >= 70) return 'text-blue-600';
+      if (percent >= 50) return 'text-yellow-600';
+      return 'text-red-600';
+    },
+    getScoreBgColor: (percent: number): string => {
+      if (percent >= 90) return 'from-green-500 to-emerald-600';
+      if (percent >= 70) return 'from-blue-500 to-indigo-600';
+      if (percent >= 50) return 'from-yellow-500 to-orange-600';
+      return 'from-red-500 to-rose-600';
+    }
+  }), []);
 
-  const getScoreBgColor = (percent: number): string => {
-    if (percent >= 90) return 'from-green-500 to-emerald-600';
-    if (percent >= 70) return 'from-blue-500 to-indigo-600';
-    if (percent >= 50) return 'from-yellow-500 to-orange-600';
-    return 'from-red-500 to-rose-600';
-  };
+  // Memoize all score calculations
+  const scoreMetrics = useMemo(() => {
+    const percentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+    const pointsRemaining = totalPoints - earnedPoints;
+    
+    return {
+      percentage,
+      pointsRemaining,
+      scoreColor: colorHelpers.getScoreColor(percentage),
+      scoreBgColor: colorHelpers.getScoreBgColor(percentage)
+    };
+  }, [earnedPoints, totalPoints, colorHelpers]);
 
+  // Memoize chart data with formatted months
+  const chartData = useMemo(() => 
+    graphPoints.map(point => ({
+      ...point,
+      formattedMonth: formatMonth(point.month)
+    })),
+    [graphPoints]
+  );
+
+  // Simple format function - lightweight enough to not need memoization
   const formatMonth = (month: string): string => {
     const [year, monthNum] = month.split('-');
     const date = new Date(parseInt(year), parseInt(monthNum) - 1);
     return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
   };
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  // Memoize the custom tooltip component to prevent recreation
+  const CustomTooltip = useCallback(({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border border-slate-200 rounded-lg shadow-lg">
@@ -72,12 +98,19 @@ const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreC
       );
     }
     return null;
-  };
+  }, [totalPoints]);
+
+  // Memoize chart configuration
+  const chartConfig = useMemo(() => ({
+    margin: { top: 10, right: 30, left: 0, bottom: 0 },
+    domain: [0, totalPoints],
+    gradientId: 'scoreGradient'
+  }), [totalPoints]);
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       {/* Header with Score */}
-      <div className={`bg-gradient-to-r ${getScoreBgColor(percentage)} text-white p-6`}>
+      <div className={`bg-gradient-to-r ${scoreMetrics.scoreBgColor} text-white p-6`}>
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center space-x-3 mb-2">
@@ -90,7 +123,7 @@ const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreC
             </div>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold mb-1">{percentage}%</div>
+            <div className="text-3xl font-bold mb-1">{scoreMetrics.percentage}%</div>
             <div className="flex items-center space-x-1 opacity-90">
               <TrendingUp className="w-4 h-4" />
               <span className="text-sm">Compliance Level</span>
@@ -114,22 +147,21 @@ const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreC
         {graphPoints.length > 0 ? (
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={graphPoints} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <AreaChart data={chartData} margin={chartConfig.margin}>
                 <defs>
-                  <linearGradient id="scoreGradient" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id={chartConfig.gradientId} x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis 
-                  dataKey="month" 
-                  tickFormatter={formatMonth}
+                  dataKey="formattedMonth"
                   stroke="#64748b"
                   fontSize={12}
                 />
                 <YAxis 
-                  domain={[0, totalPoints]} 
+                  domain={chartConfig.domain}
                   stroke="#64748b"
                   fontSize={12}
                 />
@@ -139,7 +171,7 @@ const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreC
                   dataKey="score"
                   stroke="#3b82f6"
                   strokeWidth={3}
-                  fill="url(#scoreGradient)"
+                  fill={`url(#${chartConfig.gradientId})`}
                 />
                 <Line
                   type="monotone"
@@ -166,7 +198,7 @@ const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreC
       <div className="bg-slate-50 px-6 py-4 border-t border-slate-200">
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-green-600">{Math.round((earnedPoints / totalPoints) * 100) || 0}%</div>
+            <div className="text-2xl font-bold text-green-600">{scoreMetrics.percentage}%</div>
             <div className="text-sm text-slate-600">Completed</div>
           </div>
           <div>
@@ -174,7 +206,7 @@ const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreC
             <div className="text-sm text-slate-600">Points Earned</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-500">{totalPoints - earnedPoints}</div>
+            <div className="text-2xl font-bold text-slate-500">{scoreMetrics.pointsRemaining}</div>
             <div className="text-sm text-slate-600">Points Remaining</div>
           </div>
         </div>
