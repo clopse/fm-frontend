@@ -6,6 +6,28 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useUtilitiesData } from "../hooks/useUtilitiesData";
 import { ViewMode, GasEntry } from "../types";
 
+// Define types for the seasonal data
+interface SeasonalGasData extends GasEntry {
+  season: string;
+  month: number;
+}
+
+// Type for rate data
+interface RateData {
+  period: string;
+  rate: number;
+  consumption: number;
+  cost: number;
+}
+
+// Type for efficiency data
+interface EfficiencyData {
+  period: string;
+  efficiency: number;
+  cost_per_room: number;
+  total_kwh: number;
+}
+
 export default function GasPage() {
   const rawParams = useParams();
   const hotelId = rawParams?.hotelId as string | undefined;
@@ -48,7 +70,7 @@ export default function GasPage() {
 
   // Rate analysis
   const avgRate = totalConsumption > 0 ? totalCost / totalConsumption : 0;
-  const rateData = gasData.map((g: GasEntry) => ({
+  const rateData: RateData[] = gasData.map((g: GasEntry) => ({
     period: g.period,
     rate: g.total_kwh > 0 ? g.total_eur / g.total_kwh : 0,
     consumption: g.total_kwh,
@@ -56,7 +78,7 @@ export default function GasPage() {
   }));
 
   // Seasonal analysis (assuming winter = higher usage)
-  const seasonalData = gasData.map((g: GasEntry) => {
+  const seasonalData: SeasonalGasData[] = gasData.map((g: GasEntry) => {
     const month = new Date(g.period + '-01').getMonth();
     const season = month >= 10 || month <= 2 ? 'Winter' : 
                    month >= 3 && month <= 5 ? 'Spring' :
@@ -76,7 +98,7 @@ export default function GasPage() {
   const trend = calculateTrend();
 
   // Efficiency metrics
-  const efficiencyData = gasData.map((g: GasEntry) => ({
+  const efficiencyData: EfficiencyData[] = gasData.map((g: GasEntry) => ({
     period: g.period,
     efficiency: g.per_room_kwh, // kWh per room
     cost_per_room: g.total_eur / 100, // Assuming 100 rooms
@@ -245,8 +267,8 @@ export default function GasPage() {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               <h4 className="font-semibold text-slate-900 mb-4">Seasonal Analysis</h4>
               <div className="space-y-3">
-                {['Winter', 'Spring', 'Summer', 'Autumn'].map(season => {
-                  const seasonData = seasonalData.filter(d => d.season === season);
+                {(['Winter', 'Spring', 'Summer', 'Autumn'] as const).map(season => {
+                  const seasonData = seasonalData.filter((d: SeasonalGasData) => d.season === season);
                   // Use sumBy helper here too
                   const seasonTotal = sumBy(seasonData, 'total_kwh');
                   const seasonPercent = totalConsumption > 0 ? (seasonTotal / totalConsumption) * 100 : 0;
