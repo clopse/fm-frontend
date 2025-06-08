@@ -1,15 +1,18 @@
 "use client";
 
-// app/[hotelId]/utilities/components/EnergyMixChart.tsx
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Gauge, Loader2 } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { Gauge, Loader2, Calendar, AlertTriangle } from 'lucide-react';
 import { ViewMode } from '../types';
+import { useMemo, memo } from 'react';
 
 interface EnergyMixChartProps {
   electricityTotal: number;
   gasTotal: number;
   viewMode: ViewMode;
   loading: boolean;
+  electricityData?: any[];
+  gasData?: any[];
+  incompleteMonths?: string[];
 }
 
 const COLORS = {
@@ -17,12 +20,107 @@ const COLORS = {
   gas: '#10b981'
 };
 
-export default function EnergyMixChart({ 
+// Memoized tooltip component
+const CustomTooltip = memo(({ active, payload, hasIncompleteData, viewMode }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  
+  const data = payload[0].payload;
+  const uniqueBillCount = new Set(
+    (data.sourceBills || []).map((bill: any) => bill.id)
+  ).size;
+  
+  const getUnitLabel = () => {
+    switch(viewMode) {
+      case 'eur': return '€';
+      case 'room': return 'kWh/room';
+      default: return 'kWh';
+    }
+  };
+  
+  return (
+    <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg max-w-xs">
+      <div className="flex items-center space-x-2 mb-2">
+        <div 
+          className="w-4 h-4 rounded" 
+          style={{ backgroundColor: data.color }}
+        ></div>
+        <span className="font-semibold text-slate-900">{data.name}</span>
+      </div>
+      <div className="space-y-1 text-sm">
+        <div className="flex justify-between">
+          <span>Value:</span>
+          <span className="font-medium">
+            {viewMode === 'eur' ? '€' : ''}{Math.round(data.value).toLocaleString()} {getUnitLabel()}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span>Percentage:</span>
+          <span className="font-medium">{data.percentage.toFixed(1)}%</span>
+        </div>
+        
+        {data.sourceBills && data.sourceBills.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center text-xs text-slate-600">
+              <Calendar className="w-3 h-3 mr-1" />
+              <span>
+                Based on {uniqueBillCount} {uniqueBillCount === 1 ? 'bill' : 'bills'}
+              </span>
+            </div>
+          </div>
+        )}
+        
+        {hasIncompleteData && (
+          <div className="mt-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center text-xs text-amber-600">
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              <span>
+                Some months have incomplete data
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+CustomTooltip.displayName = 'CustomTooltip';
+
+// Memoized label component
+const CustomLabel = memo(({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  if (percent < 0.05) return null; // Don't show label for very small slices
+  
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text 
+      x={x} 
+      y={y} 
+      fill="white" 
+      textAnchor={x > cx ? 'start' : 'end'} 
+      dominantBaseline="central"
+      className="font-semibold text-sm"
+    >
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+});
+
+CustomLabel.displayName = 'CustomLabel';
+
+// Memo the entire chart component
+const EnergyMixChart = memo(({ 
   electricityTotal, 
   gasTotal, 
   viewMode, 
-  loading 
-}: EnergyMixChartProps) {
+  loading,
+  electricityData = [],
+  gasData = [],
+  incompleteMonths = []
+}: EnergyMixChartProps) => {
   
   const getUnitLabel = () => {
     switch(viewMode) {
@@ -32,74 +130,27 @@ export default function EnergyMixChart({
     }
   };
 
-  const energyMixData = [
+  const hasIncompleteData = incompleteMonths.length > 0;
+
+  // Memoize chart data calculation
+  const energyMixData = useMemo(() => [
     { 
       name: 'Electricity', 
       value: electricityTotal,
       color: COLORS.electricity,
       percentage: electricityTotal + gasTotal > 0 ? 
-        (electricityTotal / (electricityTotal + gasTotal)) * 100 : 0
+        (electricityTotal / (electricityTotal + gasTotal)) * 100 : 0,
+      sourceBills: electricityData.flatMap(entry => entry.source_bills || [])
     },
     { 
       name: 'Gas', 
       value: gasTotal,
       color: COLORS.gas,
       percentage: electricityTotal + gasTotal > 0 ? 
-        (gasTotal / (electricityTotal + gasTotal)) * 100 : 0
+        (gasTotal / (electricityTotal + gasTotal)) * 100 : 0,
+      sourceBills: gasData.flatMap(entry => entry.source_bills || [])
     }
-  ];
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg">
-          <div className="flex items-center space-x-2 mb-2">
-            <div 
-              className="w-4 h-4 rounded" 
-              style={{ backgroundColor: data.color }}
-            ></div>
-            <span className="font-semibold text-slate-900">{data.name}</span>
-          </div>
-          <div className="space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span>Value:</span>
-              <span className="font-medium">
-                {viewMode === 'eur' ? '€' : ''}{Math.round(data.value).toLocaleString()} {getUnitLabel()}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Percentage:</span>
-              <span className="font-medium">{data.percentage.toFixed(1)}%</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const CustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    if (percent < 0.05) return null; // Don't show label for very small slices
-
-    return (
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
-        dominantBaseline="central"
-        className="font-semibold text-sm"
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
+  ], [electricityTotal, gasTotal, electricityData, gasData]);
 
   if (loading) {
     return (
@@ -163,6 +214,16 @@ export default function EnergyMixChart({
       </div>
       
       <div className="p-6">
+        {hasIncompleteData && (
+          <div className="mb-4 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm flex items-center text-amber-800">
+            <AlertTriangle className="w-4 h-4 mr-2 text-amber-500" />
+            <span>
+              Incomplete data for {incompleteMonths.length} {incompleteMonths.length === 1 ? 'month' : 'months'} ({incompleteMonths.map(m => m.split('-')[1]).join(', ')}). 
+              Total may change when all bills are processed.
+            </span>
+          </div>
+        )}
+        
         <div className="flex items-center">
           {/* Pie Chart */}
           <div className="flex-1">
@@ -173,7 +234,7 @@ export default function EnergyMixChart({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={CustomLabel}
+                  label={(props) => <CustomLabel {...props} />}
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="value"
@@ -184,7 +245,7 @@ export default function EnergyMixChart({
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={(props) => <CustomTooltip {...props} hasIncompleteData={hasIncompleteData} viewMode={viewMode} />} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -192,28 +253,39 @@ export default function EnergyMixChart({
           {/* Legend & Stats */}
           <div className="flex-1 pl-6">
             <div className="space-y-4">
-              {energyMixData.map((entry, index) => (
-                <div key={index} className="flex items-center justify-between p-4 rounded-lg border border-slate-100">
-                  <div className="flex items-center space-x-3">
-                    <div 
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: entry.color }}
-                    ></div>
-                    <div>
-                      <div className="font-semibold text-slate-900">{entry.name}</div>
-                      <div className="text-sm text-slate-500">
-                        {entry.percentage.toFixed(1)}% of total
+              {energyMixData.map((entry, index) => {
+                const uniqueBillCount = new Set(
+                  (entry.sourceBills || []).map((bill: any) => bill.id)
+                ).size;
+                
+                return (
+                  <div key={index} className="flex items-center justify-between p-4 rounded-lg border border-slate-100">
+                    <div className="flex items-center space-x-3">
+                      <div 
+                        className="w-4 h-4 rounded-full"
+                        style={{ backgroundColor: entry.color }}
+                      ></div>
+                      <div>
+                        <div className="font-semibold text-slate-900">{entry.name}</div>
+                        <div className="text-sm text-slate-500">
+                          {entry.percentage.toFixed(1)}% of total
+                          {uniqueBillCount > 0 && (
+                            <span className="ml-1">
+                              ({uniqueBillCount} {uniqueBillCount === 1 ? 'bill' : 'bills'})
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-slate-900">
-                      {viewMode === 'eur' ? '€' : ''}{Math.round(entry.value).toLocaleString()}
+                    <div className="text-right">
+                      <div className="font-bold text-slate-900">
+                        {viewMode === 'eur' ? '€' : ''}{Math.round(entry.value).toLocaleString()}
+                      </div>
+                      <div className="text-sm text-slate-500">{getUnitLabel()}</div>
                     </div>
-                    <div className="text-sm text-slate-500">{getUnitLabel()}</div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             {/* Efficiency indicator */}
@@ -236,4 +308,8 @@ export default function EnergyMixChart({
       </div>
     </div>
   );
-}
+});
+
+EnergyMixChart.displayName = 'EnergyMixChart';
+
+export default EnergyMixChart;
