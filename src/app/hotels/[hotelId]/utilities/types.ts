@@ -87,8 +87,27 @@ export interface BillEntry {
       billingPeriodStartDate?: string;
       billingPeriodEndDate?: string;
     };
-    [key: string]: any; // allow extra fallback fields
+    [key: string]: any;
   };
+}
+
+export interface MonthData {
+  month: string;
+  electricity_kwh: number;
+  electricity_day_kwh: number;
+  electricity_night_kwh: number;
+  electricity_eur: number;
+  gas_kwh: number;
+  gas_eur: number;
+  water_kwh: number;
+  water_eur: number;
+  days_covered: number;
+  days_in_month: number;
+  is_complete: boolean;
+  source_bills: Array<{
+    id: string;
+    type: string;
+  }>;
 }
 
 export interface UtilitiesData {
@@ -124,7 +143,7 @@ export interface UtilitiesData {
   };
   incomplete_months?: string[];
   daily_data?: Record<string, unknown>;
-  monthly_data?: Record<string, unknown>;
+  monthly_data?: MonthData[];
 }
 
 export interface DashboardFilters {
