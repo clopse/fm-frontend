@@ -87,13 +87,26 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
     );
   }
 
+  // Sort data chronologically by date (oldest to newest)
+  const getSortedData = () => {
+    return [...data].sort((a, b) => {
+      // Convert month strings "YYYY-MM" to Date objects
+      const dateA = new Date(a.month + "-01");
+      const dateB = new Date(b.month + "-01");
+      return dateA.getTime() - dateB.getTime();
+    });
+  };
+
   // Handle bar/month click
   const handleBarClick = async (clickData: any) => {
     const month = clickData?.month;
     if (!month) return;
 
+    // Get the year from the currently selected data
+    const currentYear = new Date().getFullYear(); // Default to current year
+    
     // Find the actual month data from original data
-    const monthDataKey = `2024-${month}`; // Default to 2024, could be made dynamic
+    const monthDataKey = `${currentYear}-${month}`; // More dynamic approach
     const monthData = data.find(d => d.month === monthDataKey);
     
     setSelectedMonth(monthDataKey);
@@ -102,7 +115,7 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
       onMonthClick(monthDataKey);
     }
 
-    // Simulate API call to get device breakdown
+    // Process device breakdown
     try {
       // For demo, use the device_breakdown from the data if available
       if (monthData?.device_breakdown) {
@@ -182,16 +195,18 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
 
   // Prepare data for charts with year-over-year comparison
   const prepareYearOverYearData = () => {
+    const sortedData = getSortedData();
     const monthsMap = new Map();
     
-    data.forEach(d => {
+    sortedData.forEach(d => {
       const [year, month] = d.month.split('-');
       const monthKey = month; // Just the month (01, 02, etc.)
+      const monthNum = parseInt(month);
       
       if (!monthsMap.has(monthKey)) {
         monthsMap.set(monthKey, {
           month: monthKey,
-          monthName: new Date(2024, parseInt(month) - 1).toLocaleDateString("en-US", { month: "short" })
+          monthName: new Date(2024, monthNum - 1).toLocaleDateString("en-US", { month: "short" })
         });
       }
       
@@ -200,7 +215,9 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
       monthData[`${year}_per_room`] = d.per_room_m3;
     });
     
-    return Array.from(monthsMap.values()).sort((a, b) => a.month.localeCompare(b.month));
+    // Sort by numeric month value (January to December)
+    return Array.from(monthsMap.values())
+      .sort((a, b) => parseInt(a.month) - parseInt(b.month));
   };
 
   const chartData = prepareYearOverYearData();
