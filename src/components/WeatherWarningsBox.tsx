@@ -68,13 +68,44 @@ interface WeatherResponse {
 export default function WeatherWarningsBox() {
   const [weatherData, setWeatherData] = useState<WeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+
+  const allLocations = ['Dublin', 'Cork', 'Belfast', 'London', 'Waterford'];
+
+  // Load saved preferences on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('weather-locations');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSelectedLocations(parsed);
+        } else {
+          setSelectedLocations(['Dublin', 'Cork', 'Belfast', 'London']);
+        }
+      } catch {
+        setSelectedLocations(['Dublin', 'Cork', 'Belfast', 'London']);
+      }
+    } else {
+      setSelectedLocations(['Dublin', 'Cork', 'Belfast', 'London']);
+    }
+  }, []);
+
+  // Save preferences when changed
+  useEffect(() => {
+    if (selectedLocations.length > 0) {
+      localStorage.setItem('weather-locations', JSON.stringify(selectedLocations));
+    }
+  }, [selectedLocations]);
 
   useEffect(() => {
-    fetchWeatherData();
-    // Refresh every 3 hours (8 calls/day = ~240/month, well under 1000 limit)
-    const interval = setInterval(fetchWeatherData, 3 * 60 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+    if (selectedLocations.length > 0) {
+      fetchWeatherData();
+      // Refresh every 3 hours (8 calls/day = ~240/month, well under 1000 limit)
+      const interval = setInterval(fetchWeatherData, 3 * 60 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedLocations]);
 
   const fetchWeatherData = async () => {
     try {
@@ -145,12 +176,34 @@ export default function WeatherWarningsBox() {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
     
-    if (date.toDateString() === today.toDateString()) return 'Today';
-    if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-    return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
+    if (date.toDateString() === today.toDateString()) {
+      return { 
+        label: 'Today', 
+        date: date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) 
+      };
+    }
+    
+    return { 
+      label: date.toLocaleDateString('en-GB', { weekday: 'short' }),
+      date: date.toLocaleDateString('en-GB', { day: 'numeric' })
+    };
+  };
+
+  const getHotelCount = (location: string) => {
+    const hotelCounts: Record<string, number> = {
+      'Dublin': 4,
+      'Cork': 1, 
+      'Belfast': 1,
+      'London': 2,
+      'Waterford': 1
+    };
+    return hotelCounts[location] || 0;
+  };
+
+  const handleLocationChange = (count: number) => {
+    const newSelection = allLocations.slice(0, count);
+    setSelectedLocations(newSelection);
   };
 
   if (loading) {
@@ -168,7 +221,7 @@ export default function WeatherWarningsBox() {
   }
 
   const warnings = weatherData?.warnings || [];
-  const forecasts = weatherData?.forecasts || [];
+  const forecasts = weatherData?.forecasts?.filter(f => selectedLocations.includes(f.location)) || [];
 
   return (
     <>
@@ -250,14 +303,30 @@ export default function WeatherWarningsBox() {
                 <p className="text-sm text-gray-500">Planning ahead • No active warnings</p>
               </div>
             </div>
-            {weatherData?.updated_at && (
-              <div className="text-xs text-gray-400">
-                Updated {new Date(weatherData.updated_at).toLocaleTimeString('en-GB', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })}
+            <div className="flex items-center space-x-4">
+              {/* Location selector */}
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-gray-500">Show:</span>
+                <select 
+                  value={selectedLocations.length}
+                  onChange={(e) => handleLocationChange(parseInt(e.target.value))}
+                  className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
+                >
+                  <option value={4}>4 locations</option>
+                  <option value={5}>All locations</option>
+                  <option value={3}>3 locations</option>
+                  <option value={2}>2 locations</option>
+                </select>
               </div>
-            )}
+              {weatherData?.updated_at && (
+                <div className="text-xs text-gray-400">
+                  Updated {new Date(weatherData.updated_at).toLocaleTimeString('en-GB', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {forecasts.length > 0 ? (
@@ -283,31 +352,32 @@ export default function WeatherWarningsBox() {
                   
                   {/* 5-Day Forecast Grid */}
                   <div className="grid grid-cols-5 gap-1">
-                    {forecast.forecast.slice(0, 5).map((day, index) => (
-                      <div key={day.date} className="text-center py-3 px-1">
-                        <div className="text-xs font-medium text-gray-600 mb-2">
-                          {formatDate(day.date)}
-                        </div>
-                        <div className="flex justify-center mb-2">
-                          <div className="w-8 h-8 flex items-center justify-center">
-                            {getWeatherIcon(day.condition, day.icon)}
+                    {forecast.forecast.slice(0, 5).map((day, index) => {
+                      const dateInfo = formatDate(day.date);
+                      return (
+                        <div key={day.date} className="text-center py-3 px-1">
+                          <div className="text-xs font-medium text-gray-600 mb-1">
+                            {dateInfo.label}
                           </div>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="text-sm font-semibold text-gray-900">
-                            {Math.round(day.high)}°
+                          <div className="text-xs text-gray-400 mb-2">
+                            {dateInfo.date}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {Math.round(day.low)}°
-                          </div>
-                          {day.precipitation_chance > 30 && (
-                            <div className="text-xs text-blue-600 font-medium">
-                              {day.precipitation_chance}%
+                          <div className="flex justify-center mb-2">
+                            <div className="w-8 h-8 flex items-center justify-center">
+                              {getWeatherIcon(day.condition, day.icon)}
                             </div>
-                          )}
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-sm font-semibold text-gray-900">
+                              {Math.round(day.high)}°
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {Math.round(day.low)}°
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
