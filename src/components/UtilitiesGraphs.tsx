@@ -909,13 +909,21 @@ export function UtilitiesGraphs() {
                           </td>
                           <td className="px-4 py-3 text-center">
                             {showAnomalies && (item as any).isAnomaly ? (
-                              <AlertTriangle className="w-4 h-4 text-orange-500 mx-auto" title="Anomaly detected" />
+                              <div title="Anomaly detected">
+                                <AlertTriangle className="w-4 h-4 text-orange-500 mx-auto" />
+                              </div>
                             ) : (item as any).yearOverYear > 10 ? (
-                              <TrendingUp className="w-4 h-4 text-red-500 mx-auto" title="Significant increase" />
+                              <div title="Significant increase">
+                                <TrendingUp className="w-4 h-4 text-red-500 mx-auto" />
+                              </div>
                             ) : (item as any).yearOverYear < -10 ? (
-                              <TrendingDown className="w-4 h-4 text-green-500 mx-auto" title="Significant decrease" />
+                              <div title="Significant decrease">
+                                <TrendingDown className="w-4 h-4 text-green-500 mx-auto" />
+                              </div>
                             ) : (
-                              <CheckCircle className="w-4 h-4 text-gray-400 mx-auto" title="Normal" />
+                              <div title="Normal">
+                                <CheckCircle className="w-4 h-4 text-gray-400 mx-auto" />
+                              </div>
                             )}
                           </td>
                         </>
