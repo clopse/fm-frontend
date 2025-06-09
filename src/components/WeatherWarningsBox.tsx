@@ -70,7 +70,13 @@ export default function WeatherWarningsBox() {
   const [loading, setLoading] = useState(true);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
 
-  const allLocations = ['Dublin', 'Cork', 'Belfast', 'London', 'Waterford'];
+  const allLocations = [
+    { name: 'Dublin', country: 'Ireland' },
+    { name: 'Cork', country: 'Ireland' },
+    { name: 'Belfast', country: 'Ireland' },
+    { name: 'Waterford', country: 'Ireland' },
+    { name: 'London', country: 'UK' }
+  ];
 
   // Load saved preferences on mount
   useEffect(() => {
@@ -81,13 +87,15 @@ export default function WeatherWarningsBox() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           setSelectedLocations(parsed);
         } else {
-          setSelectedLocations(['Dublin', 'Cork', 'Belfast', 'London']);
+          // Default to Irish locations
+          setSelectedLocations(['Dublin', 'Cork', 'Belfast', 'Waterford']);
         }
       } catch {
-        setSelectedLocations(['Dublin', 'Cork', 'Belfast', 'London']);
+        setSelectedLocations(['Dublin', 'Cork', 'Belfast', 'Waterford']);
       }
     } else {
-      setSelectedLocations(['Dublin', 'Cork', 'Belfast', 'London']);
+      // Default to Irish locations
+      setSelectedLocations(['Dublin', 'Cork', 'Belfast', 'Waterford']);
     }
   }, []);
 
@@ -190,20 +198,19 @@ export default function WeatherWarningsBox() {
     };
   };
 
-  const getHotelCount = (location: string) => {
-    const hotelCounts: Record<string, number> = {
-      'Dublin': 4,
-      'Cork': 1, 
-      'Belfast': 1,
-      'London': 2,
-      'Waterford': 1
-    };
-    return hotelCounts[location] || 0;
-  };
-
   const handleLocationChange = (count: number) => {
     const newSelection = allLocations.slice(0, count);
     setSelectedLocations(newSelection);
+  };
+
+  const toggleLocation = (locationName: string) => {
+    setSelectedLocations(prev => {
+      if (prev.includes(locationName)) {
+        return prev.filter(loc => loc !== locationName);
+      } else {
+        return [...prev, locationName];
+      }
+    });
   };
 
   if (loading) {
@@ -304,19 +311,25 @@ export default function WeatherWarningsBox() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              {/* Location selector */}
-              <div className="flex items-center space-x-2">
-                <span className="text-xs text-gray-500">Show:</span>
-                <select 
-                  value={selectedLocations.length}
-                  onChange={(e) => handleLocationChange(parseInt(e.target.value))}
-                  className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
-                >
-                  <option value={4}>4 locations</option>
-                  <option value={5}>All locations</option>
-                  <option value={3}>3 locations</option>
-                  <option value={2}>2 locations</option>
-                </select>
+              {/* Location toggles */}
+              <div className="flex items-center space-x-3">
+                <span className="text-xs text-gray-500">Locations:</span>
+                <div className="flex items-center space-x-2">
+                  {allLocations.map(location => (
+                    <label key={location.name} className="flex items-center space-x-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedLocations.includes(location.name)}
+                        onChange={() => toggleLocation(location.name)}
+                        className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-xs text-gray-700">
+                        {location.name}
+                        {location.country === 'UK' && <span className="text-gray-400 ml-1">(UK)</span>}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
               {weatherData?.updated_at && (
                 <div className="text-xs text-gray-400">
@@ -330,7 +343,13 @@ export default function WeatherWarningsBox() {
           </div>
 
           {forecasts.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className={`grid gap-4 ${
+              forecasts.length === 1 ? 'grid-cols-1' :
+              forecasts.length === 2 ? 'grid-cols-1 lg:grid-cols-2' :
+              forecasts.length === 3 ? 'grid-cols-1 lg:grid-cols-3' :
+              forecasts.length === 4 ? 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-4' :
+              'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
+            }`}>
               {forecasts.map((forecast) => (
                 <div key={forecast.location} className="bg-white border border-gray-200 rounded-lg p-4">
                   {/* Location Header with Current Weather */}
