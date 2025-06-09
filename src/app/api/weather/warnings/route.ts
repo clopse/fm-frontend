@@ -202,36 +202,66 @@ function transformForecast(current: OpenWeatherCurrent, daily: OpenWeatherDaily[
 export async function GET() {
   const API_KEY = process.env.OPENWEATHER_API_KEY;
   
+  console.log('🔑 API Key exists:', !!API_KEY);
+  console.log('🔑 API Key length:', API_KEY?.length || 0);
+  console.log('🌤️ Weather API called at:', new Date().toISOString());
+  
   if (!API_KEY) {
-    return NextResponse.json({ error: 'Weather API key not configured' }, { status: 500 });
+    console.error('❌ No API key found in environment');
+    const errorResponse = NextResponse.json({ error: 'Weather API key not configured' }, { status: 500 });
+    
+    // Prevent caching of error responses
+    errorResponse.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    errorResponse.headers.set('Pragma', 'no-cache');
+    errorResponse.headers.set('Expires', '0');
+    
+    return errorResponse;
   }
 
   try {
     const warnings: WeatherWarning[] = [];
     const forecasts: WeatherForecast[] = [];
     
+    console.log('📍 Checking weather for locations:', Object.keys(HOTEL_LOCATIONS));
+    
     // Fetch alerts, current weather, and 5-day forecast for each location
     for (const [locationName, locationData] of Object.entries(HOTEL_LOCATIONS)) {
       try {
-        const response = await fetch(
-          `https://api.openweathermap.org/data/3.0/onecall?lat=${locationData.lat}&lon=${locationData.lon}&appid=${API_KEY}&units=metric&exclude=minutely,hourly`
-        );
+        console.log(`🌍 Fetching weather for ${locationName}...`);
+        
+        const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${locationData.lat}&lon=${locationData.lon}&appid=${API_KEY}&units=metric&exclude=minutely,hourly`;
+        
+        const response = await fetch(url, {
+          // Add cache busting for OpenWeather API calls too
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        });
         
         if (!response.ok) {
-          console.error(`Weather API error for ${locationName}:`, response.status);
+          console.error(`❌ Weather API error for ${locationName}:`, response.status, response.statusText);
           continue;
         }
         
         const data = await response.json();
+        console.log(`✅ Received data for ${locationName}:`, {
+          hasAlerts: !!(data.alerts && data.alerts.length > 0),
+          alertCount: data.alerts?.length || 0,
+          hasCurrent: !!data.current,
+          hasDaily: !!(data.daily && data.daily.length > 0)
+        });
         
         // Process current weather + 5-day forecast
         if (data.current && data.daily) {
           const forecast = transformForecast(data.current, data.daily, locationName, locationData.hotels);
           forecasts.push(forecast);
+          console.log(`📊 Added forecast for ${locationName}`);
         }
         
         // Process alerts if they exist
         if (data.alerts && data.alerts.length > 0) {
+          console.log(`⚠️ Processing ${data.alerts.length} alerts for ${locationName}`);
+          
           for (const alert of data.alerts) {
             // Only include alerts that are still active or start within 7 days
             const now = Date.now() / 1000;
@@ -240,11 +270,16 @@ export async function GET() {
             if (alert.end > now && alert.start < sevenDaysFromNow) {
               const warning = transformAlert(alert, locationName, locationData.hotels);
               warnings.push(warning);
+              console.log(`🚨 Added warning: ${warning.title} (${warning.severity})`);
+            } else {
+              console.log(`⏰ Skipped expired/future alert: ${alert.event}`);
             }
           }
+        } else {
+          console.log(`✅ No alerts for ${locationName}`);
         }
       } catch (locationError) {
-        console.error(`Error fetching weather for ${locationName}:`, locationError);
+        console.error(`💥 Error fetching weather for ${locationName}:`, locationError);
         continue;
       }
     }
@@ -252,19 +287,48 @@ export async function GET() {
     // Sort warnings by start time (earliest first)
     warnings.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
     
-    return NextResponse.json({ 
+    console.log('📋 Final summary:', {
+      totalWarnings: warnings.length,
+      totalForecasts: forecasts.length,
+      locationsChecked: Object.keys(HOTEL_LOCATIONS).length
+    });
+    
+    const responseData = {
       warnings,
       forecasts,
       updated_at: new Date().toISOString(),
       locations_checked: Object.keys(HOTEL_LOCATIONS).length
-    });
+    };
+    
+    const response = NextResponse.json(responseData);
+    
+    // Add comprehensive cache control headers to prevent any caching
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    response.headers.set('Surrogate-Control', 'no-store');
+    response.headers.set('Last-Modified', new Date().toUTCString());
+    response.headers.set('ETag', `"${Date.now()}"`);
+    
+    console.log('✅ Returning fresh weather data with no-cache headers');
+    return response;
     
   } catch (error) {
-    console.error('Weather warnings API error:', error);
-    return NextResponse.json({ 
+    console.error('💥 Weather warnings API error:', error);
+    
+    const errorResponse = NextResponse.json({ 
       error: 'Failed to fetch weather data',
       warnings: [],
-      forecasts: []
+      forecasts: [],
+      updated_at: new Date().toISOString(),
+      locations_checked: 0
     }, { status: 500 });
+    
+    // Also prevent caching of error responses
+    errorResponse.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    errorResponse.headers.set('Pragma', 'no-cache');
+    errorResponse.headers.set('Expires', '0');
+    
+    return errorResponse;
   }
 }
