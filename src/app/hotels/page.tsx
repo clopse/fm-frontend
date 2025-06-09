@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { 
   Settings,
   Award,
-  Calendar,
   Zap,
   FileText,
   CheckCircle,
@@ -21,12 +20,13 @@ import UserPanel from '@/components/UserPanel';
 import UserManagementModal from '@/components/UserManagementModal';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
+import WeatherWarningsBox from '@/components/WeatherWarningsBox';
 import { hotelNames } from '@/lib/hotels';
 import { userService } from '@/services/userService';
 
 interface Upload {
   hotel: string;
-  hotel_id?: string; // ADDED: Include hotel_id for backend calls
+  hotel_id?: string;
   report: string;
   date: string;
   reportDate: string;
@@ -41,13 +41,6 @@ interface LeaderboardEntry {
   score: number;
 }
 
-interface MonthlyTask {
-  task_id: string;
-  frequency: string;
-  confirmed: boolean;
-  label?: string;
-}
-
 interface UserStats {
   total_users: number;
   active_users: number;
@@ -59,7 +52,6 @@ interface UserStats {
 export default function HotelsPage() {
   const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
-  const [monthlyTasks, setMonthlyTasks] = useState<MonthlyTask[]>([]);
   const [taskLabelMap, setTaskLabelMap] = useState<Record<string, string>>({});
   const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
@@ -69,7 +61,6 @@ export default function HotelsPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [currentHotel, setCurrentHotel] = useState(hotelNames['hiex']);
   
-  // Simple user stats only
   const [userStats, setUserStats] = useState<UserStats>({
     total_users: 0,
     active_users: 0,
@@ -103,7 +94,6 @@ export default function HotelsPage() {
     if (Object.keys(taskLabelMap).length > 0) {
       fetchLeaderboard();
       fetchRecentUploads();
-      fetchMonthlyChecklist();
     }
   }, [taskLabelMap]);
 
@@ -145,7 +135,6 @@ export default function HotelsPage() {
 
   const fetchRecentUploads = async () => {
     try {
-      // FIXED: Use /pending endpoint for admin dashboard (only unaudited files)
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/pending`);
       const data = await res.json();
 
@@ -156,7 +145,7 @@ export default function HotelsPage() {
         .slice(0, 10)
         .map((e: any) => ({
           hotel: hotelNames[e.hotel_id] || e.hotel_id,
-          hotel_id: e.hotel_id, // FIXED: Include the actual hotel_id for backend calls
+          hotel_id: e.hotel_id,
           report: `${taskLabelMap[e.task_id] || e.task_id}`,
           date: e.uploaded_at || e.uploadedAt,
           reportDate: e.report_date || e.reportDate,
@@ -169,24 +158,6 @@ export default function HotelsPage() {
       setRecentUploads(entries);
     } catch (err) {
       console.error('Error loading uploads:', err);
-    }
-  };
-
-  const fetchMonthlyChecklist = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`);
-      const data: MonthlyTask[] = await res.json();
-
-      const filtered = data.filter(t =>
-        t.frequency?.toLowerCase() === 'monthly' && !t.confirmed
-      ).map(t => ({
-        ...t,
-        label: taskLabelMap[t.task_id] || t.task_id
-      }));
-
-      setMonthlyTasks(filtered);
-    } catch (err) {
-      console.error('Error loading checklist:', err);
     }
   };
 
@@ -262,149 +233,118 @@ export default function HotelsPage() {
         {/* Main Dashboard Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* User Overview - Simple Stats Only */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="w-5 h-5 text-blue-600" />
+          {/* User Overview */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">User Overview</h2>
+                  <p className="text-sm text-gray-500">
+                    {loadingUserStats ? 'Loading...' : `${userStats.total_users} total users across all hotels`}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">User Overview</h2>
-                <p className="text-sm text-gray-500">
-                  {loadingUserStats ? 'Loading...' : `${userStats.total_users} total users across all hotels`}
-                </p>
+              <button 
+                onClick={() => setShowFullUserManagement(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+              >
+                <Settings className="w-4 h-4" />
+                <span>Manage All Users</span>
+              </button>
+            </div>
+            
+            <div className="p-6">
+              {loadingUserStats ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="text-gray-500">Loading user statistics...</div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <CheckCircle className="w-8 h-8 text-green-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-green-900">{userStats.active_users}</p>
+                        <p className="text-sm text-green-700">Active Users</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Users className="w-8 h-8 text-blue-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-blue-900">{userStats.total_users}</p>
+                        <p className="text-sm text-blue-700">Total Users</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-red-50 p-4 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <AlertTriangle className="w-8 h-8 text-red-600" />
+                      <div>
+                        <p className="text-2xl font-bold text-red-900">{userStats.inactive_users}</p>
+                        <p className="text-sm text-red-700">Inactive Users</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Dashboard Grid - Updated with Weather Warnings */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            
+            {/* Compliance Leaderboard */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Award className="w-5 h-5 text-green-600" />
+                  </div>
+                  <h2 className="text-lg font-semibold text-gray-900">Compliance Leaderboard</h2>
+                </div>
+                <span className="text-sm text-gray-500">Updated daily</span>
+              </div>
+              <ComplianceLeaderboard data={leaderboardData} />
+            </div>
+
+            {/* Weather Warnings - Replaces Monthly Tasks */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <WeatherWarningsBox />
+            </div>
+          </div>
+
+          {/* Utilities */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Zap className="w-5 h-5 text-purple-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900">Hotel Utilities Comparison</h2>
               </div>
             </div>
-            <button 
-              onClick={() => setShowFullUserManagement(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-            >
-              <Settings className="w-4 h-4" />
-              <span>Manage All Users</span>
-            </button>
+            <UtilitiesGraphs />
           </div>
-          
-          <div className="p-6">
-            {loadingUserStats ? (
-              <div className="flex justify-center items-center py-8">
-                <div className="text-gray-500">Loading user statistics...</div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-8 h-8 text-green-600" />
-                    <div>
-                      <p className="text-2xl font-bold text-green-900">{userStats.active_users}</p>
-                      <p className="text-sm text-green-700">Active Users</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Users className="w-8 h-8 text-blue-600" />
-                    <div>
-                      <p className="text-2xl font-bold text-blue-900">{userStats.total_users}</p>
-                      <p className="text-sm text-blue-700">Total Users</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <AlertTriangle className="w-8 h-8 text-red-600" />
-                    <div>
-                      <p className="text-2xl font-bold text-red-900">{userStats.inactive_users}</p>
-                      <p className="text-sm text-red-700">Inactive Users</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
 
-        {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          
-          {/* Compliance Leaderboard */}
+          {/* Recent Activity */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Award className="w-5 h-5 text-green-600" />
+                <div className="p-2 bg-gray-100 rounded-lg">
+                  <FileText className="w-5 h-5 text-gray-600" />
                 </div>
-                <h2 className="text-lg font-semibold text-gray-900">Compliance Leaderboard</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Recent Upload Activity</h2>
               </div>
-              <span className="text-sm text-gray-500">Updated daily</span>
             </div>
-            <ComplianceLeaderboard data={leaderboardData} />
+            <RecentUploads uploads={recentUploads} />
           </div>
 
-          {/* Monthly Tasks */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            {monthlyTasks.length > 0 ? (
-              <>
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <Calendar className="w-5 h-5 text-yellow-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">Pending Monthly Tasks</h3>
-                </div>
-                <div className="space-y-3">
-                  {monthlyTasks.slice(0, 5).map((task) => (
-                    <div key={task.task_id} className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
-                      <AlertTriangle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
-                      <span className="text-sm text-gray-900">{task.label}</span>
-                    </div>
-                  ))}
-                  {monthlyTasks.length > 5 && (
-                    <p className="text-sm text-gray-500 text-center">
-                      +{monthlyTasks.length - 5} more tasks
-                    </p>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-8">
-                <div className="p-3 bg-green-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">All Tasks Complete</h3>
-                <p className="text-gray-500">No pending monthly tasks at this time.</p>
-              </div>
-            )}
-          </div>
         </div>
-
-        {/* Utilities */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Zap className="w-5 h-5 text-purple-600" />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-900">Hotel Utilities Comparison</h2>
-            </div>
-          </div>
-          <UtilitiesGraphs />
-        </div>
-
-        {/* Recent Activity */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <FileText className="w-5 h-5 text-gray-600" />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-900">Recent Upload Activity</h2>
-            </div>
-          </div>
-          <RecentUploads uploads={recentUploads} />
-        </div>
-
-        </div>
-
       </div>
     </div>
   );
