@@ -216,15 +216,17 @@ export function UtilitiesGraphs() {
       for (const hotel of hotels) {
         try {
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/hotels/facilities/${hotel.id}.json`
+            `${process.env.NEXT_PUBLIC_API_URL}/hotels/facilities/${hotel.id}`
           );
           
           if (response.ok) {
             const data = await response.json();
+            // The API returns the data nested under 'facilities'
+            const facilities = data.facilities || data;
             facilitiesData[hotel.id] = {
-              totalRooms: data.structural?.totalRooms || 0,
-              totalSquareMetres: data.structural?.totalSquareMetres || 0,
-              yearBuilt: data.structural?.yearBuilt
+              totalRooms: facilities.structural?.totalRooms || 0,
+              totalSquareMetres: facilities.structural?.totalSquareMetres || 0,
+              yearBuilt: facilities.structural?.yearBuilt
             };
           } else {
             // Graceful fallback for missing data
