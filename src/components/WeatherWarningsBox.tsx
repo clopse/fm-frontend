@@ -35,22 +35,33 @@ interface WeatherWarning {
   };
 }
 
-interface CurrentWeather {
+interface WeatherForecast {
   location: string;
   hotel_ids: string[];
-  temperature: number;
-  feels_like: number;
-  condition: string;
-  description: string;
-  humidity: number;
-  wind_speed: number;
-  visibility: number;
-  icon: string;
+  current: {
+    temperature: number;
+    feels_like: number;
+    condition: string;
+    description: string;
+    humidity: number;
+    wind_speed: number;
+    icon: string;
+  };
+  forecast: Array<{
+    date: string;
+    day_name: string;
+    high: number;
+    low: number;
+    condition: string;
+    description: string;
+    precipitation_chance: number;
+    icon: string;
+  }>;
 }
 
 interface WeatherResponse {
   warnings: WeatherWarning[];
-  current_weather: CurrentWeather[];
+  forecasts: WeatherForecast[];
   updated_at: string;
 }
 
@@ -60,8 +71,8 @@ export default function WeatherWarningsBox() {
 
   useEffect(() => {
     fetchWeatherData();
-    // Refresh every hour to stay within API limits (1000 calls/month = ~33/day = ~1.4/hour)
-    const interval = setInterval(fetchWeatherData, 60 * 60 * 1000);
+    // Refresh every 3 hours (8 calls/day = ~240/month, well under 1000 limit)
+    const interval = setInterval(fetchWeatherData, 3 * 60 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -124,11 +135,22 @@ export default function WeatherWarningsBox() {
     });
   };
 
-  const getUtilitiesImpactText = (weather: CurrentWeather) => {
-    if (weather.temperature <= 5) return 'High heating demand expected';
-    if (weather.temperature >= 25) return 'Increased cooling costs possible';
-    if (weather.wind_speed > 20) return 'Monitor for power disruptions';
-    return 'Normal utilities impact';
+  const getUtilitiesImpactText = (current: any) => {
+    if (current.temperature <= 5) return 'Cold conditions';
+    if (current.temperature >= 25) return 'Warm conditions';
+    if (current.wind_speed > 20) return 'Windy conditions';
+    return 'Pleasant conditions';
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    
+    if (date.toDateString() === today.toDateString()) return 'Today';
+    if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
+    return date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
   };
 
   if (loading) {
@@ -146,7 +168,7 @@ export default function WeatherWarningsBox() {
   }
 
   const warnings = weatherData?.warnings || [];
-  const currentWeather = weatherData?.current_weather || [];
+  const forecasts = weatherData?.forecasts || [];
 
   return (
     <>
@@ -198,7 +220,7 @@ export default function WeatherWarningsBox() {
                         <span>{formatTime(warning.start_time)} - {formatTime(warning.end_time)}</span>
                       </span>
                     </div>
-                    <span className="text-gray-500">{warning.hotel_ids.length} hotels</span>
+                    <span className="text-gray-500">{warning.hotel_ids.length} hotel{warning.hotel_ids.length !== 1 ? 's' : ''}</span>
                   </div>
                   
                   <div className="text-xs bg-white bg-opacity-50 rounded p-2">
@@ -216,56 +238,74 @@ export default function WeatherWarningsBox() {
           </div>
         </>
       ) : (
-        // CURRENT WEATHER MODE - Show current conditions when no warnings
+        // FORECAST MODE - Show 5-day forecast when no warnings
         <>
           <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-600" />
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Weather Status</h3>
-              <p className="text-sm text-gray-500">Current conditions • No active warnings</p>
+              <h3 className="text-lg font-semibold text-gray-900">5-Day Weather Forecast</h3>
+              <p className="text-sm text-gray-500">Planning ahead • No active warnings</p>
             </div>
           </div>
 
-          {currentWeather.length > 0 ? (
-            <div className="space-y-3">
-              {currentWeather.map((weather) => (
-                <div key={weather.location} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
+          {forecasts.length > 0 ? (
+            <div className="space-y-4">
+              {forecasts.map((forecast) => (
+                <div key={forecast.location} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  {/* Current Weather Header */}
+                  <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
                     <div className="flex items-center space-x-3">
-                      <div className="flex items-center space-x-2">
-                        {getWeatherIcon(weather.condition, weather.icon)}
-                        <div>
-                          <h4 className="font-medium text-gray-900">{weather.location}</h4>
-                          <p className="text-xs text-gray-500 capitalize">{weather.description}</p>
-                        </div>
+                      {getWeatherIcon(forecast.current.condition, forecast.current.icon)}
+                      <div>
+                        <h4 className="font-semibold text-gray-900">{forecast.location}</h4>
+                        <p className="text-sm text-gray-600 capitalize">{forecast.current.description}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-gray-900">{Math.round(weather.temperature)}°C</div>
-                      <div className="text-xs text-gray-500">Feels {Math.round(weather.feels_like)}°C</div>
+                      <div className="text-2xl font-bold text-gray-900">{Math.round(forecast.current.temperature)}°C</div>
+                      <div className="text-xs text-gray-500">Feels {Math.round(forecast.current.feels_like)}°C</div>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-4 text-xs text-gray-600 mb-2">
+                  {/* 5-Day Forecast */}
+                  <div className="grid grid-cols-5 gap-2">
+                    {forecast.forecast.slice(0, 5).map((day, index) => (
+                      <div key={day.date} className="text-center p-2">
+                        <div className="text-xs font-medium text-gray-700 mb-1">
+                          {formatDate(day.date)}
+                        </div>
+                        <div className="flex justify-center mb-1">
+                          {getWeatherIcon(day.condition, day.icon)}
+                        </div>
+                        <div className="text-xs text-gray-900 font-medium">
+                          {Math.round(day.high)}°
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {Math.round(day.low)}°
+                        </div>
+                        {day.precipitation_chance > 20 && (
+                          <div className="text-xs text-blue-600 mt-1">
+                            {day.precipitation_chance}%
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Current Conditions Summary */}
+                  <div className="flex items-center justify-center space-x-4 mt-3 pt-2 border-t border-gray-200 text-xs text-gray-600">
                     <div className="flex items-center space-x-1">
                       <Wind className="w-3 h-3" />
-                      <span>{Math.round(weather.wind_speed)} km/h</span>
+                      <span>{Math.round(forecast.current.wind_speed)} km/h</span>
                     </div>
                     <div className="flex items-center space-x-1">
                       <Droplets className="w-3 h-3" />
-                      <span>{weather.humidity}%</span>
+                      <span>{forecast.current.humidity}%</span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <Eye className="w-3 h-3" />
-                      <span>{Math.round(weather.visibility / 1000)}km</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500">{weather.hotel_ids.length} hotels</span>
-                    <span className="text-gray-600">{getUtilitiesImpactText(weather)}</span>
+                    <span>•</span>
+                    <span>{getUtilitiesImpactText(forecast.current)}</span>
                   </div>
                 </div>
               ))}
@@ -287,7 +327,7 @@ export default function WeatherWarningsBox() {
                 Last updated: {new Date(weatherData.updated_at).toLocaleTimeString('en-GB', { 
                   hour: '2-digit', 
                   minute: '2-digit' 
-                })}
+                })} • Updates every 3 hours
               </p>
             </div>
           )}
