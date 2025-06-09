@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { 
   Settings,
   Award,
+  Calendar,
   Zap,
   FileText,
   CheckCircle,
@@ -20,6 +21,8 @@ import UserPanel from '@/components/UserPanel';
 import UserManagementModal from '@/components/UserManagementModal';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
+import WeatherWarningsBox from '@/components/WeatherWarningsBox';
+// import WeatherWarningsBox from '@/components/WeatherWarningsBox'; // TODO: Create this component
 import { hotelNames } from '@/lib/hotels';
 import { userService } from '@/services/userService';
 
@@ -40,6 +43,13 @@ interface LeaderboardEntry {
   score: number;
 }
 
+interface MonthlyTask {
+  task_id: string;
+  frequency: string;
+  confirmed: boolean;
+  label?: string;
+}
+
 interface UserStats {
   total_users: number;
   active_users: number;
@@ -51,6 +61,7 @@ interface UserStats {
 export default function HotelsPage() {
   const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+  const [monthlyTasks, setMonthlyTasks] = useState<MonthlyTask[]>([]);
   const [taskLabelMap, setTaskLabelMap] = useState<Record<string, string>>({});
   const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
@@ -93,6 +104,7 @@ export default function HotelsPage() {
     if (Object.keys(taskLabelMap).length > 0) {
       fetchLeaderboard();
       fetchRecentUploads();
+      fetchMonthlyChecklist();
     }
   }, [taskLabelMap]);
 
@@ -157,6 +169,24 @@ export default function HotelsPage() {
       setRecentUploads(entries);
     } catch (err) {
       console.error('Error loading uploads:', err);
+    }
+  };
+
+  const fetchMonthlyChecklist = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`);
+      const data: MonthlyTask[] = await res.json();
+
+      const filtered = data.filter(t =>
+        t.frequency?.toLowerCase() === 'monthly' && !t.confirmed
+      ).map(t => ({
+        ...t,
+        label: taskLabelMap[t.task_id] || t.task_id
+      }));
+
+      setMonthlyTasks(filtered);
+    } catch (err) {
+      console.error('Error loading checklist:', err);
     }
   };
 
