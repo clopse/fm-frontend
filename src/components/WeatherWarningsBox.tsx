@@ -294,22 +294,24 @@ export default function WeatherWarningsBox() {
               {/* Location selector with checkboxes */}
               <div className="flex items-center space-x-2">
                 <span className="text-xs text-gray-500">Locations:</span>
-                <select 
-                  multiple
-                  value={selectedLocations}
-                  onChange={(e) => {
-                    const values = Array.from(e.target.selectedOptions, option => option.value);
-                    setSelectedLocations(values);
-                  }}
-                  className="text-xs border border-gray-300 rounded px-2 py-1 bg-white max-h-20"
-                  size={Math.min(allLocations.length, 5)}
-                >
-                  {allLocations.map(location => (
-                    <option key={location} value={location}>
-                      {location} {location === 'London' && '(UK)'}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select 
+                    multiple
+                    value={selectedLocations}
+                    onChange={(e) => {
+                      const values = Array.from(e.target.selectedOptions, option => option.value);
+                      setSelectedLocations(values);
+                    }}
+                    className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
+                    style={{ minWidth: '120px', height: '80px' }}
+                  >
+                    {allLocations.map(location => (
+                      <option key={location} value={location}>
+                        {location} {location === 'London' && '(UK)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               {weatherData?.updated_at && (
                 <div className="text-xs text-gray-400">
@@ -323,7 +325,12 @@ export default function WeatherWarningsBox() {
           </div>
 
           {forecasts.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className={`grid gap-4 ${
+              forecasts.length === 1 ? 'grid-cols-1' :
+              forecasts.length === 2 ? 'grid-cols-1 lg:grid-cols-2' :
+              forecasts.length === 3 ? 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3' :
+              'grid-cols-1 lg:grid-cols-2'
+            }`}>
               {forecasts.map((forecast) => (
                 <div key={forecast.location} className="bg-white border border-gray-200 rounded-lg p-4">
                   {/* Location Header with Current Weather */}
