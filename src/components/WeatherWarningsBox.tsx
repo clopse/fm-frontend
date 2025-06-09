@@ -73,11 +73,12 @@ export default function WeatherWarningsBox() {
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const irishLocations = [
+  const allLocations = [
     { name: 'Dublin', country: 'Ireland' },
     { name: 'Cork', country: 'Ireland' },
     { name: 'Belfast', country: 'Ireland' },
-    { name: 'Waterford', country: 'Ireland' }
+    { name: 'Waterford', country: 'Ireland' },
+    { name: 'London', country: 'UK' }
   ];
   
 
