@@ -58,6 +58,14 @@ interface UserStats {
   hotels: Record<string, number>;
 }
 
+interface UserStats {
+  total_users: number;
+  active_users: number;
+  inactive_users: number;
+  roles: Record<string, number>;
+  hotels: Record<string, number>;
+}
+
 export default function HotelsPage() {
   const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
@@ -82,7 +90,6 @@ export default function HotelsPage() {
 
   useEffect(() => {
     fetchTaskLabels();
-    fetchUserStats();
     
     // Handle mobile detection
     const handleResize = () => {
