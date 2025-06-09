@@ -80,15 +80,7 @@ export default function WeatherWarningsBox() {
     { name: 'Waterford', country: 'Ireland' }
   ];
   
-  const availableLocations = includeUK ? [...irishLocations, ...ukLocations] : irishLocations;
 
-  const handleUKToggle = (checked: boolean) => {
-    setIncludeUK(checked);
-    if (!checked) {
-      // Remove London if UK is disabled
-      setSelectedLocations(prev => prev.filter(loc => loc !== 'London'));
-    }
-  };
 
   // Load saved preferences on mount
   useEffect(() => {
