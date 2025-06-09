@@ -266,9 +266,9 @@ function transformCurrentWeather(current: OpenWeatherCurrent, location: string, 
 function transformForecast(current: OpenWeatherCurrent, daily: OpenWeatherDaily[], location: string, hotelIds: string[]): WeatherForecast {
   const currentWeather = transformCurrentWeather(current, location, hotelIds);
   
-  // FIXED: Skip today (index 0) and get the next 5 days (indices 1-5)
-  // This ensures we always show the upcoming 5 days, not including today
-  const forecast = daily.slice(1, 6).map(day => {
+  // FIXED: Show today + next 4 days (indices 0-4)
+  // Current weather shows "right now", forecast shows today through next 4 days
+  const forecast = daily.slice(0, 5).map(day => {
     const date = new Date(day.dt * 1000);
     return {
       date: date.toISOString().split('T')[0],
@@ -379,11 +379,11 @@ export async function GET(request: Request) {
           hasDaily: !!(data.daily && data.daily.length > 0)
         });
         
-        // Process current weather + 5-day forecast (FIXED: now shows next 5 days)
+        // Process current weather + 5-day forecast (shows today + next 4 days)
         if (data.current && data.daily) {
           const forecast = transformForecast(data.current, data.daily, locationName, locationData.hotels);
           forecasts.push(forecast);
-          console.log(`📊 Added forecast for ${locationName} (next 5 days)`);
+          console.log(`📊 Added forecast for ${locationName} (today + next 4 days)`);
         }
         
         // Process alerts if they exist
