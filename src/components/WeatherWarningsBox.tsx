@@ -199,9 +199,9 @@ export default function WeatherWarningsBox() {
   };
 
   const handleLocationChange = (count: number) => {
-    const newSelection = allLocations.slice(0, count);
-    setSelectedLocations(newSelection);
-  };
+   const newSelection = allLocations.slice(0, count).map(loc => loc.name);
+   setSelectedLocations(newSelection);
+ };
 
   const toggleLocation = (locationName: string) => {
     setSelectedLocations(prev => {
