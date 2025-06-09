@@ -14,9 +14,7 @@ import {
   Sun,
   CloudSnow,
   Eye,
-  Droplets,
-  ChevronDown,
-  ChevronUp
+  Droplets
 } from 'lucide-react';
 
 interface WeatherWarning {
@@ -71,17 +69,8 @@ export default function WeatherWarningsBox() {
   const [weatherData, setWeatherData] = useState<WeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
-  const [isExpanded, setIsExpanded] = useState(false);
 
-  const allLocations = [
-    { name: 'Dublin', country: 'Ireland' },
-    { name: 'Cork', country: 'Ireland' },
-    { name: 'Belfast', country: 'Ireland' },
-    { name: 'Waterford', country: 'Ireland' },
-    { name: 'London', country: 'UK' }
-  ];
-  
-
+  const allLocations = ['Dublin', 'Cork', 'Belfast', 'Waterford', 'London'];
 
   // Load saved preferences on mount
   useEffect(() => {
@@ -112,6 +101,7 @@ export default function WeatherWarningsBox() {
   useEffect(() => {
     if (selectedLocations.length > 0) {
       fetchWeatherData();
+      // Refresh every 3 hours (8 calls/day = ~240/month, well under 1000 limit)
       const interval = setInterval(fetchWeatherData, 3 * 60 * 60 * 1000);
       return () => clearInterval(interval);
     }
@@ -139,23 +129,23 @@ export default function WeatherWarningsBox() {
 
   const getWarningIcon = (type: string) => {
     switch (type) {
-      case 'wind': return <Wind className="w-4 h-4" />;
-      case 'rain': return <CloudRain className="w-4 h-4" />;
-      case 'snow': return <CloudSnow className="w-4 h-4" />;
-      case 'temperature': return <Thermometer className="w-4 h-4" />;
-      case 'storm': return <Cloud className="w-4 h-4" />;
-      default: return <AlertTriangle className="w-4 h-4" />;
+      case 'wind': return <Wind className="w-5 h-5" />;
+      case 'rain': return <CloudRain className="w-5 h-5" />;
+      case 'snow': return <CloudSnow className="w-5 h-5" />;
+      case 'temperature': return <Thermometer className="w-5 h-5" />;
+      case 'storm': return <Cloud className="w-5 h-5" />;
+      default: return <AlertTriangle className="w-5 h-5" />;
     }
   };
 
   const getWeatherIcon = (condition: string, iconCode?: string) => {
     const cond = condition.toLowerCase();
-    if (cond.includes('clear') || cond.includes('sunny')) return <Sun className="w-5 h-5 text-yellow-500" />;
-    if (cond.includes('rain') || cond.includes('drizzle')) return <CloudRain className="w-5 h-5 text-blue-500" />;
-    if (cond.includes('snow')) return <CloudSnow className="w-5 h-5 text-blue-300" />;
-    if (cond.includes('cloud')) return <Cloud className="w-5 h-5 text-gray-500" />;
-    if (cond.includes('wind')) return <Wind className="w-5 h-5 text-gray-600" />;
-    return <Cloud className="w-5 h-5 text-gray-500" />;
+    if (cond.includes('clear') || cond.includes('sunny')) return <Sun className="w-6 h-6 text-yellow-500" />;
+    if (cond.includes('rain') || cond.includes('drizzle')) return <CloudRain className="w-6 h-6 text-blue-500" />;
+    if (cond.includes('snow')) return <CloudSnow className="w-6 h-6 text-blue-300" />;
+    if (cond.includes('cloud')) return <Cloud className="w-6 h-6 text-gray-500" />;
+    if (cond.includes('wind')) return <Wind className="w-6 h-6 text-gray-600" />;
+    return <Cloud className="w-6 h-6 text-gray-500" />;
   };
 
   const getSeverityColor = (severity: string) => {
@@ -193,32 +183,25 @@ export default function WeatherWarningsBox() {
     };
   };
 
-  const toggleLocation = (locationName: string) => {
+  const handleLocationToggle = (location: string) => {
     setSelectedLocations(prev => {
-      if (prev.includes(locationName)) {
-        return prev.filter(loc => loc !== locationName);
+      if (prev.includes(location)) {
+        return prev.filter(loc => loc !== location);
       } else {
-        return [...prev, locationName];
+        return [...prev, location];
       }
     });
   };
 
   if (loading) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <AlertTriangle className="w-4 h-4 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900">Weather Monitor</h3>
-              <p className="text-xs text-gray-500">Checking conditions...</p>
-            </div>
-          </div>
-          <div className="animate-spin">
-            <ChevronDown className="w-4 h-4 text-gray-400" />
-          </div>
+      <div className="flex items-center space-x-3">
+        <div className="p-2 bg-blue-100 rounded-lg">
+          <AlertTriangle className="w-5 h-5 text-blue-600" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Weather Monitor</h3>
+          <p className="text-sm text-gray-500">Checking conditions...</p>
         </div>
       </div>
     );
@@ -227,189 +210,182 @@ export default function WeatherWarningsBox() {
   const warnings = weatherData?.warnings || [];
   const forecasts = weatherData?.forecasts?.filter(f => selectedLocations.includes(f.location)) || [];
 
-  // Collapsed header view
-  const HeaderView = () => {
-    if (warnings.length > 0) {
-      return (
-        <div className="cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <AlertTriangle className="w-4 h-4 text-orange-600" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900">Weather Warnings</h3>
-              <p className="text-xs text-gray-500">
-                {warnings.length} active alert{warnings.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="flex space-x-1">
-              {warnings.slice(0, 3).map(warning => (
-                <div key={warning.id} className="w-2 h-2 rounded-full bg-orange-400" />
-              ))}
-              {warnings.length > 3 && <span className="text-xs text-gray-400">+{warnings.length - 3}</span>}
-            </div>
-            {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-          </div>
-        </div>
-      );
-    } else {
-      return (
-        <div className="cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle className="w-4 h-4 text-green-600" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900">Weather Forecast</h3>
-              <p className="text-xs text-gray-500">No warnings</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            {forecasts.slice(0, 3).map(forecast => (
-              <div key={forecast.location} className="flex items-center space-x-1">
-                {getWeatherIcon(forecast.current.condition)}
-                <span className="text-xs text-gray-600">{Math.round(forecast.current.temperature)}°</span>
-              </div>
-            ))}
-            {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-          </div>
-        </div>
-      );
-    }
-  };
-
   return (
-    <div className="bg-white border border-gray-200 rounded-lg">
-      <div className="p-4">
-        <HeaderView />
-      </div>
-
-      {isExpanded && (
-        <div className="border-t border-gray-200 p-4">
-          {warnings.length > 0 ? (
-            // WARNINGS MODE - Show active weather warnings
-            <div className="space-y-3">
-              {warnings.map((warning) => (
-                <div 
-                  key={warning.id} 
-                  className={`flex items-start space-x-3 p-3 rounded-lg border ${getSeverityColor(warning.severity)}`}
-                >
-                  <div className="flex-shrink-0 mt-0.5">
-                    {getWarningIcon(warning.warning_type)}
+    <>
+      {warnings.length > 0 ? (
+        // WARNINGS MODE - Show active weather warnings
+        <>
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Weather Warnings</h3>
+              <p className="text-sm text-gray-500">Active alerts • Utilities impact</p>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            {warnings.slice(0, 3).map((warning) => (
+              <div 
+                key={warning.id} 
+                className={`flex items-start space-x-3 p-4 rounded-lg border ${getSeverityColor(warning.severity)}`}
+              >
+                <div className="flex-shrink-0 mt-0.5">
+                  {getWarningIcon(warning.warning_type)}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-sm font-medium">{warning.title}</h4>
+                    <span className={`px-2 py-1 text-xs font-medium rounded uppercase ${
+                      warning.severity === 'red' ? 'bg-red-100 text-red-800' :
+                      warning.severity === 'amber' ? 'bg-orange-100 text-orange-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {warning.severity}
+                    </span>
                   </div>
                   
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="text-sm font-medium">{warning.title}</h4>
-                      <span className={`px-2 py-1 text-xs font-medium rounded uppercase ${
-                        warning.severity === 'red' ? 'bg-red-100 text-red-800' :
-                        warning.severity === 'amber' ? 'bg-orange-100 text-orange-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {warning.severity}
+                  <p className="text-sm mb-2">{warning.description}</p>
+                  
+                  <div className="flex items-center justify-between text-xs mb-2">
+                    <div className="flex items-center space-x-4">
+                      <span className="flex items-center space-x-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>{warning.location}</span>
+                      </span>
+                      <span className="flex items-center space-x-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>{formatTime(warning.start_time)} - {formatTime(warning.end_time)}</span>
                       </span>
                     </div>
-                    
-                    <p className="text-xs mb-2 text-gray-700">{warning.description}</p>
-                    
-                    <div className="flex items-center justify-between text-xs mb-2">
-                      <div className="flex items-center space-x-3">
-                        <span className="flex items-center space-x-1">
-                          <MapPin className="w-3 h-3" />
-                          <span>{warning.location}</span>
-                        </span>
-                        <span className="flex items-center space-x-1">
-                          <Calendar className="w-3 h-3" />
-                          <span>{formatTime(warning.start_time)} - {formatTime(warning.end_time)}</span>
-                        </span>
-                      </div>
-                      <span className="text-gray-500">{warning.hotel_ids.length} hotel{warning.hotel_ids.length !== 1 ? 's' : ''}</span>
-                    </div>
-                    
-                    <div className="text-xs bg-white bg-opacity-60 rounded p-2">
-                      <span className="font-medium">Impact:</span> {warning.impact}
-                    </div>
+                    <span className="text-gray-500">{warning.hotel_ids.length} hotel{warning.hotel_ids.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  
+                  <div className="text-xs bg-white bg-opacity-50 rounded p-2">
+                    <span className="font-medium">Impact:</span> {warning.impact}
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            // FORECAST MODE - Show 5-day forecast when no warnings
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <div className="text-sm font-medium text-gray-900">5-Day Forecast</div>
-                <div className="relative">
-                  <select
-                    multiple
-                    value={selectedLocations}
-                    onChange={(e) => {
-                      const values = Array.from(e.target.selectedOptions, option => option.value);
-                      setSelectedLocations(values);
-                    }}
-                    className="text-xs border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500 max-h-20"
-                    size={Math.min(allLocations.length, 5)}
-                  >
-                    {allLocations.map(location => (
-                      <option key={location.name} value={location.name}>
-                        {location.name} {location.country === 'UK' && '(UK)'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
-
-              {forecasts.length > 0 ? (
-                <div className="grid grid-cols-5 gap-4">
-                  {forecasts.map((forecast) => (
-                    <div key={forecast.location} className="text-center">
-                      <div className="text-xs font-medium text-gray-900 mb-1">{forecast.location}</div>
-                      <div className="flex items-center justify-center space-x-1 mb-2">
-                        {getWeatherIcon(forecast.current.condition)}
-                        <span className="text-sm font-semibold">{Math.round(forecast.current.temperature)}°</span>
-                      </div>
-                      <div className="grid grid-cols-5 gap-1">
-                        {forecast.forecast.slice(0, 5).map((day) => {
-                          const dateInfo = formatDate(day.date);
-                          return (
-                            <div key={day.date} className="text-center">
-                              <div className="text-xs text-gray-500 mb-1">{dateInfo.label}</div>
-                              <div className="flex justify-center mb-1">
-                                <div className="w-4 h-4 flex items-center justify-center">
-                                  {getWeatherIcon(day.condition, day.icon)}
-                                </div>
-                              </div>
-                              <div className="text-xs">
-                                <div className="font-semibold">{Math.round(day.high)}°</div>
-                                <div className="text-gray-500">{Math.round(day.low)}°</div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+            ))}
+            
+            {warnings.length > 3 && (
+              <p className="text-sm text-gray-500 text-center">
+                +{warnings.length - 3} more warnings
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        // FORECAST MODE - Show 5-day forecast when no warnings
+        <>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">5-Day Weather Forecast</h3>
+                <p className="text-sm text-gray-500">Planning ahead • No active warnings</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              {/* Location selector with checkboxes */}
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-gray-500">Locations:</span>
+                <select 
+                  multiple
+                  value={selectedLocations}
+                  onChange={(e) => {
+                    const values = Array.from(e.target.selectedOptions, option => option.value);
+                    setSelectedLocations(values);
+                  }}
+                  className="text-xs border border-gray-300 rounded px-2 py-1 bg-white max-h-20"
+                  size={Math.min(allLocations.length, 5)}
+                >
+                  {allLocations.map(location => (
+                    <option key={location} value={location}>
+                      {location} {location === 'London' && '(UK)'}
+                    </option>
                   ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <CheckCircle className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No forecast data available</p>
-                </div>
-              )}
-              
+                </select>
+              </div>
               {weatherData?.updated_at && (
-                <div className="text-xs text-gray-400 text-center mt-2">
+                <div className="text-xs text-gray-400">
                   Updated {new Date(weatherData.updated_at).toLocaleTimeString('en-GB', { 
                     hour: '2-digit', 
                     minute: '2-digit' 
                   })}
                 </div>
               )}
-            </>
+            </div>
+          </div>
+
+          {forecasts.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {forecasts.map((forecast) => (
+                <div key={forecast.location} className="bg-white border border-gray-200 rounded-lg p-4">
+                  {/* Location Header with Current Weather */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
+                        {getWeatherIcon(forecast.current.condition, forecast.current.icon)}
+                        <div>
+                          <h4 className="font-semibold text-gray-900 text-lg">{forecast.location}</h4>
+                          <p className="text-sm text-gray-600 capitalize">{forecast.current.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-gray-900">{Math.round(forecast.current.temperature)}°</div>
+                      <div className="text-sm text-gray-500">Feels {Math.round(forecast.current.feels_like)}°</div>
+                    </div>
+                  </div>
+                  
+                  {/* 5-Day Forecast Grid */}
+                  <div className="grid grid-cols-5 gap-1">
+                    {forecast.forecast.slice(0, 5).map((day, index) => {
+                      const dateInfo = formatDate(day.date);
+                      return (
+                        <div key={day.date} className="text-center py-3 px-1">
+                          <div className="text-xs font-medium text-gray-600 mb-1">
+                            {dateInfo.label}
+                          </div>
+                          <div className="text-xs text-gray-400 mb-2">
+                            {dateInfo.date}
+                          </div>
+                          <div className="flex justify-center mb-2">
+                            <div className="w-8 h-8 flex items-center justify-center">
+                              {getWeatherIcon(day.condition, day.icon)}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-sm font-semibold text-gray-900">
+                              {Math.round(day.high)}°
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {Math.round(day.low)}°
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                <CheckCircle className="w-10 h-10 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Weather Data Unavailable</h3>
+              <p className="text-gray-500">Unable to load forecast information at this time.</p>
+            </div>
           )}
-        </div>
+        </>
       )}
-    </div>
+    </>
   );
 }
