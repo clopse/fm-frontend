@@ -19,6 +19,9 @@ export default function ComplianceLeaderboard({ data }: Props) {
   const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
+  // Default hotels list
+  const defaultHotels = ['hiex', 'hida', 'marina', 'moxy', 'hbhdcc'];
+
   // Create hotel lookup map to avoid repeated .find() calls
   const hotelMap = useMemo(() => 
     Object.fromEntries(hotels.map(h => [h.id, h])),
@@ -32,16 +35,15 @@ export default function ComplianceLeaderboard({ data }: Props) {
     return '#ef4444'; // red-500
   }, []);
 
-  // On first load, pull hotel filters from localStorage or default to all
+  // On first load, pull hotel filters from localStorage or default to specific hotels
   useEffect(() => {
     const saved = localStorage?.getItem('selectedHotels');
     if (saved) {
       setSelectedHotels(JSON.parse(saved));
     } else {
-      const allHotelIds = hotels.map((h) => h.id);
-      setSelectedHotels(allHotelIds);
+      setSelectedHotels(defaultHotels);
       if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('selectedHotels', JSON.stringify(allHotelIds));
+        localStorage.setItem('selectedHotels', JSON.stringify(defaultHotels));
       }
     }
   }, []);
