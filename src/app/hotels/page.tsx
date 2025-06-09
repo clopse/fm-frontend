@@ -1,387 +1,417 @@
-// FILE: src/app/hotels/page.tsx
+// src/components/WeatherWarningsBox.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { 
-  Settings,
-  Award,
-  Calendar,
-  Zap,
-  FileText,
+  AlertTriangle, 
   CheckCircle,
-  AlertTriangle,
-  Users
+  MapPin,
+  Calendar,
+  Thermometer,
+  Wind,
+  CloudRain,
+  Cloud,
+  Sun,
+  CloudSnow,
+  Eye,
+  Droplets
 } from 'lucide-react';
 
-import ComplianceLeaderboard from '@/components/ComplianceLeaderboard';
-import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
-import { RecentUploads } from '@/components/RecentUploads';
-import HotelSelectorModal from '@/components/HotelSelectorModal';
-import UserPanel from '@/components/UserPanel';
-import UserManagementModal from '@/components/UserManagementModal';
-import AdminSidebar from '@/components/AdminSidebar';
-import AdminHeader from '@/components/AdminHeader';
-import WeatherWarningsBox from '@/components/WeatherWarningsBox';
-// import WeatherWarningsBox from '@/components/WeatherWarningsBox'; // TODO: Create this component
-import { hotelNames } from '@/lib/hotels';
-import { userService } from '@/services/userService';
-
-interface Upload {
-  hotel: string;
-  hotel_id?: string;
-  report: string;
-  date: string;
-  reportDate: string;
-  task_id: string;
-  fileUrl: string;
-  uploaded_by: string;
-  filename: string;
+interface WeatherWarning {
+  id: string;
+  location: string;
+  hotel_ids: string[];
+  warning_type: 'wind' | 'rain' | 'snow' | 'temperature' | 'storm';
+  severity: 'yellow' | 'amber' | 'red';
+  title: string;
+  description: string;
+  start_time: string;
+  end_time: string;
+  impact: string;
+  utilities_impact?: {
+    heating_demand?: 'high' | 'low';
+    cooling_demand?: 'high' | 'low';
+    power_risk?: boolean;
+  };
 }
 
-interface LeaderboardEntry {
-  hotel: string;
-  score: number;
+interface WeatherForecast {
+  location: string;
+  hotel_ids: string[];
+  current: {
+    temperature: number;
+    feels_like: number;
+    condition: string;
+    description: string;
+    humidity: number;
+    wind_speed: number;
+    icon: string;
+  };
+  forecast: Array<{
+    date: string;
+    day_name: string;
+    high: number;
+    low: number;
+    condition: string;
+    description: string;
+    precipitation_chance: number;
+    icon: string;
+  }>;
 }
 
-interface MonthlyTask {
-  task_id: string;
-  frequency: string;
-  confirmed: boolean;
-  label?: string;
+interface WeatherResponse {
+  warnings: WeatherWarning[];
+  forecasts: WeatherForecast[];
+  updated_at: string;
 }
 
-interface UserStats {
-  total_users: number;
-  active_users: number;
-  inactive_users: number;
-  roles: Record<string, number>;
-  hotels: Record<string, number>;
-}
+export default function WeatherWarningsBox() {
+  const [weatherData, setWeatherData] = useState<WeatherResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
 
-interface UserStats {
-  total_users: number;
-  active_users: number;
-  inactive_users: number;
-  roles: Record<string, number>;
-  hotels: Record<string, number>;
-}
+  const allLocations = [
+    { name: 'Dublin', country: 'Ireland' },
+    { name: 'Cork', country: 'Ireland' },
+    { name: 'Belfast', country: 'Ireland' },
+    { name: 'Waterford', country: 'Ireland' },
+    { name: 'London', country: 'UK' }
+  ];
 
-export default function HotelsPage() {
-  const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
-  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
-  const [monthlyTasks, setMonthlyTasks] = useState<MonthlyTask[]>([]);
-  const [taskLabelMap, setTaskLabelMap] = useState<Record<string, string>>({});
-  const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
-  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
-  const [showFullUserManagement, setShowFullUserManagement] = useState(false);
-  const [showAccountSettings, setShowAccountSettings] = useState(false);
-  const [showAdminSidebar, setShowAdminSidebar] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const [currentHotel, setCurrentHotel] = useState(hotelNames['hiex']);
-  
-  const [userStats, setUserStats] = useState<UserStats>({
-    total_users: 0,
-    active_users: 0,
-    inactive_users: 0,
-    roles: {},
-    hotels: {}
-  });
-  const [loadingUserStats, setLoadingUserStats] = useState(true);
-
+  // Load saved preferences on mount
   useEffect(() => {
-    fetchTaskLabels();
-    
-    // Handle mobile detection
-    const handleResize = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-      if (!mobile) {
-        setShowAdminSidebar(true);
-      } else {
-        setShowAdminSidebar(false);
+    const saved = localStorage.getItem('weather-locations');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSelectedLocations(parsed);
+        } else {
+          // Default to Irish locations
+          setSelectedLocations(['Dublin', 'Cork', 'Belfast', 'Waterford']);
+        }
+      } catch {
+        setSelectedLocations(['Dublin', 'Cork', 'Belfast', 'Waterford']);
       }
-    };
-    
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    } else {
+      // Default to Irish locations
+      setSelectedLocations(['Dublin', 'Cork', 'Belfast', 'Waterford']);
+    }
   }, []);
 
+  // Save preferences when changed
   useEffect(() => {
-    if (Object.keys(taskLabelMap).length > 0) {
-      fetchLeaderboard();
-      fetchRecentUploads();
-      fetchMonthlyChecklist();
+    if (selectedLocations.length > 0) {
+      localStorage.setItem('weather-locations', JSON.stringify(selectedLocations));
     }
-  }, [taskLabelMap]);
+  }, [selectedLocations]);
 
-  const fetchUserStats = async () => {
+  useEffect(() => {
+    if (selectedLocations.length > 0) {
+      fetchWeatherData();
+      // Refresh every 3 hours (8 calls/day = ~240/month, well under 1000 limit)
+      const interval = setInterval(fetchWeatherData, 3 * 60 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedLocations]);
+
+  const fetchWeatherData = async () => {
     try {
-      setLoadingUserStats(true);
-      if (userService.isAuthenticated()) {
-        const statsData = await userService.getUserStats();
-        setUserStats(statsData);
+      setLoading(true);
+      const response = await fetch('/api/weather/warnings');
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('Weather API error:', data.error);
+        setWeatherData(null);
+      } else {
+        setWeatherData(data);
       }
-    } catch (err) {
-      console.error('Error fetching user stats:', err);
+    } catch (error) {
+      console.error('Error fetching weather data:', error);
+      setWeatherData(null);
     } finally {
-      setLoadingUserStats(false);
+      setLoading(false);
     }
   };
 
-  const fetchTaskLabels = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/task-labels`);
-      const data = await res.json();
-      setTaskLabelMap(data);
-    } catch (err) {
-      console.error('Error fetching task labels:', err);
+  const getWarningIcon = (type: string) => {
+    switch (type) {
+      case 'wind': return <Wind className="w-5 h-5" />;
+      case 'rain': return <CloudRain className="w-5 h-5" />;
+      case 'snow': return <CloudSnow className="w-5 h-5" />;
+      case 'temperature': return <Thermometer className="w-5 h-5" />;
+      case 'storm': return <Cloud className="w-5 h-5" />;
+      default: return <AlertTriangle className="w-5 h-5" />;
     }
   };
 
-  const fetchLeaderboard = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`);
-      const data: LeaderboardEntry[] = await res.json();
-      const sorted = [...data].sort((a, b) => b.score - a.score);
-      setLeaderboardData(sorted);
-    } catch (err) {
-      console.error('Error loading leaderboard:', err);
-      setLeaderboardData([]);
+  const getWeatherIcon = (condition: string, iconCode?: string) => {
+    const cond = condition.toLowerCase();
+    if (cond.includes('clear') || cond.includes('sunny')) return <Sun className="w-6 h-6 text-yellow-500" />;
+    if (cond.includes('rain') || cond.includes('drizzle')) return <CloudRain className="w-6 h-6 text-blue-500" />;
+    if (cond.includes('snow')) return <CloudSnow className="w-6 h-6 text-blue-300" />;
+    if (cond.includes('cloud')) return <Cloud className="w-6 h-6 text-gray-500" />;
+    if (cond.includes('wind')) return <Wind className="w-6 h-6 text-gray-600" />;
+    return <Cloud className="w-6 h-6 text-gray-500" />;
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'red': return 'bg-red-50 border-red-200 text-red-800';
+      case 'amber': return 'bg-orange-50 border-orange-200 text-orange-800';
+      case 'yellow': return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+      default: return 'bg-gray-50 border-gray-200 text-gray-800';
     }
   };
 
-  const fetchRecentUploads = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/pending`);
-      const data = await res.json();
+  const formatTime = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-GB', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
-      const entries = (data.entries || [])
-        .sort((a: any, b: any) =>
-          new Date(b.uploaded_at || b.uploadedAt).getTime() - new Date(a.uploaded_at || a.uploadedAt).getTime()
-        )
-        .slice(0, 10)
-        .map((e: any) => ({
-          hotel: hotelNames[e.hotel_id] || e.hotel_id,
-          hotel_id: e.hotel_id,
-          report: `${taskLabelMap[e.task_id] || e.task_id}`,
-          date: e.uploaded_at || e.uploadedAt,
-          reportDate: e.report_date || e.reportDate,
-          task_id: e.task_id,
-          fileUrl: e.fileUrl,
-          uploaded_by: e.uploaded_by,
-          filename: e.filename
-        }));
+  const getUtilitiesImpactText = (current: any) => {
+    if (current.temperature <= 5) return 'Cold conditions';
+    if (current.temperature >= 25) return 'Warm conditions';
+    if (current.wind_speed > 20) return 'Windy conditions';
+    return 'Pleasant conditions';
+  };
 
-      setRecentUploads(entries);
-    } catch (err) {
-      console.error('Error loading uploads:', err);
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    
+    if (date.toDateString() === today.toDateString()) {
+      return { 
+        label: 'Today', 
+        date: date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) 
+      };
     }
+    
+    return { 
+      label: date.toLocaleDateString('en-GB', { weekday: 'short' }),
+      date: date.toLocaleDateString('en-GB', { day: 'numeric' })
+    };
   };
 
-  const fetchMonthlyChecklist = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`);
-      const data: MonthlyTask[] = await res.json();
-
-      const filtered = data.filter(t =>
-        t.frequency?.toLowerCase() === 'monthly' && !t.confirmed
-      ).map(t => ({
-        ...t,
-        label: taskLabelMap[t.task_id] || t.task_id
-      }));
-
-      setMonthlyTasks(filtered);
-    } catch (err) {
-      console.error('Error loading checklist:', err);
-    }
+  const handleLocationChange = (count: number) => {
+    const newSelection = allLocations.slice(0, count).map(loc => loc.name);
+    setSelectedLocations(newSelection);
   };
 
-  const handleHotelSelect = (hotelName: string) => {
-    setCurrentHotel(hotelName);
-    setIsHotelModalOpen(false);
+  const toggleLocation = (locationName: string) => {
+    setSelectedLocations(prev => {
+      if (prev.includes(locationName)) {
+        return prev.filter(loc => loc !== locationName);
+      } else {
+        return [...prev, locationName];
+      }
+    });
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center space-x-3">
+        <div className="p-2 bg-blue-100 rounded-lg">
+          <AlertTriangle className="w-5 h-5 text-blue-600" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Weather Monitor</h3>
+          <p className="text-sm text-gray-500">Checking conditions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const warnings = weatherData?.warnings || [];
+  const forecasts = weatherData?.forecasts?.filter(f => selectedLocations.includes(f.location)) || [];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Admin Sidebar */}
-      <AdminSidebar 
-        isMobile={isMobile}
-        isOpen={showAdminSidebar}
-        onClose={() => setShowAdminSidebar(false)}
-      />
-
-      {/* Main Content Area */}
-      <div className={`flex-1 transition-all duration-300 ${showAdminSidebar && !isMobile ? 'ml-72' : 'ml-0'}`}>
-        <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
-
-        {/* Admin Header */}
-        <AdminHeader 
-          showSidebar={showAdminSidebar}
-          onToggleSidebar={() => setShowAdminSidebar(!showAdminSidebar)}
-          onOpenHotelSelector={() => setIsHotelModalOpen(true)}
-          onOpenUserPanel={() => setIsUserPanelOpen(true)}
-          onOpenAccountSettings={() => setShowAccountSettings(true)}
-          isMobile={isMobile}
-        />
-
-        <HotelSelectorModal
-          isOpen={isHotelModalOpen}
-          setIsOpen={setIsHotelModalOpen}
-          onSelectHotel={handleHotelSelect}
-        />
-
-        {/* Account Settings Modal */}
-        {showAccountSettings && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900">Account Settings</h2>
-                <button onClick={() => setShowAccountSettings(false)} className="text-gray-400 hover:text-gray-600">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="p-6">
-                <p>Account settings content goes here...</p>
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button 
-                    onClick={() => setShowAccountSettings(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                  >
-                    Cancel
-                  </button>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    Save Changes
-                  </button>
-                </div>
-              </div>
+    <>
+      {warnings.length > 0 ? (
+        // WARNINGS MODE - Show active weather warnings
+        <>
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Weather Warnings</h3>
+              <p className="text-sm text-gray-500">Active alerts • Utilities impact</p>
             </div>
           </div>
-        )}
-
-        <UserManagementModal 
-          isOpen={showFullUserManagement}
-          onClose={() => setShowFullUserManagement(false)}
-        />
-
-        {/* Main Dashboard Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-          {/* User Overview */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="w-5 h-5 text-blue-600" />
+          
+          <div className="space-y-3">
+            {warnings.slice(0, 3).map((warning) => (
+              <div 
+                key={warning.id} 
+                className={`flex items-start space-x-3 p-4 rounded-lg border ${getSeverityColor(warning.severity)}`}
+              >
+                <div className="flex-shrink-0 mt-0.5">
+                  {getWarningIcon(warning.warning_type)}
                 </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">User Overview</h2>
-                  <p className="text-sm text-gray-500">
-                    {loadingUserStats ? 'Loading...' : `${userStats.total_users} total users across all hotels`}
-                  </p>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-sm font-medium">{warning.title}</h4>
+                    <span className={`px-2 py-1 text-xs font-medium rounded uppercase ${
+                      warning.severity === 'red' ? 'bg-red-100 text-red-800' :
+                      warning.severity === 'amber' ? 'bg-orange-100 text-orange-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {warning.severity}
+                    </span>
+                  </div>
+                  
+                  <p className="text-sm mb-2">{warning.description}</p>
+                  
+                  <div className="flex items-center justify-between text-xs mb-2">
+                    <div className="flex items-center space-x-4">
+                      <span className="flex items-center space-x-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>{warning.location}</span>
+                      </span>
+                      <span className="flex items-center space-x-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>{formatTime(warning.start_time)} - {formatTime(warning.end_time)}</span>
+                      </span>
+                    </div>
+                    <span className="text-gray-500">{warning.hotel_ids.length} hotel{warning.hotel_ids.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  
+                  <div className="text-xs bg-white bg-opacity-50 rounded p-2">
+                    <span className="font-medium">Impact:</span> {warning.impact}
+                  </div>
                 </div>
               </div>
-              <button 
-                onClick={() => setShowFullUserManagement(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-              >
-                <Settings className="w-4 h-4" />
-                <span>Manage All Users</span>
-              </button>
-            </div>
+            ))}
             
-            <div className="p-6">
-              {loadingUserStats ? (
-                <div className="flex justify-center items-center py-8">
-                  <div className="text-gray-500">Loading user statistics...</div>
+            {warnings.length > 3 && (
+              <p className="text-sm text-gray-500 text-center">
+                +{warnings.length - 3} more warnings
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        // FORECAST MODE - Show 5-day forecast when no warnings
+        <>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">5-Day Weather Forecast</h3>
+                <p className="text-sm text-gray-500">Planning ahead • No active warnings</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              {/* Location toggles */}
+              <div className="flex items-center space-x-3">
+                <span className="text-xs text-gray-500">Locations:</span>
+                <div className="flex items-center space-x-2">
+                  {allLocations.map(location => (
+                    <label key={location.name} className="flex items-center space-x-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedLocations.includes(location.name)}
+                        onChange={() => toggleLocation(location.name)}
+                        className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-xs text-gray-700">
+                        {location.name}
+                        {location.country === 'UK' && <span className="text-gray-400 ml-1">(UK)</span>}
+                      </span>
+                    </label>
+                  ))}
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <CheckCircle className="w-8 h-8 text-green-600" />
-                      <div>
-                        <p className="text-2xl font-bold text-green-900">{userStats.active_users}</p>
-                        <p className="text-sm text-green-700">Active Users</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Users className="w-8 h-8 text-blue-600" />
-                      <div>
-                        <p className="text-2xl font-bold text-blue-900">{userStats.total_users}</p>
-                        <p className="text-sm text-blue-700">Total Users</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-red-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <AlertTriangle className="w-8 h-8 text-red-600" />
-                      <div>
-                        <p className="text-2xl font-bold text-red-900">{userStats.inactive_users}</p>
-                        <p className="text-sm text-red-700">Inactive Users</p>
-                      </div>
-                    </div>
-                  </div>
+              </div>
+              {weatherData?.updated_at && (
+                <div className="text-xs text-gray-400">
+                  Updated {new Date(weatherData.updated_at).toLocaleTimeString('en-GB', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Dashboard Grid - Updated with Weather Warnings */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            
-            {/* Compliance Leaderboard */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Award className="w-5 h-5 text-green-600" />
+          {forecasts.length > 0 ? (
+            <div className={`grid gap-4 ${
+              forecasts.length === 1 ? 'grid-cols-1' :
+              forecasts.length === 2 ? 'grid-cols-1 lg:grid-cols-2' :
+              forecasts.length === 3 ? 'grid-cols-1 lg:grid-cols-3' :
+              forecasts.length === 4 ? 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-4' :
+              'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
+            }`}>
+              {forecasts.map((forecast) => (
+                <div key={forecast.location} className="bg-white border border-gray-200 rounded-lg p-4">
+                  {/* Location Header with Current Weather */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
+                        {getWeatherIcon(forecast.current.condition, forecast.current.icon)}
+                        <div>
+                          <h4 className="font-semibold text-gray-900 text-lg">{forecast.location}</h4>
+                          <p className="text-sm text-gray-600 capitalize">{forecast.current.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-gray-900">{Math.round(forecast.current.temperature)}°</div>
+                      <div className="text-sm text-gray-500">Feels {Math.round(forecast.current.feels_like)}°</div>
+                    </div>
                   </div>
-                  <h2 className="text-lg font-semibold text-gray-900">Compliance Leaderboard</h2>
+                  
+                  {/* 5-Day Forecast Grid */}
+                  <div className="grid grid-cols-5 gap-1">
+                    {forecast.forecast.slice(0, 5).map((day, index) => {
+                      const dateInfo = formatDate(day.date);
+                      return (
+                        <div key={day.date} className="text-center py-3 px-1">
+                          <div className="text-xs font-medium text-gray-600 mb-1">
+                            {dateInfo.label}
+                          </div>
+                          <div className="text-xs text-gray-400 mb-2">
+                            {dateInfo.date}
+                          </div>
+                          <div className="flex justify-center mb-2">
+                            <div className="w-8 h-8 flex items-center justify-center">
+                              {getWeatherIcon(day.condition, day.icon)}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-sm font-semibold text-gray-900">
+                              {Math.round(day.high)}°
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {Math.round(day.low)}°
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <span className="text-sm text-gray-500">Updated daily</span>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                <CheckCircle className="w-10 h-10 text-gray-400" />
               </div>
-              <ComplianceLeaderboard data={leaderboardData} />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Weather Data Unavailable</h3>
+              <p className="text-gray-500">Unable to load forecast information at this time.</p>
             </div>
-
-            {/* Weather Warnings - Replaces Monthly Tasks */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <WeatherWarningsBox />
-            </div>
-          </div>
-
-          {/* Utilities */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Zap className="w-5 h-5 text-purple-600" />
-                </div>
-                <h2 className="text-lg font-semibold text-gray-900">Hotel Utilities Comparison</h2>
-              </div>
-            </div>
-            <UtilitiesGraphs />
-          </div>
-
-          {/* Recent Activity */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-gray-100 rounded-lg">
-                  <FileText className="w-5 h-5 text-gray-600" />
-                </div>
-                <h2 className="text-lg font-semibold text-gray-900">Recent Upload Activity</h2>
-              </div>
-            </div>
-            <RecentUploads uploads={recentUploads} />
-          </div>
-
-        </div>
-      </div>
-    </div>
+          )}
+        </>
+      )}
+    </>
   );
 }
