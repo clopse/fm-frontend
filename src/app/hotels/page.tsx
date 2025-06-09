@@ -20,7 +20,6 @@ import UserPanel from '@/components/UserPanel';
 import UserManagementModal from '@/components/UserManagementModal';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
-import WeatherWarningsBox from '@/components/WeatherWarningsBox';
 import { hotelNames } from '@/lib/hotels';
 import { userService } from '@/services/userService';
 
