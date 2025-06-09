@@ -18,13 +18,11 @@ import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
 import { RecentUploads } from '@/components/RecentUploads';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
 import UserPanel from '@/components/UserPanel';
-import UserManagementModal from '@/components/UserManagementModal';
+
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
 import WeatherWarningsBox from '@/components/WeatherWarningsBox';
-// import WeatherWarningsBox from '@/components/WeatherWarningsBox'; // TODO: Create this component
 import { hotelNames } from '@/lib/hotels';
-import { userService } from '@/services/userService';
 
 interface Upload {
   hotel: string;
@@ -50,22 +48,6 @@ interface MonthlyTask {
   label?: string;
 }
 
-interface UserStats {
-  total_users: number;
-  active_users: number;
-  inactive_users: number;
-  roles: Record<string, number>;
-  hotels: Record<string, number>;
-}
-
-interface UserStats {
-  total_users: number;
-  active_users: number;
-  inactive_users: number;
-  roles: Record<string, number>;
-  hotels: Record<string, number>;
-}
-
 export default function HotelsPage() {
   const [recentUploads, setRecentUploads] = useState<Upload[]>([]);
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
@@ -73,20 +55,10 @@ export default function HotelsPage() {
   const [taskLabelMap, setTaskLabelMap] = useState<Record<string, string>>({});
   const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
   const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
-  const [showFullUserManagement, setShowFullUserManagement] = useState(false);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [showAdminSidebar, setShowAdminSidebar] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [currentHotel, setCurrentHotel] = useState(hotelNames['hiex']);
-  
-  const [userStats, setUserStats] = useState<UserStats>({
-    total_users: 0,
-    active_users: 0,
-    inactive_users: 0,
-    roles: {},
-    hotels: {}
-  });
-  const [loadingUserStats, setLoadingUserStats] = useState(true);
 
   useEffect(() => {
     fetchTaskLabels();
@@ -115,19 +87,7 @@ export default function HotelsPage() {
     }
   }, [taskLabelMap]);
 
-  const fetchUserStats = async () => {
-    try {
-      setLoadingUserStats(true);
-      if (userService.isAuthenticated()) {
-        const statsData = await userService.getUserStats();
-        setUserStats(statsData);
-      }
-    } catch (err) {
-      console.error('Error fetching user stats:', err);
-    } finally {
-      setLoadingUserStats(false);
-    }
-  };
+
 
   const fetchTaskLabels = async () => {
     try {
@@ -261,75 +221,10 @@ export default function HotelsPage() {
           </div>
         )}
 
-        <UserManagementModal 
-          isOpen={showFullUserManagement}
-          onClose={() => setShowFullUserManagement(false)}
-        />
+
 
         {/* Main Dashboard Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
-          {/* User Overview */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Users className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">User Overview</h2>
-                  <p className="text-sm text-gray-500">
-                    {loadingUserStats ? 'Loading...' : `${userStats.total_users} total users across all hotels`}
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setShowFullUserManagement(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-              >
-                <Settings className="w-4 h-4" />
-                <span>Manage All Users</span>
-              </button>
-            </div>
-            
-            <div className="p-6">
-              {loadingUserStats ? (
-                <div className="flex justify-center items-center py-8">
-                  <div className="text-gray-500">Loading user statistics...</div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <CheckCircle className="w-8 h-8 text-green-600" />
-                      <div>
-                        <p className="text-2xl font-bold text-green-900">{userStats.active_users}</p>
-                        <p className="text-sm text-green-700">Active Users</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Users className="w-8 h-8 text-blue-600" />
-                      <div>
-                        <p className="text-2xl font-bold text-blue-900">{userStats.total_users}</p>
-                        <p className="text-sm text-blue-700">Total Users</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-red-50 p-4 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <AlertTriangle className="w-8 h-8 text-red-600" />
-                      <div>
-                        <p className="text-2xl font-bold text-red-900">{userStats.inactive_users}</p>
-                        <p className="text-sm text-red-700">Inactive Users</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Dashboard Grid - Updated with Weather Warnings */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
