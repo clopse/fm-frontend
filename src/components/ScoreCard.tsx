@@ -66,6 +66,13 @@ const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreC
     };
   }, [earnedPoints, totalPoints, colorHelpers]);
 
+  // Simple format function - lightweight enough to not need memoization
+  const formatMonth = (month: string): string => {
+    const [year, monthNum] = month.split('-');
+    const date = new Date(parseInt(year), parseInt(monthNum) - 1);
+    return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  };
+
   // Memoize chart data with formatted months
   const chartData = useMemo(() => 
     graphPoints.map(point => ({
@@ -74,13 +81,6 @@ const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreC
     })),
     [graphPoints]
   );
-
-  // Simple format function - lightweight enough to not need memoization
-  const formatMonth = (month: string): string => {
-    const [year, monthNum] = month.split('-');
-    const date = new Date(parseInt(year), parseInt(monthNum) - 1);
-    return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-  };
 
   // Memoize the custom tooltip component to prevent recreation
   const CustomTooltip = useCallback(({ active, payload, label }: any) => {
