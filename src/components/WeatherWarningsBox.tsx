@@ -240,95 +240,85 @@ export default function WeatherWarningsBox() {
       ) : (
         // FORECAST MODE - Show 5-day forecast when no warnings
         <>
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-blue-600" />
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <CheckCircle className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">5-Day Weather Forecast</h3>
+                <p className="text-sm text-gray-500">Planning ahead • No active warnings</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">5-Day Weather Forecast</h3>
-              <p className="text-sm text-gray-500">Planning ahead • No active warnings</p>
-            </div>
+            {weatherData?.updated_at && (
+              <div className="text-xs text-gray-400">
+                Updated {new Date(weatherData.updated_at).toLocaleTimeString('en-GB', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
+              </div>
+            )}
           </div>
 
           {forecasts.length > 0 ? (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {forecasts.map((forecast) => (
-                <div key={forecast.location} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  {/* Current Weather Header */}
-                  <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+                <div key={forecast.location} className="bg-white border border-gray-200 rounded-lg p-4">
+                  {/* Location Header with Current Weather */}
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-3">
-                      {getWeatherIcon(forecast.current.condition, forecast.current.icon)}
-                      <div>
-                        <h4 className="font-semibold text-gray-900">{forecast.location}</h4>
-                        <p className="text-sm text-gray-600 capitalize">{forecast.current.description}</p>
+                      <div className="flex items-center space-x-2">
+                        {getWeatherIcon(forecast.current.condition, forecast.current.icon)}
+                        <div>
+                          <h4 className="font-semibold text-gray-900 text-lg">{forecast.location}</h4>
+                          <p className="text-sm text-gray-600 capitalize">{forecast.current.description}</p>
+                        </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-gray-900">{Math.round(forecast.current.temperature)}°C</div>
-                      <div className="text-xs text-gray-500">Feels {Math.round(forecast.current.feels_like)}°C</div>
+                      <div className="text-3xl font-bold text-gray-900">{Math.round(forecast.current.temperature)}°</div>
+                      <div className="text-sm text-gray-500">Feels {Math.round(forecast.current.feels_like)}°</div>
                     </div>
                   </div>
                   
-                  {/* 5-Day Forecast */}
-                  <div className="grid grid-cols-5 gap-2">
+                  {/* 5-Day Forecast Grid */}
+                  <div className="grid grid-cols-5 gap-1">
                     {forecast.forecast.slice(0, 5).map((day, index) => (
-                      <div key={day.date} className="text-center p-2">
-                        <div className="text-xs font-medium text-gray-700 mb-1">
+                      <div key={day.date} className="text-center py-3 px-1">
+                        <div className="text-xs font-medium text-gray-600 mb-2">
                           {formatDate(day.date)}
                         </div>
-                        <div className="flex justify-center mb-1">
-                          {getWeatherIcon(day.condition, day.icon)}
-                        </div>
-                        <div className="text-xs text-gray-900 font-medium">
-                          {Math.round(day.high)}°
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {Math.round(day.low)}°
-                        </div>
-                        {day.precipitation_chance > 20 && (
-                          <div className="text-xs text-blue-600 mt-1">
-                            {day.precipitation_chance}%
+                        <div className="flex justify-center mb-2">
+                          <div className="w-8 h-8 flex items-center justify-center">
+                            {getWeatherIcon(day.condition, day.icon)}
                           </div>
-                        )}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-sm font-semibold text-gray-900">
+                            {Math.round(day.high)}°
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {Math.round(day.low)}°
+                          </div>
+                          {day.precipitation_chance > 30 && (
+                            <div className="text-xs text-blue-600 font-medium">
+                              {day.precipitation_chance}%
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
-                  </div>
-                  
-                  {/* Current Conditions Summary */}
-                  <div className="flex items-center justify-center space-x-4 mt-3 pt-2 border-t border-gray-200 text-xs text-gray-600">
-                    <div className="flex items-center space-x-1">
-                      <Wind className="w-3 h-3" />
-                      <span>{Math.round(forecast.current.wind_speed)} km/h</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Droplets className="w-3 h-3" />
-                      <span>{forecast.current.humidity}%</span>
-                    </div>
-                    <span>•</span>
-                    <span>{getUtilitiesImpactText(forecast.current)}</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="text-center py-6">
-              <div className="p-3 bg-green-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <CheckCircle className="w-8 h-8 text-green-600" />
+            <div className="text-center py-12">
+              <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                <CheckCircle className="w-10 h-10 text-gray-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">All Clear</h3>
-              <p className="text-gray-500">No weather warnings for your hotel locations.</p>
-              <p className="text-xs text-gray-400 mt-2">Weather data unavailable</p>
-            </div>
-          )}
-          
-          {weatherData?.updated_at && (
-            <div className="mt-4 pt-3 border-t border-gray-200 text-center">
-              <p className="text-xs text-gray-400">
-                Last updated: {new Date(weatherData.updated_at).toLocaleTimeString('en-GB', { 
-                  hour: '2-digit', 
-                  minute: '2-digit' 
-                })} • Updates every 3 hours
-              </p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Weather Data Unavailable</h3>
+              <p className="text-gray-500">Unable to load forecast information at this time.</p>
             </div>
           )}
         </>
