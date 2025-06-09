@@ -1,0 +1,298 @@
+// src/components/WeatherWarningsBox.tsx
+'use client';
+
+import { useEffect, useState } from 'react';
+import { 
+  AlertTriangle, 
+  CheckCircle,
+  MapPin,
+  Calendar,
+  Thermometer,
+  Wind,
+  CloudRain,
+  Cloud,
+  Sun,
+  CloudSnow,
+  Eye,
+  Droplets
+} from 'lucide-react';
+
+interface WeatherWarning {
+  id: string;
+  location: string;
+  hotel_ids: string[];
+  warning_type: 'wind' | 'rain' | 'snow' | 'temperature' | 'storm';
+  severity: 'yellow' | 'amber' | 'red';
+  title: string;
+  description: string;
+  start_time: string;
+  end_time: string;
+  impact: string;
+  utilities_impact?: {
+    heating_demand?: 'high' | 'low';
+    cooling_demand?: 'high' | 'low';
+    power_risk?: boolean;
+  };
+}
+
+interface CurrentWeather {
+  location: string;
+  hotel_ids: string[];
+  temperature: number;
+  feels_like: number;
+  condition: string;
+  description: string;
+  humidity: number;
+  wind_speed: number;
+  visibility: number;
+  icon: string;
+}
+
+interface WeatherResponse {
+  warnings: WeatherWarning[];
+  current_weather: CurrentWeather[];
+  updated_at: string;
+}
+
+export default function WeatherWarningsBox() {
+  const [weatherData, setWeatherData] = useState<WeatherResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchWeatherData();
+    // Refresh every hour to stay within API limits (1000 calls/month = ~33/day = ~1.4/hour)
+    const interval = setInterval(fetchWeatherData, 60 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchWeatherData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/weather/warnings');
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('Weather API error:', data.error);
+        setWeatherData(null);
+      } else {
+        setWeatherData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching weather data:', error);
+      setWeatherData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getWarningIcon = (type: string) => {
+    switch (type) {
+      case 'wind': return <Wind className="w-5 h-5" />;
+      case 'rain': return <CloudRain className="w-5 h-5" />;
+      case 'snow': return <CloudSnow className="w-5 h-5" />;
+      case 'temperature': return <Thermometer className="w-5 h-5" />;
+      case 'storm': return <Cloud className="w-5 h-5" />;
+      default: return <AlertTriangle className="w-5 h-5" />;
+    }
+  };
+
+  const getWeatherIcon = (condition: string, iconCode?: string) => {
+    const cond = condition.toLowerCase();
+    if (cond.includes('clear') || cond.includes('sunny')) return <Sun className="w-6 h-6 text-yellow-500" />;
+    if (cond.includes('rain') || cond.includes('drizzle')) return <CloudRain className="w-6 h-6 text-blue-500" />;
+    if (cond.includes('snow')) return <CloudSnow className="w-6 h-6 text-blue-300" />;
+    if (cond.includes('cloud')) return <Cloud className="w-6 h-6 text-gray-500" />;
+    if (cond.includes('wind')) return <Wind className="w-6 h-6 text-gray-600" />;
+    return <Cloud className="w-6 h-6 text-gray-500" />;
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'red': return 'bg-red-50 border-red-200 text-red-800';
+      case 'amber': return 'bg-orange-50 border-orange-200 text-orange-800';
+      case 'yellow': return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+      default: return 'bg-gray-50 border-gray-200 text-gray-800';
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-GB', { 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getUtilitiesImpactText = (weather: CurrentWeather) => {
+    if (weather.temperature <= 5) return 'High heating demand expected';
+    if (weather.temperature >= 25) return 'Increased cooling costs possible';
+    if (weather.wind_speed > 20) return 'Monitor for power disruptions';
+    return 'Normal utilities impact';
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center space-x-3">
+        <div className="p-2 bg-blue-100 rounded-lg">
+          <AlertTriangle className="w-5 h-5 text-blue-600" />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Weather Monitor</h3>
+          <p className="text-sm text-gray-500">Checking conditions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const warnings = weatherData?.warnings || [];
+  const currentWeather = weatherData?.current_weather || [];
+
+  return (
+    <>
+      {warnings.length > 0 ? (
+        // WARNINGS MODE - Show active weather warnings
+        <>
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Weather Warnings</h3>
+              <p className="text-sm text-gray-500">Active alerts • Utilities impact</p>
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            {warnings.slice(0, 3).map((warning) => (
+              <div 
+                key={warning.id} 
+                className={`flex items-start space-x-3 p-4 rounded-lg border ${getSeverityColor(warning.severity)}`}
+              >
+                <div className="flex-shrink-0 mt-0.5">
+                  {getWarningIcon(warning.warning_type)}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="text-sm font-medium">{warning.title}</h4>
+                    <span className={`px-2 py-1 text-xs font-medium rounded uppercase ${
+                      warning.severity === 'red' ? 'bg-red-100 text-red-800' :
+                      warning.severity === 'amber' ? 'bg-orange-100 text-orange-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {warning.severity}
+                    </span>
+                  </div>
+                  
+                  <p className="text-sm mb-2">{warning.description}</p>
+                  
+                  <div className="flex items-center justify-between text-xs mb-2">
+                    <div className="flex items-center space-x-4">
+                      <span className="flex items-center space-x-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>{warning.location}</span>
+                      </span>
+                      <span className="flex items-center space-x-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>{formatTime(warning.start_time)} - {formatTime(warning.end_time)}</span>
+                      </span>
+                    </div>
+                    <span className="text-gray-500">{warning.hotel_ids.length} hotels</span>
+                  </div>
+                  
+                  <div className="text-xs bg-white bg-opacity-50 rounded p-2">
+                    <span className="font-medium">Impact:</span> {warning.impact}
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {warnings.length > 3 && (
+              <p className="text-sm text-gray-500 text-center">
+                +{warnings.length - 3} more warnings
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        // CURRENT WEATHER MODE - Show current conditions when no warnings
+        <>
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Weather Status</h3>
+              <p className="text-sm text-gray-500">Current conditions • No active warnings</p>
+            </div>
+          </div>
+
+          {currentWeather.length > 0 ? (
+            <div className="space-y-3">
+              {currentWeather.map((weather) => (
+                <div key={weather.location} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-2">
+                        {getWeatherIcon(weather.condition, weather.icon)}
+                        <div>
+                          <h4 className="font-medium text-gray-900">{weather.location}</h4>
+                          <p className="text-xs text-gray-500 capitalize">{weather.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-gray-900">{Math.round(weather.temperature)}°C</div>
+                      <div className="text-xs text-gray-500">Feels {Math.round(weather.feels_like)}°C</div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4 text-xs text-gray-600 mb-2">
+                    <div className="flex items-center space-x-1">
+                      <Wind className="w-3 h-3" />
+                      <span>{Math.round(weather.wind_speed)} km/h</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Droplets className="w-3 h-3" />
+                      <span>{weather.humidity}%</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Eye className="w-3 h-3" />
+                      <span>{Math.round(weather.visibility / 1000)}km</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500">{weather.hotel_ids.length} hotels</span>
+                    <span className="text-gray-600">{getUtilitiesImpactText(weather)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <div className="p-3 bg-green-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">All Clear</h3>
+              <p className="text-gray-500">No weather warnings for your hotel locations.</p>
+              <p className="text-xs text-gray-400 mt-2">Weather data unavailable</p>
+            </div>
+          )}
+          
+          {weatherData?.updated_at && (
+            <div className="mt-4 pt-3 border-t border-gray-200 text-center">
+              <p className="text-xs text-gray-400">
+                Last updated: {new Date(weatherData.updated_at).toLocaleTimeString('en-GB', { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+    </>
+  );
+}
