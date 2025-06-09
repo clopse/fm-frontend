@@ -14,7 +14,8 @@ import {
   Sun,
   CloudSnow,
   Eye,
-  Droplets
+  Droplets,
+  ChevronDown
 } from 'lucide-react';
 
 interface WeatherWarning {
@@ -69,6 +70,7 @@ export default function WeatherWarningsBox() {
   const [weatherData, setWeatherData] = useState<WeatherResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const allLocations = ['Dublin', 'Cork', 'Belfast', 'Waterford', 'London'];
 
@@ -97,6 +99,19 @@ export default function WeatherWarningsBox() {
       localStorage.setItem('weather-locations', JSON.stringify(selectedLocations));
     }
   }, [selectedLocations]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (dropdownOpen && !target.closest('[data-dropdown="location-filter"]')) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [dropdownOpen]);
 
   useEffect(() => {
     if (selectedLocations.length > 0) {
@@ -205,6 +220,15 @@ export default function WeatherWarningsBox() {
     setSelectedLocations(locationList);
   };
 
+  const toggleLocation = (location: string) => {
+    setSelectedLocations(prev => {
+      const newSelection = prev.includes(location)
+        ? prev.filter(loc => loc !== location)
+        : [...prev, location];
+      return newSelection;
+    });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center space-x-3">
@@ -305,23 +329,34 @@ export default function WeatherWarningsBox() {
             <div className="flex items-center space-x-4">
               {/* Location selector */}
               <div className="flex items-center space-x-2">
-                <span className="text-xs text-gray-500">Show:</span>
-                <select 
-                  multiple
-                  value={selectedLocations}
-                  onChange={(e) => {
-                    const values = Array.from(e.target.selectedOptions, option => option.value);
-                    handleLocationChange(values);
-                  }}
-                  className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
-                  size={5}
-                >
-                  {allLocations.map(location => (
-                    <option key={location} value={location}>
-                      {location} {location === 'London' && '(UK)'}
-                    </option>
-                  ))}
-                </select>
+                <span className="text-xs text-gray-500">Locations:</span>
+                <div className="relative" data-dropdown="location-filter">
+                  <button
+                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                    className="flex items-center justify-center p-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-lg transition-colors text-gray-600"
+                    title="Filter locations"
+                  >
+                    <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {dropdownOpen && (
+                    <div className="absolute top-10 right-0 bg-white border border-gray-200 rounded-lg z-10 shadow-lg min-w-48 max-h-60 overflow-y-auto">
+                      <div className="p-2">
+                        {allLocations.map((location) => (
+                          <label key={location} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer text-sm">
+                            <input
+                              type="checkbox"
+                              checked={selectedLocations.includes(location)}
+                              onChange={() => toggleLocation(location)}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-gray-700">{location} {location === 'London' && '(UK)'}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               {weatherData?.updated_at && (
                 <div className="text-xs text-gray-400">
