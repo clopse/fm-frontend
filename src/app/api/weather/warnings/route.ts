@@ -71,17 +71,43 @@ interface WeatherWarning {
   };
 }
 
-interface CurrentWeather {
+interface OpenWeatherDaily {
+  dt: number;
+  temp: {
+    day: number;
+    min: number;
+    max: number;
+  };
+  weather: Array<{
+    main: string;
+    description: string;
+    icon: string;
+  }>;
+  pop: number; // Probability of precipitation
+}
+
+interface WeatherForecast {
   location: string;
   hotel_ids: string[];
-  temperature: number;
-  feels_like: number;
-  condition: string;
-  description: string;
-  humidity: number;
-  wind_speed: number;
-  visibility: number;
-  icon: string;
+  current: {
+    temperature: number;
+    feels_like: number;
+    condition: string;
+    description: string;
+    humidity: number;
+    wind_speed: number;
+    icon: string;
+  };
+  forecast: Array<{
+    date: string;
+    day_name: string;
+    high: number;
+    low: number;
+    condition: string;
+    description: string;
+    precipitation_chance: number;
+    icon: string;
+  }>;
 }
 
 function transformAlert(alert: OpenWeatherAlert, location: string, hotelIds: string[]): WeatherWarning {
@@ -136,18 +162,40 @@ function transformAlert(alert: OpenWeatherAlert, location: string, hotelIds: str
   };
 }
 
-function transformCurrentWeather(current: OpenWeatherCurrent, location: string, hotelIds: string[]): CurrentWeather {
+function transformCurrentWeather(current: OpenWeatherCurrent, location: string, hotelIds: string[]): WeatherForecast['current'] {
   return {
-    location,
-    hotel_ids: hotelIds,
     temperature: current.temp,
     feels_like: current.feels_like,
     condition: current.weather[0]?.main || 'Unknown',
     description: current.weather[0]?.description || 'No description',
     humidity: current.humidity,
     wind_speed: current.wind_speed * 3.6, // Convert m/s to km/h
-    visibility: current.visibility,
     icon: current.weather[0]?.icon || '01d'
+  };
+}
+
+function transformForecast(current: OpenWeatherCurrent, daily: OpenWeatherDaily[], location: string, hotelIds: string[]): WeatherForecast {
+  const currentWeather = transformCurrentWeather(current, location, hotelIds);
+  
+  const forecast = daily.slice(0, 5).map(day => {
+    const date = new Date(day.dt * 1000);
+    return {
+      date: date.toISOString().split('T')[0],
+      day_name: date.toLocaleDateString('en-GB', { weekday: 'short' }),
+      high: day.temp.max,
+      low: day.temp.min,
+      condition: day.weather[0]?.main || 'Unknown',
+      description: day.weather[0]?.description || 'No description',
+      precipitation_chance: Math.round(day.pop * 100),
+      icon: day.weather[0]?.icon || '01d'
+    };
+  });
+
+  return {
+    location,
+    hotel_ids: hotelIds,
+    current: currentWeather,
+    forecast
   };
 }
 
@@ -160,13 +208,13 @@ export async function GET() {
 
   try {
     const warnings: WeatherWarning[] = [];
-    const currentWeather: CurrentWeather[] = [];
+    const forecasts: WeatherForecast[] = [];
     
-    // Fetch alerts and current weather for each location
+    // Fetch alerts, current weather, and 5-day forecast for each location
     for (const [locationName, locationData] of Object.entries(HOTEL_LOCATIONS)) {
       try {
         const response = await fetch(
-          `https://api.openweathermap.org/data/3.0/onecall?lat=${locationData.lat}&lon=${locationData.lon}&appid=${API_KEY}&units=metric&exclude=minutely,hourly,daily`
+          `https://api.openweathermap.org/data/3.0/onecall?lat=${locationData.lat}&lon=${locationData.lon}&appid=${API_KEY}&units=metric&exclude=minutely,hourly`
         );
         
         if (!response.ok) {
@@ -176,10 +224,10 @@ export async function GET() {
         
         const data = await response.json();
         
-        // Process current weather
-        if (data.current) {
-          const current = transformCurrentWeather(data.current, locationName, locationData.hotels);
-          currentWeather.push(current);
+        // Process current weather + 5-day forecast
+        if (data.current && data.daily) {
+          const forecast = transformForecast(data.current, data.daily, locationName, locationData.hotels);
+          forecasts.push(forecast);
         }
         
         // Process alerts if they exist
@@ -206,7 +254,7 @@ export async function GET() {
     
     return NextResponse.json({ 
       warnings,
-      current_weather: currentWeather,
+      forecasts,
       updated_at: new Date().toISOString(),
       locations_checked: Object.keys(HOTEL_LOCATIONS).length
     });
@@ -216,7 +264,7 @@ export async function GET() {
     return NextResponse.json({ 
       error: 'Failed to fetch weather data',
       warnings: [],
-      current_weather: []
+      forecasts: []
     }, { status: 500 });
   }
 }
