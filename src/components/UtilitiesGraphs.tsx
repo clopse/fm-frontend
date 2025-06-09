@@ -1,4 +1,20 @@
-'use client';
+const toggleHotelSelection = (hotelId: string) => {
+    if (selectedHotels.includes(hotelId)) {
+      if (selectedHotels.length > 1) { // Prevent deselecting all
+        setSelectedHotels(selectedHotels.filter(id => id !== hotelId));
+      }
+    } else {
+      setSelectedHotels([...selectedHotels, hotelId]);
+    }
+  };
+
+  const selectAllHotels = () => {
+    setSelectedHotels(hotels.map(h => h.id));
+  };
+
+  const clearAllHotels = () => {
+    setSelectedHotels([hotels[0]?.id].filter(Boolean)); // Keep at least one selected
+  };'use client';
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import {
@@ -82,7 +98,7 @@ const MONTHS = [
 ];
 
 const YEARS = ['2023', '2024', '2025'];
-const CURRENT_YEAR = '2024';
+const CURRENT_YEAR = '2025';
 
 export function UtilitiesGraphs() {
   const [utilityData, setUtilityData] = useState<UtilityBill[]>([]);
@@ -95,10 +111,10 @@ export function UtilitiesGraphs() {
   const [selectedMetric, setSelectedMetric] = useState('kwh_per_sqm');
   const [viewMode, setViewMode] = useState<'efficiency' | 'trends' | 'single-hotel'>('efficiency');
   const [selectedSingleHotel, setSelectedSingleHotel] = useState<string>(hotels[0]?.id || '');
-  const [showAnomalies, setShowAnomalies] = useState(true);
+  const [showHotelSelector, setShowHotelSelector] = useState(false);
   
-  // All hotels selected by default, current year with all months
-  const [selectedHotels] = useState<string[]>(hotels.map(h => h.id));
+  // Hotel selection with toggle functionality
+  const [selectedHotels, setSelectedHotels] = useState<string[]>(hotels.map(h => h.id));
   const [selectedYears] = useState<string[]>([CURRENT_YEAR]);
   const [selectedMonths] = useState<string[]>(MONTHS);
 
@@ -431,27 +447,13 @@ export function UtilitiesGraphs() {
     }
   }, [utilityData, hotelFacilities, selectedHotels, selectedMonths, selectedYears]);
 
-  // Detect anomalies in the data
+  // Detect anomalies in the data - REMOVED as seasonal variations are normal
   const detectAnomalies = (data: MonthlyUtilityData[]): MonthlyUtilityData[] => {
-    const dataByHotel = data.reduce((acc, item) => {
-      if (!acc[item.hotelId]) acc[item.hotelId] = [];
-      acc[item.hotelId].push(item);
-      return acc;
-    }, {} as Record<string, MonthlyUtilityData[]>);
-
-    Object.values(dataByHotel).forEach(hotelData => {
-      const values = hotelData.map(d => d.efficiencyMetrics[selectedMetric] || 0);
-      const mean = values.reduce((a, b) => a + b, 0) / values.length;
-      const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
-      const stdDev = Math.sqrt(variance);
-      
-      hotelData.forEach(item => {
-        const value = item.efficiencyMetrics[selectedMetric] || 0;
-        const zScore = Math.abs((value - mean) / stdDev);
-        (item as any).isAnomaly = zScore > 2; // 2 standard deviations
-      });
+    // For now, we'll mark all data as not anomalous since seasonal variations
+    // (higher bills in winter) are expected and not true anomalies
+    data.forEach(item => {
+      (item as any).isAnomaly = false;
     });
-
     return data;
   };
 
@@ -463,6 +465,10 @@ export function UtilitiesGraphs() {
       return selectedHotels.map(hotelId => {
         const hotel = hotels.find(h => h.id === hotelId);
         const hotelData = dataWithAnomalies.filter(data => data.hotelId === hotelId);
+        
+        if (hotelData.length === 0) {
+          return null; // Skip hotels with no data
+        }
         
         let totalValue = 0;
         let validDataPoints = 0;
@@ -478,6 +484,16 @@ export function UtilitiesGraphs() {
         const avgValue = validDataPoints > 0 ? totalValue / validDataPoints : 0;
         const facilities = hotelFacilities[hotelId];
         
+        // Only include hotels that have both facility data AND utility data
+        const hasValidData = validDataPoints > 0 && 
+                           facilities?.totalSquareMetres && 
+                           facilities?.totalRooms &&
+                           avgValue > 0;
+        
+        if (!hasValidData) {
+          return null; // Skip invalid data
+        }
+        
         return {
           name: hotel?.name || hotelId,
           hotelId,
@@ -485,14 +501,16 @@ export function UtilitiesGraphs() {
           rooms: facilities?.totalRooms || 0,
           sqm: facilities?.totalSquareMetres || 0,
           dataPoints: validDataPoints,
-          hasValidData: validDataPoints > 0 && facilities?.totalSquareMetres && facilities?.totalRooms
+          hasValidData: true
         };
-      }).filter(item => item.hasValidData);
+      }).filter(item => item !== null); // Remove null entries
     }
     
     if (viewMode === 'trends') {
       const trendData = MONTHS.map(month => {
-        const monthData = dataWithAnomalies.filter(data => data.month === month);
+        const monthData = dataWithAnomalies.filter(data => 
+          data.month === month && selectedHotels.includes(data.hotelId)
+        );
         
         let totalValue = 0;
         let validDataPoints = 0;
@@ -536,7 +554,7 @@ export function UtilitiesGraphs() {
           value: Math.round(currentValue * 100) / 100,
           previousYear: Math.round(previousValue * 100) / 100,
           yearOverYear: Math.round(yearOverYear * 10) / 10,
-          isAnomaly: (currentYearData as any)?.isAnomaly || false
+          isAnomaly: false // Removed anomaly detection
         };
       }).filter(item => item.value > 0 || item.previousYear > 0);
     }
@@ -634,37 +652,75 @@ export function UtilitiesGraphs() {
             </div>
           </div>
 
-          {/* Single Hotel Selector */}
-          {viewMode === 'single-hotel' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Hotel</label>
-              <select
-                value={selectedSingleHotel}
-                onChange={(e) => setSelectedSingleHotel(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                {hotels.map(hotel => (
-                  <option key={hotel.id} value={hotel.id}>
-                    {hotel.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Hotel Selection or Single Hotel Selector */}
+          <div>
+            {viewMode === 'single-hotel' ? (
+              <>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Hotel</label>
+                <select
+                  value={selectedSingleHotel}
+                  onChange={(e) => setSelectedSingleHotel(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {hotels.map(hotel => (
+                    <option key={hotel.id} value={hotel.id}>
+                      {hotel.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Hotels ({selectedHotels.length}/{hotels.length})
+                </label>
+                <button
+                  onClick={() => setShowHotelSelector(!showHotelSelector)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-left text-sm"
+                >
+                  {selectedHotels.length === hotels.length ? 'All Hotels' : `${selectedHotels.length} Selected`}
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Anomaly Detection Toggle */}
-        {viewMode === 'single-hotel' && (
-          <div className="mt-4 flex items-center">
-            <button
-              onClick={() => setShowAnomalies(!showAnomalies)}
-              className={`flex items-center px-3 py-1 rounded-lg text-sm transition-colors ${
-                showAnomalies ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'
-              }`}
-            >
-              {showAnomalies ? <Eye className="w-4 h-4 mr-1" /> : <EyeOff className="w-4 h-4 mr-1" />}
-              Show Anomalies
-            </button>
+        {/* Hotel Selection Panel */}
+        {showHotelSelector && viewMode !== 'single-hotel' && (
+          <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-medium text-gray-900">Select Hotels for Comparison</h4>
+              <div className="flex space-x-2">
+                <button
+                  onClick={selectAllHotels}
+                  className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={clearAllHotels}
+                  className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {hotels.map(hotel => (
+                <label key={hotel.id} className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedHotels.includes(hotel.id)}
+                    onChange={() => toggleHotelSelection(hotel.id)}
+                    className="mr-2 rounded border-gray-300"
+                  />
+                  <span className="text-sm text-gray-700">{hotel.name}</span>
+                  <span className="ml-auto text-xs text-gray-500">
+                    {hotelFacilities[hotel.id]?.totalRooms || 0} rooms
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -724,12 +780,6 @@ export function UtilitiesGraphs() {
                             {data.yearOverYear !== 0 && (
                               <p className={`${data.yearOverYear > 0 ? 'text-red-600' : 'text-green-600'}`}>
                                 {`YoY: ${data.yearOverYear > 0 ? '+' : ''}${data.yearOverYear}%`}
-                              </p>
-                            )}
-                            {showAnomalies && data.isAnomaly && (
-                              <p className="text-orange-600 text-sm flex items-center">
-                                <AlertTriangle className="w-3 h-3 mr-1" />
-                                Anomaly detected
                               </p>
                             )}
                           </div>
@@ -910,11 +960,7 @@ export function UtilitiesGraphs() {
                             {(item as any).yearOverYear !== 0 ? `${(item as any).yearOverYear > 0 ? '+' : ''}${(item as any).yearOverYear}%` : '-'}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            {showAnomalies && (item as any).isAnomaly ? (
-                              <div title="Anomaly detected">
-                                <AlertTriangle className="w-4 h-4 text-orange-500 mx-auto" />
-                              </div>
-                            ) : (item as any).yearOverYear > 10 ? (
+                            {(item as any).yearOverYear > 10 ? (
                               <div title="Significant increase">
                                 <TrendingUp className="w-4 h-4 text-red-500 mx-auto" />
                               </div>
