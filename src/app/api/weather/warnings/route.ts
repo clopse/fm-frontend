@@ -39,6 +39,20 @@ interface OpenWeatherAlert {
   tags: string[];
 }
 
+interface OpenWeatherCurrent {
+  dt: number;
+  temp: number;
+  feels_like: number;
+  humidity: number;
+  visibility: number;
+  wind_speed: number;
+  weather: Array<{
+    main: string;
+    description: string;
+    icon: string;
+  }>;
+}
+
 interface WeatherWarning {
   id: string;
   location: string;
@@ -55,6 +69,19 @@ interface WeatherWarning {
     cooling_demand?: 'high' | 'low';
     power_risk?: boolean;
   };
+}
+
+interface CurrentWeather {
+  location: string;
+  hotel_ids: string[];
+  temperature: number;
+  feels_like: number;
+  condition: string;
+  description: string;
+  humidity: number;
+  wind_speed: number;
+  visibility: number;
+  icon: string;
 }
 
 function transformAlert(alert: OpenWeatherAlert, location: string, hotelIds: string[]): WeatherWarning {
@@ -109,6 +136,21 @@ function transformAlert(alert: OpenWeatherAlert, location: string, hotelIds: str
   };
 }
 
+function transformCurrentWeather(current: OpenWeatherCurrent, location: string, hotelIds: string[]): CurrentWeather {
+  return {
+    location,
+    hotel_ids: hotelIds,
+    temperature: current.temp,
+    feels_like: current.feels_like,
+    condition: current.weather[0]?.main || 'Unknown',
+    description: current.weather[0]?.description || 'No description',
+    humidity: current.humidity,
+    wind_speed: current.wind_speed * 3.6, // Convert m/s to km/h
+    visibility: current.visibility,
+    icon: current.weather[0]?.icon || '01d'
+  };
+}
+
 export async function GET() {
   const API_KEY = process.env.OPENWEATHER_API_KEY;
   
@@ -118,12 +160,13 @@ export async function GET() {
 
   try {
     const warnings: WeatherWarning[] = [];
+    const currentWeather: CurrentWeather[] = [];
     
-    // Fetch alerts for each location
+    // Fetch alerts and current weather for each location
     for (const [locationName, locationData] of Object.entries(HOTEL_LOCATIONS)) {
       try {
         const response = await fetch(
-          `https://api.openweathermap.org/data/3.0/onecall?lat=${locationData.lat}&lon=${locationData.lon}&appid=${API_KEY}&exclude=minutely,hourly,daily`
+          `https://api.openweathermap.org/data/3.0/onecall?lat=${locationData.lat}&lon=${locationData.lon}&appid=${API_KEY}&units=metric&exclude=minutely,hourly,daily`
         );
         
         if (!response.ok) {
@@ -133,7 +176,13 @@ export async function GET() {
         
         const data = await response.json();
         
-        // Check if there are any alerts
+        // Process current weather
+        if (data.current) {
+          const current = transformCurrentWeather(data.current, locationName, locationData.hotels);
+          currentWeather.push(current);
+        }
+        
+        // Process alerts if they exist
         if (data.alerts && data.alerts.length > 0) {
           for (const alert of data.alerts) {
             // Only include alerts that are still active or start within 7 days
@@ -152,11 +201,12 @@ export async function GET() {
       }
     }
     
-    // Sort by start time (earliest first)
+    // Sort warnings by start time (earliest first)
     warnings.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
     
     return NextResponse.json({ 
       warnings,
+      current_weather: currentWeather,
       updated_at: new Date().toISOString(),
       locations_checked: Object.keys(HOTEL_LOCATIONS).length
     });
@@ -164,8 +214,9 @@ export async function GET() {
   } catch (error) {
     console.error('Weather warnings API error:', error);
     return NextResponse.json({ 
-      error: 'Failed to fetch weather warnings',
-      warnings: [] 
+      error: 'Failed to fetch weather data',
+      warnings: [],
+      current_weather: []
     }, { status: 500 });
   }
 }
