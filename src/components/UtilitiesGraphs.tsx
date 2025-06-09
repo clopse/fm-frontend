@@ -881,7 +881,7 @@ export function UtilitiesGraphs() {
                           </td>
                           <td className="px-4 py-3 text-right text-gray-700">{(item as any).rooms}</td>
                           <td className="px-4 py-3 text-right text-gray-700">{(item as any).sqm.toLocaleString()}</td>
-                          <td className="px-4 py-3 text-right text-gray-500">{item.dataPoints}</td>
+                          <td className="px-4 py-3 text-right text-gray-500">{(item as any).dataPoints}</td>
                         </>
                       )}
                       {viewMode === 'trends' && (
@@ -890,7 +890,7 @@ export function UtilitiesGraphs() {
                           <td className="px-4 py-3 text-right text-gray-700">
                             {item.value.toLocaleString()} {currentMetric?.unit}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-500">{item.dataPoints}</td>
+                          <td className="px-4 py-3 text-right text-gray-500">{(item as any).dataPoints}</td>
                         </>
                       )}
                       {viewMode === 'single-hotel' && (
