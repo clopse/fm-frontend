@@ -1,20 +1,4 @@
-const toggleHotelSelection = (hotelId: string) => {
-    if (selectedHotels.includes(hotelId)) {
-      if (selectedHotels.length > 1) { // Prevent deselecting all
-        setSelectedHotels(selectedHotels.filter(id => id !== hotelId));
-      }
-    } else {
-      setSelectedHotels([...selectedHotels, hotelId]);
-    }
-  };
-
-  const selectAllHotels = () => {
-    setSelectedHotels(hotels.map(h => h.id));
-  };
-
-  const clearAllHotels = () => {
-    setSelectedHotels([hotels[0]?.id].filter(Boolean)); // Keep at least one selected
-  };'use client';
+'use client';
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import {
@@ -120,11 +104,30 @@ export function UtilitiesGraphs() {
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Hotel selection functions
+  const toggleHotelSelection = (hotelId: string) => {
+    if (selectedHotels.includes(hotelId)) {
+      if (selectedHotels.length > 1) { // Prevent deselecting all
+        setSelectedHotels(selectedHotels.filter(id => id !== hotelId));
+      }
+    } else {
+      setSelectedHotels([...selectedHotels, hotelId]);
+    }
+  };
+
+  const selectAllHotels = () => {
+    setSelectedHotels(hotels.map(h => h.id));
+  };
+
+  const clearAllHotels = () => {
+    setSelectedHotels([hotels[0]?.id].filter(Boolean)); // Keep at least one selected
+  };
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        // Close any open dropdowns
+        setShowHotelSelector(false);
       }
     };
 
@@ -227,16 +230,20 @@ export function UtilitiesGraphs() {
   // Fetch hotel facilities data
   useEffect(() => {
     const fetchHotelFacilities = async () => {
+      console.log('🏨 Starting to fetch hotel facilities data...');
       const facilitiesData: Record<string, HotelFacilities> = {};
       
       for (const hotel of hotels) {
         try {
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/hotels/facilities/${hotel.id}`
-          );
+          const url = `${process.env.NEXT_PUBLIC_API_URL}/hotels/facilities/${hotel.id}`;
+          console.log(`🏨 Fetching facilities for ${hotel.id} from:`, url);
+          
+          const response = await fetch(url);
           
           if (response.ok) {
             const data = await response.json();
+            console.log(`✅ Facilities data for ${hotel.id}:`, data);
+            
             // The API returns the data nested under 'facilities'
             const facilities = data.facilities || data;
             facilitiesData[hotel.id] = {
@@ -244,7 +251,10 @@ export function UtilitiesGraphs() {
               totalSquareMetres: facilities.structural?.totalSquareMetres || 0,
               yearBuilt: facilities.structural?.yearBuilt
             };
+            
+            console.log(`📊 Processed facilities for ${hotel.id}:`, facilitiesData[hotel.id]);
           } else {
+            console.warn(`❌ Failed to fetch facilities for ${hotel.id}:`, response.status, response.statusText);
             // Graceful fallback for missing data
             facilitiesData[hotel.id] = {
               totalRooms: 0,
@@ -252,7 +262,7 @@ export function UtilitiesGraphs() {
             };
           }
         } catch (error) {
-          console.warn(`Could not fetch facilities for ${hotel.id}:`, error);
+          console.error(`💥 Error fetching facilities for ${hotel.id}:`, error);
           facilitiesData[hotel.id] = {
             totalRooms: 0,
             totalSquareMetres: 0
@@ -260,6 +270,7 @@ export function UtilitiesGraphs() {
         }
       }
       
+      console.log('🏨 Final facilities data:', facilitiesData);
       setHotelFacilities(facilitiesData);
     };
 
@@ -269,23 +280,32 @@ export function UtilitiesGraphs() {
   // Fetch utility data (same as your existing logic)
   useEffect(() => {
     const fetchUtilityData = async () => {
+      console.log('⚡ Starting to fetch utility data...');
+      console.log('⚡ Selected hotels:', selectedHotels);
+      console.log('⚡ Selected utility type:', selectedUtilityType);
+      
       setLoading(true);
       try {
         const billsPromises = selectedHotels.map(async (hotelId) => {
+          console.log(`⚡ Fetching bills for hotel: ${hotelId}`);
           const bills: UtilityBill[] = [];
           
           for (const year of YEARS) {
             try {
-              const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${year}`
-              );
+              const url = `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${year}`;
+              console.log(`⚡ Fetching ${year} bills from:`, url);
+              
+              const response = await fetch(url);
               
               if (response.ok) {
                 const data = await response.json();
+                console.log(`✅ Raw utility data for ${hotelId} ${year}:`, data);
                 
                 for (const bill of data.bills || []) {
                   const summary = bill.summary || {};
                   const billDate = summary.bill_date || '';
+                  
+                  console.log(`📄 Processing bill with date: ${billDate}, type: ${bill.utility_type}`);
                   
                   if (billDate) {
                     const [billYear, billMonth] = billDate.split('-');
@@ -299,23 +319,32 @@ export function UtilitiesGraphs() {
                         year: billYear,
                         data: bill.raw_data || bill
                       });
+                      console.log(`✅ Added bill: ${hotelId} ${monthName} ${billYear} ${bill.utility_type}`);
+                    } else {
+                      console.log(`❌ Skipped bill - wrong type: ${bill.utility_type} (looking for ${selectedUtilityType})`);
                     }
+                  } else {
+                    console.warn('❌ Bill missing date:', bill);
                   }
                 }
+              } else {
+                console.warn(`❌ Failed to fetch ${hotelId} ${year}:`, response.status, response.statusText);
               }
             } catch (error) {
-              console.error(`Error fetching ${hotelId} ${year}:`, error);
+              console.error(`💥 Error fetching ${hotelId} ${year}:`, error);
             }
           }
           
+          console.log(`📊 Total bills found for ${hotelId}:`, bills.length);
           return bills;
         });
         
         const allBills = (await Promise.all(billsPromises)).flat();
+        console.log('📊 All utility bills collected:', allBills.length, allBills);
         setUtilityData(allBills);
         
       } catch (error) {
-        console.error('Error fetching utility data:', error);
+        console.error('💥 Error fetching utility data:', error);
         setUtilityData([]);
       }
       setLoading(false);
@@ -324,6 +353,7 @@ export function UtilitiesGraphs() {
     if (selectedHotels.length > 0 && selectedUtilityType) {
       fetchUtilityData();
     } else {
+      console.log('❌ Skipping fetch - no hotels selected or utility type');
       setUtilityData([]);
       setLoading(false);
     }
@@ -430,19 +460,29 @@ export function UtilitiesGraphs() {
 
   // Process data with efficiency calculations
   useEffect(() => {
+    console.log('🔄 Processing utility data...');
+    console.log('🔄 Raw utility data length:', utilityData.length);
+    console.log('🔄 Hotel facilities keys:', Object.keys(hotelFacilities));
+    
     if (utilityData.length > 0 && Object.keys(hotelFacilities).length > 0) {
+      console.log('🔄 Both utility data and facilities available - processing...');
       const proportionalData = generateProportionalMonthlyData(utilityData);
+      console.log('📊 Generated proportional data:', proportionalData.length, proportionalData);
       
       const filteredData = proportionalData.filter(data => {
         const isSelectedHotel = selectedHotels.includes(data.hotelId);
         const isSelectedYear = selectedYears.includes(data.year);
         const isSelectedMonth = selectedMonths.includes(data.month);
         
+        console.log(`🔍 Filtering ${data.hotelId} ${data.month} ${data.year}: hotel=${isSelectedHotel}, year=${isSelectedYear}, month=${isSelectedMonth}`);
+        
         return isSelectedHotel && isSelectedYear && isSelectedMonth;
       });
       
+      console.log('✅ Final filtered processed data:', filteredData.length, filteredData);
       setProcessedData(filteredData);
     } else {
+      console.log('❌ Missing data - utility:', utilityData.length, 'facilities:', Object.keys(hotelFacilities).length);
       setProcessedData([]);
     }
   }, [utilityData, hotelFacilities, selectedHotels, selectedMonths, selectedYears]);
@@ -459,14 +499,22 @@ export function UtilitiesGraphs() {
 
   // Generate chart data for different view modes
   const getChartData = () => {
+    console.log('📈 Generating chart data for view mode:', viewMode);
+    console.log('📈 Processed data available:', processedData.length);
+    
     const dataWithAnomalies = detectAnomalies([...processedData]);
     
     if (viewMode === 'efficiency') {
-      return selectedHotels.map(hotelId => {
+      console.log('📈 Processing efficiency view for hotels:', selectedHotels);
+      
+      const chartData = selectedHotels.map(hotelId => {
         const hotel = hotels.find(h => h.id === hotelId);
         const hotelData = dataWithAnomalies.filter(data => data.hotelId === hotelId);
         
+        console.log(`📈 Hotel ${hotelId} data points:`, hotelData.length);
+        
         if (hotelData.length === 0) {
+          console.log(`❌ No data for hotel ${hotelId}`);
           return null; // Skip hotels with no data
         }
         
@@ -475,6 +523,7 @@ export function UtilitiesGraphs() {
         
         hotelData.forEach(data => {
           const value = data.efficiencyMetrics[selectedMetric];
+          console.log(`📊 ${hotelId} ${data.month} ${data.year} ${selectedMetric}:`, value);
           if (value && value > 0) {
             totalValue += value;
             validDataPoints++;
@@ -484,6 +533,8 @@ export function UtilitiesGraphs() {
         const avgValue = validDataPoints > 0 ? totalValue / validDataPoints : 0;
         const facilities = hotelFacilities[hotelId];
         
+        console.log(`📊 ${hotelId} summary: avg=${avgValue}, points=${validDataPoints}, facilities=`, facilities);
+        
         // Only include hotels that have both facility data AND utility data
         const hasValidData = validDataPoints > 0 && 
                            facilities?.totalSquareMetres && 
@@ -491,10 +542,11 @@ export function UtilitiesGraphs() {
                            avgValue > 0;
         
         if (!hasValidData) {
+          console.log(`❌ Invalid data for ${hotelId}: points=${validDataPoints}, sqm=${facilities?.totalSquareMetres}, rooms=${facilities?.totalRooms}, avg=${avgValue}`);
           return null; // Skip invalid data
         }
         
-        return {
+        const result = {
           name: hotel?.name || hotelId,
           hotelId,
           value: Math.round(avgValue * 100) / 100,
@@ -503,7 +555,13 @@ export function UtilitiesGraphs() {
           dataPoints: validDataPoints,
           hasValidData: true
         };
+        
+        console.log(`✅ Valid chart data for ${hotelId}:`, result);
+        return result;
       }).filter(item => item !== null); // Remove null entries
+      
+      console.log('📈 Final efficiency chart data:', chartData);
+      return chartData;
     }
     
     if (viewMode === 'trends') {
@@ -794,13 +852,7 @@ export function UtilitiesGraphs() {
                     stroke="#3b82f6" 
                     strokeWidth={2}
                     name={CURRENT_YEAR}
-                    dot={(props) => {
-                      const { payload } = props;
-                      if (showAnomalies && payload?.isAnomaly) {
-                        return <circle {...props} r={6} fill="#f59e0b" stroke="#f59e0b" />;
-                      }
-                      return <circle {...props} r={4} fill="#3b82f6" />;
-                    }}
+                    dot={<circle r={4} fill="#3b82f6" />}
                   />
                   <Line 
                     type="monotone" 
