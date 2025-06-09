@@ -125,13 +125,26 @@ export default function WeatherWarningsBox() {
   const fetchWeatherData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/weather/warnings');
+      console.log('🌤️ Fetching weather data at:', new Date().toLocaleString());
+      
+      // Add cache-busting parameter to force fresh data
+      const response = await fetch(`/api/weather/warnings?t=${Date.now()}`);
       const data = await response.json();
       
       if (data.error) {
         console.error('Weather API error:', data.error);
         setWeatherData(null);
       } else {
+        const updateTime = new Date(data.updated_at);
+        const now = new Date();
+        const minutesAgo = Math.round((now.getTime() - updateTime.getTime()) / (1000 * 60));
+        
+        console.log('✅ API updated_at:', data.updated_at);
+        console.log('🕒 That was', minutesAgo, 'minutes ago');
+        console.log('📍 Locations checked:', data.locations_checked);
+        console.log('⚠️ Warnings found:', data.warnings?.length || 0);
+        console.log('🌡️ Forecasts found:', data.forecasts?.length || 0);
+        
         setWeatherData(data);
       }
     } catch (error) {
