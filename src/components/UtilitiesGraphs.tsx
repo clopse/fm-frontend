@@ -84,7 +84,7 @@ const MONTHS = [
 const YEARS = ['2023', '2024', '2025'];
 const CURRENT_YEAR = '2024';
 
-export default function UtilitiesAnalytics() {
+export function UtilitiesGraphs() {
   const [utilityData, setUtilityData] = useState<UtilityBill[]>([]);
   const [hotelFacilities, setHotelFacilities] = useState<Record<string, HotelFacilities>>({});
   const [processedData, setProcessedData] = useState<MonthlyUtilityData[]>([]);
