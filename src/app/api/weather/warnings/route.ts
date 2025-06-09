@@ -1,6 +1,9 @@
 // app/api/weather/warnings/route.ts
 import { NextResponse } from 'next/server';
 
+// Rate limiting storage (in production, use Redis or database)
+const requestLimits = new Map<string, { count: number; resetTime: number }>();
+
 // Hotel location mapping
 const HOTEL_LOCATIONS = {
   'Dublin': {
@@ -29,6 +32,17 @@ const HOTEL_LOCATIONS = {
     lon: -7.1101
   }
 };
+
+// Simple in-memory cache (in production, use Redis)
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+}
+
+const weatherCache = new Map<string, CacheEntry>();
+const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 3; // 3 requests per minute per IP
 
 interface OpenWeatherAlert {
   sender_name: string;
@@ -110,6 +124,81 @@ interface WeatherForecast {
   }>;
 }
 
+function getClientIP(request: Request): string {
+  // Get IP from various headers (depending on your deployment)
+  const forwarded = request.headers.get('x-forwarded-for');
+  const realIP = request.headers.get('x-real-ip');
+  const remoteAddr = request.headers.get('remote-addr');
+  
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  
+  return realIP || remoteAddr || 'unknown';
+}
+
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number; resetTime: number } {
+  const now = Date.now();
+  const key = ip;
+  
+  // Clean up expired entries
+  for (const [k, v] of requestLimits.entries()) {
+    if (now > v.resetTime) {
+      requestLimits.delete(k);
+    }
+  }
+  
+  const current = requestLimits.get(key);
+  
+  if (!current || now > current.resetTime) {
+    // New window
+    const resetTime = now + RATE_LIMIT_WINDOW;
+    requestLimits.set(key, { count: 1, resetTime });
+    return { 
+      allowed: true, 
+      remaining: RATE_LIMIT_MAX_REQUESTS - 1, 
+      resetTime 
+    };
+  }
+  
+  if (current.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return { 
+      allowed: false, 
+      remaining: 0, 
+      resetTime: current.resetTime 
+    };
+  }
+  
+  current.count++;
+  requestLimits.set(key, current);
+  
+  return { 
+    allowed: true, 
+    remaining: RATE_LIMIT_MAX_REQUESTS - current.count, 
+    resetTime: current.resetTime 
+  };
+}
+
+function getCachedData(key: string): any | null {
+  const cached = weatherCache.get(key);
+  if (!cached) return null;
+  
+  const now = Date.now();
+  if (now - cached.timestamp > CACHE_DURATION) {
+    weatherCache.delete(key);
+    return null;
+  }
+  
+  return cached.data;
+}
+
+function setCachedData(key: string, data: any): void {
+  weatherCache.set(key, {
+    data,
+    timestamp: Date.now()
+  });
+}
+
 function transformAlert(alert: OpenWeatherAlert, location: string, hotelIds: string[]): WeatherWarning {
   const event = alert.event.toLowerCase();
   
@@ -177,7 +266,9 @@ function transformCurrentWeather(current: OpenWeatherCurrent, location: string, 
 function transformForecast(current: OpenWeatherCurrent, daily: OpenWeatherDaily[], location: string, hotelIds: string[]): WeatherForecast {
   const currentWeather = transformCurrentWeather(current, location, hotelIds);
   
-  const forecast = daily.slice(0, 5).map(day => {
+  // FIXED: Skip today (index 0) and get the next 5 days (indices 1-5)
+  // This ensures we always show the upcoming 5 days, not including today
+  const forecast = daily.slice(1, 6).map(day => {
     const date = new Date(day.dt * 1000);
     return {
       date: date.toISOString().split('T')[0],
@@ -199,12 +290,49 @@ function transformForecast(current: OpenWeatherCurrent, daily: OpenWeatherDaily[
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const API_KEY = process.env.OPENWEATHER_API_KEY;
+  const clientIP = getClientIP(request);
   
   console.log('🔑 API Key exists:', !!API_KEY);
-  console.log('🔑 API Key length:', API_KEY?.length || 0);
   console.log('🌤️ Weather API called at:', new Date().toISOString());
+  console.log('🌐 Client IP:', clientIP);
+  
+  // Check rate limiting
+  const rateLimit = checkRateLimit(clientIP);
+  if (!rateLimit.allowed) {
+    console.log(`⏰ Rate limit exceeded for IP: ${clientIP}`);
+    const rateLimitResponse = NextResponse.json({ 
+      error: 'Too many requests. Please wait before refreshing again.',
+      retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000)
+    }, { status: 429 });
+    
+    rateLimitResponse.headers.set('X-RateLimit-Limit', RATE_LIMIT_MAX_REQUESTS.toString());
+    rateLimitResponse.headers.set('X-RateLimit-Remaining', '0');
+    rateLimitResponse.headers.set('X-RateLimit-Reset', rateLimit.resetTime.toString());
+    rateLimitResponse.headers.set('Retry-After', Math.ceil((rateLimit.resetTime - Date.now()) / 1000).toString());
+    
+    return rateLimitResponse;
+  }
+  
+  // Check cache first
+  const cacheKey = 'weather-data';
+  const cachedData = getCachedData(cacheKey);
+  if (cachedData) {
+    console.log('📦 Returning cached weather data');
+    const response = NextResponse.json({
+      ...cachedData,
+      cached: true,
+      cache_age: Math.floor((Date.now() - weatherCache.get(cacheKey)!.timestamp) / 1000)
+    });
+    
+    // Add rate limit headers
+    response.headers.set('X-RateLimit-Limit', RATE_LIMIT_MAX_REQUESTS.toString());
+    response.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString());
+    response.headers.set('X-RateLimit-Reset', rateLimit.resetTime.toString());
+    
+    return response;
+  }
   
   if (!API_KEY) {
     console.error('❌ No API key found in environment');
@@ -223,6 +351,7 @@ export async function GET() {
     const forecasts: WeatherForecast[] = [];
     
     console.log('📍 Checking weather for locations:', Object.keys(HOTEL_LOCATIONS));
+    console.log('💰 Making fresh API calls to OpenWeather...');
     
     // Fetch alerts, current weather, and 5-day forecast for each location
     for (const [locationName, locationData] of Object.entries(HOTEL_LOCATIONS)) {
@@ -232,7 +361,6 @@ export async function GET() {
         const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${locationData.lat}&lon=${locationData.lon}&appid=${API_KEY}&units=metric&exclude=minutely,hourly`;
         
         const response = await fetch(url, {
-          // Add cache busting for OpenWeather API calls too
           headers: {
             'Cache-Control': 'no-cache'
           }
@@ -251,11 +379,11 @@ export async function GET() {
           hasDaily: !!(data.daily && data.daily.length > 0)
         });
         
-        // Process current weather + 5-day forecast
+        // Process current weather + 5-day forecast (FIXED: now shows next 5 days)
         if (data.current && data.daily) {
           const forecast = transformForecast(data.current, data.daily, locationName, locationData.hotels);
           forecasts.push(forecast);
-          console.log(`📊 Added forecast for ${locationName}`);
+          console.log(`📊 Added forecast for ${locationName} (next 5 days)`);
         }
         
         // Process alerts if they exist
@@ -297,8 +425,13 @@ export async function GET() {
       warnings,
       forecasts,
       updated_at: new Date().toISOString(),
-      locations_checked: Object.keys(HOTEL_LOCATIONS).length
+      locations_checked: Object.keys(HOTEL_LOCATIONS).length,
+      cached: false
     };
+    
+    // Cache the fresh data
+    setCachedData(cacheKey, responseData);
+    console.log('💾 Cached weather data for 10 minutes');
     
     const response = NextResponse.json(responseData);
     
@@ -310,7 +443,12 @@ export async function GET() {
     response.headers.set('Last-Modified', new Date().toUTCString());
     response.headers.set('ETag', `"${Date.now()}"`);
     
-    console.log('✅ Returning fresh weather data with no-cache headers');
+    // Add rate limit headers
+    response.headers.set('X-RateLimit-Limit', RATE_LIMIT_MAX_REQUESTS.toString());
+    response.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString());
+    response.headers.set('X-RateLimit-Reset', rateLimit.resetTime.toString());
+    
+    console.log('✅ Returning fresh weather data with rate limiting');
     return response;
     
   } catch (error) {
