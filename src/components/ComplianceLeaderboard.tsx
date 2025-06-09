@@ -25,8 +25,8 @@ export default function ComplianceLeaderboard({ data }: Props) {
     [] // hotels is static, so empty dependency array
   );
 
-  // Memoize score color calculation
-  const getScoreColor = useMemo(() => (score: number) => {
+  // Memoize score color calculation function (not the result)
+  const getScoreColor = useCallback((score: number) => {
     if (score >= 85) return '#10b981'; // green-500
     if (score >= 70) return '#f59e0b'; // amber-500
     return '#ef4444'; // red-500
