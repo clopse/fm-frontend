@@ -875,18 +875,18 @@ export function UtilitiesGraphs() {
                     <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
                       {viewMode === 'efficiency' && (
                         <>
-                          <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
+                          <td className="px-4 py-3 font-medium text-gray-900">{(item as any).name}</td>
                           <td className="px-4 py-3 text-right text-gray-700">
                             {item.value.toLocaleString()} {currentMetric?.unit}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-700">{item.rooms}</td>
-                          <td className="px-4 py-3 text-right text-gray-700">{item.sqm.toLocaleString()}</td>
+                          <td className="px-4 py-3 text-right text-gray-700">{(item as any).rooms}</td>
+                          <td className="px-4 py-3 text-right text-gray-700">{(item as any).sqm.toLocaleString()}</td>
                           <td className="px-4 py-3 text-right text-gray-500">{item.dataPoints}</td>
                         </>
                       )}
                       {viewMode === 'trends' && (
                         <>
-                          <td className="px-4 py-3 font-medium text-gray-900">{item.month}</td>
+                          <td className="px-4 py-3 font-medium text-gray-900">{(item as any).month}</td>
                           <td className="px-4 py-3 text-right text-gray-700">
                             {item.value.toLocaleString()} {currentMetric?.unit}
                           </td>
@@ -895,24 +895,24 @@ export function UtilitiesGraphs() {
                       )}
                       {viewMode === 'single-hotel' && (
                         <>
-                          <td className="px-4 py-3 font-medium text-gray-900">{item.month}</td>
+                          <td className="px-4 py-3 font-medium text-gray-900">{(item as any).month}</td>
                           <td className="px-4 py-3 text-right text-gray-700">
                             {item.value > 0 ? `${item.value.toLocaleString()} ${currentMetric?.unit}` : '-'}
                           </td>
                           <td className="px-4 py-3 text-right text-gray-700">
-                            {item.previousYear > 0 ? `${item.previousYear.toLocaleString()} ${currentMetric?.unit}` : '-'}
+                            {(item as any).previousYear > 0 ? `${(item as any).previousYear.toLocaleString()} ${currentMetric?.unit}` : '-'}
                           </td>
                           <td className={`px-4 py-3 text-right ${
-                            item.yearOverYear > 0 ? 'text-red-600' : item.yearOverYear < 0 ? 'text-green-600' : 'text-gray-500'
+                            (item as any).yearOverYear > 0 ? 'text-red-600' : (item as any).yearOverYear < 0 ? 'text-green-600' : 'text-gray-500'
                           }`}>
-                            {item.yearOverYear !== 0 ? `${item.yearOverYear > 0 ? '+' : ''}${item.yearOverYear}%` : '-'}
+                            {(item as any).yearOverYear !== 0 ? `${(item as any).yearOverYear > 0 ? '+' : ''}${(item as any).yearOverYear}%` : '-'}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            {showAnomalies && item.isAnomaly ? (
+                            {showAnomalies && (item as any).isAnomaly ? (
                               <AlertTriangle className="w-4 h-4 text-orange-500 mx-auto" title="Anomaly detected" />
-                            ) : item.yearOverYear > 10 ? (
+                            ) : (item as any).yearOverYear > 10 ? (
                               <TrendingUp className="w-4 h-4 text-red-500 mx-auto" title="Significant increase" />
-                            ) : item.yearOverYear < -10 ? (
+                            ) : (item as any).yearOverYear < -10 ? (
                               <TrendingDown className="w-4 h-4 text-green-500 mx-auto" title="Significant decrease" />
                             ) : (
                               <CheckCircle className="w-4 h-4 text-gray-400 mx-auto" title="Normal" />
@@ -936,12 +936,12 @@ export function UtilitiesGraphs() {
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h5 className="font-medium text-blue-900 mb-2">Most Efficient</h5>
                   <p className="text-blue-700">
-                    {chartData.reduce((prev, current) => 
+                    {(chartData as any[]).reduce((prev, current) => 
                       (prev.value < current.value) ? prev : current
                     ).name}
                   </p>
                   <p className="text-sm text-blue-600">
-                    {chartData.reduce((prev, current) => 
+                    {(chartData as any[]).reduce((prev, current) => 
                       (prev.value < current.value) ? prev : current
                     ).value.toLocaleString()} {currentMetric?.unit}
                   </p>
@@ -949,12 +949,12 @@ export function UtilitiesGraphs() {
                 <div className="bg-orange-50 p-4 rounded-lg">
                   <h5 className="font-medium text-orange-900 mb-2">Needs Attention</h5>
                   <p className="text-orange-700">
-                    {chartData.reduce((prev, current) => 
+                    {(chartData as any[]).reduce((prev, current) => 
                       (prev.value > current.value) ? prev : current
                     ).name}
                   </p>
                   <p className="text-sm text-orange-600">
-                    {chartData.reduce((prev, current) => 
+                    {(chartData as any[]).reduce((prev, current) => 
                       (prev.value > current.value) ? prev : current
                     ).value.toLocaleString()} {currentMetric?.unit}
                   </p>
@@ -974,7 +974,7 @@ export function UtilitiesGraphs() {
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <h5 className="font-medium text-blue-900 mb-2">Best Month</h5>
                   <p className="text-blue-700">
-                    {chartData.reduce((prev, current) => 
+                    {(chartData as any[]).reduce((prev, current) => 
                       (prev.value < current.value && prev.value > 0) ? prev : current
                     ).month}
                   </p>
@@ -983,14 +983,14 @@ export function UtilitiesGraphs() {
                 <div className="bg-orange-50 p-4 rounded-lg">
                   <h5 className="font-medium text-orange-900 mb-2">Improvement Opportunity</h5>
                   <p className="text-orange-700">
-                    {chartData.filter(item => item.yearOverYear > 0).length} months
+                    {(chartData as any[]).filter(item => item.yearOverYear > 0).length} months
                   </p>
                   <p className="text-sm text-orange-600">Showing increased usage</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
                   <h5 className="font-medium text-green-900 mb-2">Trend Direction</h5>
                   <p className="text-green-700">
-                    {chartData.filter(item => item.yearOverYear < 0).length > chartData.filter(item => item.yearOverYear > 0).length 
+                    {(chartData as any[]).filter(item => item.yearOverYear < 0).length > (chartData as any[]).filter(item => item.yearOverYear > 0).length 
                       ? 'Improving' : 'Increasing'}
                   </p>
                   <p className="text-sm text-green-600">Overall efficiency trend</p>
