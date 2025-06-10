@@ -1,170 +1,145 @@
-// FILE: src/services/idleService.ts
-import { userService } from './userService';
+// FILE: src/services/userService.ts
+import { User, UserCreate, UserUpdate, LoginRequest, LoginResponse, UserStats } from '../types/user';
 
-class IdleService {
-  private timeout: NodeJS.Timeout | null = null;
-  private warningTimeout: NodeJS.Timeout | null = null;
-  private readonly IDLE_TIME = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
-  private readonly WARNING_TIME = 5 * 60 * 1000; // Show warning 5 minutes before logout
-  private isActive = false;
-  private warningCallback?: () => void;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-  // Events that indicate user activity
-  private readonly ACTIVITY_EVENTS = [
-    'mousedown',
-    'mousemove', 
-    'keypress',
-    'scroll',
-    'touchstart',
-    'click',
-    'keydown'
-  ];
+// Helper function to check if current path is training
+function isTrainingPath(): boolean {
+  if (typeof window !== 'undefined') {
+    return window.location.pathname.includes('/training/');
+  }
+  return false;
+}
 
-  /**
-   * Start tracking user activity
-   * @param onWarning - Optional callback when warning should be shown
-   */
-  startTracking(onWarning?: () => void) {
-    if (this.isActive) return; // Already tracking
-    
-    this.warningCallback = onWarning;
-    this.isActive = true;
-    
-    // Add event listeners for user activity
-    this.ACTIVITY_EVENTS.forEach(event => {
-      document.addEventListener(event, this.resetTimer.bind(this), true);
+// Generic fetch wrapper with auth
+export async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const token = localStorage.getItem('access_token');
+  
+  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(options?.headers || {}),
+    },
+  });
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || `API error: ${res.status}`);
+  }
+  
+  return res.json();
+}
+
+class UserService {
+  // Authentication
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
+    const data = await apiFetch<LoginResponse>('/api/users/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
     });
-    
-    // Handle visibility change (tab switching)
-    document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
-    
-    // Start the timer
-    this.resetTimer();
-    
-    console.log('Idle tracking started - 2 hour timeout');
+    // Store token and user
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    return data;
   }
 
-  /**
-   * Stop tracking user activity
-   */
-  stopTracking() {
-    if (!this.isActive) return;
-    
-    this.isActive = false;
-    
-    // Remove event listeners
-    this.ACTIVITY_EVENTS.forEach(event => {
-      document.removeEventListener(event, this.resetTimer.bind(this), true);
-    });
-    
-    document.removeEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
-    
-    // Clear timers
-    this.clearTimers();
-    
-    console.log('Idle tracking stopped');
-  }
-
-  /**
-   * Reset the idle timer (called on user activity)
-   */
-  private resetTimer() {
-    if (!this.isActive) return;
-    
-    this.clearTimers();
-    
-    // Set warning timer (fires 5 minutes before logout)
-    this.warningTimeout = setTimeout(() => {
-      if (this.warningCallback) {
-        this.warningCallback();
-      } else {
-        // Default warning behavior
-        const shouldContinue = confirm(
-          'Your session will expire in 5 minutes due to inactivity. Click OK to continue your session.'
-        );
-        
-        if (shouldContinue) {
-          this.resetTimer(); // Reset if user wants to continue
-        }
+  async logout(): Promise<void> {
+    try {
+      await apiFetch('/api/users/auth/logout', { method: 'POST' });
+    } finally {
+      // Stop idle tracking
+      if (typeof window !== 'undefined') {
+        // Dynamic import to avoid circular dependency
+        import('./idleService').then(({ idleService }) => {
+          idleService.stopTracking();
+        });
       }
-    }, this.IDLE_TIME - this.WARNING_TIME);
-    
-    // Set logout timer
-    this.timeout = setTimeout(() => {
-      this.handleTimeout();
-    }, this.IDLE_TIME);
-  }
-
-  /**
-   * Handle when user switches tabs
-   */
-  private handleVisibilityChange() {
-    if (document.hidden) {
-      // User switched away - don't reset timer
-      return;
-    } else {
-      // User came back - reset timer
-      this.resetTimer();
+      
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
     }
   }
 
-  /**
-   * Handle idle timeout - logout user
-   */
-  private handleTimeout() {
-    console.log('Session expired due to inactivity');
-    
-    // Stop tracking
-    this.stopTracking();
-    
-    // Logout user
-    userService.logout();
-    
-    // Show message and redirect
-    alert('Your session has expired due to inactivity. Please log in again.');
-    window.location.href = '/login';
+  getCurrentUser(): User | null {
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
   }
 
-  /**
-   * Clear all timers
-   */
-  private clearTimers() {
-    if (this.timeout) {
-      clearTimeout(this.timeout);
-      this.timeout = null;
+  isAuthenticated(): boolean {
+    // BYPASS AUTH FOR TRAINING PAGES
+    if (isTrainingPath()) {
+      return true; // Always return true for training pages
     }
     
-    if (this.warningTimeout) {
-      clearTimeout(this.warningTimeout);
-      this.warningTimeout = null;
+    // Normal auth check for other pages
+    if (typeof window === 'undefined') {
+      return false; // Server-side, assume not authenticated
+    }
+    
+    try {
+      return !!localStorage.getItem('access_token');
+    } catch (error) {
+      console.error('localStorage access error:', error);
+      return false;
     }
   }
 
-  /**
-   * Manually extend the session (useful for "Stay logged in" buttons)
-   */
-  extendSession() {
-    if (this.isActive) {
-      this.resetTimer();
-      console.log('Session extended');
-    }
+  // User CRUD operations
+  async getUsers(filters?: {
+    role?: string;
+    hotel?: string;
+    status?: string;
+    search?: string;
+  }): Promise<User[]> {
+    const params = new URLSearchParams();
+    if (filters?.role) params.append('role', filters.role);
+    if (filters?.hotel && filters.hotel !== 'All Hotels') params.append('hotel', filters.hotel);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.search) params.append('search', filters.search);
+    return apiFetch<User[]>(`/api/users/?${params}`);
   }
 
-  /**
-   * Get remaining time until logout (in milliseconds)
-   */
-  getRemainingTime(): number {
-    // This is approximate since we don't track the exact start time
-    // In a production app, you'd want to track this more precisely
-    return this.IDLE_TIME;
+  async getUser(userId: string): Promise<User> {
+    return apiFetch<User>(`/api/users/${userId}`);
   }
 
-  /**
-   * Check if idle tracking is active
-   */
-  isTracking(): boolean {
-    return this.isActive;
+  async createUser(userData: UserCreate): Promise<User> {
+    return apiFetch<User>('/api/users/', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async updateUser(userId: string, userData: UserUpdate): Promise<User> {
+    return apiFetch<User>(`/api/users/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    await apiFetch(`/api/users/${userId}`, { method: 'DELETE' });
+  }
+
+  async resetPassword(userId: string, newPassword: string): Promise<void> {
+    await apiFetch(`/api/users/${userId}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({
+        email: '',
+        new_password: newPassword,
+      }),
+    });
+  }
+
+  async activateUser(userId: string): Promise<void> {
+    await apiFetch(`/api/users/${userId}/activate`, { method: 'POST' });
+  }
+
+  async getUserStats(): Promise<UserStats> {
+    return apiFetch<UserStats>('/api/users/stats/summary');
   }
 }
 
-export const idleService = new IdleService();
+export const userService = new UserService();
