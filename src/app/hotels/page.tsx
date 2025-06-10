@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 import ComplianceLeaderboard from '@/components/ComplianceLeaderboard';
-import { UtilitiesGraphs } from '@/components/UtilitiesGraphs';
+import UtilitiesGraphs from '@/components/UtilitiesGraphs';
 import { RecentUploads } from '@/components/RecentUploads';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
 import UserPanel from '@/components/UserPanel';
