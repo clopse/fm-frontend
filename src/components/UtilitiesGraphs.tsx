@@ -249,19 +249,17 @@ export function UtilitiesGraphs() {
   // Fetch hotel facilities data
   useEffect(() => {
     const fetchHotelFacilities = async () => {
-      console.log('🏨 Starting to fetch hotel facilities data...');
       const facilitiesData: Record<string, HotelFacilities> = {};
       
       for (const hotel of hotels) {
         try {
-          const url = `${process.env.NEXT_PUBLIC_API_URL}/hotels/facilities/${hotel.id}`;
-          console.log(`🏨 Fetching facilities for ${hotel.id} from:`, url);
+          // FIXED: Added /api to the URL path
+          const url = `${process.env.NEXT_PUBLIC_API_URL}/api/hotels/facilities/${hotel.id}`;
           
           const response = await fetch(url);
           
           if (response.ok) {
             const data = await response.json();
-            console.log(`✅ Facilities data for ${hotel.id}:`, data);
             
             // The API returns the data nested under 'facilities'
             const facilities = data.facilities || data;
@@ -270,10 +268,7 @@ export function UtilitiesGraphs() {
               totalSquareMetres: facilities.structural?.totalSquareMetres || 0,
               yearBuilt: facilities.structural?.yearBuilt
             };
-            
-            console.log(`📊 Processed facilities for ${hotel.id}:`, facilitiesData[hotel.id]);
           } else {
-            console.warn(`❌ Failed to fetch facilities for ${hotel.id}:`, response.status, response.statusText);
             // Graceful fallback for missing data
             facilitiesData[hotel.id] = {
               totalRooms: 0,
@@ -281,7 +276,6 @@ export function UtilitiesGraphs() {
             };
           }
         } catch (error) {
-          console.error(`💥 Error fetching facilities for ${hotel.id}:`, error);
           facilitiesData[hotel.id] = {
             totalRooms: 0,
             totalSquareMetres: 0
@@ -289,42 +283,32 @@ export function UtilitiesGraphs() {
         }
       }
       
-      console.log('🏨 Final facilities data:', facilitiesData);
       setHotelFacilities(facilitiesData);
     };
 
     fetchHotelFacilities();
   }, []);
 
-  // Fetch utility data (same as your existing logic)
+  // Fetch utility data
   useEffect(() => {
     const fetchUtilityData = async () => {
-      console.log('⚡ Starting to fetch utility data...');
-      console.log('⚡ Selected hotels:', selectedHotels);
-      console.log('⚡ Selected utility type:', selectedUtilityType);
-      
       setLoading(true);
       try {
         const billsPromises = selectedHotels.map(async (hotelId) => {
-          console.log(`⚡ Fetching bills for hotel: ${hotelId}`);
           const bills: UtilityBill[] = [];
           
           for (const year of YEARS) {
             try {
               const url = `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${year}`;
-              console.log(`⚡ Fetching ${year} bills from:`, url);
               
               const response = await fetch(url);
               
               if (response.ok) {
                 const data = await response.json();
-                console.log(`✅ Raw utility data for ${hotelId} ${year}:`, data);
                 
                 for (const bill of data.bills || []) {
                   const summary = bill.summary || {};
                   const billDate = summary.bill_date || '';
-                  
-                  console.log(`📄 Processing bill with date: ${billDate}, type: ${bill.utility_type}`);
                   
                   if (billDate) {
                     const [billYear, billMonth] = billDate.split('-');
@@ -338,32 +322,22 @@ export function UtilitiesGraphs() {
                         year: billYear,
                         data: bill.raw_data || bill
                       });
-                      console.log(`✅ Added bill: ${hotelId} ${monthName} ${billYear} ${bill.utility_type}`);
-                    } else {
-                      console.log(`❌ Skipped bill - wrong type: ${bill.utility_type} (looking for ${selectedUtilityType})`);
                     }
-                  } else {
-                    console.warn('❌ Bill missing date:', bill);
                   }
                 }
-              } else {
-                console.warn(`❌ Failed to fetch ${hotelId} ${year}:`, response.status, response.statusText);
               }
             } catch (error) {
-              console.error(`💥 Error fetching ${hotelId} ${year}:`, error);
+              // Silent error handling
             }
           }
           
-          console.log(`📊 Total bills found for ${hotelId}:`, bills.length);
           return bills;
         });
         
         const allBills = (await Promise.all(billsPromises)).flat();
-        console.log('📊 All utility bills collected:', allBills.length, allBills);
         setUtilityData(allBills);
         
       } catch (error) {
-        console.error('💥 Error fetching utility data:', error);
         setUtilityData([]);
       }
       setLoading(false);
@@ -372,7 +346,6 @@ export function UtilitiesGraphs() {
     if (selectedHotels.length > 0 && selectedUtilityType) {
       fetchUtilityData();
     } else {
-      console.log('❌ Skipping fetch - no hotels selected or utility type');
       setUtilityData([]);
       setLoading(false);
     }
@@ -463,7 +436,7 @@ export function UtilitiesGraphs() {
           monthlyDataMap[dataKey].dayCount += dayCount;
         });
       } catch (error) {
-        console.warn('Error processing bill:', error);
+        // Silent error handling
       }
     });
     
@@ -472,9 +445,6 @@ export function UtilitiesGraphs() {
     results.forEach(data => {
       if (data.facilities) {
         data.efficiencyMetrics = calculateEfficiencyMetrics(data, data.facilities);
-        console.log(`🧮 Calculated efficiency metrics for ${data.hotelId} ${data.month} ${data.year}:`, data.efficiencyMetrics);
-      } else {
-        console.warn(`❌ No facilities data for ${data.hotelId} - cannot calculate efficiency metrics`);
       }
     });
     
@@ -483,29 +453,19 @@ export function UtilitiesGraphs() {
 
   // Process data with efficiency calculations
   useEffect(() => {
-    console.log('🔄 Processing utility data...');
-    console.log('🔄 Raw utility data length:', utilityData.length);
-    console.log('🔄 Hotel facilities keys:', Object.keys(hotelFacilities));
-    
     if (utilityData.length > 0 && Object.keys(hotelFacilities).length > 0) {
-      console.log('🔄 Both utility data and facilities available - processing...');
       const proportionalData = generateProportionalMonthlyData(utilityData);
-      console.log('📊 Generated proportional data:', proportionalData.length, proportionalData);
       
       const filteredData = proportionalData.filter(data => {
         const isSelectedHotel = selectedHotels.includes(data.hotelId);
         const isSelectedYear = selectedYears.includes(data.year);
         const isSelectedMonth = selectedMonths.includes(data.month);
         
-        console.log(`🔍 Filtering ${data.hotelId} ${data.month} ${data.year}: hotel=${isSelectedHotel}, year=${isSelectedYear}, month=${isSelectedMonth}`);
-        
         return isSelectedHotel && isSelectedYear && isSelectedMonth;
       });
       
-      console.log('✅ Final filtered processed data:', filteredData.length, filteredData);
       setProcessedData(filteredData);
     } else {
-      console.log('❌ Missing data - utility:', utilityData.length, 'facilities:', Object.keys(hotelFacilities).length);
       setProcessedData([]);
     }
   }, [utilityData, hotelFacilities, selectedHotels, selectedMonths, selectedYears]);
@@ -522,22 +482,14 @@ export function UtilitiesGraphs() {
 
   // Generate chart data for different view modes
   const getChartData = () => {
-    console.log('📈 Generating chart data for view mode:', viewMode);
-    console.log('📈 Processed data available:', processedData.length);
-    
     const dataWithAnomalies = detectAnomalies([...processedData]);
     
     if (viewMode === 'efficiency') {
-      console.log('📈 Processing efficiency view for hotels:', selectedHotels);
-      
       const chartData = selectedHotels.map(hotelId => {
         const hotel = hotels.find(h => h.id === hotelId);
         const hotelData = dataWithAnomalies.filter(data => data.hotelId === hotelId);
         
-        console.log(`📈 Hotel ${hotelId} data points:`, hotelData.length);
-        
         if (hotelData.length === 0) {
-          console.log(`❌ No data for hotel ${hotelId}`);
           return null; // Skip hotels with no data
         }
         
@@ -546,7 +498,6 @@ export function UtilitiesGraphs() {
         
         hotelData.forEach(data => {
           const value = data.efficiencyMetrics[selectedMetric];
-          console.log(`📊 ${hotelId} ${data.month} ${data.year} ${selectedMetric}:`, value);
           if (value && value > 0) {
             totalValue += value;
             validDataPoints++;
@@ -556,8 +507,6 @@ export function UtilitiesGraphs() {
         const avgValue = validDataPoints > 0 ? totalValue / validDataPoints : 0;
         const facilities = hotelFacilities[hotelId];
         
-        console.log(`📊 ${hotelId} summary: avg=${avgValue}, points=${validDataPoints}, facilities=`, facilities);
-        
         // Only include hotels that have both facility data AND utility data
         const hasValidData = validDataPoints > 0 && 
                            facilities?.totalSquareMetres && 
@@ -565,7 +514,6 @@ export function UtilitiesGraphs() {
                            avgValue > 0;
         
         if (!hasValidData) {
-          console.log(`❌ Invalid data for ${hotelId}: points=${validDataPoints}, sqm=${facilities?.totalSquareMetres}, rooms=${facilities?.totalRooms}, avg=${avgValue}`);
           return null; // Skip invalid data
         }
         
@@ -579,11 +527,9 @@ export function UtilitiesGraphs() {
           hasValidData: true
         };
         
-        console.log(`✅ Valid chart data for ${hotelId}:`, result);
         return result;
       }).filter(item => item !== null); // Remove null entries
       
-      console.log('📈 Final efficiency chart data:', chartData);
       return chartData;
     }
     
@@ -596,8 +542,6 @@ export function UtilitiesGraphs() {
         const hotel = hotels.find(h => h.id === hotelId);
         const hotelData = dataWithAnomalies.filter(data => data.hotelId === hotelId);
         
-        console.log(`📈 Processing trends for ${hotelId}:`, hotelData.length, 'data points');
-        
         hotelTrendData[hotelId] = MONTHS.map(month => {
           const monthData = hotelData.filter(data => data.month === month);
           
@@ -606,7 +550,6 @@ export function UtilitiesGraphs() {
           
           monthData.forEach(data => {
             const value = data.efficiencyMetrics[selectedMetric];
-            console.log(`📊 ${hotelId} ${month} ${selectedMetric}:`, value);
             if (value && value > 0) {
               totalValue += value;
               validDataPoints++;
@@ -642,7 +585,6 @@ export function UtilitiesGraphs() {
         return selectedHotels.some(hotelId => item[hotelId] && item[hotelId] > 0);
       });
       
-      console.log('📈 Final combined trend data:', combinedTrendData);
       return combinedTrendData;
     }
     
@@ -1067,62 +1009,7 @@ export function UtilitiesGraphs() {
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Data Points</th>
                       </>
                     )}
-                    {viewMode === 'trends' && (
-                      <>
-                        <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Month</th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">
-                          Average {currentMetric?.label}
-                        </th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Hotels</th>
-                      </>
-                    )}
-                    {viewMode === 'trends' && (
-              <>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-blue-900 mb-2">Data Coverage</h5>
-                  <p className="text-blue-700">
-                    {selectedHotels.length} hotel{selectedHotels.length !== 1 ? 's' : ''} selected
-                  </p>
-                  <p className="text-sm text-blue-600">Trends across {selectedYears.join(', ')}</p>
-                </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-green-900 mb-2">Best Performing</h5>
-                  <p className="text-green-700">
-                    {(() => {
-                      const avgByHotel = selectedHotels.map(hotelId => {
-                        const hotelData = (chartData as any[]).map(item => item[hotelId]).filter(val => val > 0);
-                        const avg = hotelData.length > 0 ? hotelData.reduce((sum, val) => sum + val, 0) / hotelData.length : 0;
-                        return { hotelId, avg, name: hotels.find(h => h.id === hotelId)?.name || hotelId };
-                      }).filter(item => item.avg > 0);
-                      
-                      if (avgByHotel.length === 0) return 'No data available';
-                      
-                      const best = avgByHotel.reduce((prev, current) => (prev.avg < current.avg) ? prev : current);
-                      return best.name;
-                    })()}
-                  </p>
-                  <p className="text-sm text-green-600">Lowest average usage</p>
-                </div>
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-orange-900 mb-2">Needs Focus</h5>
-                  <p className="text-orange-700">
-                    {(() => {
-                      const avgByHotel = selectedHotels.map(hotelId => {
-                        const hotelData = (chartData as any[]).map(item => item[hotelId]).filter(val => val > 0);
-                        const avg = hotelData.length > 0 ? hotelData.reduce((sum, val) => sum + val, 0) / hotelData.length : 0;
-                        return { hotelId, avg, name: hotels.find(h => h.id === hotelId)?.name || hotelId };
-                      }).filter(item => item.avg > 0);
-                      
-                      if (avgByHotel.length === 0) return 'No data available';
-                      
-                      const worst = avgByHotel.reduce((prev, current) => (prev.avg > current.avg) ? prev : current);
-                      return worst.name;
-                    })()}
-                  </p>
-                  <p className="text-sm text-orange-600">Highest average usage</p>
-                </div>
-              </>
-            )}
+                    {viewMode === 'single-hotel' && (
                       <>
                         <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Month</th>
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">
@@ -1148,15 +1035,6 @@ export function UtilitiesGraphs() {
                           </td>
                           <td className="px-4 py-3 text-right text-gray-700">{(item as any).rooms}</td>
                           <td className="px-4 py-3 text-right text-gray-700">{(item as any).sqm.toLocaleString()}</td>
-                          <td className="px-4 py-3 text-right text-gray-500">{(item as any).dataPoints}</td>
-                        </>
-                      )}
-                      {viewMode === 'trends' && (
-                        <>
-                          <td className="px-4 py-3 font-medium text-gray-900">{(item as any).month}</td>
-                          <td className="px-4 py-3 text-right text-gray-700">
-                            {item.value.toLocaleString()} {currentMetric?.unit}
-                          </td>
                           <td className="px-4 py-3 text-right text-gray-500">{(item as any).dataPoints}</td>
                         </>
                       )}
@@ -1238,6 +1116,55 @@ export function UtilitiesGraphs() {
                   <p className="text-sm text-green-600">Across all hotels</p>
                 </div>
               </>
+            )}
+            
+            {viewMode === 'trends' && (
+              <>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h5 className="font-medium text-blue-900 mb-2">Data Coverage</h5>
+                  <p className="text-blue-700">
+                    {selectedHotels.length} hotel{selectedHotels.length !== 1 ? 's' : ''} selected
+                  </p>
+                  <p className="text-sm text-blue-600">Trends across {selectedYears.join(', ')}</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h5 className="font-medium text-green-900 mb-2">Best Performing</h5>
+                  <p className="text-green-700">
+                    {(() => {
+                      const avgByHotel = selectedHotels.map(hotelId => {
+                        const hotelData = (chartData as any[]).map(item => item[hotelId]).filter(val => val > 0);
+                        const avg = hotelData.length > 0 ? hotelData.reduce((sum, val) => sum + val, 0) / hotelData.length : 0;
+                        return { hotelId, avg, name: hotels.find(h => h.id === hotelId)?.name || hotelId };
+                      }).filter(item => item.avg > 0);
+                      
+                      if (avgByHotel.length === 0) return 'No data available';
+                      
+                      const best = avgByHotel.reduce((prev, current) => (prev.avg < current.avg) ? prev : current);
+                      return best.name;
+                    })()}
+                  </p>
+                  <p className="text-sm text-green-600">Lowest average usage</p>
+                </div>
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <h5 className="font-medium text-orange-900 mb-2">Needs Focus</h5>
+                  <p className="text-orange-700">
+                    {(() => {
+                      const avgByHotel = selectedHotels.map(hotelId => {
+                        const hotelData = (chartData as any[]).map(item => item[hotelId]).filter(val => val > 0);
+                        const avg = hotelData.length > 0 ? hotelData.reduce((sum, val) => sum + val, 0) / hotelData.length : 0;
+                        return { hotelId, avg, name: hotels.find(h => h.id === hotelId)?.name || hotelId };
+                      }).filter(item => item.avg > 0);
+                      
+                      if (avgByHotel.length === 0) return 'No data available';
+                      
+                      const worst = avgByHotel.reduce((prev, current) => (prev.avg > current.avg) ? prev : current);
+                      return worst.name;
+                    })()}
+                  </p>
+                  <p className="text-sm text-orange-600">Highest average usage</p>
+                </div>
+              </>
+            )}
             
             {viewMode === 'single-hotel' && (
               <>
