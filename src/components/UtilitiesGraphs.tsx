@@ -519,6 +519,7 @@ export default function UtilitiesGraphs() {
         
         // Sort by year to ensure chronological order
         return chartData.sort((a, b) => {
+          if (!a || !b) return 0;
           const yearA = parseInt(a.year);
           const yearB = parseInt(b.year);
           if (yearA !== yearB) return yearA - yearB;
