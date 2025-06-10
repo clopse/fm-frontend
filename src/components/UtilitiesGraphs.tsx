@@ -93,7 +93,7 @@ export function UtilitiesGraphs() {
   // Professional dashboard filters - simplified and focused
   const [selectedUtilityType, setSelectedUtilityType] = useState<'electricity' | 'gas' | 'water'>('electricity');
   const [selectedMetric, setSelectedMetric] = useState('kwh_per_sqm');
-  const [viewMode, setViewMode] = useState<'efficiency' | 'single-hotel'>('efficiency');
+  const [viewMode, setViewMode] = useState<'efficiency' | 'trends' | 'single-hotel'>('efficiency');
   const [selectedSingleHotel, setSelectedSingleHotel] = useState<string>(hotels[0]?.id || '');
   const [showHotelSelector, setShowHotelSelector] = useState(false);
   
@@ -537,6 +537,61 @@ export function UtilitiesGraphs() {
       return chartData;
     }
     
+    if (viewMode === 'trends') {
+      // Create separate trend lines for each hotel
+      const hotelTrendData: Record<string, any[]> = {};
+      const hotelColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+      
+      selectedHotels.forEach((hotelId, index) => {
+        const hotel = hotels.find(h => h.id === hotelId);
+        const hotelData = dataWithAnomalies.filter(data => data.hotelId === hotelId);
+        
+        hotelTrendData[hotelId] = MONTHS.map(month => {
+          const monthData = hotelData.filter(data => data.month === month);
+          
+          let totalValue = 0;
+          let validDataPoints = 0;
+          
+          monthData.forEach(data => {
+            const value = data.efficiencyMetrics[selectedMetric];
+            if (value && value > 0) {
+              totalValue += value;
+              validDataPoints++;
+            }
+          });
+          
+          const avgValue = validDataPoints > 0 ? totalValue / validDataPoints : 0;
+          
+          return {
+            month,
+            [hotelId]: Math.round(avgValue * 100) / 100,
+            hotelName: hotel?.name || hotelId,
+            color: hotelColors[index % hotelColors.length],
+            dataPoints: validDataPoints
+          };
+        });
+      });
+      
+      // Combine all hotel data into a single dataset for charting
+      const combinedTrendData = MONTHS.map(month => {
+        const monthEntry: any = { month };
+        selectedHotels.forEach(hotelId => {
+          const hotelMonthData = hotelTrendData[hotelId]?.find(d => d.month === month);
+          if (hotelMonthData && hotelMonthData[hotelId] > 0) {
+            monthEntry[hotelId] = hotelMonthData[hotelId];
+            monthEntry[`${hotelId}_name`] = hotelMonthData.hotelName;
+            monthEntry[`${hotelId}_color`] = hotelMonthData.color;
+          }
+        });
+        return monthEntry;
+      }).filter(item => {
+        // Only include months that have data for at least one hotel
+        return selectedHotels.some(hotelId => item[hotelId] && item[hotelId] > 0);
+      });
+      
+      return combinedTrendData;
+    }
+    
     if (viewMode === 'single-hotel') {
       const hotelData = dataWithAnomalies.filter(data => data.hotelId === selectedSingleHotel);
       
@@ -639,6 +694,7 @@ export function UtilitiesGraphs() {
             <div className="flex space-x-1">
               {[
                 { key: 'efficiency', label: 'Efficiency', icon: Calculator },
+                { key: 'trends', label: 'Trends', icon: TrendingUp },
                 { key: 'single-hotel', label: 'Single Hotel', icon: Building2 }
               ].map(mode => (
                 <button
@@ -772,6 +828,7 @@ export function UtilitiesGraphs() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium text-gray-900">
               {viewMode === 'efficiency' && `${currentMetric?.label} Comparison`}
+              {viewMode === 'trends' && `${currentMetric?.label} Monthly Trends`}
               {viewMode === 'single-hotel' && `${hotels.find(h => h.id === selectedSingleHotel)?.name} - ${currentMetric?.label}`}
             </h3>
             <div className="text-sm text-gray-500">
@@ -847,6 +904,57 @@ export function UtilitiesGraphs() {
                   />
                   <Legend />
                 </LineChart>
+              ) : viewMode === 'trends' ? (
+                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                  <XAxis 
+                    dataKey="month" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={80}
+                    fontSize={12}
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                            <p className="font-medium">{`Month: ${label}`}</p>
+                            {payload.map((entry, index) => {
+                              const hotelName = hotels.find(h => h.id === entry.dataKey)?.name || entry.dataKey;
+                              return (
+                                <p key={index} style={{ color: entry.color }}>
+                                  {`${hotelName}: ${entry.value} ${currentMetric?.unit}`}
+                                </p>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend 
+                    formatter={(value) => {
+                      const hotelName = hotels.find(h => h.id === value)?.name || value;
+                      return hotelName;
+                    }}
+                  />
+                  {selectedHotels.map((hotelId, index) => {
+                    const hotelColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+                    return (
+                      <Line
+                        key={hotelId}
+                        type="monotone"
+                        dataKey={hotelId}
+                        stroke={hotelColors[index % hotelColors.length]}
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                        connectNulls={false}
+                      />
+                    );
+                  })}
+                </LineChart>
               ) : (
                 <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                   <XAxis 
@@ -892,6 +1000,7 @@ export function UtilitiesGraphs() {
           <div className="mt-6">
             <h4 className="text-lg font-medium text-gray-900 mb-3">
               {viewMode === 'efficiency' && 'Hotel Efficiency Comparison'}
+              {viewMode === 'trends' && 'Monthly Trend Data'}
               {viewMode === 'single-hotel' && 'Year-over-Year Performance'}
             </h4>
             <div className="overflow-x-auto">
@@ -908,6 +1017,15 @@ export function UtilitiesGraphs() {
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Rooms</th>
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Area (m²)</th>
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Data Points</th>
+                      </>
+                    )}
+                    {viewMode === 'trends' && (
+                      <>
+                        <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Month</th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">
+                          Average {currentMetric?.label}
+                        </th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Hotels with Data</th>
                       </>
                     )}
                     {viewMode === 'single-hotel' && (
@@ -938,6 +1056,21 @@ export function UtilitiesGraphs() {
                           <td className="px-4 py-3 text-right text-gray-700">{(item as any).rooms}</td>
                           <td className="px-4 py-3 text-right text-gray-700">{(item as any).sqm.toLocaleString()}</td>
                           <td className="px-4 py-3 text-right text-gray-500">{(item as any).dataPoints}</td>
+                        </>
+                      )}
+                      {viewMode === 'trends' && (
+                        <>
+                          <td className="px-4 py-3 font-medium text-gray-900">{(item as any).month}</td>
+                          <td className="px-4 py-3 text-right text-gray-700">
+                            {(() => {
+                              const values = selectedHotels.map(hotelId => (item as any)[hotelId]).filter(val => val > 0);
+                              const avg = values.length > 0 ? values.reduce((sum, val) => sum + val, 0) / values.length : 0;
+                              return avg > 0 ? `${avg.toFixed(2)} ${currentMetric?.unit}` : '-';
+                            })()}
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-500">
+                            {selectedHotels.filter(hotelId => (item as any)[hotelId] > 0).length}
+                          </td>
                         </>
                       )}
                       {viewMode === 'single-hotel' && (
@@ -979,8 +1112,8 @@ export function UtilitiesGraphs() {
           </div>
         )}
 
-        {/* Key Insights Panel */}
-        {!loading && chartData.length > 0 && (
+        {/* Key Insights Panel - Only for efficiency and single-hotel views */}
+        {!loading && chartData.length > 0 && viewMode !== 'trends' && (
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             {viewMode === 'efficiency' && (
               <>
