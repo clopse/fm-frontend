@@ -11,18 +11,11 @@ import {
   Eye, EyeOff, Settings, Loader2
 } from 'lucide-react';
 
-// Mock hotels data
-const hotels = [
-  { id: 'hie', name: 'Holiday Inn Express' },
-  { id: 'moxy', name: 'Moxy Cork' },
-  { id: 'hida', name: 'Holiday Inn Dublin Airport' },
-  { id: 'hd', name: 'Hampton Dublin' },
-  { id: 'he', name: 'Hampton Ealing' },
-  { id: 'wm', name: 'Waterford Marina' },
-  { id: 'hd2', name: 'Hamilton Dock' },
-  { id: 'sk', name: 'Seraphine Kensington' },
-  { id: 'th', name: 'Telephone House' }
-];
+import { hotels } from '@/lib/hotels';
+import { 
+  startOfMonth, endOfMonth, eachDayOfInterval, 
+  format, isValid, parseISO, subYears
+} from 'date-fns';
 
 interface UtilityBill {
   hotelId: string;
@@ -105,62 +98,120 @@ export default function ImprovedUtilitiesDashboard() {
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Mock hotel facilities data
-  const mockFacilities: Record<string, HotelFacilities> = {
-    'hie': { totalRooms: 198, totalSquareMetres: 8500, yearBuilt: 2010 },
-    'moxy': { totalRooms: 206, totalSquareMetres: 9200, yearBuilt: 2015 },
-    'hida': { totalRooms: 421, totalSquareMetres: 15800, yearBuilt: 2018 },
-    'hd': { totalRooms: 150, totalSquareMetres: 7200, yearBuilt: 2012 },
-    'he': { totalRooms: 180, totalSquareMetres: 8100, yearBuilt: 2014 },
-    'wm': { totalRooms: 120, totalSquareMetres: 6500, yearBuilt: 2016 },
-    'hd2': { totalRooms: 200, totalSquareMetres: 9000, yearBuilt: 2019 },
-    'sk': { totalRooms: 170, totalSquareMetres: 7800, yearBuilt: 2017 },
-    'th': { totalRooms: 190, totalSquareMetres: 8700, yearBuilt: 2020 }
+  const getMonthNumber = (monthName: string): number => {
+    return MONTHS.findIndex(m => m === monthName) + 1;
+  };
+  
+  const getMonthName = (monthNumber: number): string => {
+    return MONTHS[monthNumber - 1] || '';
   };
 
-  // Mock utility data generator
-  const generateMockData = () => {
-    const bills: UtilityBill[] = [];
-    
-    selectedHotels.forEach(hotelId => {
-      YEARS.forEach(year => {
-        MONTHS.forEach((month, monthIndex) => {
-          selectedUtilityTypes.forEach(utilityType => {
-            // Generate realistic seasonal data
-            const baseConsumption = utilityType === 'electricity' ? 
-              (monthIndex >= 5 && monthIndex <= 8 ? 15000 : 12000) : // Higher in summer for AC
-              (monthIndex >= 10 || monthIndex <= 2 ? 8000 : 4000); // Higher in winter for heating
+  // Fetch hotel facilities data from real API
+  useEffect(() => {
+    const fetchHotelFacilities = async () => {
+      const facilitiesData: Record<string, HotelFacilities> = {};
+      
+      for (const hotel of hotels) {
+        try {
+          const url = `${process.env.NEXT_PUBLIC_API_URL}/api/hotels/facilities/${hotel.id}`;
+          
+          const response = await fetch(url);
+          
+          if (response.ok) {
+            const data = await response.json();
             
-            const variation = 0.8 + Math.random() * 0.4; // ±20% variation
-            const consumption = Math.round(baseConsumption * variation);
-            const rate = utilityType === 'electricity' ? 0.15 : 0.08;
-            const cost = Math.round(consumption * rate * 100) / 100;
-            
-            bills.push({
-              hotelId,
-              billType: utilityType,
-              month,
-              year,
-              data: {
-                consumption: utilityType === 'electricity' ? 
-                  [{ type: 'Day', units: { value: consumption * 0.6 } }, { type: 'Night', units: { value: consumption * 0.4 } }] :
-                  null,
-                consumptionDetails: utilityType === 'gas' ? { consumptionValue: consumption } : null,
-                totalAmount: { value: cost },
-                billSummary: { currentBillAmount: cost },
-                billingPeriod: {
-                  startDate: `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`,
-                  endDate: `${year}-${String(monthIndex + 1).padStart(2, '0')}-${new Date(parseInt(year), monthIndex + 1, 0).getDate()}`
+            // The API returns the data nested under 'facilities'
+            const facilities = data.facilities || data;
+            facilitiesData[hotel.id] = {
+              totalRooms: facilities.structural?.totalRooms || 0,
+              totalSquareMetres: facilities.structural?.totalSquareMetres || 0,
+              yearBuilt: facilities.structural?.yearBuilt
+            };
+          } else {
+            // Graceful fallback for missing data
+            facilitiesData[hotel.id] = {
+              totalRooms: 0,
+              totalSquareMetres: 0
+            };
+          }
+        } catch (error) {
+          console.error(`Error fetching facilities for ${hotel.id}:`, error);
+          facilitiesData[hotel.id] = {
+            totalRooms: 0,
+            totalSquareMetres: 0
+          };
+        }
+      }
+      
+      setHotelFacilities(facilitiesData);
+    };
+
+    fetchHotelFacilities();
+  }, []);
+
+  // Fetch real utility data from API
+  useEffect(() => {
+    const fetchUtilityData = async () => {
+      setLoading(true);
+      try {
+        const billsPromises = selectedHotels.map(async (hotelId) => {
+          const bills: UtilityBill[] = [];
+          
+          for (const year of YEARS) {
+            try {
+              const url = `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${year}`;
+              
+              const response = await fetch(url);
+              
+              if (response.ok) {
+                const data = await response.json();
+                
+                for (const bill of data.bills || []) {
+                  const summary = bill.summary || {};
+                  const billDate = summary.bill_date || '';
+                  
+                  if (billDate) {
+                    const [billYear, billMonth] = billDate.split('-');
+                    const monthName = MONTHS[parseInt(billMonth) - 1];
+                    
+                    // Check if this utility type is selected
+                    if (selectedUtilityTypes.includes(bill.utility_type as 'electricity' | 'gas' | 'water')) {
+                      bills.push({
+                        hotelId,
+                        billType: bill.utility_type as 'electricity' | 'gas' | 'water',
+                        month: monthName,
+                        year: billYear,
+                        data: bill.raw_data || bill
+                      });
+                    }
+                  }
                 }
               }
-            });
-          });
+            } catch (error) {
+              console.error(`Error fetching utility data for ${hotelId} ${year}:`, error);
+            }
+          }
+          
+          return bills;
         });
-      });
-    });
-    
-    return bills;
-  };
+        
+        const allBills = (await Promise.all(billsPromises)).flat();
+        setUtilityData(allBills);
+        
+      } catch (error) {
+        console.error('Error fetching utility data:', error);
+        setUtilityData([]);
+      }
+      setLoading(false);
+    };
+
+    if (selectedHotels.length > 0 && selectedUtilityTypes.length > 0) {
+      fetchUtilityData();
+    } else {
+      setUtilityData([]);
+      setLoading(false);
+    }
+  }, [selectedHotels, selectedUtilityTypes]);
 
   // Utility type selection functions
   const toggleUtilityType = (utilityType: 'electricity' | 'gas' | 'water') => {
@@ -216,7 +267,7 @@ export default function ImprovedUtilitiesDashboard() {
     return () => clearTimeout(timer);
   }, [selectedHotels, selectedUtilityTypes]);
 
-  // Extract metric value from bill
+  // Extract metric value from bill (same as your existing function)
   const extractMetricValue = (bill: UtilityBill, metric: string): number => {
     const data = bill.data;
     
@@ -228,6 +279,10 @@ export default function ImprovedUtilitiesDashboard() {
           return dayUnits + nightUnits;
         case 'total_cost':
           return data.totalAmount?.value || 0;
+        case 'cost_per_kwh':
+          const totalCost = extractMetricValue(bill, 'total_cost');
+          const totalConsumption = extractMetricValue(bill, 'total_consumption');
+          return totalConsumption > 0 ? totalCost / totalConsumption : 0;
         default:
           return 0;
       }
@@ -238,7 +293,21 @@ export default function ImprovedUtilitiesDashboard() {
         case 'total_consumption':
           return data.consumptionDetails?.consumptionValue || 0;
         case 'total_cost':
-          return data.billSummary?.currentBillAmount || 0;
+          return data.billSummary?.currentBillAmount || data.billSummary?.totalDueAmount || 0;
+        case 'cost_per_kwh':
+          const gasTotalCost = extractMetricValue(bill, 'total_cost');
+          const gasConsumption = extractMetricValue(bill, 'total_consumption');
+          return gasConsumption > 0 ? gasTotalCost / gasConsumption : 0;
+        default:
+          return 0;
+      }
+    }
+    
+    if (bill.billType === 'water') {
+      switch (metric) {
+        case 'total_consumption':
+        case 'total_cost':
+          return 0; // Implement when you have water bill JSON structure
         default:
           return 0;
       }
@@ -256,11 +325,27 @@ export default function ImprovedUtilitiesDashboard() {
     const { totalRooms = 0, totalSquareMetres = 0 } = facilities;
     
     if (data.billType === 'electricity' || data.billType === 'gas') {
+      // kWh per m²
       metrics.kwh_per_sqm = totalSquareMetres > 0 ? data.totalKwh / totalSquareMetres : 0;
+      // Cost per m²
       metrics.cost_per_sqm = totalSquareMetres > 0 ? data.totalCost / totalSquareMetres : 0;
+      // kWh per room
       metrics.kwh_per_room = totalRooms > 0 ? data.totalKwh / totalRooms : 0;
+      // Cost per room
       metrics.cost_per_room = totalRooms > 0 ? data.totalCost / totalRooms : 0;
+      // Rate per kWh
       metrics.cost_per_kwh = data.totalKwh > 0 ? data.totalCost / data.totalKwh : 0;
+    }
+    
+    if (data.billType === 'water') {
+      // m³ per m²
+      metrics.m3_per_sqm = totalSquareMetres > 0 ? data.totalKwh / totalSquareMetres : 0;
+      // Cost per m²
+      metrics.cost_per_sqm = totalSquareMetres > 0 ? data.totalCost / totalSquareMetres : 0;
+      // m³ per room
+      metrics.m3_per_room = totalRooms > 0 ? data.totalKwh / totalRooms : 0;
+      // Cost per room
+      metrics.cost_per_room = totalRooms > 0 ? data.totalCost / totalRooms : 0;
     }
     
     return metrics;
