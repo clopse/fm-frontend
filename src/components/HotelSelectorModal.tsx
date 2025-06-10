@@ -1,9 +1,21 @@
 // src/components/HotelSelectorModal.tsx
 'use client';
+
 import Link from 'next/link';
 import HotelImage from './HotelImage';
-import { hotels } from '@/lib/hotels';
 import styles from '@/styles/HotelSelectorModal.module.css';
+
+const hotels = [
+  { name: 'Holiday Inn Express', id: 'hiex' },
+  { name: 'Moxy Cork', id: 'moxy' },
+  { name: 'Holiday Inn Dublin Airport', id: 'hida' },
+  { name: 'Hampton Dublin', id: 'hbhdcc' },
+  { name: 'Hampton Ealing', id: 'hbhe' },
+  { name: 'Seraphine', id: 'sera' },
+  { name: 'Waterford Marina', id: 'marina' },
+  { name: 'Telephone House', id: 'hiltonth' },
+  { name: 'Hamilton Dock', id: 'belfast' },
+];
 
 export default function HotelSelectorModal({
   isOpen,
@@ -12,7 +24,7 @@ export default function HotelSelectorModal({
 }: {
   isOpen: boolean;
   setIsOpen: (val: boolean) => void;
-  onSelectHotel?: (hotelName: string) => void;
+  onSelectHotel?: (hotelName: string) => void; // <-- added optional
 }) {
   if (!isOpen) return null;
 
