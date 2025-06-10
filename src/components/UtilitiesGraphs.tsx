@@ -517,7 +517,13 @@ export default function UtilitiesGraphs() {
           }).filter(Boolean);
         }).flat().filter(Boolean);
         
-        return chartData;
+        // Sort by year to ensure chronological order
+        return chartData.sort((a, b) => {
+          const yearA = parseInt(a.year);
+          const yearB = parseInt(b.year);
+          if (yearA !== yearB) return yearA - yearB;
+          return a.hotelId.localeCompare(b.hotelId);
+        });
       } else {
         // Monthly comparison for current year
         return MONTHS.map(month => {
@@ -559,9 +565,11 @@ export default function UtilitiesGraphs() {
     }
     
     if (viewMode === 'trends') {
-      // Multi-year trend data
+      // Multi-year trend data - sort years chronologically
+      const sortedYears = [...selectedYears].sort((a, b) => parseInt(a) - parseInt(b));
       const allMonths: string[] = [];
-      selectedYears.forEach(year => {
+      
+      sortedYears.forEach(year => {
         MONTHS.forEach(month => {
           allMonths.push(`${month} ${year}`);
         });
@@ -652,7 +660,10 @@ export default function UtilitiesGraphs() {
           };
         }).filter(item => item.value > 0 || item.previousYear > 0);
       } else {
-        return selectedYears.map(year => ({
+        // Sort years chronologically for single hotel yearly view
+        const sortedYears = [...selectedYears].sort((a, b) => parseInt(a) - parseInt(b));
+        
+        return sortedYears.map(year => ({
           year,
           value: (() => {
             let totalValue = 0;
