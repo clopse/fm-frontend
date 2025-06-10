@@ -8,13 +8,21 @@ import {
 import { 
   TrendingUp, TrendingDown, Zap, Flame, Droplets, Building2, 
   AlertTriangle, CheckCircle, Calendar, Target, Calculator,
-  Eye, EyeOff, Settings
+  Eye, EyeOff, Settings, Loader2
 } from 'lucide-react';
-import { hotels } from '@/lib/hotels';
-import { 
-  startOfMonth, endOfMonth, eachDayOfInterval, 
-  format, isValid, parseISO, subYears
-} from 'date-fns';
+
+// Mock hotels data
+const hotels = [
+  { id: 'hie', name: 'Holiday Inn Express' },
+  { id: 'moxy', name: 'Moxy Cork' },
+  { id: 'hida', name: 'Holiday Inn Dublin Airport' },
+  { id: 'hd', name: 'Hampton Dublin' },
+  { id: 'he', name: 'Hampton Ealing' },
+  { id: 'wm', name: 'Waterford Marina' },
+  { id: 'hd2', name: 'Hamilton Dock' },
+  { id: 'sk', name: 'Seraphine Kensington' },
+  { id: 'th', name: 'Telephone House' }
+];
 
 interface UtilityBill {
   hotelId: string;
@@ -42,14 +50,6 @@ interface MonthlyUtilityData {
   metrics: Record<string, number>;
   facilities?: HotelFacilities;
   efficiencyMetrics: Record<string, number>;
-}
-
-interface TrendData {
-  month: string;
-  value: number;
-  yearOverYear?: number;
-  isAnomaly?: boolean;
-  hotelName?: string;
 }
 
 // Core efficiency metrics for professional analysis
@@ -84,30 +84,99 @@ const MONTHS = [
 const YEARS = ['2023', '2024', '2025'];
 const CURRENT_YEAR = '2025';
 
-export function UtilitiesGraphs() {
+export default function ImprovedUtilitiesDashboard() {
   const [utilityData, setUtilityData] = useState<UtilityBill[]>([]);
   const [hotelFacilities, setHotelFacilities] = useState<Record<string, HotelFacilities>>({});
   const [processedData, setProcessedData] = useState<MonthlyUtilityData[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // Professional dashboard filters - simplified and focused
-  const [selectedUtilityType, setSelectedUtilityType] = useState<'electricity' | 'gas' | 'water'>('electricity');
+  // Updated filters with multi-utility selection
+  const [selectedUtilityTypes, setSelectedUtilityTypes] = useState<('electricity' | 'gas' | 'water')[]>(['electricity']);
   const [selectedMetric, setSelectedMetric] = useState('kwh_per_sqm');
-  const [viewMode, setViewMode] = useState<'efficiency' | 'trends' | 'single-hotel'>('efficiency');
+  const [viewMode, setViewMode] = useState<'comparison' | 'trends' | 'single-hotel'>('comparison');
+  const [timeView, setTimeView] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedSingleHotel, setSelectedSingleHotel] = useState<string>(hotels[0]?.id || '');
   const [showHotelSelector, setShowHotelSelector] = useState(false);
   
-  // Hotel selection with toggle functionality
+  // Hotel and year selection
   const [selectedHotels, setSelectedHotels] = useState<string[]>(hotels.map(h => h.id));
   const [selectedYears, setSelectedYears] = useState<string[]>([CURRENT_YEAR]);
   const [selectedMonths] = useState<string[]>(MONTHS);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Mock hotel facilities data
+  const mockFacilities: Record<string, HotelFacilities> = {
+    'hie': { totalRooms: 198, totalSquareMetres: 8500, yearBuilt: 2010 },
+    'moxy': { totalRooms: 206, totalSquareMetres: 9200, yearBuilt: 2015 },
+    'hida': { totalRooms: 421, totalSquareMetres: 15800, yearBuilt: 2018 },
+    'hd': { totalRooms: 150, totalSquareMetres: 7200, yearBuilt: 2012 },
+    'he': { totalRooms: 180, totalSquareMetres: 8100, yearBuilt: 2014 },
+    'wm': { totalRooms: 120, totalSquareMetres: 6500, yearBuilt: 2016 },
+    'hd2': { totalRooms: 200, totalSquareMetres: 9000, yearBuilt: 2019 },
+    'sk': { totalRooms: 170, totalSquareMetres: 7800, yearBuilt: 2017 },
+    'th': { totalRooms: 190, totalSquareMetres: 8700, yearBuilt: 2020 }
+  };
+
+  // Mock utility data generator
+  const generateMockData = () => {
+    const bills: UtilityBill[] = [];
+    
+    selectedHotels.forEach(hotelId => {
+      YEARS.forEach(year => {
+        MONTHS.forEach((month, monthIndex) => {
+          selectedUtilityTypes.forEach(utilityType => {
+            // Generate realistic seasonal data
+            const baseConsumption = utilityType === 'electricity' ? 
+              (monthIndex >= 5 && monthIndex <= 8 ? 15000 : 12000) : // Higher in summer for AC
+              (monthIndex >= 10 || monthIndex <= 2 ? 8000 : 4000); // Higher in winter for heating
+            
+            const variation = 0.8 + Math.random() * 0.4; // ±20% variation
+            const consumption = Math.round(baseConsumption * variation);
+            const rate = utilityType === 'electricity' ? 0.15 : 0.08;
+            const cost = Math.round(consumption * rate * 100) / 100;
+            
+            bills.push({
+              hotelId,
+              billType: utilityType,
+              month,
+              year,
+              data: {
+                consumption: utilityType === 'electricity' ? 
+                  [{ type: 'Day', units: { value: consumption * 0.6 } }, { type: 'Night', units: { value: consumption * 0.4 } }] :
+                  null,
+                consumptionDetails: utilityType === 'gas' ? { consumptionValue: consumption } : null,
+                totalAmount: { value: cost },
+                billSummary: { currentBillAmount: cost },
+                billingPeriod: {
+                  startDate: `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`,
+                  endDate: `${year}-${String(monthIndex + 1).padStart(2, '0')}-${new Date(parseInt(year), monthIndex + 1, 0).getDate()}`
+                }
+              }
+            });
+          });
+        });
+      });
+    });
+    
+    return bills;
+  };
+
+  // Utility type selection functions
+  const toggleUtilityType = (utilityType: 'electricity' | 'gas' | 'water') => {
+    if (selectedUtilityTypes.includes(utilityType)) {
+      if (selectedUtilityTypes.length > 1) {
+        setSelectedUtilityTypes(selectedUtilityTypes.filter(type => type !== utilityType));
+      }
+    } else {
+      setSelectedUtilityTypes([...selectedUtilityTypes, utilityType]);
+    }
+  };
+
   // Hotel selection functions
   const toggleHotelSelection = (hotelId: string) => {
     if (selectedHotels.includes(hotelId)) {
-      if (selectedHotels.length > 1) { // Prevent deselecting all
+      if (selectedHotels.length > 1) {
         setSelectedHotels(selectedHotels.filter(id => id !== hotelId));
       }
     } else {
@@ -120,13 +189,13 @@ export function UtilitiesGraphs() {
   };
 
   const clearAllHotels = () => {
-    setSelectedHotels([hotels[0]?.id].filter(Boolean)); // Keep at least one selected
+    setSelectedHotels([hotels[0]?.id].filter(Boolean));
   };
 
   // Year selection functions
   const toggleYearSelection = (year: string) => {
     if (selectedYears.includes(year)) {
-      if (selectedYears.length > 1) { // Prevent deselecting all
+      if (selectedYears.length > 1) {
         setSelectedYears(selectedYears.filter(y => y !== year));
       }
     } else {
@@ -134,35 +203,20 @@ export function UtilitiesGraphs() {
     }
   };
 
-  const selectAllYears = () => {
-    setSelectedYears(YEARS);
-  };
-
-  const clearAllYears = () => {
-    setSelectedYears([CURRENT_YEAR]); // Keep current year selected
-  };
-
-  // Close dropdowns when clicking outside
+  // Mock data loading
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowHotelSelector(false);
-      }
-    };
+    setLoading(true);
+    // Simulate API delay
+    const timer = setTimeout(() => {
+      setHotelFacilities(mockFacilities);
+      setUtilityData(generateMockData());
+      setLoading(false);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [selectedHotels, selectedUtilityTypes]);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const getMonthNumber = (monthName: string): number => {
-    return MONTHS.findIndex(m => m === monthName) + 1;
-  };
-  
-  const getMonthName = (monthNumber: number): string => {
-    return MONTHS[monthNumber - 1] || '';
-  };
-
-  // Extract metric value from bill (same as your existing function)
+  // Extract metric value from bill
   const extractMetricValue = (bill: UtilityBill, metric: string): number => {
     const data = bill.data;
     
@@ -174,10 +228,6 @@ export function UtilitiesGraphs() {
           return dayUnits + nightUnits;
         case 'total_cost':
           return data.totalAmount?.value || 0;
-        case 'cost_per_kwh':
-          const totalCost = extractMetricValue(bill, 'total_cost');
-          const totalConsumption = extractMetricValue(bill, 'total_consumption');
-          return totalConsumption > 0 ? totalCost / totalConsumption : 0;
         default:
           return 0;
       }
@@ -188,21 +238,7 @@ export function UtilitiesGraphs() {
         case 'total_consumption':
           return data.consumptionDetails?.consumptionValue || 0;
         case 'total_cost':
-          return data.billSummary?.currentBillAmount || data.billSummary?.totalDueAmount || 0;
-        case 'cost_per_kwh':
-          const gasTotalCost = extractMetricValue(bill, 'total_cost');
-          const gasConsumption = extractMetricValue(bill, 'total_consumption');
-          return gasConsumption > 0 ? gasTotalCost / gasConsumption : 0;
-        default:
-          return 0;
-      }
-    }
-    
-    if (bill.billType === 'water') {
-      switch (metric) {
-        case 'total_consumption':
-        case 'total_cost':
-          return 0; // Implement when you have water bill JSON structure
+          return data.billSummary?.currentBillAmount || 0;
         default:
           return 0;
       }
@@ -220,138 +256,17 @@ export function UtilitiesGraphs() {
     const { totalRooms = 0, totalSquareMetres = 0 } = facilities;
     
     if (data.billType === 'electricity' || data.billType === 'gas') {
-      // kWh per m²
       metrics.kwh_per_sqm = totalSquareMetres > 0 ? data.totalKwh / totalSquareMetres : 0;
-      // Cost per m²
       metrics.cost_per_sqm = totalSquareMetres > 0 ? data.totalCost / totalSquareMetres : 0;
-      // kWh per room
       metrics.kwh_per_room = totalRooms > 0 ? data.totalKwh / totalRooms : 0;
-      // Cost per room
       metrics.cost_per_room = totalRooms > 0 ? data.totalCost / totalRooms : 0;
-      // Rate per kWh
       metrics.cost_per_kwh = data.totalKwh > 0 ? data.totalCost / data.totalKwh : 0;
-    }
-    
-    if (data.billType === 'water') {
-      // m³ per m²
-      metrics.m3_per_sqm = totalSquareMetres > 0 ? data.totalKwh / totalSquareMetres : 0;
-      // Cost per m²
-      metrics.cost_per_sqm = totalSquareMetres > 0 ? data.totalCost / totalSquareMetres : 0;
-      // m³ per room
-      metrics.m3_per_room = totalRooms > 0 ? data.totalKwh / totalRooms : 0;
-      // Cost per room
-      metrics.cost_per_room = totalRooms > 0 ? data.totalCost / totalRooms : 0;
     }
     
     return metrics;
   };
 
-  // Fetch hotel facilities data
-  useEffect(() => {
-    const fetchHotelFacilities = async () => {
-      const facilitiesData: Record<string, HotelFacilities> = {};
-      
-      for (const hotel of hotels) {
-        try {
-          // FIXED: Added /api to the URL path
-          const url = `${process.env.NEXT_PUBLIC_API_URL}/api/hotels/facilities/${hotel.id}`;
-          
-          const response = await fetch(url);
-          
-          if (response.ok) {
-            const data = await response.json();
-            
-            // The API returns the data nested under 'facilities'
-            const facilities = data.facilities || data;
-            facilitiesData[hotel.id] = {
-              totalRooms: facilities.structural?.totalRooms || 0,
-              totalSquareMetres: facilities.structural?.totalSquareMetres || 0,
-              yearBuilt: facilities.structural?.yearBuilt
-            };
-          } else {
-            // Graceful fallback for missing data
-            facilitiesData[hotel.id] = {
-              totalRooms: 0,
-              totalSquareMetres: 0
-            };
-          }
-        } catch (error) {
-          facilitiesData[hotel.id] = {
-            totalRooms: 0,
-            totalSquareMetres: 0
-          };
-        }
-      }
-      
-      setHotelFacilities(facilitiesData);
-    };
-
-    fetchHotelFacilities();
-  }, []);
-
-  // Fetch utility data
-  useEffect(() => {
-    const fetchUtilityData = async () => {
-      setLoading(true);
-      try {
-        const billsPromises = selectedHotels.map(async (hotelId) => {
-          const bills: UtilityBill[] = [];
-          
-          for (const year of YEARS) {
-            try {
-              const url = `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${year}`;
-              
-              const response = await fetch(url);
-              
-              if (response.ok) {
-                const data = await response.json();
-                
-                for (const bill of data.bills || []) {
-                  const summary = bill.summary || {};
-                  const billDate = summary.bill_date || '';
-                  
-                  if (billDate) {
-                    const [billYear, billMonth] = billDate.split('-');
-                    const monthName = MONTHS[parseInt(billMonth) - 1];
-                    
-                    if (bill.utility_type === selectedUtilityType) {
-                      bills.push({
-                        hotelId,
-                        billType: bill.utility_type as 'electricity' | 'gas' | 'water',
-                        month: monthName,
-                        year: billYear,
-                        data: bill.raw_data || bill
-                      });
-                    }
-                  }
-                }
-              }
-            } catch (error) {
-              // Silent error handling
-            }
-          }
-          
-          return bills;
-        });
-        
-        const allBills = (await Promise.all(billsPromises)).flat();
-        setUtilityData(allBills);
-        
-      } catch (error) {
-        setUtilityData([]);
-      }
-      setLoading(false);
-    };
-
-    if (selectedHotels.length > 0 && selectedUtilityType) {
-      fetchUtilityData();
-    } else {
-      setUtilityData([]);
-      setLoading(false);
-    }
-  }, [selectedHotels, selectedUtilityType]);
-
-  // Generate proportional monthly data with efficiency metrics
+  // Process utility data into monthly format with real billing periods
   const generateProportionalMonthlyData = (bills: UtilityBill[]): MonthlyUtilityData[] => {
     const monthlyDataMap: Record<string, MonthlyUtilityData> = {};
     
@@ -362,56 +277,65 @@ export function UtilitiesGraphs() {
         
         if (bill.data) {
           try {
+            // Try different date field formats from real API data
             if (bill.data.billingPeriod) {
-              startDate = parseISO(bill.data.billingPeriod.startDate);
-              endDate = parseISO(bill.data.billingPeriod.endDate);
+              startDate = new Date(bill.data.billingPeriod.startDate);
+              endDate = new Date(bill.data.billingPeriod.endDate);
             } else if (bill.data.billSummary && bill.data.billSummary.billingPeriodStartDate) {
-              startDate = parseISO(bill.data.billSummary.billingPeriodStartDate);
-              endDate = parseISO(bill.data.billSummary.billingPeriodEndDate);
+              startDate = new Date(bill.data.billSummary.billingPeriodStartDate);
+              endDate = new Date(bill.data.billSummary.billingPeriodEndDate);
             } else if (bill.data.summary?.billing_period_start) {
-              startDate = parseISO(bill.data.summary.billing_period_start);
-              endDate = parseISO(bill.data.summary.billing_period_end);
+              startDate = new Date(bill.data.summary.billing_period_start);
+              endDate = new Date(bill.data.summary.billing_period_end);
             }
           } catch (error) {
+            console.warn(`Error parsing dates for bill ${bill.hotelId}-${bill.month}-${bill.year}:`, error);
             startDate = null;
             endDate = null;
           }
         }
         
-        if (!startDate || !endDate || !isValid(startDate) || !isValid(endDate)) {
-          const monthIndex = getMonthNumber(bill.month) - 1;
+        // Fallback to month-based dates if billing period not available
+        if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          const monthIndex = MONTHS.findIndex(m => m === bill.month);
           if (monthIndex >= 0) {
             startDate = new Date(parseInt(bill.year), monthIndex, 1);
-            endDate = endOfMonth(startDate);
+            endDate = new Date(parseInt(bill.year), monthIndex + 1, 0); // Last day of month
           } else {
+            console.warn(`Invalid month ${bill.month} for bill ${bill.hotelId}`);
             return;
           }
         }
         
-        if (!isValid(startDate) || !isValid(endDate) || startDate > endDate) {
+        if (startDate > endDate) {
+          console.warn(`Invalid date range for bill ${bill.hotelId}-${bill.month}-${bill.year}`);
           return;
         }
 
-        const daysInPeriod = eachDayOfInterval({ start: startDate, end: endDate });
-        const totalDays = daysInPeriod.length;
+        // Calculate days in billing period
+        const timeDiff = endDate.getTime() - startDate.getTime();
+        const totalDays = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
         
-        if (totalDays <= 0) return;
+        if (totalDays <= 0) {
+          console.warn(`Invalid billing period duration for ${bill.hotelId}-${bill.month}-${bill.year}`);
+          return;
+        }
         
-        const metricValues: Record<string, number> = {};
         const totalKwh = extractMetricValue(bill, 'total_consumption');
         const totalCost = extractMetricValue(bill, 'total_cost');
         
+        // Distribute consumption across months proportionally
         const daysByMonth: Record<string, number> = {};
         
-        daysInPeriod.forEach(day => {
-          const monthKey = format(day, 'yyyy-MM');
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+          const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
           daysByMonth[monthKey] = (daysByMonth[monthKey] || 0) + 1;
-        });
+        }
         
         Object.entries(daysByMonth).forEach(([monthKey, dayCount]) => {
           const proportion = dayCount / totalDays;
           const [year, month] = monthKey.split('-');
-          const monthName = getMonthName(parseInt(month));
+          const monthName = MONTHS[parseInt(month) - 1];
           
           const dataKey = `${bill.hotelId}-${monthKey}-${bill.billType}`;
           
@@ -436,7 +360,7 @@ export function UtilitiesGraphs() {
           monthlyDataMap[dataKey].dayCount += dayCount;
         });
       } catch (error) {
-        // Silent error handling
+        console.error(`Error processing bill for ${bill.hotelId}-${bill.month}-${bill.year}:`, error);
       }
     });
     
@@ -451,175 +375,242 @@ export function UtilitiesGraphs() {
     return results;
   };
 
-  // Process data with efficiency calculations
+  // Process data when utility data or facilities change
   useEffect(() => {
     if (utilityData.length > 0 && Object.keys(hotelFacilities).length > 0) {
-      const proportionalData = generateProportionalMonthlyData(utilityData);
+      const processed = generateProportionalMonthlyData(utilityData);
       
-      const filteredData = proportionalData.filter(data => {
+      // Filter processed data based on selections
+      const filteredData = processed.filter(data => {
         const isSelectedHotel = selectedHotels.includes(data.hotelId);
         const isSelectedYear = selectedYears.includes(data.year);
         const isSelectedMonth = selectedMonths.includes(data.month);
+        const isSelectedUtility = selectedUtilityTypes.includes(data.billType);
         
-        return isSelectedHotel && isSelectedYear && isSelectedMonth;
+        return isSelectedHotel && isSelectedYear && isSelectedMonth && isSelectedUtility;
       });
       
       setProcessedData(filteredData);
     } else {
       setProcessedData([]);
     }
-  }, [utilityData, hotelFacilities, selectedHotels, selectedMonths, selectedYears]);
+  }, [utilityData, hotelFacilities, selectedHotels, selectedYears, selectedMonths, selectedUtilityTypes]);
 
-  // Detect anomalies in the data - REMOVED as seasonal variations are normal
-  const detectAnomalies = (data: MonthlyUtilityData[]): MonthlyUtilityData[] => {
-    // For now, we'll mark all data as not anomalous since seasonal variations
-    // (higher bills in winter) are expected and not true anomalies
-    data.forEach(item => {
-      (item as any).isAnomaly = false;
-    });
-    return data;
-  };
-
-  // Generate chart data for different view modes
+  // Generate chart data
   const getChartData = () => {
-    const dataWithAnomalies = detectAnomalies([...processedData]);
-    
-    if (viewMode === 'efficiency') {
-      const chartData = selectedHotels.map(hotelId => {
-        const hotel = hotels.find(h => h.id === hotelId);
-        const hotelData = dataWithAnomalies.filter(data => data.hotelId === hotelId);
-        
-        if (hotelData.length === 0) {
-          return null; // Skip hotels with no data
-        }
-        
-        // Group by year and calculate separately - don't aggregate across years
-        const yearlyData = selectedYears.map(year => {
-          const yearData = hotelData.filter(data => data.year === year);
+    if (viewMode === 'comparison') {
+      if (timeView === 'yearly') {
+        // Yearly comparison
+        const chartData = selectedHotels.map(hotelId => {
+          const hotel = hotels.find(h => h.id === hotelId);
           
-          let totalValue = 0;
-          let validDataPoints = 0;
+          return selectedYears.map(year => {
+            // Combine all utility types for this hotel/year
+            let totalKwh = 0;
+            let validDataPoints = 0;
+            
+            selectedUtilityTypes.forEach(utilityType => {
+              const yearData = processedData.filter(data => 
+                data.hotelId === hotelId && 
+                data.year === year && 
+                data.billType === utilityType
+              );
+              
+              yearData.forEach(data => {
+                const value = data.efficiencyMetrics[selectedMetric];
+                if (value && value > 0) {
+                  totalKwh += value;
+                  validDataPoints++;
+                }
+              });
+            });
+            
+            const avgValue = validDataPoints > 0 ? totalKwh / validDataPoints : 0;
+            const facilities = hotelFacilities[hotelId];
+            
+            if (avgValue > 0 && facilities?.totalSquareMetres && facilities?.totalRooms) {
+              return {
+                name: `${hotel?.name || hotelId} (${year})`,
+                hotelId,
+                year,
+                value: Math.round(avgValue * 100) / 100,
+                rooms: facilities?.totalRooms || 0,
+                sqm: facilities?.totalSquareMetres || 0,
+                utilityTypes: selectedUtilityTypes.join(', ')
+              };
+            }
+            return null;
+          }).filter(Boolean);
+        }).flat().filter(Boolean);
+        
+        return chartData;
+      } else {
+        // Monthly comparison for current year
+        return MONTHS.map(month => {
+          const monthEntry: any = { month };
           
-          yearData.forEach(data => {
-            const value = data.efficiencyMetrics[selectedMetric];
-            if (value && value > 0) {
-              totalValue += value;
-              validDataPoints++;
+          selectedHotels.forEach(hotelId => {
+            const hotel = hotels.find(h => h.id === hotelId);
+            let totalValue = 0;
+            let validDataPoints = 0;
+            
+            selectedUtilityTypes.forEach(utilityType => {
+              const monthData = processedData.find(data => 
+                data.hotelId === hotelId && 
+                data.month === month && 
+                data.year === CURRENT_YEAR &&
+                data.billType === utilityType
+              );
+              
+              if (monthData) {
+                const value = monthData.efficiencyMetrics[selectedMetric];
+                if (value && value > 0) {
+                  totalValue += value;
+                  validDataPoints++;
+                }
+              }
+            });
+            
+            if (validDataPoints > 0) {
+              monthEntry[hotelId] = Math.round((totalValue / validDataPoints) * 100) / 100;
+              monthEntry[`${hotelId}_name`] = hotel?.name || hotelId;
             }
           });
           
-          const avgValue = validDataPoints > 0 ? totalValue / validDataPoints : 0;
-          const facilities = hotelFacilities[hotelId];
-          
-          // Only include if has valid data
-          const hasValidData = validDataPoints > 0 && 
-                             facilities?.totalSquareMetres && 
-                             facilities?.totalRooms &&
-                             avgValue > 0;
-          
-          if (!hasValidData) return null;
-          
-          return {
-            name: `${hotel?.name || hotelId} (${year})`,
-            hotelId,
-            year,
-            value: Math.round(avgValue * 100) / 100,
-            rooms: facilities?.totalRooms || 0,
-            sqm: facilities?.totalSquareMetres || 0,
-            dataPoints: validDataPoints,
-            hasValidData: true
-          };
-        }).filter(item => item !== null);
-        
-        return yearlyData;
-      }).flat().filter(item => item !== null); // Flatten and remove nulls
-      
-      return chartData;
+          return monthEntry;
+        }).filter(item => 
+          selectedHotels.some(hotelId => item[hotelId] && item[hotelId] > 0)
+        );
+      }
     }
     
     if (viewMode === 'trends') {
-      // Create separate trend lines for each hotel
-      const hotelTrendData: Record<string, any[]> = {};
-      const hotelColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+      // Multi-year trend data
+      const allMonths: string[] = [];
+      selectedYears.forEach(year => {
+        MONTHS.forEach(month => {
+          allMonths.push(`${month} ${year}`);
+        });
+      });
       
-      selectedHotels.forEach((hotelId, index) => {
-        const hotel = hotels.find(h => h.id === hotelId);
-        const hotelData = dataWithAnomalies.filter(data => data.hotelId === hotelId);
+      return allMonths.map(monthYear => {
+        const [month, year] = monthYear.split(' ');
+        const monthEntry: any = { month: monthYear };
         
-        hotelTrendData[hotelId] = MONTHS.map(month => {
-          const monthData = hotelData.filter(data => data.month === month);
-          
+        selectedHotels.forEach(hotelId => {
+          const hotel = hotels.find(h => h.id === hotelId);
           let totalValue = 0;
           let validDataPoints = 0;
           
-          monthData.forEach(data => {
-            const value = data.efficiencyMetrics[selectedMetric];
-            if (value && value > 0) {
-              totalValue += value;
-              validDataPoints++;
+          selectedUtilityTypes.forEach(utilityType => {
+            const monthData = processedData.find(data => 
+              data.hotelId === hotelId && 
+              data.month === month && 
+              data.year === year &&
+              data.billType === utilityType
+            );
+            
+            if (monthData) {
+              const value = monthData.efficiencyMetrics[selectedMetric];
+              if (value && value > 0) {
+                totalValue += value;
+                validDataPoints++;
+              }
             }
           });
           
-          const avgValue = validDataPoints > 0 ? totalValue / validDataPoints : 0;
-          
-          return {
-            month,
-            [hotelId]: Math.round(avgValue * 100) / 100,
-            hotelName: hotel?.name || hotelId,
-            color: hotelColors[index % hotelColors.length],
-            dataPoints: validDataPoints
-          };
-        });
-      });
-      
-      // Combine all hotel data into a single dataset for charting
-      const combinedTrendData = MONTHS.map(month => {
-        const monthEntry: any = { month };
-        selectedHotels.forEach(hotelId => {
-          const hotelMonthData = hotelTrendData[hotelId]?.find(d => d.month === month);
-          if (hotelMonthData && hotelMonthData[hotelId] > 0) {
-            monthEntry[hotelId] = hotelMonthData[hotelId];
-            monthEntry[`${hotelId}_name`] = hotelMonthData.hotelName;
-            monthEntry[`${hotelId}_color`] = hotelMonthData.color;
+          if (validDataPoints > 0) {
+            monthEntry[hotelId] = Math.round((totalValue / validDataPoints) * 100) / 100;
+            monthEntry[`${hotelId}_name`] = hotel?.name || hotelId;
           }
         });
+        
         return monthEntry;
-      }).filter(item => {
-        // Only include months that have data for at least one hotel
-        return selectedHotels.some(hotelId => item[hotelId] && item[hotelId] > 0);
-      });
-      
-      return combinedTrendData;
+      }).filter(item => 
+        selectedHotels.some(hotelId => item[hotelId] && item[hotelId] > 0)
+      );
     }
     
     if (viewMode === 'single-hotel') {
-      const hotelData = dataWithAnomalies.filter(data => data.hotelId === selectedSingleHotel);
-      
-      return MONTHS.map(month => {
-        const monthData = hotelData.filter(data => data.month === month);
-        
-        const currentYearData = monthData.find(data => data.year === CURRENT_YEAR);
-        const previousYearData = monthData.find(data => data.year === (parseInt(CURRENT_YEAR) - 1).toString());
-        
-        const currentValue = currentYearData?.efficiencyMetrics[selectedMetric] || 0;
-        const previousValue = previousYearData?.efficiencyMetrics[selectedMetric] || 0;
-        
-        const yearOverYear = previousValue > 0 ? ((currentValue - previousValue) / previousValue) * 100 : 0;
-        
-        return {
-          month,
-          value: Math.round(currentValue * 100) / 100,
-          previousYear: Math.round(previousValue * 100) / 100,
-          yearOverYear: Math.round(yearOverYear * 10) / 10,
-          isAnomaly: false // Removed anomaly detection
-        };
-      }).filter(item => item.value > 0 || item.previousYear > 0);
+      // Single hotel detailed view
+      if (timeView === 'monthly') {
+        return MONTHS.map(month => {
+          let currentValue = 0;
+          let previousValue = 0;
+          let currentCount = 0;
+          let previousCount = 0;
+          
+          selectedUtilityTypes.forEach(utilityType => {
+            const currentData = processedData.find(data => 
+              data.hotelId === selectedSingleHotel && 
+              data.month === month && 
+              data.year === CURRENT_YEAR &&
+              data.billType === utilityType
+            );
+            
+            const previousData = processedData.find(data => 
+              data.hotelId === selectedSingleHotel && 
+              data.month === month && 
+              data.year === (parseInt(CURRENT_YEAR) - 1).toString() &&
+              data.billType === utilityType
+            );
+            
+            if (currentData?.efficiencyMetrics[selectedMetric]) {
+              currentValue += currentData.efficiencyMetrics[selectedMetric];
+              currentCount++;
+            }
+            
+            if (previousData?.efficiencyMetrics[selectedMetric]) {
+              previousValue += previousData.efficiencyMetrics[selectedMetric];
+              previousCount++;
+            }
+          });
+          
+          const avgCurrent = currentCount > 0 ? currentValue / currentCount : 0;
+          const avgPrevious = previousCount > 0 ? previousValue / previousCount : 0;
+          const yearOverYear = avgPrevious > 0 ? ((avgCurrent - avgPrevious) / avgPrevious) * 100 : 0;
+          
+          return {
+            month,
+            value: Math.round(avgCurrent * 100) / 100,
+            previousYear: Math.round(avgPrevious * 100) / 100,
+            yearOverYear: Math.round(yearOverYear * 10) / 10
+          };
+        }).filter(item => item.value > 0 || item.previousYear > 0);
+      } else {
+        return selectedYears.map(year => ({
+          year,
+          value: (() => {
+            let totalValue = 0;
+            let validDataPoints = 0;
+            
+            MONTHS.forEach(month => {
+              selectedUtilityTypes.forEach(utilityType => {
+                const data = processedData.find(d => 
+                  d.hotelId === selectedSingleHotel && 
+                  d.month === month && 
+                  d.year === year &&
+                  d.billType === utilityType
+                );
+                
+                if (data?.efficiencyMetrics[selectedMetric]) {
+                  totalValue += data.efficiencyMetrics[selectedMetric];
+                  validDataPoints++;
+                }
+              });
+            });
+            
+            return validDataPoints > 0 ? Math.round((totalValue / validDataPoints) * 100) / 100 : 0;
+          })()
+        })).filter(item => item.value > 0);
+      }
     }
     
     return [];
   };
 
-  const currentMetric = EFFICIENCY_METRICS[selectedUtilityType].find(m => m.key === selectedMetric);
+  const currentMetric = EFFICIENCY_METRICS[selectedUtilityTypes[0]]?.find(m => m.key === selectedMetric) || 
+                       EFFICIENCY_METRICS.electricity.find(m => m.key === selectedMetric);
   const chartData = getChartData();
 
   return (
@@ -629,45 +620,46 @@ export function UtilitiesGraphs() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Utilities Dashboard</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Analyzing {selectedUtilityTypes.join(' + ')} consumption across properties
+            </p>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          </div>
+          {loading && (
+            <div className="flex items-center space-x-2 text-blue-600">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm">Loading data...</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Streamlined Controls */}
+      {/* Enhanced Controls */}
       <div className="p-6 bg-gray-50 border-b border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           
-          {/* Utility Type */}
+          {/* Multi-Utility Type Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Utility Type</label>
-            <div className="flex space-x-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Utility Types (Multi-select)
+            </label>
+            <div className="space-y-1">
               {(['electricity', 'gas', 'water'] as const).map(type => (
-                <button
-                  key={type}
-                  onClick={() => {
-                    setSelectedUtilityType(type);
-                    // Keep the same metric if it exists in the new utility type, otherwise use the first one
-                    const newMetrics = EFFICIENCY_METRICS[type];
-                    const currentMetricExists = newMetrics.find(m => m.key === selectedMetric);
-                    if (!currentMetricExists) {
-                      setSelectedMetric(newMetrics[0].key);
-                    }
-                    // Keep the selected years - don't reset them
-                  }}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center ${
-                    selectedUtilityType === type
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {type === 'electricity' && <Zap className="w-4 h-4 mr-1" />}
-                  {type === 'gas' && <Flame className="w-4 h-4 mr-1" />}
-                  {type === 'water' && <Droplets className="w-4 h-4 mr-1" />}
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </button>
+                <label key={type} className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedUtilityTypes.includes(type)}
+                    onChange={() => toggleUtilityType(type)}
+                    className="mr-2 rounded border-gray-300"
+                  />
+                  <div className="flex items-center">
+                    {type === 'electricity' && <Zap className="w-4 h-4 mr-1 text-blue-600" />}
+                    {type === 'gas' && <Flame className="w-4 h-4 mr-1 text-orange-600" />}
+                    {type === 'water' && <Droplets className="w-4 h-4 mr-1 text-cyan-600" />}
+                    <span className="text-sm text-gray-700">
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </span>
+                  </div>
+                </label>
               ))}
             </div>
           </div>
@@ -680,7 +672,7 @@ export function UtilitiesGraphs() {
               onChange={(e) => setSelectedMetric(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              {EFFICIENCY_METRICS[selectedUtilityType].map(metric => (
+              {EFFICIENCY_METRICS[selectedUtilityTypes[0] || 'electricity'].map(metric => (
                 <option key={metric.key} value={metric.key}>
                   {metric.label}
                 </option>
@@ -693,9 +685,9 @@ export function UtilitiesGraphs() {
             <label className="block text-sm font-medium text-gray-700 mb-2">Analysis View</label>
             <div className="flex space-x-1">
               {[
-                { key: 'efficiency', label: 'Efficiency', icon: Calculator },
+                { key: 'comparison', label: 'Compare', icon: Calculator },
                 { key: 'trends', label: 'Trends', icon: TrendingUp },
-                { key: 'single-hotel', label: 'Single Hotel', icon: Building2 }
+                { key: 'single-hotel', label: 'Single', icon: Building2 }
               ].map(mode => (
                 <button
                   key={mode.key}
@@ -713,57 +705,125 @@ export function UtilitiesGraphs() {
             </div>
           </div>
 
-          {/* Hotel Selection or Single Hotel Selector */}
+          {/* Time View Toggle */}
           <div>
-            {viewMode === 'single-hotel' ? (
-              <>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Hotel</label>
-                <select
-                  value={selectedSingleHotel}
-                  onChange={(e) => setSelectedSingleHotel(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  {hotels.map(hotel => (
-                    <option key={hotel.id} value={hotel.id}>
-                      {hotel.name}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : (
-              <>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Hotels
-                </label>
-                <button
-                  onClick={() => setShowHotelSelector(!showHotelSelector)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-left text-sm"
-                >
-                  {selectedHotels.length === hotels.length ? 'All Hotels' : `${selectedHotels.length} Selected`}
-                </button>
-              </>
-            )}
+            <label className="block text-sm font-medium text-gray-700 mb-2">Time View</label>
+            <div className="flex space-x-1">
+              <button
+                onClick={() => setTimeView('yearly')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  timeView === 'yearly'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Yearly
+              </button>
+              <button
+                onClick={() => setTimeView('monthly')}
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  timeView === 'monthly'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Monthly
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Hotel Selection for multi-hotel views */}
+        {viewMode !== 'single-hotel' && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Hotels ({selectedHotels.length} selected)
+              </label>
+              <button
+                onClick={() => setShowHotelSelector(!showHotelSelector)}
+                className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+              >
+                {showHotelSelector ? 'Hide' : 'Show'} Selection
+              </button>
+            </div>
+            
+            {showHotelSelector && (
+              <div className="p-4 bg-white rounded-lg border border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-medium text-gray-900">Select Hotels</span>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={selectAllHotels}
+                      className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      onClick={clearAllHotels}
+                      className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {hotels.map(hotel => (
+                    <label key={hotel.id} className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedHotels.includes(hotel.id)}
+                        onChange={() => toggleHotelSelection(hotel.id)}
+                        className="mr-2 rounded border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700">{hotel.name}</span>
+                      <span className="ml-auto text-xs text-gray-500">
+                        {hotelFacilities[hotel.id]?.totalRooms || 0} rooms
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Single Hotel Selection */}
+        {viewMode === 'single-hotel' && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Hotel</label>
+            <select
+              value={selectedSingleHotel}
+              onChange={(e) => setSelectedSingleHotel(e.target.value)}
+              className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {hotels.map(hotel => (
+                <option key={hotel.id} value={hotel.id}>
+                  {hotel.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Year Selection */}
         <div className="mt-4">
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-gray-700">
-              Years
+              Years ({selectedYears.length} selected)
             </label>
             <div className="flex space-x-2">
               <button
-                onClick={selectAllYears}
+                onClick={() => setSelectedYears(YEARS)}
                 className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
               >
-                All
+                All Years
               </button>
               <button
-                onClick={clearAllYears}
+                onClick={() => setSelectedYears([CURRENT_YEAR])}
                 className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
               >
-                Current
+                Current Only
               </button>
             </div>
           </div>
@@ -781,45 +841,6 @@ export function UtilitiesGraphs() {
             ))}
           </div>
         </div>
-
-        {/* Hotel Selection Panel */}
-        {showHotelSelector && viewMode !== 'single-hotel' && (
-          <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200">
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="font-medium text-gray-900">Select Hotels for Comparison</h4>
-              <div className="flex space-x-2">
-                <button
-                  onClick={selectAllHotels}
-                  className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
-                >
-                  Select All
-                </button>
-                <button
-                  onClick={clearAllHotels}
-                  className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                >
-                  Clear All
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-              {hotels.map(hotel => (
-                <label key={hotel.id} className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedHotels.includes(hotel.id)}
-                    onChange={() => toggleHotelSelection(hotel.id)}
-                    className="mr-2 rounded border-gray-300"
-                  />
-                  <span className="text-sm text-gray-700">{hotel.name}</span>
-                  <span className="ml-auto text-xs text-gray-500">
-                    {hotelFacilities[hotel.id]?.totalRooms || 0} rooms
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Chart Section */}
@@ -827,20 +848,21 @@ export function UtilitiesGraphs() {
         <div className="bg-gray-50 rounded-lg p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium text-gray-900">
-              {viewMode === 'efficiency' && `${currentMetric?.label} Comparison`}
-              {viewMode === 'trends' && `${currentMetric?.label} Monthly Trends`}
+              {viewMode === 'comparison' && `${currentMetric?.label} ${timeView === 'monthly' ? 'Monthly' : 'Annual'} Comparison`}
+              {viewMode === 'trends' && `${currentMetric?.label} Long-term Trends`}
               {viewMode === 'single-hotel' && `${hotels.find(h => h.id === selectedSingleHotel)?.name} - ${currentMetric?.label}`}
             </h3>
             <div className="text-sm text-gray-500">
-              Unit: {currentMetric?.unit}
+              Unit: {currentMetric?.unit} | Utilities: {selectedUtilityTypes.join(' + ')}
             </div>
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center h-64 text-gray-500">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                <p>Loading utility data...</p>
+                <Loader2 className="w-12 h-12 mx-auto mb-4 text-blue-600 animate-spin" />
+                <p className="text-lg font-medium">Loading utility data...</p>
+                <p className="text-sm">Processing {selectedUtilityTypes.join(' and ')} bills</p>
               </div>
             </div>
           ) : chartData.length === 0 ? (
@@ -848,19 +870,20 @@ export function UtilitiesGraphs() {
               <div className="text-center">
                 <Building2 className="w-12 h-12 mx-auto mb-2 text-gray-300" />
                 <p>No efficiency data available</p>
-                <p className="text-sm">Hotels may be missing facility data (rooms/sqm)</p>
+                <p className="text-sm">Check hotel and year selections</p>
               </div>
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={400}>
-              {viewMode === 'single-hotel' ? (
-                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+            <ResponsiveContainer width="100%" height={500}>
+              {viewMode === 'comparison' && timeView === 'yearly' ? (
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
                   <XAxis 
-                    dataKey="month" 
+                    dataKey="name" 
                     angle={-45} 
                     textAnchor="end" 
-                    height={80}
-                    fontSize={12}
+                    height={100}
+                    fontSize={11}
+                    interval={0}
                   />
                   <YAxis />
                   <Tooltip 
@@ -869,42 +892,25 @@ export function UtilitiesGraphs() {
                         const data = payload[0].payload;
                         return (
                           <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-                            <p className="font-medium">{`Month: ${label}`}</p>
-                            <p className="text-blue-600">{`${CURRENT_YEAR}: ${payload[0].value} ${currentMetric?.unit}`}</p>
-                            {data.previousYear > 0 && (
-                              <p className="text-gray-600">{`${parseInt(CURRENT_YEAR) - 1}: ${data.previousYear} ${currentMetric?.unit}`}</p>
-                            )}
-                            {data.yearOverYear !== 0 && (
-                              <p className={`${data.yearOverYear > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                {`YoY: ${data.yearOverYear > 0 ? '+' : ''}${data.yearOverYear}%`}
-                              </p>
-                            )}
+                            <p className="font-medium">{label}</p>
+                            <p className="text-blue-600">{`${currentMetric?.label}: ${payload[0].value} ${currentMetric?.unit}`}</p>
+                            <p className="text-gray-600">{`Rooms: ${data.rooms}`}</p>
+                            <p className="text-gray-600">{`Area: ${data.sqm?.toLocaleString()} m²`}</p>
+                            <p className="text-gray-600">{`Utilities: ${data.utilityTypes}`}</p>
                           </div>
                         );
                       }
                       return null;
                     }}
                   />
-                  <Line 
-                    type="monotone" 
+                  <Bar 
                     dataKey="value" 
-                    stroke="#3b82f6" 
-                    strokeWidth={2}
-                    name={CURRENT_YEAR}
-                    dot={<circle r={4} fill="#3b82f6" />}
+                    fill="#3b82f6" 
+                    name={currentMetric?.label}
+                    radius={[4, 4, 0, 0]}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="previousYear" 
-                    stroke="#94a3b8" 
-                    strokeWidth={1}
-                    strokeDasharray="5 5"
-                    name={`${parseInt(CURRENT_YEAR) - 1}`}
-                    dot={false}
-                  />
-                  <Legend />
-                </LineChart>
-              ) : viewMode === 'trends' ? (
+                </BarChart>
+              ) : viewMode === 'comparison' && timeView === 'monthly' ? (
                 <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                   <XAxis 
                     dataKey="month" 
@@ -928,6 +934,7 @@ export function UtilitiesGraphs() {
                                 </p>
                               );
                             })}
+                            <p className="text-gray-500 text-sm mt-1">Combined: {selectedUtilityTypes.join(' + ')}</p>
                           </div>
                         );
                       }
@@ -955,10 +962,63 @@ export function UtilitiesGraphs() {
                     );
                   })}
                 </LineChart>
-              ) : (
-                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+              ) : viewMode === 'trends' ? (
+                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 80 }}>
                   <XAxis 
-                    dataKey="name" 
+                    dataKey="month" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={100}
+                    fontSize={10}
+                    interval={Math.ceil(chartData.length / 12)} // Show every year or so
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                            <p className="font-medium">{`${label}`}</p>
+                            {payload.map((entry, index) => {
+                              const hotelName = hotels.find(h => h.id === entry.dataKey)?.name || entry.dataKey;
+                              return (
+                                <p key={index} style={{ color: entry.color }}>
+                                  {`${hotelName}: ${entry.value} ${currentMetric?.unit}`}
+                                </p>
+                              );
+                            })}
+                            <p className="text-gray-500 text-sm mt-1">Combined: {selectedUtilityTypes.join(' + ')}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend 
+                    formatter={(value) => {
+                      const hotelName = hotels.find(h => h.id === value)?.name || value;
+                      return hotelName;
+                    }}
+                  />
+                  {selectedHotels.map((hotelId, index) => {
+                    const hotelColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+                    return (
+                      <Line
+                        key={hotelId}
+                        type="monotone"
+                        dataKey={hotelId}
+                        stroke={hotelColors[index % hotelColors.length]}
+                        strokeWidth={3}
+                        dot={{ r: 3 }}
+                        connectNulls={false}
+                      />
+                    );
+                  })}
+                </LineChart>
+              ) : viewMode === 'single-hotel' && timeView === 'monthly' ? (
+                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                  <XAxis 
+                    dataKey="month" 
                     angle={-45} 
                     textAnchor="end" 
                     height={80}
@@ -971,12 +1031,57 @@ export function UtilitiesGraphs() {
                         const data = payload[0].payload;
                         return (
                           <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-                            <p className="font-medium">{`Hotel: ${label}`}</p>
+                            <p className="font-medium">{`Month: ${label}`}</p>
+                            <p className="text-blue-600">{`${CURRENT_YEAR}: ${payload[0].value} ${currentMetric?.unit}`}</p>
+                            {data.previousYear > 0 && (
+                              <p className="text-gray-600">{`${parseInt(CURRENT_YEAR) - 1}: ${data.previousYear} ${currentMetric?.unit}`}</p>
+                            )}
+                            {data.yearOverYear !== 0 && (
+                              <p className={`${data.yearOverYear > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                {`YoY: ${data.yearOverYear > 0 ? '+' : ''}${data.yearOverYear}%`}
+                              </p>
+                            )}
+                            <p className="text-gray-500 text-sm mt-1">Combined: {selectedUtilityTypes.join(' + ')}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3}
+                    name={CURRENT_YEAR}
+                    dot={{ r: 5, fill: "#3b82f6" }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="previousYear" 
+                    stroke="#94a3b8" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    name={`${parseInt(CURRENT_YEAR) - 1}`}
+                    dot={{ r: 3, fill: "#94a3b8" }}
+                  />
+                  <Legend />
+                </LineChart>
+              ) : (
+                <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                  <XAxis 
+                    dataKey="year" 
+                    fontSize={12}
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+                            <p className="font-medium">{`Year: ${label}`}</p>
                             <p className="text-blue-600">{`${currentMetric?.label}: ${payload[0].value} ${currentMetric?.unit}`}</p>
-                            <p className="text-gray-600">{`Rooms: ${data.rooms}`}</p>
-                            <p className="text-gray-600">{`Area: ${data.sqm.toLocaleString()} m²`}</p>
-                            <p className="text-gray-600">{`Year: ${data.year}`}</p>
-                            <p className="text-gray-500 text-sm">{`Data Points: ${data.dataPoints}`}</p>
+                            <p className="text-gray-500 text-sm mt-1">Combined: {selectedUtilityTypes.join(' + ')}</p>
                           </div>
                         );
                       }
@@ -995,72 +1100,110 @@ export function UtilitiesGraphs() {
           )}
         </div>
 
-        {/* Professional Summary Table */}
+        {/* Enhanced Summary Statistics */}
         {!loading && chartData.length > 0 && (
           <div className="mt-6">
             <h4 className="text-lg font-medium text-gray-900 mb-3">
-              {viewMode === 'efficiency' && 'Hotel Efficiency Comparison'}
-              {viewMode === 'trends' && 'Monthly Trend Data'}
-              {viewMode === 'single-hotel' && 'Year-over-Year Performance'}
+              Performance Summary
             </h4>
+            
+            {/* Key Metrics Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h5 className="font-medium text-blue-900 mb-2">Total Data Points</h5>
+                <p className="text-2xl font-bold text-blue-700">{chartData.length}</p>
+                <p className="text-sm text-blue-600">Across selected period</p>
+              </div>
+              
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h5 className="font-medium text-green-900 mb-2">Average {currentMetric?.label}</h5>
+                <p className="text-2xl font-bold text-green-700">
+                  {(chartData.reduce((sum, item) => sum + (item.value || 0), 0) / chartData.length).toFixed(2)}
+                </p>
+                <p className="text-sm text-green-600">{currentMetric?.unit}</p>
+              </div>
+              
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <h5 className="font-medium text-orange-900 mb-2">Best Performance</h5>
+                <p className="text-2xl font-bold text-orange-700">
+                  {Math.min(...chartData.map(item => item.value || Infinity)).toFixed(2)}
+                </p>
+                <p className="text-sm text-orange-600">Lowest consumption</p>
+              </div>
+              
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <h5 className="font-medium text-purple-900 mb-2">Utilities Combined</h5>
+                <p className="text-2xl font-bold text-purple-700">{selectedUtilityTypes.length}</p>
+                <p className="text-sm text-purple-600">{selectedUtilityTypes.join(', ')}</p>
+              </div>
+            </div>
+
+            {/* Detailed Data Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm border border-gray-200 rounded-lg">
                 <thead>
                   <tr className="bg-gray-50">
-                    {viewMode === 'efficiency' && (
+                    {viewMode === 'comparison' && timeView === 'yearly' && (
                       <>
-                        <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Hotel</th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">
-                          {currentMetric?.label}
-                        </th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Year</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Hotel & Year</th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">{currentMetric?.label}</th>
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Rooms</th>
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Area (m²)</th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Data Points</th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-700 border-b">Utilities</th>
+                      </>
+                    )}
+                    {viewMode === 'comparison' && timeView === 'monthly' && (
+                      <>
+                        <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Month</th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Hotels with Data</th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Avg {currentMetric?.label}</th>
                       </>
                     )}
                     {viewMode === 'trends' && (
                       <>
-                        <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Month</th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">
-                          Average {currentMetric?.label}
-                        </th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Period</th>
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Hotels with Data</th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Combined Data Points</th>
                       </>
                     )}
                     {viewMode === 'single-hotel' && (
                       <>
-                        <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">Month</th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">
-                          {CURRENT_YEAR} {currentMetric?.label}
+                        <th className="px-4 py-3 text-left font-medium text-gray-700 border-b">
+                          {timeView === 'monthly' ? 'Month' : 'Year'}
                         </th>
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">
-                          {parseInt(CURRENT_YEAR) - 1} {currentMetric?.label}
+                          {currentMetric?.label}
                         </th>
-                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">YoY Change</th>
-                        <th className="px-4 py-3 text-center font-medium text-gray-700 border-b">Status</th>
+                        {timeView === 'monthly' && (
+                          <>
+                            <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Previous Year</th>
+                            <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">YoY Change</th>
+                          </>
+                        )}
                       </>
                     )}
                   </tr>
                 </thead>
                 <tbody>
-                  {chartData.map((item, index) => (
+                  {chartData.slice(0, 20).map((item, index) => (
                     <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                      {viewMode === 'efficiency' && (
+                      {viewMode === 'comparison' && timeView === 'yearly' && (
                         <>
                           <td className="px-4 py-3 font-medium text-gray-900">{(item as any).name}</td>
                           <td className="px-4 py-3 text-right text-gray-700">
-                            {item.value.toLocaleString()} {currentMetric?.unit}
+                            {item.value?.toLocaleString()} {currentMetric?.unit}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-700">{(item as any).year}</td>
                           <td className="px-4 py-3 text-right text-gray-700">{(item as any).rooms}</td>
-                          <td className="px-4 py-3 text-right text-gray-700">{(item as any).sqm.toLocaleString()}</td>
-                          <td className="px-4 py-3 text-right text-gray-500">{(item as any).dataPoints}</td>
+                          <td className="px-4 py-3 text-right text-gray-700">{(item as any).sqm?.toLocaleString()}</td>
+                          <td className="px-4 py-3 text-center text-gray-600">{(item as any).utilityTypes}</td>
                         </>
                       )}
-                      {viewMode === 'trends' && (
+                      {viewMode === 'comparison' && timeView === 'monthly' && (
                         <>
                           <td className="px-4 py-3 font-medium text-gray-900">{(item as any).month}</td>
+                          <td className="px-4 py-3 text-right text-gray-700">
+                            {selectedHotels.filter(hotelId => (item as any)[hotelId] > 0).length}
+                          </td>
                           <td className="px-4 py-3 text-right text-gray-700">
                             {(() => {
                               const values = selectedHotels.map(hotelId => (item as any)[hotelId]).filter(val => val > 0);
@@ -1068,40 +1211,28 @@ export function UtilitiesGraphs() {
                               return avg > 0 ? `${avg.toFixed(2)} ${currentMetric?.unit}` : '-';
                             })()}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-500">
-                            {selectedHotels.filter(hotelId => (item as any)[hotelId] > 0).length}
-                          </td>
                         </>
                       )}
                       {viewMode === 'single-hotel' && (
                         <>
-                          <td className="px-4 py-3 font-medium text-gray-900">{(item as any).month}</td>
+                          <td className="px-4 py-3 font-medium text-gray-900">
+                            {timeView === 'monthly' ? (item as any).month : (item as any).year}
+                          </td>
                           <td className="px-4 py-3 text-right text-gray-700">
                             {item.value > 0 ? `${item.value.toLocaleString()} ${currentMetric?.unit}` : '-'}
                           </td>
-                          <td className="px-4 py-3 text-right text-gray-700">
-                            {(item as any).previousYear > 0 ? `${(item as any).previousYear.toLocaleString()} ${currentMetric?.unit}` : '-'}
-                          </td>
-                          <td className={`px-4 py-3 text-right ${
-                            (item as any).yearOverYear > 0 ? 'text-red-600' : (item as any).yearOverYear < 0 ? 'text-green-600' : 'text-gray-500'
-                          }`}>
-                            {(item as any).yearOverYear !== 0 ? `${(item as any).yearOverYear > 0 ? '+' : ''}${(item as any).yearOverYear}%` : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {(item as any).yearOverYear > 10 ? (
-                              <div title="Significant increase">
-                                <TrendingUp className="w-4 h-4 text-red-500 mx-auto" />
-                              </div>
-                            ) : (item as any).yearOverYear < -10 ? (
-                              <div title="Significant decrease">
-                                <TrendingDown className="w-4 h-4 text-green-500 mx-auto" />
-                              </div>
-                            ) : (
-                              <div title="Normal">
-                                <CheckCircle className="w-4 h-4 text-gray-400 mx-auto" />
-                              </div>
-                            )}
-                          </td>
+                          {timeView === 'monthly' && (
+                            <>
+                              <td className="px-4 py-3 text-right text-gray-700">
+                                {(item as any).previousYear > 0 ? `${(item as any).previousYear.toLocaleString()} ${currentMetric?.unit}` : '-'}
+                              </td>
+                              <td className={`px-4 py-3 text-right ${
+                                (item as any).yearOverYear > 0 ? 'text-red-600' : (item as any).yearOverYear < 0 ? 'text-green-600' : 'text-gray-500'
+                              }`}>
+                                {(item as any).yearOverYear !== 0 ? `${(item as any).yearOverYear > 0 ? '+' : ''}${(item as any).yearOverYear}%` : '-'}
+                              </td>
+                            </>
+                          )}
                         </>
                       )}
                     </tr>
@@ -1109,77 +1240,11 @@ export function UtilitiesGraphs() {
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
-
-        {/* Key Insights Panel - Only for efficiency and single-hotel views */}
-        {!loading && chartData.length > 0 && viewMode !== 'trends' && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {viewMode === 'efficiency' && (
-              <>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-blue-900 mb-2">Most Efficient</h5>
-                  <p className="text-blue-700">
-                    {(chartData as any[]).reduce((prev, current) => 
-                      (prev.value < current.value) ? prev : current
-                    ).name}
-                  </p>
-                  <p className="text-sm text-blue-600">
-                    {(chartData as any[]).reduce((prev, current) => 
-                      (prev.value < current.value) ? prev : current
-                    ).value.toLocaleString()} {currentMetric?.unit}
-                  </p>
-                </div>
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-orange-900 mb-2">Needs Attention</h5>
-                  <p className="text-orange-700">
-                    {(chartData as any[]).reduce((prev, current) => 
-                      (prev.value > current.value) ? prev : current
-                    ).name}
-                  </p>
-                  <p className="text-sm text-orange-600">
-                    {(chartData as any[]).reduce((prev, current) => 
-                      (prev.value > current.value) ? prev : current
-                    ).value.toLocaleString()} {currentMetric?.unit}
-                  </p>
-                </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-green-900 mb-2">Average Performance</h5>
-                  <p className="text-green-700">
-                    {(chartData.reduce((sum, item) => sum + item.value, 0) / chartData.length).toFixed(2)} {currentMetric?.unit}
-                  </p>
-                  <p className="text-sm text-green-600">Across all hotels</p>
-                </div>
-              </>
-            )}
             
-            {viewMode === 'single-hotel' && (
-              <>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-blue-900 mb-2">Best Month</h5>
-                  <p className="text-blue-700">
-                    {(chartData as any[]).reduce((prev, current) => 
-                      (prev.value < current.value && prev.value > 0) ? prev : current
-                    ).month}
-                  </p>
-                  <p className="text-sm text-blue-600">Most efficient performance</p>
-                </div>
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-orange-900 mb-2">Improvement Opportunity</h5>
-                  <p className="text-orange-700">
-                    {(chartData as any[]).filter(item => item.yearOverYear > 0).length} months
-                  </p>
-                  <p className="text-sm text-orange-600">Showing increased usage</p>
-                </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-green-900 mb-2">Trend Direction</h5>
-                  <p className="text-green-700">
-                    {(chartData as any[]).filter(item => item.yearOverYear < 0).length > (chartData as any[]).filter(item => item.yearOverYear > 0).length 
-                      ? 'Improving' : 'Increasing'}
-                  </p>
-                  <p className="text-sm text-green-600">Overall efficiency trend</p>
-                </div>
-              </>
+            {chartData.length > 20 && (
+              <p className="text-sm text-gray-500 mt-2">
+                Showing first 20 of {chartData.length} data points
+              </p>
             )}
           </div>
         )}
@@ -1188,10 +1253,10 @@ export function UtilitiesGraphs() {
         <div className="mt-6 p-3 bg-blue-50 rounded-lg">
           <div className="flex items-center justify-between text-sm">
             <span className="text-blue-700 font-medium">
-              Data Source: Proportionally distributed utility bills with facility metrics
+              Multi-utility analysis: {selectedUtilityTypes.join(' + ')} | View: {viewMode} ({timeView})
             </span>
             <span className="text-blue-600">
-              Hotels with valid data: {chartData.length} | Bills processed: {utilityData.length}
+              {selectedHotels.length} hotels × {selectedYears.length} years × {selectedUtilityTypes.length} utilities
             </span>
           </div>
         </div>
