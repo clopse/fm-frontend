@@ -1,16 +1,72 @@
 "use client";
 
-import { X, Zap, Flame, Droplets, Eye, FileText, Euro, Calendar, Download, Loader } from 'lucide-react';
+import { X, Zap, Flame, Droplets, Eye, Download, Loader, Edit3, FileText, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
-import { BillEntry } from '../types';
 
-interface BillsListModalProps {
-  bills: BillEntry[];
-  onClose: () => void;
+interface BillEntry {
+  id?: string;
+  hotel_id: string;
+  utility_type: 'electricity' | 'gas' | 'water';
+  filename: string;
+  bill_period?: string;
+  total_amount: number;
+  consumption: number;
+  consumption_unit: string;
+  parsed_status?: string;
+  raw_data?: any;
+  summary?: {
+    bill_date?: string;
+    billing_period_start?: string;
+    billing_period_end?: string;
+    total_cost?: number;
+    total_kwh?: number;
+    consumption_kwh?: number;
+    supplier?: string;
+    account_number?: string;
+    meter_number?: string;
+  };
 }
 
-export default function BillsListModal({ bills, onClose }: BillsListModalProps) {
+interface ImprovedBillsListModalProps {
+  bills: BillEntry[];
+  onClose: () => void;
+  utilityType?: 'electricity' | 'gas' | 'water' | 'all';
+  month?: string;
+  year?: string;
+  hotelId?: string;
+}
+
+export default function ImprovedBillsListModal({ 
+  bills, 
+  onClose, 
+  utilityType = 'all',
+  month,
+  year,
+  hotelId 
+}: ImprovedBillsListModalProps) {
   const [downloadingBills, setDownloadingBills] = useState<Set<string>>(new Set());
+  const [viewingDetails, setViewingDetails] = useState<BillEntry | null>(null);
+
+  // Filter bills based on props - same logic as MetricsModal
+  const filteredBills = bills.filter(bill => {
+    // Filter by utility type
+    if (utilityType !== 'all' && bill.utility_type !== utilityType) return false;
+    
+    // Filter by hotel
+    if (hotelId && bill.hotel_id !== hotelId) return false;
+    
+    // Filter by year/month if provided
+    if (year || month) {
+      const billDate = bill.summary?.bill_date || bill.summary?.billing_period_end;
+      if (billDate) {
+        const date = new Date(billDate);
+        if (year && date.getFullYear().toString() !== year) return false;
+        if (month && date.toLocaleString('default', { month: 'long' }) !== month) return false;
+      }
+    }
+    
+    return true;
+  });
 
   const getUtilityIcon = (type: string) => {
     switch (type) {
@@ -45,71 +101,16 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
   };
 
   const getSupplierName = (bill: BillEntry) => {
-    return bill.summary?.supplier || bill.supplier || 'Unknown Supplier';
+    return bill.summary?.supplier || 'Unknown Supplier';
   };
 
-  const generatePdfFilename = (bill: BillEntry) => {
-    const utilityType = bill.utility_type.toUpperCase();
-    const supplier = getSupplierName(bill).replace(/[^a-zA-Z0-9]/g, '');
+  // Use same S3 PDF URL pattern as MetricsModal
+  const getS3PdfUrl = (bill: BillEntry) => {
+    const billYear = bill.summary?.bill_date ? 
+      bill.summary.bill_date.substring(0, 4) : 
+      year || "2024";
     
-    // Get billing period dates - now with proper types!
-    const startDate = bill.summary?.billing_period_start;
-    const endDate = bill.summary?.billing_period_end || bill.summary?.bill_date;
-    
-    // Fallback to raw_data if summary doesn't have the fields
-    let fallbackStartDate, fallbackEndDate;
-    if (!startDate && bill.raw_data) {
-      if (bill.raw_data.billingPeriod) {
-        fallbackStartDate = bill.raw_data.billingPeriod.startDate;
-        fallbackEndDate = bill.raw_data.billingPeriod.endDate;
-      } else if (bill.raw_data.billSummary) {
-        fallbackStartDate = bill.raw_data.billSummary.billingPeriodStartDate;
-        fallbackEndDate = bill.raw_data.billSummary.billingPeriodEndDate;
-      }
-    }
-    
-    const finalStartDate = startDate || fallbackStartDate;
-    const finalEndDate = endDate || fallbackEndDate;
-    
-    if (finalStartDate && finalEndDate) {
-      try {
-        const start = new Date(finalStartDate);
-        const end = new Date(finalEndDate);
-        
-        const startFormatted = start.toLocaleDateString('en-US', { 
-          month: 'short', 
-          year: '2-digit' 
-        }).replace(/\s/g, '');
-        
-        const endFormatted = end.toLocaleDateString('en-US', { 
-          month: 'short', 
-          year: '2-digit' 
-        }).replace(/\s/g, '');
-        
-        if (startFormatted === endFormatted) {
-          return `${utilityType}_${supplier}_${startFormatted}.pdf`;
-        } else {
-          return `${utilityType}_${supplier}_${startFormatted}-${endFormatted}.pdf`;
-        }
-      } catch (error) {
-        console.warn('Error formatting dates for filename:', error);
-      }
-    }
-    
-    if (finalEndDate) {
-      try {
-        const end = new Date(finalEndDate);
-        const endFormatted = end.toLocaleDateString('en-US', { 
-          month: 'short', 
-          year: '2-digit' 
-        }).replace(/\s/g, '');
-        return `${utilityType}_${supplier}_${endFormatted}.pdf`;
-      } catch (error) {
-        console.warn('Error formatting end date for filename:', error);
-      }
-    }
-    
-    return bill.filename || `${utilityType}_${supplier}_bill.pdf`;
+    return `${process.env.NEXT_PUBLIC_API_URL}/utilities/bill-pdf/${bill.hotel_id}/${bill.utility_type}/${billYear}/${encodeURIComponent(bill.filename)}`;
   };
 
   const downloadPdf = async (bill: BillEntry) => {
@@ -120,19 +121,15 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
     setDownloadingBills(prev => new Set(prev).add(billId));
     
     try {
-      const response = await fetch(`/api/utilities/bill-pdf/${billId}`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/pdf',
-        },
-      });
+      const pdfUrl = getS3PdfUrl(bill);
+      const response = await fetch(pdfUrl);
       
       if (!response.ok) {
-        throw new Error(`Failed to download PDF: ${response.statusText}`);
+        throw new Error(`No PDF available for this bill`);
       }
       
       const blob = await response.blob();
-      const filename = generatePdfFilename(bill);
+      const filename = bill.filename.endsWith('.pdf') ? bill.filename : `${bill.filename}.pdf`;
       
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -147,7 +144,7 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
       
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      alert(`Failed to download PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      alert(`No PDF available for this bill: ${error instanceof Error ? error.message : 'File not found'}`);
     } finally {
       setDownloadingBills(prev => {
         const newSet = new Set(prev);
@@ -157,38 +154,8 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
     }
   };
 
-  const viewBillDetails = async (bill: BillEntry) => {
-    try {
-      const billId = bill.id || `${bill.hotel_id}_${bill.utility_type}_${bill.bill_period}`;
-      
-      const response = await fetch(`/api/utilities/bill-details/${billId}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch bill details');
-      }
-      
-      const data = await response.json();
-      console.log('Bill details:', data);
-      
-      const detailsText = [
-        `Utility Type: ${bill.utility_type}`,
-        `Supplier: ${getSupplierName(bill)}`,
-        `Bill Period: ${bill.summary?.billing_period_start || 'N/A'} to ${bill.summary?.billing_period_end || bill.summary?.bill_date || 'N/A'}`,
-        `Total Cost: ${formatCurrency(bill.summary?.total_cost || bill.total_amount)}`,
-        `Consumption: ${formatConsumption(
-          bill.summary?.total_kwh || bill.summary?.consumption_kwh || bill.consumption,
-          bill.consumption_unit
-        )}`,
-        `Account Number: ${bill.summary?.account_number || 'N/A'}`,
-        `Meter Number: ${bill.summary?.meter_number || 'N/A'}`
-      ].join('\n');
-      
-      alert(`Bill Details:\n\n${detailsText}`);
-      
-    } catch (error) {
-      console.error('Error fetching bill details:', error);
-      alert('Failed to load bill details');
-    }
+  const viewBillDetails = (bill: BillEntry) => {
+    setViewingDetails(bill);
   };
 
   const getBillStatus = (bill: BillEntry) => {
@@ -216,6 +183,19 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
     }
   };
 
+  const getModalTitle = () => {
+    let title = "Utility Bills";
+    if (utilityType !== 'all') {
+      title = `${utilityType.charAt(0).toUpperCase() + utilityType.slice(1)} Bills`;
+    }
+    if (month && year) {
+      title += ` - ${month} ${year}`;
+    } else if (year) {
+      title += ` - ${year}`;
+    }
+    return title;
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
@@ -223,9 +203,10 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
         <div className="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xl font-bold">Utility Bills Archive</h3>
+              <h3 className="text-xl font-bold">{getModalTitle()}</h3>
               <p className="text-slate-200 text-sm mt-1">
-                {bills.length} bill{bills.length !== 1 ? 's' : ''} found
+                {filteredBills.length} bill{filteredBills.length !== 1 ? 's' : ''} found
+                {hotelId && ` for ${hotelId}`}
               </p>
             </div>
             <button 
@@ -239,17 +220,20 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
 
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
-          {bills.length === 0 ? (
+          {filteredBills.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-slate-600 mb-2">No bills found</h3>
               <p className="text-slate-500">
-                Upload some utility bills to see them listed here.
+                {utilityType !== 'all' ? 
+                  `No ${utilityType} bills found for the selected period.` :
+                  'Upload some utility bills to see them listed here.'
+                }
               </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {bills.map((bill, index) => {
+              {filteredBills.map((bill, index) => {
                 const billId = bill.id || `${bill.hotel_id}_${bill.utility_type}_${bill.bill_period}`;
                 const isDownloading = downloadingBills.has(billId);
                 const status = getBillStatus(bill);
@@ -279,12 +263,9 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
                             </span>
                           </div>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-slate-600">
-                            <div className="flex items-center space-x-2">
-                              <Calendar className="w-4 h-4 text-slate-400" />
-                              <span>
-                                <span className="font-medium">Period:</span> {getBillingPeriodDisplay(bill)}
-                              </span>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-slate-600 mb-3">
+                            <div>
+                              <span className="font-medium">Period:</span> {getBillingPeriodDisplay(bill)}
                             </div>
                             
                             {bill.summary?.account_number && (
@@ -293,23 +274,20 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
                               </div>
                             )}
                             
-                            <div>
-                              <span className="font-medium">Uploaded:</span> {formatDate(bill.upload_date)}
-                            </div>
+                            {bill.summary?.meter_number && (
+                              <div>
+                                <span className="font-medium">Meter:</span> {bill.summary.meter_number}
+                              </div>
+                            )}
                           </div>
 
-                          <div className="mt-2 space-y-1">
-                            <div className="text-xs text-slate-500 font-mono">
-                              Original: {bill.filename}
-                            </div>
-                            <div className="text-xs text-blue-600 font-mono">
-                              Download as: {generatePdfFilename(bill)}
-                            </div>
+                          <div className="text-xs text-slate-500 font-mono">
+                            File: {bill.filename}
                           </div>
                         </div>
                       </div>
                       
-                      {/* Right side - Amounts */}
+                      {/* Right side - Amounts and Actions */}
                       <div className="text-right flex-shrink-0 ml-4">
                         <div className="mb-2">
                           <p className="text-2xl font-bold text-slate-900">
@@ -352,17 +330,6 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
                         </div>
                       </div>
                     </div>
-                    
-                    {(bill.summary?.bill_date) && (
-                      <div className="mt-4 pt-4 border-t border-slate-100">
-                        <div className="flex items-center justify-between text-sm text-slate-500">
-                          <span>Bill Date: {formatDate(bill.summary.bill_date)}</span>
-                          {bill.summary?.meter_number && (
-                            <span>Meter: {bill.summary.meter_number}</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -371,27 +338,180 @@ export default function BillsListModal({ bills, onClose }: BillsListModalProps) 
         </div>
         
         {/* Footer */}
-        {bills.length > 0 && (
+        {filteredBills.length > 0 && (
           <div className="border-t border-slate-200 px-6 py-4 bg-slate-50">
             <div className="flex items-center justify-between text-sm text-slate-600">
               <span>
-                Total: {bills.length} bill{bills.length !== 1 ? 's' : ''}
+                Total: {filteredBills.length} bill{filteredBills.length !== 1 ? 's' : ''}
+                {utilityType !== 'all' && ` (${utilityType} only)`}
               </span>
               
               <div className="flex items-center space-x-4">
                 <span>
-                  <Euro className="w-4 h-4 inline mr-1" />
-                  {formatCurrency(
-                    bills.reduce((sum, bill) => 
+                  €{formatCurrency(
+                    filteredBills.reduce((sum, bill) => 
                       sum + (bill.summary?.total_cost || bill.total_amount), 0
                     )
-                  )} total
+                  ).replace('€', '')} total
+                </span>
+                
+                <span>
+                  {filteredBills.reduce((sum, bill) => 
+                    sum + (bill.summary?.total_kwh || bill.summary?.consumption_kwh || bill.consumption), 0
+                  ).toLocaleString()} {filteredBills[0]?.consumption_unit || 'kWh'}
                 </span>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Bill Details Modal - PDF and JSON side by side */}
+      {viewingDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-[95vw] w-full max-h-[95vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b bg-slate-50">
+              <div className="flex items-center space-x-3">
+                {getUtilityIcon(viewingDetails.utility_type)}
+                <div>
+                  <h4 className="text-lg font-semibold">
+                    {viewingDetails.utility_type.charAt(0).toUpperCase() + viewingDetails.utility_type.slice(1)} Bill Details
+                  </h4>
+                  <p className="text-sm text-slate-600">
+                    {getSupplierName(viewingDetails)} • {getBillingPeriodDisplay(viewingDetails)}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setViewingDetails(null)}
+                className="p-2 hover:bg-gray-200 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content - PDF and JSON side by side */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* Left side - PDF */}
+              <div className="w-1/2 border-r flex flex-col">
+                <div className="p-3 bg-gray-50 border-b">
+                  <h5 className="font-medium text-gray-900">Original PDF</h5>
+                  <p className="text-sm text-gray-600">{viewingDetails.filename}</p>
+                </div>
+                <div className="flex-1 bg-gray-100 flex items-center justify-center">
+                  <iframe
+                    src={getS3PdfUrl(viewingDetails)}
+                    className="w-full h-full border-none"
+                    title="Bill PDF"
+                    onError={() => {
+                      console.log('PDF failed to load');
+                    }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100" style={{ display: 'none' }}>
+                    <div className="text-center">
+                      <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600">PDF not available</p>
+                      <button 
+                        onClick={() => downloadPdf(viewingDetails)}
+                        className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                      >
+                        Try Download
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right side - Extracted Data */}
+              <div className="w-1/2 flex flex-col">
+                <div className="p-3 bg-gray-50 border-b">
+                  <h5 className="font-medium text-gray-900">Extracted Data</h5>
+                  <p className="text-sm text-gray-600">
+                    Status: <span className={`px-2 py-0.5 rounded text-xs ${getBillStatus(viewingDetails).color}`}>
+                      {getBillStatus(viewingDetails).label}
+                    </span>
+                  </p>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-4">
+                  {/* Summary Information */}
+                  <div className="mb-6">
+                    <h6 className="font-semibold text-gray-800 mb-3 flex items-center">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Summary
+                    </h6>
+                    <div className="bg-blue-50 rounded-lg p-4 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Total Cost:</span>
+                        <span className="font-semibold text-lg text-blue-900">
+                          {formatCurrency(viewingDetails.summary?.total_cost || viewingDetails.total_amount)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-600">Consumption:</span>
+                        <span className="font-medium text-blue-800">
+                          {formatConsumption(
+                            viewingDetails.summary?.total_kwh || viewingDetails.summary?.consumption_kwh || viewingDetails.consumption,
+                            viewingDetails.consumption_unit
+                          )}
+                        </span>
+                      </div>
+                      {viewingDetails.summary?.account_number && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Account:</span>
+                          <span className="font-mono text-sm">{viewingDetails.summary.account_number}</span>
+                        </div>
+                      )}
+                      {viewingDetails.summary?.meter_number && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Meter:</span>
+                          <span className="font-mono text-sm">{viewingDetails.summary.meter_number}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Raw JSON Data */}
+                  <div>
+                    <h6 className="font-semibold text-gray-800 mb-3 flex items-center">
+                      <Edit3 className="w-4 h-4 mr-2" />
+                      Raw JSON Data
+                    </h6>
+                    <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                      <pre className="text-xs font-mono text-gray-700 whitespace-pre-wrap break-words">
+                        {JSON.stringify(viewingDetails.raw_data || viewingDetails, null, 2)}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t bg-slate-50 flex justify-between items-center">
+              <div className="text-sm text-slate-600">
+                File: <code className="bg-slate-200 px-2 py-1 rounded text-xs">{viewingDetails.filename}</code>
+              </div>
+              <div className="flex space-x-2">
+                <button 
+                  onClick={() => downloadPdf(viewingDetails)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download PDF</span>
+                </button>
+                <button 
+                  onClick={() => setViewingDetails(null)}
+                  className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
