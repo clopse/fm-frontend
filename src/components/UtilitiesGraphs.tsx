@@ -254,18 +254,7 @@ export default function UtilitiesGraphs() {
     }
   };
 
-  // Mock data loading
-  useEffect(() => {
-    setLoading(true);
-    // Simulate API delay
-    const timer = setTimeout(() => {
-      setHotelFacilities(mockFacilities);
-      setUtilityData(generateMockData());
-      setLoading(false);
-    }, 1000);
-    
-    return () => clearTimeout(timer);
-  }, [selectedHotels, selectedUtilityTypes]);
+
 
   // Extract metric value from bill (same as your existing function)
   const extractMetricValue = (bill: UtilityBill, metric: string): number => {
