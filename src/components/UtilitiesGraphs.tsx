@@ -493,62 +493,14 @@ export function UtilitiesGraphs() {
           return null; // Skip hotels with no data
         }
         
-        let totalValue = 0;
-        let validDataPoints = 0;
-        
-        hotelData.forEach(data => {
-          const value = data.efficiencyMetrics[selectedMetric];
-          if (value && value > 0) {
-            totalValue += value;
-            validDataPoints++;
-          }
-        });
-        
-        const avgValue = validDataPoints > 0 ? totalValue / validDataPoints : 0;
-        const facilities = hotelFacilities[hotelId];
-        
-        // Only include hotels that have both facility data AND utility data
-        const hasValidData = validDataPoints > 0 && 
-                           facilities?.totalSquareMetres && 
-                           facilities?.totalRooms &&
-                           avgValue > 0;
-        
-        if (!hasValidData) {
-          return null; // Skip invalid data
-        }
-        
-        const result = {
-          name: hotel?.name || hotelId,
-          hotelId,
-          value: Math.round(avgValue * 100) / 100,
-          rooms: facilities?.totalRooms || 0,
-          sqm: facilities?.totalSquareMetres || 0,
-          dataPoints: validDataPoints,
-          hasValidData: true
-        };
-        
-        return result;
-      }).filter(item => item !== null); // Remove null entries
-      
-      return chartData;
-    }
-    
-    if (viewMode === 'trends') {
-      // Create separate trend lines for each hotel
-      const hotelTrendData: Record<string, any[]> = {};
-      const hotelColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
-      
-      selectedHotels.forEach((hotelId, index) => {
-        const hotel = hotels.find(h => h.id === hotelId);
-        const hotelData = dataWithAnomalies.filter(data => data.hotelId === hotelId);
-        
-        hotelTrendData[hotelId] = MONTHS.map(month => {
-          const monthData = hotelData.filter(data => data.month === month);
+        // Group by year and calculate separately - don't aggregate across years
+        const yearlyData = selectedYears.map(year => {
+          const yearData = hotelData.filter(data => data.year === year);
           
           let totalValue = 0;
           let validDataPoints = 0;
           
-          monthData.forEach(data => {
+          yearData.forEach(data => {
             const value = data.efficiencyMetrics[selectedMetric];
             if (value && value > 0) {
               totalValue += value;
@@ -557,35 +509,32 @@ export function UtilitiesGraphs() {
           });
           
           const avgValue = validDataPoints > 0 ? totalValue / validDataPoints : 0;
+          const facilities = hotelFacilities[hotelId];
+          
+          // Only include if has valid data
+          const hasValidData = validDataPoints > 0 && 
+                             facilities?.totalSquareMetres && 
+                             facilities?.totalRooms &&
+                             avgValue > 0;
+          
+          if (!hasValidData) return null;
           
           return {
-            month,
-            [hotelId]: Math.round(avgValue * 100) / 100,
-            hotelName: hotel?.name || hotelId,
-            color: hotelColors[index % hotelColors.length],
-            dataPoints: validDataPoints
+            name: `${hotel?.name || hotelId} (${year})`,
+            hotelId,
+            year,
+            value: Math.round(avgValue * 100) / 100,
+            rooms: facilities?.totalRooms || 0,
+            sqm: facilities?.totalSquareMetres || 0,
+            dataPoints: validDataPoints,
+            hasValidData: true
           };
-        });
-      });
+        }).filter(item => item !== null);
+        
+        return yearlyData;
+      }).flat().filter(item => item !== null); // Flatten and remove nulls
       
-      // Combine all hotel data into a single dataset for charting
-      const combinedTrendData = MONTHS.map(month => {
-        const monthEntry: any = { month };
-        selectedHotels.forEach(hotelId => {
-          const hotelMonthData = hotelTrendData[hotelId]?.find(d => d.month === month);
-          if (hotelMonthData && hotelMonthData[hotelId] > 0) {
-            monthEntry[hotelId] = hotelMonthData[hotelId];
-            monthEntry[`${hotelId}_name`] = hotelMonthData.hotelName;
-            monthEntry[`${hotelId}_color`] = hotelMonthData.color;
-          }
-        });
-        return monthEntry;
-      }).filter(item => {
-        // Only include months that have data for at least one hotel
-        return selectedHotels.some(hotelId => item[hotelId] && item[hotelId] > 0);
-      });
-      
-      return combinedTrendData;
+      return chartData;
     }
     
     if (viewMode === 'single-hotel') {
@@ -624,11 +573,9 @@ export function UtilitiesGraphs() {
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Utilities Analytics</h2>
-            <p className="text-gray-600 mt-1">Efficiency metrics and trend analysis for operational optimization</p>
+            <h2 className="text-2xl font-bold text-gray-900">Utilities Dashboard</h2>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-gray-500">Data points: {processedData.length}</span>
             <div className="w-2 h-2 bg-green-500 rounded-full"></div>
           </div>
         </div>
@@ -686,7 +633,6 @@ export function UtilitiesGraphs() {
             <div className="flex space-x-1">
               {[
                 { key: 'efficiency', label: 'Efficiency', icon: Calculator },
-                { key: 'trends', label: 'Trends', icon: TrendingUp },
                 { key: 'single-hotel', label: 'Single Hotel', icon: Building2 }
               ].map(mode => (
                 <button
@@ -725,7 +671,7 @@ export function UtilitiesGraphs() {
             ) : (
               <>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Hotels ({selectedHotels.length}/{hotels.length})
+                  Hotels
                 </label>
                 <button
                   onClick={() => setShowHotelSelector(!showHotelSelector)}
@@ -742,7 +688,7 @@ export function UtilitiesGraphs() {
         <div className="mt-4">
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-gray-700">
-              Years ({selectedYears.length}/{YEARS.length})
+              Years
             </label>
             <div className="flex space-x-2">
               <button
@@ -820,7 +766,6 @@ export function UtilitiesGraphs() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium text-gray-900">
               {viewMode === 'efficiency' && `${currentMetric?.label} Comparison`}
-              {viewMode === 'trends' && `${currentMetric?.label} Monthly Trends`}
               {viewMode === 'single-hotel' && `${hotels.find(h => h.id === selectedSingleHotel)?.name} - ${currentMetric?.label}`}
             </h3>
             <div className="text-sm text-gray-500">
@@ -896,57 +841,6 @@ export function UtilitiesGraphs() {
                   />
                   <Legend />
                 </LineChart>
-              ) : viewMode === 'trends' ? (
-                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                  <XAxis 
-                    dataKey="month" 
-                    angle={-45} 
-                    textAnchor="end" 
-                    height={80}
-                    fontSize={12}
-                  />
-                  <YAxis />
-                  <Tooltip 
-                    content={({ active, payload, label }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-                            <p className="font-medium">{`Month: ${label}`}</p>
-                            {payload.map((entry, index) => {
-                              const hotelName = hotels.find(h => h.id === entry.dataKey)?.name || entry.dataKey;
-                              return (
-                                <p key={index} style={{ color: entry.color }}>
-                                  {`${hotelName}: ${entry.value} ${currentMetric?.unit}`}
-                                </p>
-                              );
-                            })}
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Legend 
-                    formatter={(value) => {
-                      const hotelName = hotels.find(h => h.id === value)?.name || value;
-                      return hotelName;
-                    }}
-                  />
-                  {selectedHotels.map((hotelId, index) => {
-                    const hotelColors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
-                    return (
-                      <Line
-                        key={hotelId}
-                        type="monotone"
-                        dataKey={hotelId}
-                        stroke={hotelColors[index % hotelColors.length]}
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                        connectNulls={false}
-                      />
-                    );
-                  })}
-                </LineChart>
               ) : (
                 <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                   <XAxis 
@@ -991,7 +885,6 @@ export function UtilitiesGraphs() {
           <div className="mt-6">
             <h4 className="text-lg font-medium text-gray-900 mb-3">
               {viewMode === 'efficiency' && 'Hotel Efficiency Comparison'}
-              {viewMode === 'trends' && 'Monthly Trend Analysis'}
               {viewMode === 'single-hotel' && 'Year-over-Year Performance'}
             </h4>
             <div className="overflow-x-auto">
@@ -1118,85 +1011,6 @@ export function UtilitiesGraphs() {
               </>
             )}
             
-            {viewMode === 'trends' && (
-              <>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-blue-900 mb-2">Data Coverage</h5>
-                  <p className="text-blue-700">
-                    {selectedHotels.length} hotel{selectedHotels.length !== 1 ? 's' : ''} selected
-                  </p>
-                  <p className="text-sm text-blue-600">Trends across {selectedYears.join(', ')}</p>
-                </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-green-900 mb-2">Best Performing</h5>
-                  <p className="text-green-700">
-                    {(() => {
-                      const avgByHotel = selectedHotels.map(hotelId => {
-                        const hotelData = (chartData as any[]).map(item => item[hotelId]).filter(val => val > 0);
-                        const avg = hotelData.length > 0 ? hotelData.reduce((sum, val) => sum + val, 0) / hotelData.length : 0;
-                        return { hotelId, avg, name: hotels.find(h => h.id === hotelId)?.name || hotelId };
-                      }).filter(item => item.avg > 0);
-                      
-                      if (avgByHotel.length === 0) return 'No data available';
-                      
-                      const best = avgByHotel.reduce((prev, current) => (prev.avg < current.avg) ? prev : current);
-                      return best.name;
-                    })()}
-                  </p>
-                  <p className="text-sm text-green-600">Lowest average usage</p>
-                </div>
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-orange-900 mb-2">Needs Focus</h5>
-                  <p className="text-orange-700">
-                    {(() => {
-                      const avgByHotel = selectedHotels.map(hotelId => {
-                        const hotelData = (chartData as any[]).map(item => item[hotelId]).filter(val => val > 0);
-                        const avg = hotelData.length > 0 ? hotelData.reduce((sum, val) => sum + val, 0) / hotelData.length : 0;
-                        return { hotelId, avg, name: hotels.find(h => h.id === hotelId)?.name || hotelId };
-                      }).filter(item => item.avg > 0);
-                      
-                      if (avgByHotel.length === 0) return 'No data available';
-                      
-                      const worst = avgByHotel.reduce((prev, current) => (prev.avg > current.avg) ? prev : current);
-                      return worst.name;
-                    })()}
-                  </p>
-                  <p className="text-sm text-orange-600">Highest average usage</p>
-                </div>
-              </>
-            )}
-            
-            {viewMode === 'single-hotel' && (
-              <>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-blue-900 mb-2">Best Month</h5>
-                  <p className="text-blue-700">
-                    {(chartData as any[]).reduce((prev, current) => 
-                      (prev.value < current.value && prev.value > 0) ? prev : current
-                    ).month}
-                  </p>
-                  <p className="text-sm text-blue-600">Most efficient performance</p>
-                </div>
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-orange-900 mb-2">Improvement Opportunity</h5>
-                  <p className="text-orange-700">
-                    {(chartData as any[]).filter(item => item.yearOverYear > 0).length} months
-                  </p>
-                  <p className="text-sm text-orange-600">Showing increased usage</p>
-                </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <h5 className="font-medium text-green-900 mb-2">Trend Direction</h5>
-                  <p className="text-green-700">
-                    {(chartData as any[]).filter(item => item.yearOverYear < 0).length > (chartData as any[]).filter(item => item.yearOverYear > 0).length 
-                      ? 'Improving' : 'Increasing'}
-                  </p>
-                  <p className="text-sm text-green-600">Overall efficiency trend</p>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
         {/* Data Quality Indicator */}
         <div className="mt-6 p-3 bg-blue-50 rounded-lg">
           <div className="flex items-center justify-between text-sm">
