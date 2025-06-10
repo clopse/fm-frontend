@@ -49,6 +49,8 @@ class UserService {
     try {
       await apiFetch('/api/users/auth/logout', { method: 'POST' });
     } finally {
+      // Stop idle tracking - will be handled by IdleWrapper component
+      
       localStorage.removeItem('access_token');
       localStorage.removeItem('user');
     }
