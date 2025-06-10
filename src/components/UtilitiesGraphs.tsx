@@ -93,7 +93,7 @@ export function UtilitiesGraphs() {
   // Professional dashboard filters - simplified and focused
   const [selectedUtilityType, setSelectedUtilityType] = useState<'electricity' | 'gas' | 'water'>('electricity');
   const [selectedMetric, setSelectedMetric] = useState('kwh_per_sqm');
-  const [viewMode, setViewMode] = useState<'efficiency' | 'trends' | 'single-hotel'>('efficiency');
+  const [viewMode, setViewMode] = useState<'efficiency' | 'single-hotel'>('efficiency');
   const [selectedSingleHotel, setSelectedSingleHotel] = useState<string>(hotels[0]?.id || '');
   const [showHotelSelector, setShowHotelSelector] = useState(false);
   
@@ -594,7 +594,13 @@ export function UtilitiesGraphs() {
                   key={type}
                   onClick={() => {
                     setSelectedUtilityType(type);
-                    setSelectedMetric(EFFICIENCY_METRICS[type][0].key);
+                    // Keep the same metric if it exists in the new utility type, otherwise use the first one
+                    const newMetrics = EFFICIENCY_METRICS[type];
+                    const currentMetricExists = newMetrics.find(m => m.key === selectedMetric);
+                    if (!currentMetricExists) {
+                      setSelectedMetric(newMetrics[0].key);
+                    }
+                    // Keep the selected years - don't reset them
                   }}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center ${
                     selectedUtilityType === type
@@ -861,6 +867,7 @@ export function UtilitiesGraphs() {
                             <p className="text-blue-600">{`${currentMetric?.label}: ${payload[0].value} ${currentMetric?.unit}`}</p>
                             <p className="text-gray-600">{`Rooms: ${data.rooms}`}</p>
                             <p className="text-gray-600">{`Area: ${data.sqm.toLocaleString()} m²`}</p>
+                            <p className="text-gray-600">{`Year: ${data.year}`}</p>
                             <p className="text-gray-500 text-sm">{`Data Points: ${data.dataPoints}`}</p>
                           </div>
                         );
@@ -897,6 +904,7 @@ export function UtilitiesGraphs() {
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">
                           {currentMetric?.label}
                         </th>
+                        <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Year</th>
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Rooms</th>
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Area (m²)</th>
                         <th className="px-4 py-3 text-right font-medium text-gray-700 border-b">Data Points</th>
@@ -926,6 +934,7 @@ export function UtilitiesGraphs() {
                           <td className="px-4 py-3 text-right text-gray-700">
                             {item.value.toLocaleString()} {currentMetric?.unit}
                           </td>
+                          <td className="px-4 py-3 text-right text-gray-700">{(item as any).year}</td>
                           <td className="px-4 py-3 text-right text-gray-700">{(item as any).rooms}</td>
                           <td className="px-4 py-3 text-right text-gray-700">{(item as any).sqm.toLocaleString()}</td>
                           <td className="px-4 py-3 text-right text-gray-500">{(item as any).dataPoints}</td>
@@ -1011,6 +1020,37 @@ export function UtilitiesGraphs() {
               </>
             )}
             
+            {viewMode === 'single-hotel' && (
+              <>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h5 className="font-medium text-blue-900 mb-2">Best Month</h5>
+                  <p className="text-blue-700">
+                    {(chartData as any[]).reduce((prev, current) => 
+                      (prev.value < current.value && prev.value > 0) ? prev : current
+                    ).month}
+                  </p>
+                  <p className="text-sm text-blue-600">Most efficient performance</p>
+                </div>
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <h5 className="font-medium text-orange-900 mb-2">Improvement Opportunity</h5>
+                  <p className="text-orange-700">
+                    {(chartData as any[]).filter(item => item.yearOverYear > 0).length} months
+                  </p>
+                  <p className="text-sm text-orange-600">Showing increased usage</p>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h5 className="font-medium text-green-900 mb-2">Trend Direction</h5>
+                  <p className="text-green-700">
+                    {(chartData as any[]).filter(item => item.yearOverYear < 0).length > (chartData as any[]).filter(item => item.yearOverYear > 0).length 
+                      ? 'Improving' : 'Increasing'}
+                  </p>
+                  <p className="text-sm text-green-600">Overall efficiency trend</p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Data Quality Indicator */}
         <div className="mt-6 p-3 bg-blue-50 rounded-lg">
           <div className="flex items-center justify-between text-sm">
