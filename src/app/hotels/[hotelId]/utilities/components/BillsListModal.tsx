@@ -46,7 +46,7 @@ export default function BillsListModal({
   hotelId 
 }: BillsListModalProps) {
   const [downloadingBills, setDownloadingBills] = useState<Set<string>>(new Set());
-  const [viewingDetails, setViewingDetails] = useState<BillEntry | null>(null);
+  // Removed viewingDetails state since we're not using the modal anymore
 
   // Filter bills based on props - check if billing period OVERLAPS with target month/year
   const filteredBills = bills.filter(bill => {
@@ -261,12 +261,20 @@ export default function BillsListModal({
   };
 
   const viewBillDetails = (bill: BillEntry) => {
-    console.log('🔍 Opening bill details for:', {
+    console.log('🔍 Auto-opening PDF for:', {
       filename: bill.filename,
-      pdfUrl: getS3PdfUrl(bill),
+      pdfUrl: getS3PdfUrl(bill, true),
       isMobile: isMobile().any
     });
-    setViewingDetails(bill);
+    
+    // Just open the PDF directly instead of modal
+    if (isMobile().any) {
+      // Mobile - open in new tab
+      window.open(getS3PdfUrl(bill, true), '_blank');
+    } else {
+      // Desktop - open in new tab too for now
+      window.open(getS3PdfUrl(bill, true), '_blank');
+    }
   };
 
   const getBillStatus = (bill: BillEntry) => {
@@ -423,20 +431,20 @@ export default function BillsListModal({
                             className="flex items-center space-x-1 text-sm text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-lg transition-colors"
                           >
                             <Eye className="w-4 h-4" />
-                            <span>Details</span>
+                            <span>View PDF</span>
                           </button>
                           
                           <button 
-                            onClick={() => openPdf(bill)}
+                            onClick={() => downloadPdf(bill)}
                             disabled={isDownloading}
                             className="flex items-center space-x-1 text-sm text-green-600 hover:text-green-700 bg-green-50 hover:bg-green-100 px-3 py-1 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {isDownloading ? (
                               <Loader className="w-4 h-4 animate-spin" />
                             ) : (
-                              <Eye className="w-4 h-4" />
+                              <Download className="w-4 h-4" />
                             )}
-                            <span>{isDownloading ? 'Opening...' : 'View PDF'}</span>
+                            <span>{isDownloading ? 'Downloading...' : 'Download'}</span>
                           </button>
                         </div>
                       </div>
@@ -476,182 +484,6 @@ export default function BillsListModal({
           </div>
         )}
       </div>
-
-      {/* Bill Details Modal - PDF and JSON side by side */}
-      {viewingDetails && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-[95vw] w-full max-h-[95vh] flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b bg-slate-50">
-              <div className="flex items-center space-x-3">
-                {getUtilityIcon(viewingDetails.utility_type)}
-                <div>
-                  <h4 className="text-lg font-semibold">
-                    {viewingDetails.utility_type.charAt(0).toUpperCase() + viewingDetails.utility_type.slice(1)} Bill Details
-                  </h4>
-                  <p className="text-sm text-slate-600">
-                    {getSupplierName(viewingDetails)} • {getBillingPeriodDisplay(viewingDetails)}
-                  </p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setViewingDetails(null)}
-                className="p-2 hover:bg-gray-200 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Content - PDF and JSON side by side */}
-            <div className="flex-1 flex overflow-hidden">
-              {/* Left side - PDF */}
-              <div className="w-1/2 border-r flex flex-col">
-                <div className="p-3 bg-gray-50 border-b">
-                  <h5 className="font-medium text-gray-900">PDF Document</h5>
-                  <p className="text-sm text-gray-600">{viewingDetails.filename}</p>
-                </div>
-                <div className="flex-1 bg-gray-100 relative">
-                  {/* Show simple iframe for desktop, buttons for mobile */}
-                  {isMobile().any ? (
-                    <div className="flex items-center justify-center h-full bg-gray-100">
-                      <div className="text-center max-w-md p-6">
-                        <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-gray-700 mb-2">Mobile PDF Viewing</h3>
-                        <p className="text-gray-500 mb-4 text-sm">
-                          PDF preview not available on mobile devices
-                        </p>
-                        <div className="space-y-2">
-                          <button 
-                            onClick={() => window.open(getS3PdfUrl(viewingDetails, true), '_blank')}
-                            className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                          >
-                            Open PDF for Viewing
-                          </button>
-                          <button 
-                            onClick={() => downloadPdf(viewingDetails)}
-                            className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                          >
-                            Download PDF
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    // Desktop - simple iframe like ServiceReportsPage
-                    <iframe
-                      src={getS3PdfUrl(viewingDetails, true)}
-                      className="w-full h-full border-0"
-                      title="PDF Viewer"
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Right side - Extracted Data */}
-              <div className="w-1/2 flex flex-col">
-                <div className="p-3 bg-gray-50 border-b">
-                  <h5 className="font-medium text-gray-900">Extracted Data</h5>
-                  <p className="text-sm text-gray-600">
-                    Status: <span className={`px-2 py-0.5 rounded text-xs ${getBillStatus(viewingDetails).color}`}>
-                      {getBillStatus(viewingDetails).label}
-                    </span>
-                  </p>
-                </div>
-                
-                <div className="flex-1 overflow-y-auto p-4">
-                  {/* Summary Information */}
-                  <div className="mb-6">
-                    <h6 className="font-semibold text-gray-800 mb-3 flex items-center">
-                      <FileText className="w-4 h-4 mr-2" />
-                      Summary
-                    </h6>
-                    <div className="bg-blue-50 rounded-lg p-4 space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Total Cost:</span>
-                        <span className="font-semibold text-lg text-blue-900">
-                          {formatCurrency(viewingDetails.summary?.total_cost || viewingDetails.total_amount)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600">Consumption:</span>
-                        <span className="font-medium text-blue-800">
-                          {(() => {
-                            const consumption = viewingDetails.summary?.total_kwh || viewingDetails.summary?.consumption_kwh || viewingDetails.consumption;
-                            const unit = viewingDetails.consumption_unit || 
-                                        (viewingDetails.raw_data?.consumptionDetails?.consumptionUnit) ||
-                                        (viewingDetails.utility_type === 'gas' ? 'kWh' : 'kWh');
-                            return formatConsumption(consumption, unit);
-                          })()}
-                        </span>
-                      </div>
-                      
-                      {/* Billing Period */}
-                      {(viewingDetails.summary?.billing_period_start || viewingDetails.summary?.billing_period_end) && (
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Billing Period:</span>
-                          <span className="font-mono text-sm text-blue-800">
-                            {viewingDetails.summary?.billing_period_start && formatDate(viewingDetails.summary.billing_period_start)}
-                            {viewingDetails.summary?.billing_period_start && viewingDetails.summary?.billing_period_end && ' → '}
-                            {viewingDetails.summary?.billing_period_end && formatDate(viewingDetails.summary.billing_period_end)}
-                          </span>
-                        </div>
-                      )}
-                      
-                      {viewingDetails.summary?.account_number && (
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Account:</span>
-                          <span className="font-mono text-sm">{viewingDetails.summary.account_number}</span>
-                        </div>
-                      )}
-                      {viewingDetails.summary?.meter_number && (
-                        <div className="flex justify-between">
-                          <span className="text-sm text-gray-600">Meter:</span>
-                          <span className="font-mono text-sm">{viewingDetails.summary.meter_number}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Raw JSON Data */}
-                  <div>
-                    <h6 className="font-semibold text-gray-800 mb-3 flex items-center">
-                      <Edit3 className="w-4 h-4 mr-2" />
-                      Raw JSON Data
-                    </h6>
-                    <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
-                      <pre className="text-xs font-mono text-gray-700 whitespace-pre-wrap break-words">
-                        {JSON.stringify(viewingDetails.raw_data || viewingDetails, null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t bg-slate-50 flex justify-between items-center">
-              <div className="text-sm text-slate-600">
-                File: <code className="bg-slate-200 px-2 py-1 rounded text-xs">{viewingDetails.filename}</code>
-              </div>
-              <div className="flex space-x-2">
-                <button 
-                  onClick={() => downloadPdf(viewingDetails)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download PDF</span>
-                </button>
-                <button 
-                  onClick={() => setViewingDetails(null)}
-                  className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
