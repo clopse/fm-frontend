@@ -510,14 +510,14 @@ export default function BillsListModal({
                 </div>
                 <div className="flex-1 bg-gray-100 relative">
                   {isMobile().any ? (
-                    // Mobile fallback - show download/open buttons instead of iframe
+                    // Mobile fallback - same as ServiceReportsPage
                     <div className="flex items-center justify-center h-full bg-gray-100">
                       <div className="text-center">
                         <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-600 mb-4">PDF preview not available on mobile</p>
                         <div className="space-x-2">
                           <button 
-                            onClick={() => openPdf(viewingDetails)}
+                            onClick={() => window.open(getS3PdfUrl(viewingDetails), '_blank')}
                             className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
                           >
                             Open PDF
@@ -532,59 +532,12 @@ export default function BillsListModal({
                       </div>
                     </div>
                   ) : (
-                    <>
-                      {/* Try object tag first, fallback to iframe */}
-                      <object
-                        data={`${getS3PdfUrl(viewingDetails)}#view=FitH&toolbar=1&navpanes=0&scrollbar=1&zoom=85`}
-                        type="application/pdf"
-                        className="w-full h-full border-none"
-                        style={{ minHeight: '500px' }}
-                        onLoad={(e) => {
-                          console.log('PDF object loaded successfully');
-                          const errorDiv = document.getElementById(`pdf-error-${viewingDetails.id || 'details'}`);
-                          if (errorDiv) {
-                            errorDiv.classList.add('hidden');
-                          }
-                        }}
-                        onError={(e) => {
-                          console.log('PDF object failed to load, showing fallback');
-                          const errorDiv = document.getElementById(`pdf-error-${viewingDetails.id || 'details'}`);
-                          if (errorDiv) {
-                            errorDiv.classList.remove('hidden');
-                          }
-                        }}
-                      >
-                        {/* Fallback iframe inside object tag */}
-                        <iframe
-                          src={`${getS3PdfUrl(viewingDetails)}#view=FitH&toolbar=1&navpanes=0&scrollbar=1&zoom=85`}
-                          className="w-full h-full border-none"
-                          title="Bill PDF"
-                          style={{ minHeight: '500px' }}
-                        />
-                      </object>
-                      
-                      <div className="absolute inset-0 flex items-center justify-center bg-gray-100 hidden" id={`pdf-error-${viewingDetails.id || 'details'}`}>
-                        <div className="text-center">
-                          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                          <p className="text-gray-600 mb-3">PDF preview not working in this browser</p>
-                          <p className="text-sm text-gray-500 mb-4">Some browsers block PDF embedding for security</p>
-                          <div className="space-x-2">
-                            <button 
-                              onClick={() => openPdf(viewingDetails)}
-                              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-                            >
-                              Open in New Tab
-                            </button>
-                            <button 
-                              onClick={() => downloadPdf(viewingDetails)}
-                              className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
-                            >
-                              Download
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </>
+                    // Desktop - simple iframe like ServiceReportsPage
+                    <iframe
+                      src={getS3PdfUrl(viewingDetails)}
+                      className="w-full h-full border-0"
+                      title="PDF Viewer"
+                    />
                   )}
                 </div>
               </div>
