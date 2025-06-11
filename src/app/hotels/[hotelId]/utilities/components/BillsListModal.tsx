@@ -1,4 +1,28 @@
-"use client";
+return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold">{getModalTitle()}</h3>
+              <p className="text-slate-200 text-sm mt-1">
+                {filteredBills.length} bill{filteredBills.length !== 1 ? 's' : ''} found
+                {hotelId && ` for ${hotelId}`}
+              </p>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+          {filteredBills.length"use client";
 
 import { X, Zap, Flame, Droplets, Eye, Download, Loader, Edit3, FileText, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
@@ -47,6 +71,7 @@ export default function BillsListModal({
 }: BillsListModalProps) {
   const [downloadingBills, setDownloadingBills] = useState<Set<string>>(new Set());
   const [viewingDetails, setViewingDetails] = useState<BillEntry | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'details'>('list');
 
   // Filter bills based on props - MOVED BEFORE debug logging to fix the error
   const filteredBills = bills.filter(bill => {
@@ -183,12 +208,15 @@ export default function BillsListModal({
   };
 
   // Use same S3 PDF URL pattern as MetricsModal
-  const getS3PdfUrl = (bill: BillEntry) => {
+  const getS3PdfUrl = (bill: BillEntry, forViewing = false) => {
     const billYear = bill.summary?.bill_date ? 
       bill.summary.bill_date.substring(0, 4) : 
       year || "2024";
     
-    return `${process.env.NEXT_PUBLIC_API_URL}/utilities/bill-pdf/${bill.hotel_id}/${bill.utility_type}/${billYear}/${encodeURIComponent(bill.filename)}`;
+    const baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/utilities/bill-pdf/${bill.hotel_id}/${bill.utility_type}/${billYear}/${encodeURIComponent(bill.filename)}`;
+    
+    // Add disposition parameter for viewing vs downloading
+    return forViewing ? `${baseUrl}?disposition=inline` : baseUrl;
   };
 
   // Add download function for the footer button
@@ -198,7 +226,7 @@ export default function BillsListModal({
     setDownloadingBills(prev => new Set(prev).add(billId));
     
     try {
-      const pdfUrl = getS3PdfUrl(bill);
+      const pdfUrl = getS3PdfUrl(bill, false); // false = download disposition
       const response = await fetch(pdfUrl);
       
       if (!response.ok) {
@@ -239,16 +267,10 @@ export default function BillsListModal({
     setDownloadingBills(prev => new Set(prev).add(billId));
     
     try {
-      const pdfUrl = getS3PdfUrl(bill);
+      const pdfUrl = getS3PdfUrl(bill, true); // true = inline disposition for viewing
       
-      // Check if PDF exists first
-      const response = await fetch(pdfUrl, { method: 'HEAD' });
-      
-      if (!response.ok) {
-        throw new Error(`PDF not available for this bill`);
-      }
-      
-      // Open PDF in new tab/window
+      // Don't check if PDF exists with HEAD - just try to open it
+      // Your API returns 405 for HEAD requests
       window.open(pdfUrl, '_blank');
       
     } catch (error) {
@@ -270,6 +292,12 @@ export default function BillsListModal({
       isMobile: isMobile().any
     });
     setViewingDetails(bill);
+    setViewMode('details');
+  };
+
+  const closeBillDetails = () => {
+    setViewingDetails(null);
+    setViewMode('list');
   };
 
   const getBillStatus = (bill: BillEntry) => {
@@ -510,80 +538,38 @@ export default function BillsListModal({
               {/* Left side - PDF */}
               <div className="w-1/2 border-r flex flex-col">
                 <div className="p-3 bg-gray-50 border-b">
-                  <h5 className="font-medium text-gray-900">Original PDF</h5>
+                  <h5 className="font-medium text-gray-900">PDF Document</h5>
                   <p className="text-sm text-gray-600">{viewingDetails.filename}</p>
                 </div>
                 <div className="flex-1 bg-gray-100 relative">
-                  {isMobile().any ? (
-                    // Mobile fallback - same as ServiceReportsPage
-                    <div className="flex items-center justify-center h-full bg-gray-100">
-                      <div className="text-center">
-                        <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 mb-4">PDF preview not available on mobile</p>
-                        <div className="space-x-2">
-                          <button 
-                            onClick={() => window.open(getS3PdfUrl(viewingDetails), '_blank')}
-                            className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-                          >
-                            Open PDF
-                          </button>
-                          <button 
-                            onClick={() => downloadPdf(viewingDetails)}
-                            className="px-4 py-2 bg-green-500 text-white rounded text-sm hover:bg-green-600"
-                          >
-                            Download
-                          </button>
-                        </div>
+                  {/* Show explanation instead of broken iframe */}
+                  <div className="flex items-center justify-center h-full bg-gray-100">
+                    <div className="text-center max-w-md p-6">
+                      <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-700 mb-2">PDF Downloads Automatically</h3>
+                      <p className="text-gray-500 mb-4 text-sm">
+                        Your server is configured to download PDFs instead of displaying them inline. 
+                        This is a server-side setting (Content-Disposition: attachment).
+                      </p>
+                      <div className="space-y-2">
+                        <button 
+                          onClick={() => window.open(getS3PdfUrl(viewingDetails, true), '_blank')}
+                          className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                        >
+                          Open PDF for Viewing
+                        </button>
+                        <button 
+                          onClick={() => downloadPdf(viewingDetails)}
+                          className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                        >
+                          Download PDF
+                        </button>
+                        <p className="text-xs text-gray-400 mt-2">
+                          View URL: <code className="bg-gray-200 px-1 rounded text-xs">{getS3PdfUrl(viewingDetails, true)}</code>
+                        </p>
                       </div>
                     </div>
-                  ) : (
-                    // Desktop - try embedding, with fallback options
-                    <div className="w-full h-full relative">
-                      <iframe
-                        src={`data:application/pdf;base64,`}
-                        className="w-full h-full border-0 hidden"
-                        title="PDF Viewer"
-                        id={`pdf-iframe-${viewingDetails.id || 'details'}`}
-                        onLoad={() => {
-                          console.log('PDF iframe loaded');
-                        }}
-                      />
-                      
-                      {/* Alternative: Show embedded viewer with manual load */}
-                      <div className="flex items-center justify-center h-full bg-gray-100" id={`pdf-manual-${viewingDetails.id || 'details'}`}>
-                        <div className="text-center">
-                          <FileText className="w-16 h-16 text-blue-400 mx-auto mb-4" />
-                          <h3 className="text-lg font-medium text-gray-700 mb-2">Bill PDF Ready</h3>
-                          <p className="text-gray-500 mb-4">Click below to view the PDF document</p>
-                          <div className="space-x-2">
-                            <button 
-                              onClick={() => {
-                                const iframe = document.getElementById(`pdf-iframe-${viewingDetails.id || 'details'}`) as HTMLIFrameElement;
-                                const manual = document.getElementById(`pdf-manual-${viewingDetails.id || 'details'}`);
-                                if (iframe && manual) {
-                                  iframe.src = getS3PdfUrl(viewingDetails);
-                                  iframe.classList.remove('hidden');
-                                  manual.classList.add('hidden');
-                                }
-                              }}
-                              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                            >
-                              Load PDF in Viewer
-                            </button>
-                            <button 
-                              onClick={() => window.open(getS3PdfUrl(viewingDetails), '_blank')}
-                              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                            >
-                              Open in New Tab
-                            </button>
-                          </div>
-                          <div className="mt-2 text-xs text-gray-400">
-                            URL: {getS3PdfUrl(viewingDetails)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
