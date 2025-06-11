@@ -47,27 +47,7 @@ export default function BillsListModal({
   const [downloadingBills, setDownloadingBills] = useState<Set<string>>(new Set());
   const [viewingDetails, setViewingDetails] = useState<BillEntry | null>(null);
 
-  // Debug logging to see what's happening - with distinctive prefix
-  console.log('🔥 BILLS MODAL DEBUG 🔥', {
-    utilityType,
-    month, 
-    year,
-    hotelId,
-    totalBills: bills.length,
-    filteredBills: filteredBills.length,
-    sampleBill: bills[0] ? {
-      utility_type: bills[0].utility_type,
-      filename: bills[0].filename,
-      bill_date: bills[0].summary?.bill_date,
-      raw_billing_end: bills[0].raw_data?.billSummary?.billingPeriodEndDate
-    } : null,
-    sampleFiltered: filteredBills[0] ? {
-      utility_type: filteredBills[0].utility_type,
-      filename: filteredBills[0].filename
-    } : null
-  });
-
-  // Filter bills based on props - FIXED to match how the graph processes bills
+  // Filter bills based on props - MOVED BEFORE debug logging to fix the error
   const filteredBills = bills.filter(bill => {
     // Filter by utility type (most important for chart clicks)
     if (utilityType !== 'all' && bill.utility_type !== utilityType) return false;
@@ -97,6 +77,26 @@ export default function BillsListModal({
     }
     
     return true;
+  });
+
+  // Debug logging to see what's happening - with distinctive prefix
+  console.log('🔥 BILLS MODAL DEBUG 🔥', {
+    utilityType,
+    month, 
+    year,
+    hotelId,
+    totalBills: bills.length,
+    filteredBills: filteredBills.length,
+    sampleBill: bills[0] ? {
+      utility_type: bills[0].utility_type,
+      filename: bills[0].filename,
+      bill_date: bills[0].summary?.bill_date,
+      raw_billing_end: bills[0].raw_data?.billSummary?.billingPeriodEndDate
+    } : null,
+    sampleFiltered: filteredBills[0] ? {
+      utility_type: filteredBills[0].utility_type,
+      filename: filteredBills[0].filename
+    } : null
   });
 
   const getUtilityIcon = (type: string) => {
