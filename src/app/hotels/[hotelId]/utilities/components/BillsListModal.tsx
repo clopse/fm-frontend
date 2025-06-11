@@ -1,28 +1,4 @@
-return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-bold">{getModalTitle()}</h3>
-              <p className="text-slate-200 text-sm mt-1">
-                {filteredBills.length} bill{filteredBills.length !== 1 ? 's' : ''} found
-                {hotelId && ` for ${hotelId}`}
-              </p>
-            </div>
-            <button 
-              onClick={onClose}
-              className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
-          {filteredBills.length"use client";
+"use client";
 
 import { X, Zap, Flame, Droplets, Eye, Download, Loader, Edit3, FileText, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
@@ -71,9 +47,8 @@ export default function BillsListModal({
 }: BillsListModalProps) {
   const [downloadingBills, setDownloadingBills] = useState<Set<string>>(new Set());
   const [viewingDetails, setViewingDetails] = useState<BillEntry | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'details'>('list');
 
-  // Filter bills based on props - MOVED BEFORE debug logging to fix the error
+  // Filter bills based on props - check if billing period OVERLAPS with target month/year
   const filteredBills = bills.filter(bill => {
     // Filter by utility type (most important for chart clicks)
     if (utilityType !== 'all' && bill.utility_type !== utilityType) return false;
@@ -292,12 +267,6 @@ export default function BillsListModal({
       isMobile: isMobile().any
     });
     setViewingDetails(bill);
-    setViewMode('details');
-  };
-
-  const closeBillDetails = () => {
-    setViewingDetails(null);
-    setViewMode('list');
   };
 
   const getBillStatus = (bill: BillEntry) => {
@@ -542,34 +511,39 @@ export default function BillsListModal({
                   <p className="text-sm text-gray-600">{viewingDetails.filename}</p>
                 </div>
                 <div className="flex-1 bg-gray-100 relative">
-                  {/* Show explanation instead of broken iframe */}
-                  <div className="flex items-center justify-center h-full bg-gray-100">
-                    <div className="text-center max-w-md p-6">
-                      <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-700 mb-2">PDF Downloads Automatically</h3>
-                      <p className="text-gray-500 mb-4 text-sm">
-                        Your server is configured to download PDFs instead of displaying them inline. 
-                        This is a server-side setting (Content-Disposition: attachment).
-                      </p>
-                      <div className="space-y-2">
-                        <button 
-                          onClick={() => window.open(getS3PdfUrl(viewingDetails, true), '_blank')}
-                          className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                        >
-                          Open PDF for Viewing
-                        </button>
-                        <button 
-                          onClick={() => downloadPdf(viewingDetails)}
-                          className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                        >
-                          Download PDF
-                        </button>
-                        <p className="text-xs text-gray-400 mt-2">
-                          View URL: <code className="bg-gray-200 px-1 rounded text-xs">{getS3PdfUrl(viewingDetails, true)}</code>
+                  {/* Show simple iframe for desktop, buttons for mobile */}
+                  {isMobile().any ? (
+                    <div className="flex items-center justify-center h-full bg-gray-100">
+                      <div className="text-center max-w-md p-6">
+                        <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-700 mb-2">Mobile PDF Viewing</h3>
+                        <p className="text-gray-500 mb-4 text-sm">
+                          PDF preview not available on mobile devices
                         </p>
+                        <div className="space-y-2">
+                          <button 
+                            onClick={() => window.open(getS3PdfUrl(viewingDetails, true), '_blank')}
+                            className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                          >
+                            Open PDF for Viewing
+                          </button>
+                          <button 
+                            onClick={() => downloadPdf(viewingDetails)}
+                            className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                          >
+                            Download PDF
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    // Desktop - simple iframe like ServiceReportsPage
+                    <iframe
+                      src={getS3PdfUrl(viewingDetails, true)}
+                      className="w-full h-full border-0"
+                      title="PDF Viewer"
+                    />
+                  )}
                 </div>
               </div>
 
