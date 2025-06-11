@@ -443,41 +443,44 @@ export default function BillsListModal({
                 </div>
                 <div className="flex-1 bg-gray-100 relative">
                   <iframe
-                    src={`${getS3PdfUrl(viewingDetails)}#toolbar=1&navpanes=1&scrollbar=1`}
+                    src={`${getS3PdfUrl(viewingDetails)}#view=FitH&toolbar=1&navpanes=1&scrollbar=1&zoom=100`}
                     className="w-full h-full border-none"
                     title="Bill PDF"
                     style={{ minHeight: '500px' }}
+                    allow="fullscreen"
                     onLoad={(e) => {
-                      // Hide error div if PDF loads successfully
-                      const errorDiv = document.getElementById(`pdf-error-${viewingDetails.id}`);
+                      console.log('PDF iframe loaded successfully');
+                      const errorDiv = document.getElementById(`pdf-error-${viewingDetails.id || 'details'}`);
                       if (errorDiv) {
                         errorDiv.classList.add('hidden');
                       }
                     }}
                     onError={(e) => {
-                      // Show error div if PDF fails to load
-                      const errorDiv = document.getElementById(`pdf-error-${viewingDetails.id}`);
+                      console.log('PDF iframe failed to load');
+                      const errorDiv = document.getElementById(`pdf-error-${viewingDetails.id || 'details'}`);
                       if (errorDiv) {
                         errorDiv.classList.remove('hidden');
                       }
                     }}
                   />
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100 hidden" id={`pdf-error-${viewingDetails.id}`}>
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100 hidden" id={`pdf-error-${viewingDetails.id || 'details'}`}>
                     <div className="text-center">
                       <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-600">PDF not available for preview</p>
-                      <button 
-                        onClick={() => openPdf(viewingDetails)}
-                        className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 mr-2"
-                      >
-                        Open in New Tab
-                      </button>
-                      <button 
-                        onClick={() => downloadPdf(viewingDetails)}
-                        className="mt-2 px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
-                      >
-                        Download
-                      </button>
+                      <p className="text-gray-600 mb-3">PDF not available for preview</p>
+                      <div className="space-x-2">
+                        <button 
+                          onClick={() => openPdf(viewingDetails)}
+                          className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                        >
+                          Open in New Tab
+                        </button>
+                        <button 
+                          onClick={() => downloadPdf(viewingDetails)}
+                          className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                        >
+                          Download
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -511,12 +514,28 @@ export default function BillsListModal({
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600">Consumption:</span>
                         <span className="font-medium text-blue-800">
-                          {formatConsumption(
-                            viewingDetails.summary?.total_kwh || viewingDetails.summary?.consumption_kwh || viewingDetails.consumption,
-                            viewingDetails.consumption_unit
-                          )}
+                          {(() => {
+                            const consumption = viewingDetails.summary?.total_kwh || viewingDetails.summary?.consumption_kwh || viewingDetails.consumption;
+                            const unit = viewingDetails.consumption_unit || 
+                                        (viewingDetails.raw_data?.consumptionDetails?.consumptionUnit) ||
+                                        (viewingDetails.utility_type === 'gas' ? 'kWh' : 'kWh');
+                            return formatConsumption(consumption, unit);
+                          })()}
                         </span>
                       </div>
+                      
+                      {/* Billing Period */}
+                      {(viewingDetails.summary?.billing_period_start || viewingDetails.summary?.billing_period_end) && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-600">Billing Period:</span>
+                          <span className="font-mono text-sm text-blue-800">
+                            {viewingDetails.summary?.billing_period_start && formatDate(viewingDetails.summary.billing_period_start)}
+                            {viewingDetails.summary?.billing_period_start && viewingDetails.summary?.billing_period_end && ' → '}
+                            {viewingDetails.summary?.billing_period_end && formatDate(viewingDetails.summary.billing_period_end)}
+                          </span>
+                        </div>
+                      )}
+                      
                       {viewingDetails.summary?.account_number && (
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">Account:</span>
