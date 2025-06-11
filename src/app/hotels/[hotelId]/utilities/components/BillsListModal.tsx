@@ -173,7 +173,9 @@ export default function BillsListModal({
   };
 
   const formatConsumption = (consumption: number, unit: string) => {
-    return `${consumption.toLocaleString()} ${unit}`;
+    // Default units if missing
+    const defaultUnit = unit || 'kWh';
+    return `${consumption.toLocaleString()} ${defaultUnit}`;
   };
 
   const getSupplierName = (bill: BillEntry) => {
@@ -407,7 +409,7 @@ export default function BillsListModal({
                           <p className="text-lg font-semibold text-slate-700">
                             {formatConsumption(
                               bill.summary?.total_kwh || bill.summary?.consumption_kwh || bill.consumption,
-                              bill.consumption_unit
+                              bill.consumption_unit || (bill.utility_type === 'gas' ? 'kWh' : 'kWh')
                             )}
                           </p>
                           <p className="text-sm text-slate-500">Consumption</p>
@@ -531,31 +533,41 @@ export default function BillsListModal({
                     </div>
                   ) : (
                     <>
-                      <iframe
-                        src={`${getS3PdfUrl(viewingDetails)}#view=FitH&toolbar=1&navpanes=1&scrollbar=1&zoom=100`}
+                      {/* Try object tag first, fallback to iframe */}
+                      <object
+                        data={`${getS3PdfUrl(viewingDetails)}#view=FitH&toolbar=1&navpanes=0&scrollbar=1&zoom=85`}
+                        type="application/pdf"
                         className="w-full h-full border-none"
-                        title="Bill PDF"
                         style={{ minHeight: '500px' }}
-                        allow="fullscreen"
                         onLoad={(e) => {
-                          console.log('PDF iframe loaded successfully');
+                          console.log('PDF object loaded successfully');
                           const errorDiv = document.getElementById(`pdf-error-${viewingDetails.id || 'details'}`);
                           if (errorDiv) {
                             errorDiv.classList.add('hidden');
                           }
                         }}
                         onError={(e) => {
-                          console.log('PDF iframe failed to load');
+                          console.log('PDF object failed to load, showing fallback');
                           const errorDiv = document.getElementById(`pdf-error-${viewingDetails.id || 'details'}`);
                           if (errorDiv) {
                             errorDiv.classList.remove('hidden');
                           }
                         }}
-                      />
+                      >
+                        {/* Fallback iframe inside object tag */}
+                        <iframe
+                          src={`${getS3PdfUrl(viewingDetails)}#view=FitH&toolbar=1&navpanes=0&scrollbar=1&zoom=85`}
+                          className="w-full h-full border-none"
+                          title="Bill PDF"
+                          style={{ minHeight: '500px' }}
+                        />
+                      </object>
+                      
                       <div className="absolute inset-0 flex items-center justify-center bg-gray-100 hidden" id={`pdf-error-${viewingDetails.id || 'details'}`}>
                         <div className="text-center">
                           <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                          <p className="text-gray-600 mb-3">PDF not available for preview</p>
+                          <p className="text-gray-600 mb-3">PDF preview not working in this browser</p>
+                          <p className="text-sm text-gray-500 mb-4">Some browsers block PDF embedding for security</p>
                           <div className="space-x-2">
                             <button 
                               onClick={() => openPdf(viewingDetails)}
