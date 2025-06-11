@@ -37,6 +37,14 @@ export default function UtilitiesDashboard() {
   const [showMetricsModal, setShowMetricsModal] = useState(false);
   const [selectedYears, setSelectedYears] = useState<number[]>([2025]);
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+  
+  // Add state for bills list filtering
+  const [billsListFilter, setBillsListFilter] = useState<{
+    month?: string;
+    year?: string;
+    utilityType?: 'electricity' | 'gas' | 'water' | 'all';
+    hotelId?: string;
+  }>({});
 
   const {
     data,
@@ -112,16 +120,36 @@ export default function UtilitiesDashboard() {
   const handleYearChange = useCallback((years: number[]) => { setSelectedYears(years); }, []);
   const handleMonthChange = useCallback((months: number[]) => { setSelectedMonths(months); }, []);
 
-  const handleShowBills = useCallback((monthFilter?: string) => {
+  // Updated handleShowBills function to set proper filter parameters
+  const handleShowBills = useCallback((monthFilter?: string, utilityType?: 'electricity' | 'gas') => {
+    console.log('🎯 CHART CLICKED - Setting Bills Filter:', { monthFilter, utilityType, year, hotelId });
+    
+    // Convert month number to month name for filtering
+    let monthName: string | undefined;
     if (monthFilter && monthFilter !== 'all') {
-      updateFilter('month', monthFilter);
       const monthNum = parseInt(monthFilter);
-      if (!selectedMonths.includes(monthNum)) {
-        setSelectedMonths([monthNum]);
+      if (monthNum >= 1 && monthNum <= 12) {
+        monthName = new Date(0, monthNum - 1).toLocaleString('default', { month: 'long' });
       }
     }
+    
+    // Set the bills filter with all the necessary parameters
+    setBillsListFilter({
+      month: monthName,
+      year: year.toString(),
+      utilityType: utilityType || 'all',
+      hotelId: hotelId
+    });
+    
+    console.log('🎯 Final Bills Filter:', {
+      month: monthName,
+      year: year.toString(),
+      utilityType: utilityType || 'all',
+      hotelId: hotelId
+    });
+    
     setShowBillsList(true);
-  }, [updateFilter, selectedMonths]);
+  }, [year, hotelId]);
 
   const getFilteredBills = useCallback(() => {
     if (!data.bills) return [];
@@ -225,13 +253,13 @@ export default function UtilitiesDashboard() {
             data={filteredData.electricity}
             viewMode={viewMode}
             loading={loading}
-            onMonthClick={handleShowBills}
+            onMonthClick={(month) => handleShowBills(month, 'electricity')}
           />
           <GasChart
             data={filteredData.gas}
             viewMode={viewMode}
             loading={loading}
-            onMonthClick={handleShowBills}
+            onMonthClick={(month) => handleShowBills(month, 'gas')}
           />
         </div>
 
@@ -282,10 +310,15 @@ export default function UtilitiesDashboard() {
         </div>
       </div>
 
+      {/* Updated BillsListModal call with proper filtering parameters */}
       {showBillsList && (
         <BillsListModal
-          bills={getFilteredBills()}
+          bills={data.bills || []}
           onClose={() => setShowBillsList(false)}
+          utilityType={billsListFilter.utilityType}
+          month={billsListFilter.month}
+          year={billsListFilter.year}
+          hotelId={billsListFilter.hotelId}
         />
       )}
 
