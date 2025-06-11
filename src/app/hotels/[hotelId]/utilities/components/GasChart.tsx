@@ -67,12 +67,18 @@ export default function GasChart({ data, viewMode, loading, onMonthClick }: GasC
     }
   };
 
-  // Handle chart clicks
+  // Enhanced chart click handler
   const handleChartClick = (data: any) => {
+    console.log('🔥 GAS CHART CLICKED:', data);
+    
     if (onMonthClick && data && data.activePayload && data.activePayload[0]) {
       const clickedPeriod = data.activePayload[0].payload.period;
+      console.log('🔥 Clicked period:', clickedPeriod);
+      
       // Extract month number for filtering (e.g., "2025-01" -> "1")
       const monthNumber = clickedPeriod.split('-')[1];
+      console.log('🔥 Extracted month number:', monthNumber);
+      
       onMonthClick(monthNumber);
     }
   };
