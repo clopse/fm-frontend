@@ -47,60 +47,7 @@ export default function BillsListModal({
   const [downloadingBills, setDownloadingBills] = useState<Set<string>>(new Set());
   const [viewingDetails, setViewingDetails] = useState<BillEntry | null>(null);
 
-  // Helper function to check if bill covers the target month/year
-  const billCoversTargetPeriod = (bill: BillEntry, targetMonth?: string, targetYear?: string) => {
-    if (!targetMonth && !targetYear) return true; // No filtering needed
-    
-    // Get bill period dates
-    let startDate: Date | null = null;
-    let endDate: Date | null = null;
-    
-    // Try different date field formats from real API data
-    if (bill.summary?.billing_period_start && bill.summary?.billing_period_end) {
-      startDate = new Date(bill.summary.billing_period_start);
-      endDate = new Date(bill.summary.billing_period_end);
-    } else if (bill.summary?.bill_date) {
-      // If only bill date, assume it covers that month
-      const billDate = new Date(bill.summary.bill_date);
-      startDate = new Date(billDate.getFullYear(), billDate.getMonth(), 1);
-      endDate = new Date(billDate.getFullYear(), billDate.getMonth() + 1, 0); // Last day of month
-    } else if (bill.bill_period) {
-      // Fallback to bill_period if available
-      try {
-        const [year, month] = bill.bill_period.split('-');
-        startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
-        endDate = new Date(parseInt(year), parseInt(month), 0);
-      } catch (e) {
-        return false;
-      }
-    }
-    
-    if (!startDate || !endDate) return false;
-    
-    // Create target month period
-    const targetMonthNumber = targetMonth ? 
-      ['January', 'February', 'March', 'April', 'May', 'June',
-       'July', 'August', 'September', 'October', 'November', 'December'].indexOf(targetMonth) + 1 : 
-      null;
-    
-    const targetYearNumber = targetYear ? parseInt(targetYear) : null;
-    
-    if (targetYearNumber && targetMonthNumber) {
-      // Check if bill period overlaps with target month
-      const targetStart = new Date(targetYearNumber, targetMonthNumber - 1, 1);
-      const targetEnd = new Date(targetYearNumber, targetMonthNumber, 0); // Last day of target month
-      
-      // Bill covers target period if there's any overlap
-      return (startDate <= targetEnd && endDate >= targetStart);
-    } else if (targetYearNumber) {
-      // Just year filtering
-      return startDate.getFullYear() === targetYearNumber || endDate.getFullYear() === targetYearNumber;
-    }
-    
-    return false;
-  };
-
-  // Filter bills based on props
+  // Filter bills based on props - FIXED to match how the graph processes bills
   const filteredBills = bills.filter(bill => {
     // Filter by utility type (most important for chart clicks)
     if (utilityType !== 'all' && bill.utility_type !== utilityType) return false;
@@ -108,9 +55,25 @@ export default function BillsListModal({
     // Filter by hotel
     if (hotelId && bill.hotel_id !== hotelId) return false;
     
-    // Filter by period using the more sophisticated check
+    // Filter by period - use the SAME logic as the graph processing
     if (month || year) {
-      return billCoversTargetPeriod(bill, month, year);
+      // Get bill date the same way the graph does
+      const billDate = bill.summary?.bill_date || 
+                      bill.summary?.billing_period_end ||
+                      bill.raw_data?.billingPeriod?.endDate ||
+                      bill.raw_data?.billSummary?.billingPeriodEndDate;
+      
+      if (!billDate) return false;
+      
+      // Year filter
+      if (year && !billDate.startsWith(year)) return false;
+      
+      // Month filter - check if bill date is in the target month
+      if (month) {
+        const billDateObj = new Date(billDate);
+        const billMonthName = billDateObj.toLocaleString('default', { month: 'long' });
+        if (billMonthName !== month) return false;
+      }
     }
     
     return true;
