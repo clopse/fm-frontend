@@ -264,6 +264,11 @@ export default function BillsListModal({
   };
 
   const viewBillDetails = (bill: BillEntry) => {
+    console.log('🔍 Opening bill details for:', {
+      filename: bill.filename,
+      pdfUrl: getS3PdfUrl(bill),
+      isMobile: isMobile().any
+    });
     setViewingDetails(bill);
   };
 
@@ -532,12 +537,52 @@ export default function BillsListModal({
                       </div>
                     </div>
                   ) : (
-                    // Desktop - simple iframe like ServiceReportsPage
-                    <iframe
-                      src={getS3PdfUrl(viewingDetails)}
-                      className="w-full h-full border-0"
-                      title="PDF Viewer"
-                    />
+                    // Desktop - try embedding, with fallback options
+                    <div className="w-full h-full relative">
+                      <iframe
+                        src={`data:application/pdf;base64,`}
+                        className="w-full h-full border-0 hidden"
+                        title="PDF Viewer"
+                        id={`pdf-iframe-${viewingDetails.id || 'details'}`}
+                        onLoad={() => {
+                          console.log('PDF iframe loaded');
+                        }}
+                      />
+                      
+                      {/* Alternative: Show embedded viewer with manual load */}
+                      <div className="flex items-center justify-center h-full bg-gray-100" id={`pdf-manual-${viewingDetails.id || 'details'}`}>
+                        <div className="text-center">
+                          <FileText className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+                          <h3 className="text-lg font-medium text-gray-700 mb-2">Bill PDF Ready</h3>
+                          <p className="text-gray-500 mb-4">Click below to view the PDF document</p>
+                          <div className="space-x-2">
+                            <button 
+                              onClick={() => {
+                                const iframe = document.getElementById(`pdf-iframe-${viewingDetails.id || 'details'}`) as HTMLIFrameElement;
+                                const manual = document.getElementById(`pdf-manual-${viewingDetails.id || 'details'}`);
+                                if (iframe && manual) {
+                                  iframe.src = getS3PdfUrl(viewingDetails);
+                                  iframe.classList.remove('hidden');
+                                  manual.classList.add('hidden');
+                                }
+                              }}
+                              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            >
+                              Load PDF in Viewer
+                            </button>
+                            <button 
+                              onClick={() => window.open(getS3PdfUrl(viewingDetails), '_blank')}
+                              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                            >
+                              Open in New Tab
+                            </button>
+                          </div>
+                          <div className="mt-2 text-xs text-gray-400">
+                            URL: {getS3PdfUrl(viewingDetails)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
