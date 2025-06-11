@@ -55,24 +55,51 @@ export default function BillsListModal({
     // Filter by hotel
     if (hotelId && bill.hotel_id !== hotelId) return false;
     
-    // Filter by period - use the SAME logic as the graph processing
+    // Filter by period - check if billing period OVERLAPS with target month/year
     if (month || year) {
-      // Get bill date the same way the graph does
-      const billDate = bill.summary?.bill_date || 
-                      bill.summary?.billing_period_end ||
-                      bill.raw_data?.billingPeriod?.endDate ||
-                      bill.raw_data?.billSummary?.billingPeriodEndDate;
+      // Get billing period dates
+      const startDate = bill.summary?.billing_period_start || 
+                       bill.raw_data?.billingPeriod?.startDate ||
+                       bill.raw_data?.billSummary?.billingPeriodStartDate;
       
-      if (!billDate) return false;
+      const endDate = bill.summary?.billing_period_end || 
+                     bill.summary?.bill_date ||
+                     bill.raw_data?.billingPeriod?.endDate ||
+                     bill.raw_data?.billSummary?.billingPeriodEndDate;
       
-      // Year filter
-      if (year && !billDate.startsWith(year)) return false;
+      if (!endDate) return false;
       
-      // Month filter - check if bill date is in the target month
-      if (month) {
-        const billDateObj = new Date(billDate);
-        const billMonthName = billDateObj.toLocaleString('default', { month: 'long' });
-        if (billMonthName !== month) return false;
+      // If we have both start and end dates, check for overlap
+      if (startDate && endDate) {
+        const billStartDate = new Date(startDate);
+        const billEndDate = new Date(endDate);
+        
+        // Create target month boundaries
+        if (month && year) {
+          // Get month number from month name
+          const monthNum = new Date(`${month} 1, ${year}`).getMonth();
+          const targetMonthStart = new Date(parseInt(year), monthNum, 1);
+          const targetMonthEnd = new Date(parseInt(year), monthNum + 1, 0); // Last day of month
+          
+          // Check if billing period overlaps with target month
+          const overlaps = billStartDate <= targetMonthEnd && billEndDate >= targetMonthStart;
+          if (!overlaps) return false;
+        } else if (year) {
+          // Year filter - check if any part of the billing period is in the target year
+          const targetYearStart = new Date(parseInt(year), 0, 1);
+          const targetYearEnd = new Date(parseInt(year), 11, 31);
+          const overlaps = billStartDate <= targetYearEnd && billEndDate >= targetYearStart;
+          if (!overlaps) return false;
+        }
+      } else {
+        // Fallback to old logic if we only have end date
+        if (year && !endDate.startsWith(year)) return false;
+        
+        if (month) {
+          const billDateObj = new Date(endDate);
+          const billMonthName = billDateObj.toLocaleString('default', { month: 'long' });
+          if (billMonthName !== month) return false;
+        }
       }
     }
     
@@ -87,15 +114,32 @@ export default function BillsListModal({
     hotelId,
     totalBills: bills.length,
     filteredBills: filteredBills.length,
+    billsByType: bills.reduce((acc, bill) => {
+      acc[bill.utility_type] = (acc[bill.utility_type] || 0) + 1;
+      return acc;
+    }, {}),
+    billPeriods: bills.map(bill => ({
+      type: bill.utility_type,
+      filename: bill.filename,
+      start: bill.summary?.billing_period_start,
+      end: bill.summary?.billing_period_end || bill.summary?.bill_date,
+      rawStart: bill.raw_data?.billingPeriod?.startDate,
+      rawEnd: bill.raw_data?.billingPeriod?.endDate || bill.raw_data?.billSummary?.billingPeriodEndDate
+    })),
+    targetPeriod: month && year ? `${month} ${year}` : year || 'all',
     sampleBill: bills[0] ? {
       utility_type: bills[0].utility_type,
       filename: bills[0].filename,
       bill_date: bills[0].summary?.bill_date,
+      billing_start: bills[0].summary?.billing_period_start,
+      billing_end: bills[0].summary?.billing_period_end,
       raw_billing_end: bills[0].raw_data?.billSummary?.billingPeriodEndDate
     } : null,
     sampleFiltered: filteredBills[0] ? {
       utility_type: filteredBills[0].utility_type,
-      filename: filteredBills[0].filename
+      filename: filteredBills[0].filename,
+      billing_start: filteredBills[0].summary?.billing_period_start,
+      billing_end: filteredBills[0].summary?.billing_period_end
     } : null
   });
 
