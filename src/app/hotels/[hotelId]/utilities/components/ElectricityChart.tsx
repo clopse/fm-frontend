@@ -81,12 +81,18 @@ export default function ElectricityChart({ data, viewMode, loading, onMonthClick
     }
   };
 
-  // Handle chart clicks
+  // Enhanced chart click handler
   const handleChartClick = (data: any) => {
+    console.log('⚡ ELECTRICITY CHART CLICKED:', data);
+    
     if (onMonthClick && data && data.activePayload && data.activePayload[0]) {
       const clickedMonth = data.activePayload[0].payload.month;
+      console.log('⚡ Clicked month:', clickedMonth);
+      
       // Extract month number for filtering (e.g., "2025-01" -> "1")
       const monthNumber = clickedMonth.split('-')[1];
+      console.log('⚡ Extracted month number:', monthNumber);
+      
       onMonthClick(monthNumber);
     }
   };
