@@ -1,6 +1,6 @@
 'use client';
 
-import { UserPlus, Eye, Edit, Mail, Shield, Trash2, X, Plus, Check, Search, Filter } from 'lucide-react';
+import { UserPlus, Eye, Edit, Mail, Shield, Trash2, X, Plus, Check, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { User, UserCreate, UserUpdate } from '../types/user';
 import { userService } from '../services/userService';
@@ -58,7 +58,6 @@ function ViewUserModal({ isOpen, onClose, user }: ViewUserModalProps) {
         </div>
 
         <div className="space-y-6">
-          {/* User Info Section */}
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center space-x-4 mb-4">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
@@ -90,7 +89,6 @@ function ViewUserModal({ isOpen, onClose, user }: ViewUserModalProps) {
             </div>
           </div>
 
-          {/* Hotel Access Section */}
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">Hotel Access</label>
             <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -111,7 +109,6 @@ function ViewUserModal({ isOpen, onClose, user }: ViewUserModalProps) {
             </div>
           </div>
 
-          {/* Account Information */}
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">Account Information</label>
             <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
@@ -164,7 +161,6 @@ function EditUserModal({ isOpen, onClose, onUserUpdated, user }: EditUserModalPr
         hotel: user.hotel,
       });
 
-      // Set selected hotels
       if (user.hotel === 'All Hotels') {
         setSelectedHotels(hotels.map(h => h.name));
       } else {
@@ -566,4 +562,373 @@ export default function InlineUserManagement({ className = '' }: InlineUserManag
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   
-  const [searchTerm, setSearchTerm] = us
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [hotelFilter, setHotelFilter] = useState('');
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const userData = await userService.getUsers({
+        search: searchTerm || undefined,
+        role: roleFilter || undefined,
+        hotel: hotelFilter || undefined,
+      });
+      setUsers(userData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, [searchTerm, roleFilter, hotelFilter]);
+
+  const handleViewUser = (user: User) => {
+    setSelectedUser(user);
+    setShowViewModal(true);
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setShowEditModal(true);
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to deactivate this user?')) return;
+
+    try {
+      await userService.deleteUser(userId);
+      fetchUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete user');
+    }
+  };
+
+  const handleResetPassword = async (userId: string) => {
+    const newPassword = prompt('Enter new password (minimum 6 characters):');
+    if (!newPassword || newPassword.length < 6) {
+      alert('Password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      await userService.resetPassword(userId, newPassword);
+      alert('Password reset successfully');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to reset password');
+    }
+  };
+
+  const handleActivateUser = async (userId: string) => {
+    try {
+      await userService.activateUser(userId);
+      fetchUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to activate user');
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-IE', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatLastLogin = (lastLogin: string | null) => {
+    if (!lastLogin) return 'Never';
+    
+    const loginDate = new Date(lastLogin);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - loginDate.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes} min ago`;
+    } else if (diffInMinutes < 1440) {
+      return `${Math.floor(diffInMinutes / 60)} hours ago`;
+    } else {
+      return `${Math.floor(diffInMinutes / 1440)} days ago`;
+    }
+  };
+
+  const formatHotelAccess = (hotelString: string) => {
+    if (hotelString === 'All Hotels') {
+      return (
+        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+          All Hotels
+        </span>
+      );
+    }
+    
+    const hotelList = hotelString.split(', ');
+    if (hotelList.length === 1) {
+      return <span className="text-sm text-gray-900">{hotelList[0]}</span>;
+    }
+    
+    return (
+      <div className="space-y-1">
+        <span className="text-sm text-gray-900">{hotelList[0]}</span>
+        {hotelList.length > 1 && (
+          <div className="text-xs text-gray-500">
+            +{hotelList.length - 1} more
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">User Management</h2>
+              <p className="text-gray-600 mt-1">Manage system users, roles, and permissions</p>
+            </div>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Add New User
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 border-b border-gray-200 bg-gray-50">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search Users</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input 
+                  type="text" 
+                  placeholder="Search users..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+              <select 
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Roles</option>
+                <option value="admin">Administrator</option>
+                <option value="manager">Manager</option>
+                <option value="staff">Staff</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Hotel</label>
+              <select 
+                value={hotelFilter}
+                onChange={(e) => setHotelFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Hotels</option>
+                {hotels.map(hotel => (
+                  <option key={hotel.id} value={hotel.name}>{hotel.name}</option>
+                ))}
+                <option value="All Hotels">All Hotels</option>
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setRoleFilter('');
+                  setHotelFilter('');
+                }}
+                className="w-full px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 text-sm text-gray-600">
+            Showing {users.length} user{users.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+
+        <div className="p-6">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                <p className="text-gray-600">Loading users...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hotel Access</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {users.map(user => (
+                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-medium text-blue-600">
+                              {user.name.split(' ').map(n => n[0]).join('')}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                            <div className="text-sm text-gray-500 flex items-center">
+                              <Mail className="w-3 h-3 mr-1" />
+                              {user.email}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {formatHotelAccess(user.hotel)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {user.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatLastLogin(user.last_login)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(user.created_at)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            className="p-1 text-blue-600 hover:text-blue-800 transition-colors" 
+                            title="View Details"
+                            onClick={() => handleViewUser(user)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button 
+                            className="p-1 text-green-600 hover:text-green-800 transition-colors" 
+                            title="Edit User"
+                            onClick={() => handleEditUser(user)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button 
+                            className="p-1 text-gray-600 hover:text-gray-800 transition-colors" 
+                            title="Send Email"
+                            onClick={() => window.open(`mailto:${user.email}`)}
+                          >
+                            <Mail className="w-4 h-4" />
+                          </button>
+                          <button 
+                            className="p-1 text-yellow-600 hover:text-yellow-800 transition-colors" 
+                            title="Reset Password"
+                            onClick={() => handleResetPassword(user.id)}
+                          >
+                            <Shield className="w-4 h-4" />
+                          </button>
+                          {user.status === 'Active' ? (
+                            <button 
+                              className="p-1 text-red-600 hover:text-red-800 transition-colors" 
+                              title="Deactivate"
+                              onClick={() => handleDeleteUser(user.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button 
+                              className="p-1 text-green-600 hover:text-green-800 transition-colors" 
+                              title="Activate"
+                              onClick={() => handleActivateUser(user.id)}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {users.length === 0 && !loading && (
+                <div className="text-center py-12">
+                  <UserPlus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+                  <p className="text-gray-500">
+                    {searchTerm || roleFilter || hotelFilter
+                      ? 'Try adjusting your search or filter criteria.'
+                      : 'Get started by adding your first user.'
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <AddUserModal 
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onUserAdded={fetchUsers}
+      />
+
+      <EditUserModal 
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedUser(null);
+        }}
+        onUserUpdated={fetchUsers}
+        user={selectedUser}
+      />
+
+      <ViewUserModal 
+        isOpen={showViewModal}
+        onClose={() => {
+          setShowViewModal(false);
+          setSelectedUser(null);
+        }}
+        user={selectedUser}
+      />
+    </>
+  );
+}
