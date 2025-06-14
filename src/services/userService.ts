@@ -117,12 +117,12 @@ class UserService {
     await apiFetch(`/api/users/${userId}`, { method: 'DELETE' });
   }
 
+  // FIXED: Send correct format for password reset
   async resetPassword(userId: string, newPassword: string): Promise<void> {
     await apiFetch(`/api/users/${userId}/reset-password`, {
       method: 'POST',
       body: JSON.stringify({
-        email: '',
-        new_password: newPassword,
+        password: newPassword  // Changed from 'new_password' to 'password'
       }),
     });
   }
