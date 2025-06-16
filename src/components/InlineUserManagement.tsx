@@ -747,7 +747,7 @@ export default function InlineUserManagement({ className = '' }: InlineUserManag
     if (!confirm('Are you sure you want to delete this user?')) return;
 
     try {
-      await userService.deleteUser(userId);
+      await userService.deleteUser(userId.toString());
       fetchUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete user');
