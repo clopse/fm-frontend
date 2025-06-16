@@ -6,7 +6,7 @@ import HotelSelectorModal from '@/components/HotelSelectorModal';
 import UserPanel from '@/components/UserPanel';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
-import AuditPrintSystem from '@/components/audit/AuditPrintSystem';
+import AuditPrintSystem from '@/components/AuditPrintSystem';
 import { hotelNames } from '@/lib/hotels';
 
 export default function AdminCompliancePage() {
