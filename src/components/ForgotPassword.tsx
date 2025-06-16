@@ -25,7 +25,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
     setError('');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/forgot-password`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/auth/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
