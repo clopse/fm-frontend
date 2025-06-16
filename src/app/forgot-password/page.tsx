@@ -24,7 +24,8 @@ export default function ForgotPasswordPage() {
     setMessage('');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/forgot-password`, {
+      // FIXED: Added /api/users to the URL path
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/auth/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -35,7 +36,7 @@ export default function ForgotPasswordPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage('Password reset email sent! Check your inbox and spam folder.');
+        setMessage('If your email address is registered, you will receive a password reset link shortly.');
         setEmail(''); // Clear the form
       } else {
         setError(data.detail || 'Failed to send reset email. Please try again.');
