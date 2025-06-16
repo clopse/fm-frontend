@@ -12,6 +12,7 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [debugInfo, setDebugInfo] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,9 +24,14 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
 
     setIsSubmitting(true);
     setError('');
+    
+    // Debug info
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const fullUrl = `${apiUrl}/api/users/auth/forgot-password`;
+    setDebugInfo(`Calling: ${fullUrl}`);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/auth/forgot-password`, {
+      const response = await fetch(fullUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -33,13 +39,20 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
         body: JSON.stringify({ email }),
       });
 
+      // More debug info
+      setDebugInfo(prev => prev + `\nStatus: ${response.status}\nOK: ${response.ok}`);
+
       if (response.ok) {
+        const data = await response.json();
+        setDebugInfo(prev => prev + `\nResponse: ${JSON.stringify(data)}`);
         setIsSubmitted(true);
       } else {
         const data = await response.json();
+        setDebugInfo(prev => prev + `\nError Response: ${JSON.stringify(data)}`);
         setError(data.detail || 'Something went wrong. Please try again.');
       }
     } catch (error) {
+      setDebugInfo(prev => prev + `\nCatch Error: ${error}`);
       setError('Network error. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
@@ -59,6 +72,14 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
               <p className="text-gray-600 mb-6">
                 If your email address is registered, you will receive a password reset link shortly.
               </p>
+              
+              {/* Debug info */}
+              {debugInfo && (
+                <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 mb-6 text-left">
+                  <p className="text-xs text-gray-700 font-mono whitespace-pre-wrap">{debugInfo}</p>
+                </div>
+              )}
+              
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <p className="text-sm text-blue-800">
                   <strong>Didn't receive the email?</strong> Check your spam folder or wait a few minutes and try again.
@@ -92,10 +113,26 @@ export default function ForgotPassword({ onBackToLogin }: ForgotPasswordProps) {
             </p>
           </div>
 
+          {/* Debug info */}
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-xs text-yellow-800">
+              <strong>Debug Info:</strong><br/>
+              API URL: {process.env.NEXT_PUBLIC_API_URL || 'MISSING'}<br/>
+              Full URL: {process.env.NEXT_PUBLIC_API_URL}/api/users/auth/forgot-password
+            </p>
+          </div>
+
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center">
               <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0" />
               <span className="text-red-700 text-sm">{error}</span>
+            </div>
+          )}
+
+          {/* Debug response info */}
+          {debugInfo && (
+            <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-xs text-gray-700 font-mono whitespace-pre-wrap">{debugInfo}</p>
             </div>
           )}
 
