@@ -743,7 +743,7 @@ export default function InlineUserManagement({ className = '' }: InlineUserManag
     }
   };
 
-  const handleDeleteUser = async (userId: number) => {
+    const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
 
     try {
