@@ -17,11 +17,18 @@ export default function RouteGuard({ children }: RouteGuardProps) {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const { checkPageAccess } = useUserRedirect();
 
+  // Define public routes that don't require authentication
+  const publicRoutes = [
+    '/login',
+    '/forgot-password',
+    '/reset-password'
+  ];
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Don't check auth for login page
-        if (pathname === '/login') {
+        // Don't check auth for public routes
+        if (publicRoutes.includes(pathname)) {
           setIsLoading(false);
           setIsAuthorized(true);
           return;
