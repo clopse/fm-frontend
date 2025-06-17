@@ -72,11 +72,13 @@ const ProfessionalAuditPDF: React.FC = () => {
   const [previewTasks, setPreviewTasks] = useState<ComplianceTask[]>([]);
   const [error, setError] = useState<string>('');
 
-  // Set default dates to current year
+  // Set default dates to previous year for 13-24 months of data
   useEffect(() => {
-    const currentYear = new Date().getFullYear();
-    setStartDate(`${currentYear}-01-01`);
-    setEndDate(`${currentYear}-12-31`);
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const previousYear = currentYear - 1;
+    setStartDate(`${previousYear}-01-01`);
+    setEndDate(today.toISOString().split('T')[0]); // Today's date
   }, []);
 
   const auditTypes = [
@@ -110,14 +112,15 @@ const ProfessionalAuditPDF: React.FC = () => {
       );
       
       if (!response.ok) {
-        throw new Error(`Preview failed: ${response.status} ${response.statusText}`);
+        console.warn(`Preview failed: ${response.status} ${response.statusText}`);
+        setPreviewTasks([]);
+        return;
       }
       
       const data = await response.json();
       setPreviewTasks(data.compliance?.tasks || []);
     } catch (error: any) {
-      console.error('Error loading preview data:', error);
-      setError(error.message);
+      console.warn('Error loading preview data:', error);
       setPreviewTasks([]);
     }
   };
@@ -140,7 +143,8 @@ const ProfessionalAuditPDF: React.FC = () => {
       );
       
       if (!response.ok) {
-        throw new Error(`PDF generation failed: ${response.status} ${response.statusText}`);
+        console.warn(`PDF generation failed: ${response.status} ${response.statusText}`);
+        return;
       }
       
       // Download the PDF
@@ -155,8 +159,7 @@ const ProfessionalAuditPDF: React.FC = () => {
       document.body.removeChild(a);
       
     } catch (error: any) {
-      console.error('Error generating PDF:', error);
-      setError(error.message);
+      console.warn('Error generating PDF:', error);
     } finally {
       setIsLoading(false);
     }
@@ -174,10 +177,18 @@ const ProfessionalAuditPDF: React.FC = () => {
       );
       
       if (!response.ok) {
-        throw new Error(`Preview failed: ${response.status} ${response.statusText}`);
+        console.warn(`Preview failed: ${response.status} ${response.statusText}`);
+        setAuditData(null);
+        return;
       }
       
       const data = await response.json();
+      
+      // Only proceed if we have real data
+      if (!data.compliance?.tasks || data.compliance.tasks.length === 0) {
+        setAuditData(null);
+        return;
+      }
       
       // Transform preview data into full audit data structure for display
       const fullAuditData: AuditData = {
@@ -219,14 +230,15 @@ const ProfessionalAuditPDF: React.FC = () => {
       setAuditData(fullAuditData);
       setShowPreview(true);
     } catch (error: any) {
-      console.error('Error fetching audit data:', error);
-      setError(error.message);
+      console.warn('Error fetching audit data:', error);
+      setAuditData(null);
     } finally {
       setIsLoading(false);
     }
   };
 
   const currentAuditType = auditTypes.find(a => a.value === selectedAudit);
+  const today = new Date().toISOString().split('T')[0];
 
   const getFrequencyBoxes = (frequency: string) => {
     const year = new Date().getFullYear();
@@ -764,6 +776,7 @@ const ProfessionalAuditPDF: React.FC = () => {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
+              max={today}
               className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
           </div>
@@ -776,6 +789,7 @@ const ProfessionalAuditPDF: React.FC = () => {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              max={today}
               className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
           </div>
@@ -816,14 +830,13 @@ const ProfessionalAuditPDF: React.FC = () => {
         )}
 
         {selectedAudit && previewTasks.length === 0 && !error && selectedHotel && (
-          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="flex items-center gap-2 text-yellow-800">
-              <AlertTriangle className="w-5 h-5" />
-              <span className="font-medium">No tasks found for this audit type</span>
+          <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <div className="flex items-center gap-2 text-gray-600">
+              <FileText className="w-5 h-5" />
+              <span className="font-medium">No data available for this configuration</span>
             </div>
-            <p className="text-yellow-700 text-sm mt-1">
-              This hotel may not have {currentAuditType?.label.toLowerCase()} compliance requirements, 
-              or the tasks haven't been configured yet.
+            <p className="text-gray-500 text-sm mt-1">
+              No {currentAuditType?.label.toLowerCase()} compliance tasks found for the selected hotel and date range.
             </p>
           </div>
         )}
@@ -831,9 +844,9 @@ const ProfessionalAuditPDF: React.FC = () => {
         <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
           <button
             onClick={fetchAuditData}
-            disabled={!selectedHotel || !selectedAudit || isLoading || previewTasks.length === 0}
+            disabled={!selectedHotel || !selectedAudit || isLoading}
             className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 justify-center transition-colors ${
-              !selectedHotel || !selectedAudit || isLoading || previewTasks.length === 0
+              !selectedHotel || !selectedAudit || isLoading
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
             }`}
@@ -853,9 +866,9 @@ const ProfessionalAuditPDF: React.FC = () => {
 
           <button
             onClick={generatePDF}
-            disabled={!selectedHotel || !selectedAudit || isLoading || previewTasks.length === 0}
+            disabled={!selectedHotel || !selectedAudit || isLoading}
             className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 justify-center transition-colors ${
-              !selectedHotel || !selectedAudit || isLoading || previewTasks.length === 0
+              !selectedHotel || !selectedAudit || isLoading
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
             }`}
