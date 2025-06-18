@@ -1,5 +1,6 @@
 'use client';
-import { UserPlus, Eye, Edit, Mail, Shield, Trash2, X, Plus, Check, Search, Send } from 'lucide-react';
+
+import { UserPlus, Eye, Edit, Mail, Shield, Trash2, X, Plus, Check, Search, Filter } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { User, UserCreate, UserUpdate } from '../types/user';
 import { userService } from '../services/userService';
@@ -15,416 +16,6 @@ interface AddUserModalProps {
   onUserAdded: () => void;
 }
 
-interface EditUserModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onUserUpdated: () => void;
-  user: User | null;
-}
-
-interface ViewUserModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  user: User | null;
-}
-
-// Email service functions
-const sendWelcomeEmail = async (userId: string) => {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/send-welcome-email/${userId}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to send welcome email');
-  }
-
-  return response.json();
-};
-
-function ViewUserModal({ isOpen, onClose, user }: ViewUserModalProps) {
-  const [sendingEmail, setSendingEmail] = useState(false);
-  const [emailMessage, setEmailMessage] = useState('');
-  const [emailError, setEmailError] = useState('');
-
-  const handleSendWelcomeEmail = async () => {
-    if (!user) return;
-
-    setSendingEmail(true);
-    setEmailError('');
-    setEmailMessage('');
-
-    try {
-      await sendWelcomeEmail(user.id.toString());
-      setEmailMessage('Welcome email sent successfully!');
-      setTimeout(() => setEmailMessage(''), 3000);
-    } catch (error) {
-      setEmailError(error instanceof Error ? error.message : 'Failed to send email');
-      setTimeout(() => setEmailError(''), 5000);
-    } finally {
-      setSendingEmail(false);
-    }
-  };
-
-  if (!isOpen || !user) return null;
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IE', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatLastLogin = (lastLogin: string | null) => {
-    if (!lastLogin) return 'Never logged in';
-    return formatDate(lastLogin);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold">User Details</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Email status messages */}
-        {emailMessage && (
-          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
-            {emailMessage}
-          </div>
-        )}
-        {emailError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
-            {emailError}
-          </div>
-        )}
-
-        <div className="space-y-6">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center space-x-4 mb-4">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-xl font-bold text-blue-600">
-                  {user.name.split(' ').map(n => n[0]).join('')}
-                </span>
-              </div>
-              <div>
-                <h4 className="text-lg font-semibold text-gray-900">{user.name}</h4>
-                <p className="text-gray-600">{user.email}</p>
-              </div>
-              <div className="ml-auto">
-                <button
-                  onClick={handleSendWelcomeEmail}
-                  disabled={sendingEmail}
-                  className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {sendingEmail ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4 mr-2" />
-                      Send Welcome Email
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Role</label>
-                <span className="inline-flex px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-800">
-                  {user.role}
-                </span>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Status</label>
-                <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${
-                  user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                  {user.status}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-2">Hotel Access</label>
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              {user.hotel === 'All Hotels' ? (
-                <span className="inline-flex px-3 py-1 text-sm font-medium rounded-full bg-purple-100 text-purple-800">
-                  All Hotels
-                </span>
-              ) : (
-                <div className="space-y-2">
-                  {user.hotel.split(', ').map((hotel, index) => (
-                    <div key={index} className="flex items-center">
-                      <Check className="w-4 h-4 text-green-500 mr-2" />
-                      <span className="text-gray-900">{hotel}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-2">Account Information</label>
-            <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Created:</span>
-                <span className="text-gray-900">{formatDate(user.created_at)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Last Login:</span>
-                <span className="text-gray-900">{formatLastLogin(user.last_login)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">User ID:</span>
-                <span className="text-gray-900 font-mono text-sm">{user.id}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 mt-6">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EditUserModal({ isOpen, onClose, onUserUpdated, user }: EditUserModalProps) {
-  const [formData, setFormData] = useState<UserUpdate>({
-    name: '',
-    email: '',
-    role: '',
-    hotel: '',
-  });
-  const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (user && isOpen) {
-      setFormData({
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        hotel: user.hotel,
-      });
-
-      if (user.hotel === 'All Hotels') {
-        setSelectedHotels(hotels.map(h => h.name));
-      } else {
-        setSelectedHotels(user.hotel.split(', '));
-      }
-    }
-  }, [user, isOpen]);
-
-  const handleHotelToggle = (hotel: string) => {
-    setSelectedHotels(prev => {
-      if (prev.includes(hotel)) {
-        return prev.filter(h => h !== hotel);
-      } else {
-        return [...prev, hotel];
-      }
-    });
-  };
-
-  const selectAllHotels = () => {
-    const allHotelNames = hotels.map(h => h.name);
-    if (selectedHotels.length === allHotelNames.length) {
-      setSelectedHotels([]);
-    } else {
-      setSelectedHotels([...allHotelNames]);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    setLoading(true);
-    setError(null);
-
-    if (selectedHotels.length === 0) {
-      setError('Please select at least one hotel');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const allHotelNames = hotels.map(h => h.name);
-      const hotelAccess = selectedHotels.length === allHotelNames.length 
-        ? 'All Hotels' 
-        : selectedHotels.join(', ');
-
-      const userData = {
-        ...formData,
-        hotel: hotelAccess
-      };
-
-      await userService.updateUser(user.id, userData);
-      onUserUpdated();
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({ name: '', email: '', role: '', hotel: '' });
-    setSelectedHotels([]);
-    setError(null);
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
-  if (!isOpen || !user) return null;
-
-  const allHotelNames = hotels.map(h => h.name);
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Edit User</h3>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-            <input
-              type="text"
-              required
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter role (e.g., Hotel Manager, System Admin, etc.)"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Hotel Access</label>
-            
-            <div className="mb-3">
-              <button
-                type="button"
-                onClick={selectAllHotels}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center space-x-1"
-              >
-                <Check className="w-4 h-4" />
-                <span>
-                  {selectedHotels.length === allHotelNames.length ? 'Deselect All' : 'Select All Hotels'}
-                </span>
-              </button>
-            </div>
-
-            <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-md p-3 space-y-2">
-              {hotels.map(hotel => (
-                <label key={hotel.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                  <input
-                    type="checkbox"
-                    checked={selectedHotels.includes(hotel.name)}
-                    onChange={() => handleHotelToggle(hotel.name)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-900">{hotel.name}</span>
-                </label>
-              ))}
-            </div>
-
-            <div className="mt-2 text-xs text-gray-500">
-              {selectedHotels.length} of {allHotelNames.length} hotels selected
-              {selectedHotels.length > 0 && (
-                <div className="mt-1">
-                  <strong>Selected:</strong> {selectedHotels.slice(0, 2).join(', ')}
-                  {selectedHotels.length > 2 && ` and ${selectedHotels.length - 2} more`}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? 'Updating...' : 'Update User'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
   const [formData, setFormData] = useState<UserCreate>({
     name: '',
@@ -434,9 +25,10 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
     password: '',
   });
   const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
-  const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true); // Default to true
+  const [sendWelcomeEmail, setSendWelcomeEmail] = useState(true); // Add this back
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null); // Add success feedback
 
   const handleHotelToggle = (hotel: string) => {
     setSelectedHotels(prev => {
@@ -461,6 +53,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     if (selectedHotels.length === 0) {
       setError('Please select at least one hotel');
@@ -479,57 +72,41 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
         hotel: hotelAccess
       };
 
-      // Create user with send_welcome_email parameter
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users?send_welcome_email=${sendWelcomeEmail}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(userData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Failed to create user');
+      // FIXED: Use userService with email handling
+      const result = await userService.createUser(userData, sendWelcomeEmail);
+      
+      // Show success message with email status
+      if (sendWelcomeEmail) {
+        if (result.emailSent) {
+          setSuccessMessage('User created successfully and welcome email sent!');
+        } else if (result.emailError) {
+          setSuccessMessage(`User created successfully, but email failed: ${result.emailError}`);
+        }
+      } else {
+        setSuccessMessage('User created successfully!');
       }
 
-      onUserAdded();
-      onClose();
+      // Brief delay to show success message, then close
+      setTimeout(() => {
+        onUserAdded();
+        onClose();
+        setFormData({
+          name: '',
+          email: '',
+          role: '',
+          hotel: '',
+          password: '',
+        });
+        setSelectedHotels([]);
+        setSendWelcomeEmail(true);
+        setSuccessMessage(null);
+      }, 1500);
       
-      // Reset form
-      setFormData({
-        name: '',
-        email: '',
-        role: '',
-        hotel: '',
-        password: '',
-      });
-      setSelectedHotels([]);
-      setSendWelcomeEmail(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create user');
     } finally {
       setLoading(false);
     }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      email: '',
-      role: '',
-      hotel: '',
-      password: '',
-    });
-    setSelectedHotels([]);
-    setSendWelcomeEmail(true);
-    setError(null);
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
   };
 
   if (!isOpen) return null;
@@ -541,7 +118,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Add New User</h3>
-          <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -549,6 +126,13 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
             {error}
+          </div>
+        )}
+
+        {/* ADDED: Success message display */}
+        {successMessage && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
+            {successMessage}
           </div>
         )}
 
@@ -638,12 +222,9 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <p className="mt-1 text-xs text-gray-500">
-              Minimum 6 characters required
-            </p>
           </div>
 
-          {/* Send Welcome Email Checkbox */}
+          {/* ADDED BACK: Send Welcome Email Checkbox */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <label className="flex items-start space-x-3 cursor-pointer">
               <input
@@ -656,7 +237,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
                 <span className="text-sm font-medium text-gray-900">Send welcome email</span>
                 <p className="text-xs text-gray-600 mt-1">
                   Send an email to the new user with their login credentials and welcome information.
-                  The email will include their username, temporary password, and next steps.
+                  The user will still be created even if the email fails to send.
                 </p>
               </div>
             </label>
@@ -665,7 +246,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
-              onClick={handleClose}
+              onClick={onClose}
               className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
             >
               Cancel
@@ -673,22 +254,9 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Create User
-                </>
-              )}
+              {loading ? 'Creating...' : 'Create User'}
             </button>
           </div>
         </form>
@@ -702,9 +270,6 @@ export default function InlineUserManagement({ className = '' }: InlineUserManag
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -714,7 +279,12 @@ export default function InlineUserManagement({ className = '' }: InlineUserManag
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const userData = await userService.getUsers();
+      setError(null);
+      const userData = await userService.getUsers({
+        search: searchTerm || undefined,
+        role: roleFilter || undefined,
+        hotel: hotelFilter || undefined,
+      });
       setUsers(userData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch users');
@@ -725,321 +295,345 @@ export default function InlineUserManagement({ className = '' }: InlineUserManag
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [searchTerm, roleFilter, hotelFilter]);
 
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to deactivate this user?')) return;
+
+    try {
+      await userService.deleteUser(userId);
+      fetchUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete user');
+    }
+  };
+
+  const handleResetPassword = async (userId: string) => {
+    const newPassword = prompt('Enter new password (minimum 6 characters):');
+    if (!newPassword || newPassword.length < 6) {
+      alert('Password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      await userService.resetPassword(userId, newPassword);
+      alert('Password reset successfully');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to reset password');
+    }
+  };
+
+  const handleActivateUser = async (userId: string) => {
+    try {
+      await userService.activateUser(userId);
+      fetchUsers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to activate user');
+    }
+  };
+
+  // FIXED: Use userService for sending emails to existing users
   const handleSendWelcomeEmail = async (userId: string) => {
     setSendingEmailTo(userId);
     
     try {
-      await sendWelcomeEmail(userId);
-      // Show success message (you could add a toast notification here)
+      await userService.sendWelcomeEmail(userId);
       console.log('Welcome email sent successfully');
     } catch (error) {
       console.error('Failed to send welcome email:', error);
-      // Show error message (you could add a toast notification here)
       alert('Failed to send welcome email: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setSendingEmailTo(null);
     }
   };
 
-    const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-IE', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
 
-    try {
-      await userService.deleteUser(userId.toString());
-      fetchUsers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete user');
+  const formatLastLogin = (lastLogin: string | null) => {
+    if (!lastLogin) return 'Never';
+    
+    const loginDate = new Date(lastLogin);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now.getTime() - loginDate.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes} min ago`;
+    } else if (diffInMinutes < 1440) {
+      return `${Math.floor(diffInMinutes / 60)} hours ago`;
+    } else {
+      return `${Math.floor(diffInMinutes / 1440)} days ago`;
     }
   };
 
-  // Filter users based on search and filters
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = !roleFilter || user.role === roleFilter;
-    const matchesHotel = !hotelFilter || user.hotel.includes(hotelFilter) || user.hotel === 'All Hotels';
+  const formatHotelAccess = (hotelString: string) => {
+    if (hotelString === 'All Hotels') {
+      return (
+        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+          All Hotels
+        </span>
+      );
+    }
     
-    return matchesSearch && matchesRole && matchesHotel;
-  });
-
-  // Get unique roles and hotels for filters
-  const uniqueRoles = [...new Set(users.map(user => user.role))];
-  const uniqueHotels = [...new Set(hotels.map(hotel => hotel.name))];
-
-  if (loading) {
+    const hotelList = hotelString.split(', ');
+    if (hotelList.length === 1) {
+      return <span className="text-sm text-gray-900">{hotelList[0]}</span>;
+    }
+    
     return (
-      <div className={`space-y-6 ${className}`}>
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
-          <p className="text-gray-600">Manage user accounts and permissions</p>
-        </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <UserPlus className="w-4 h-4 mr-2" />
-          Add User
-        </button>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search users by name or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Roles</option>
-              {uniqueRoles.map(role => (
-                <option key={role} value={role}>{role}</option>
-              ))}
-            </select>
-            <select
-              value={hotelFilter}
-              onChange={(e) => setHotelFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Hotels</option>
-              {uniqueHotels.map(hotel => (
-                <option key={hotel} value={hotel}>{hotel}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Error Display */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-          {error}
-          <button 
-            onClick={() => setError(null)}
-            className="ml-2 text-red-600 hover:text-red-800"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* Users Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Hotel Access
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Last Login
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-blue-600">
-                          {user.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {user.hotel === 'All Hotels' ? (
-                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
-                          All Hotels
-                        </span>
-                      ) : (
-                        <span className="text-sm text-gray-600">
-                          {user.hotel.split(', ').length > 1 
-                            ? `${user.hotel.split(', ')[0]} + ${user.hotel.split(', ').length - 1} more`
-                            : user.hotel
-                          }
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {user.last_login 
-                      ? new Date(user.last_login).toLocaleDateString('en-IE')
-                      : 'Never'
-                    }
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      {/* Send Welcome Email Button */}
-                      <button
-                        onClick={() => handleSendWelcomeEmail(user.id.toString())}
-                        disabled={sendingEmailTo === user.id.toString()}
-                        className="inline-flex items-center p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Send Welcome Email"
-                      >
-                        {sendingEmailTo === user.id.toString() ? (
-                          <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                        ) : (
-                          <Send className="w-4 h-4" />
-                        )}
-                      </button>
-
-                      {/* View Button */}
-                      <button
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setShowViewModal(true);
-                        }}
-                        className="inline-flex items-center p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded-md"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-
-                      {/* Edit Button */}
-                      <button
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setShowEditModal(true);
-                        }}
-                        className="inline-flex items-center p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md"
-                        title="Edit User"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-
-                      {/* Delete Button */}
-                      <button
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="inline-flex items-center p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-md"
-                        title="Delete User"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredUsers.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-500">
-              {searchTerm || roleFilter || hotelFilter 
-                ? 'No users match your search criteria' 
-                : 'No users found'
-              }
-            </div>
+      <div className="space-y-1">
+        <span className="text-sm text-gray-900">{hotelList[0]}</span>
+        {hotelList.length > 1 && (
+          <div className="text-xs text-gray-500">
+            +{hotelList.length - 1} more
           </div>
         )}
       </div>
+    );
+  };
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-blue-600">{users.length}</div>
-          <div className="text-sm text-gray-600">Total Users</div>
-        </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-green-600">
-            {users.filter(u => u.status === 'Active').length}
+  return (
+    <>
+      <div className={`bg-white rounded-lg border border-gray-200 ${className}`}>
+        {/* Header Section */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">User Management</h2>
+              <p className="text-gray-600 mt-1">Manage system users, roles, and permissions</p>
+            </div>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Add New User
+            </button>
           </div>
-          <div className="text-sm text-gray-600">Active Users</div>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-purple-600">
-            {uniqueRoles.length}
+
+        {/* Filters Section */}
+        <div className="p-6 border-b border-gray-200 bg-gray-50">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Search */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search Users</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input 
+                  type="text" 
+                  placeholder="Search users..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            {/* Role Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+              <select 
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Roles</option>
+                <option value="admin">Administrator</option>
+                <option value="manager">Manager</option>
+                <option value="staff">Staff</option>
+                <option value="viewer">Viewer</option>
+              </select>
+            </div>
+
+            {/* Hotel Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Hotel</label>
+              <select 
+                value={hotelFilter}
+                onChange={(e) => setHotelFilter(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Hotels</option>
+                {hotels.map(hotel => (
+                  <option key={hotel.id} value={hotel.name}>{hotel.name}</option>
+                ))}
+                <option value="All Hotels">All Hotels</option>
+              </select>
+            </div>
+
+            {/* Clear Filters */}
+            <div className="flex items-end">
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setRoleFilter('');
+                  setHotelFilter('');
+                }}
+                className="w-full px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
           </div>
-          <div className="text-sm text-gray-600">Different Roles</div>
+
+          {/* Results Summary */}
+          <div className="mt-4 text-sm text-gray-600">
+            Showing {users.length} user{users.length !== 1 ? 's' : ''}
+          </div>
         </div>
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-2xl font-bold text-orange-600">
-            {users.filter(u => !u.last_login).length}
-          </div>
-          <div className="text-sm text-gray-600">Never Logged In</div>
+
+        {/* Content Section */}
+        <div className="p-6">
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                <p className="text-gray-600">Loading users...</p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hotel Access</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {users.map(user => (
+                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-medium text-blue-600">
+                              {user.name.split(' ').map(n => n[0]).join('')}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                            <div className="text-sm text-gray-500 flex items-center">
+                              <Mail className="w-3 h-3 mr-1" />
+                              {user.email}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                          {user.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {formatHotelAccess(user.hotel)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          user.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {user.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatLastLogin(user.last_login)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(user.created_at)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            className="p-1 text-blue-600 hover:text-blue-800 transition-colors" 
+                            title="View Details"
+                            onClick={() => alert('View details functionality coming soon')}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button 
+                            className="p-1 text-green-600 hover:text-green-800 transition-colors" 
+                            title="Edit User"
+                            onClick={() => alert('Edit functionality coming soon')}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button 
+                            className="p-1 text-gray-600 hover:text-gray-800 transition-colors" 
+                            title="Send Email"
+                            onClick={() => window.open(`mailto:${user.email}`)}
+                          >
+                            <Mail className="w-4 h-4" />
+                          </button>
+                          <button 
+                            className="p-1 text-yellow-600 hover:text-yellow-800 transition-colors" 
+                            title="Reset Password"
+                            onClick={() => handleResetPassword(user.id)}
+                          >
+                            <Shield className="w-4 h-4" />
+                          </button>
+                          {user.status === 'Active' ? (
+                            <button 
+                              className="p-1 text-red-600 hover:text-red-800 transition-colors" 
+                              title="Deactivate"
+                              onClick={() => handleDeleteUser(user.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button 
+                              className="p-1 text-green-600 hover:text-green-800 transition-colors" 
+                              title="Activate"
+                              onClick={() => handleActivateUser(user.id)}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {users.length === 0 && !loading && (
+                <div className="text-center py-12">
+                  <UserPlus className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+                  <p className="text-gray-500">
+                    {searchTerm || roleFilter || hotelFilter
+                      ? 'Try adjusting your search or filter criteria.'
+                      : 'Get started by adding your first user.'
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Modals */}
-      <AddUserModal
+      {/* Add User Modal */}
+      <AddUserModal 
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onUserAdded={fetchUsers}
       />
-
-      <EditUserModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onUserUpdated={fetchUsers}
-        user={selectedUser}
-      />
-
-      <ViewUserModal
-        isOpen={showViewModal}
-        onClose={() => setShowViewModal(false)}
-        user={selectedUser}
-      />
-    </div>
+    </>
   );
 }
