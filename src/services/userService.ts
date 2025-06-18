@@ -1,96 +1,7 @@
-// src/services/userService.ts
+// FILE: src/services/userService.ts
 import { User, UserCreate, UserUpdate, LoginRequest, LoginResponse, UserStats } from '../types/user';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
-
-// Enhanced types for secure auth
-interface TokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  user: User;
-  expires_in: number;
-}
-
-interface StandardResponse {
-  message: string;
-  success: boolean;
-}
-
-// Secure token management
-class TokenManager {
-  private static ACCESS_TOKEN_KEY = 'access_token';
-  private static REFRESH_TOKEN_KEY = 'refresh_token';
-  private static USER_KEY = 'user';
-  private static TOKEN_EXPIRY_KEY = 'token_expiry';
-
-  static setTokens(tokenResponse: TokenResponse): void {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      const expiryTime = Date.now() + (tokenResponse.expires_in * 1000);
-      
-      localStorage.setItem(this.ACCESS_TOKEN_KEY, tokenResponse.access_token);
-      localStorage.setItem(this.REFRESH_TOKEN_KEY, tokenResponse.refresh_token);
-      localStorage.setItem(this.USER_KEY, JSON.stringify(tokenResponse.user));
-      localStorage.setItem(this.TOKEN_EXPIRY_KEY, expiryTime.toString());
-    } catch (error) {
-      console.error('Error storing tokens:', error);
-    }
-  }
-
-  static getAccessToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    try {
-      return localStorage.getItem(this.ACCESS_TOKEN_KEY);
-    } catch {
-      return null;
-    }
-  }
-
-  static getRefreshToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    try {
-      return localStorage.getItem(this.REFRESH_TOKEN_KEY);
-    } catch {
-      return null;
-    }
-  }
-
-  static getUser(): User | null {
-    if (typeof window === 'undefined') return null;
-    try {
-      const userStr = localStorage.getItem(this.USER_KEY);
-      return userStr ? JSON.parse(userStr) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  static isTokenExpired(): boolean {
-    if (typeof window === 'undefined') return true;
-    try {
-      const expiryTime = localStorage.getItem(this.TOKEN_EXPIRY_KEY);
-      if (!expiryTime) return true;
-      
-      return Date.now() > parseInt(expiryTime) - 60000; // 1 minute buffer
-    } catch {
-      return true;
-    }
-  }
-
-  static clearTokens(): void {
-    if (typeof window === 'undefined') return;
-    try {
-      localStorage.removeItem(this.ACCESS_TOKEN_KEY);
-      localStorage.removeItem(this.REFRESH_TOKEN_KEY);
-      localStorage.removeItem(this.USER_KEY);
-      localStorage.removeItem(this.TOKEN_EXPIRY_KEY);
-    } catch (error) {
-      console.error('Error clearing tokens:', error);
-    }
-  }
-}
 
 // Helper function to check if current path is training
 function isTrainingPath(): boolean {
@@ -100,26 +11,10 @@ function isTrainingPath(): boolean {
   return false;
 }
 
-// Enhanced fetch wrapper with automatic token refresh
+// Generic fetch wrapper with auth
 export async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  // First attempt with current token
-  let token = TokenManager.getAccessToken();
+  const token = localStorage.getItem('access_token');
   
-  // If token is expired, try to refresh
-  if (token && TokenManager.isTokenExpired()) {
-    try {
-      await refreshAccessToken();
-      token = TokenManager.getAccessToken();
-    } catch (error) {
-      // Refresh failed, clear tokens and redirect to login
-      TokenManager.clearTokens();
-      if (typeof window !== 'undefined' && !isTrainingPath()) {
-        window.location.href = '/login';
-      }
-      throw new Error('Authentication expired');
-    }
-  }
-
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
@@ -128,134 +23,69 @@ export async function apiFetch<T>(endpoint: string, options?: RequestInit): Prom
       ...(options?.headers || {}),
     },
   });
-
-  // Handle token expiry during request
-  if (res.status === 401 && token) {
-    try {
-      await refreshAccessToken();
-      const newToken = TokenManager.getAccessToken();
-      
-      // Retry the original request with new token
-      const retryRes = await fetch(`${API_BASE_URL}${endpoint}`, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(newToken && { Authorization: `Bearer ${newToken}` }),
-          ...(options?.headers || {}),
-        },
-      });
-
-      if (!retryRes.ok) {
-        const errorData = await retryRes.json().catch(() => ({ detail: 'Authentication failed' }));
-        throw new Error(errorData.detail || `API error: ${retryRes.status}`);
-      }
-
-      return retryRes.json();
-    } catch (refreshError) {
-      TokenManager.clearTokens();
-      if (typeof window !== 'undefined' && !isTrainingPath()) {
-        window.location.href = '/login';
-      }
-      throw new Error('Authentication expired');
-    }
-  }
-
+  
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.detail || `API error: ${res.status}`);
   }
-
+  
   return res.json();
 }
 
-// Refresh token function
-async function refreshAccessToken(): Promise<void> {
-  const refreshToken = TokenManager.getRefreshToken();
-  if (!refreshToken) {
-    throw new Error('No refresh token available');
-  }
-
-  const response = await fetch(`${API_BASE_URL}/api/users/auth/refresh`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
-
-  if (!response.ok) {
-    throw new Error('Token refresh failed');
-  }
-
-  const tokenResponse: TokenResponse = await response.json();
-  TokenManager.setTokens(tokenResponse);
+// ADDED: Result interface for user creation with email status
+interface CreateUserResult {
+  user: User;
+  emailSent: boolean;
+  emailError?: string;
 }
 
 class UserService {
   // Authentication
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/users/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(credentials),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Login failed' }));
-        throw new Error(errorData.detail || 'Login failed');
-      }
-
-      const tokenResponse: TokenResponse = await response.json();
-      TokenManager.setTokens(tokenResponse);
-      
-      return {
-        access_token: tokenResponse.access_token,
-        token_type: tokenResponse.token_type,
-        user: tokenResponse.user
-      };
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+    const data = await apiFetch<LoginResponse>('/api/users/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
+    // Store token and user
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    return data;
   }
 
   async logout(): Promise<void> {
     try {
-      await apiFetch<StandardResponse>('/api/users/auth/logout', { method: 'POST' });
-    } catch (error) {
-      console.error('Logout error:', error);
+      await apiFetch('/api/users/auth/logout', { method: 'POST' });
     } finally {
-      TokenManager.clearTokens();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
-      }
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
     }
   }
 
   getCurrentUser(): User | null {
-    return TokenManager.getUser();
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
   }
 
   isAuthenticated(): boolean {
     // BYPASS AUTH FOR TRAINING PAGES
     if (isTrainingPath()) {
-      return true;
+      return true; // Always return true for training pages
     }
-
+    
+    // Normal auth check for other pages
     if (typeof window === 'undefined') {
+      return false; // Server-side, assume not authenticated
+    }
+    
+    try {
+      return !!localStorage.getItem('access_token');
+    } catch (error) {
+      console.error('localStorage access error:', error);
       return false;
     }
-
-    const token = TokenManager.getAccessToken();
-    const user = TokenManager.getUser();
-    
-    return !!(token && user && !TokenManager.isTokenExpired());
   }
 
-  // User CRUD operations - All require admin privileges
+  // User CRUD operations
   async getUsers(filters?: {
     role?: string;
     hotel?: string;
@@ -267,7 +97,6 @@ class UserService {
     if (filters?.hotel && filters.hotel !== 'All Hotels') params.append('hotel', filters.hotel);
     if (filters?.status) params.append('status', filters.status);
     if (filters?.search) params.append('search', filters.search);
-    
     return apiFetch<User[]>(`/api/users/?${params}`);
   }
 
@@ -275,11 +104,41 @@ class UserService {
     return apiFetch<User>(`/api/users/${userId}`);
   }
 
-  async createUser(userData: UserCreate): Promise<User> {
-    return apiFetch<User>('/api/users/', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
+  // MODIFIED: Updated createUser method with email support
+  async createUser(userData: UserCreate, sendWelcomeEmail: boolean = false): Promise<CreateUserResult> {
+    let user: User;
+    let emailSent = false;
+    let emailError: string | undefined;
+
+    try {
+      // Step 1: Create the user first (this always happens)
+      user = await apiFetch<User>('/api/users/', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      });
+
+      // Step 2: If email is requested, try to send it
+      if (sendWelcomeEmail) {
+        try {
+          await this.sendWelcomeEmail(user.id.toString());
+          emailSent = true;
+        } catch (emailErr) {
+          // Email failed but user was created successfully
+          emailError = emailErr instanceof Error ? emailErr.message : 'Failed to send welcome email';
+          console.warn('User created but welcome email failed:', emailError);
+        }
+      }
+
+      return {
+        user,
+        emailSent,
+        emailError
+      };
+
+    } catch (userCreationError) {
+      // If user creation fails, throw the error
+      throw userCreationError;
+    }
   }
 
   async updateUser(userId: string, userData: UserUpdate): Promise<User> {
@@ -289,61 +148,33 @@ class UserService {
     });
   }
 
-  async deleteUser(userId: string): Promise<StandardResponse> {
-    return apiFetch<StandardResponse>(`/api/users/${userId}`, { 
-      method: 'DELETE' 
-    });
+  async deleteUser(userId: string): Promise<void> {
+    await apiFetch(`/api/users/${userId}`, { method: 'DELETE' });
   }
 
-  async resetPassword(userId: string, newPassword: string): Promise<StandardResponse> {
-    return apiFetch<StandardResponse>(`/api/users/${userId}/reset-password`, {
-      method: 'PUT',
+  async resetPassword(userId: string, newPassword: string): Promise<void> {
+    await apiFetch(`/api/users/${userId}/reset-password`, {
+      method: 'POST',
       body: JSON.stringify({
-        password: newPassword
+        email: '',
+        new_password: newPassword,
       }),
     });
   }
 
-  async activateUser(userId: string): Promise<StandardResponse> {
-    return apiFetch<StandardResponse>(`/api/users/${userId}/activate`, { 
-      method: 'POST' 
-    });
+  async activateUser(userId: string): Promise<void> {
+    await apiFetch(`/api/users/${userId}/activate`, { method: 'POST' });
   }
 
   async getUserStats(): Promise<UserStats> {
     return apiFetch<UserStats>('/api/users/stats/summary');
   }
 
-  // New audit log functionality for admins
-  async getAuditLogs(limit: number = 100, eventType?: string): Promise<any[]> {
-    const params = new URLSearchParams();
-    params.append('limit', limit.toString());
-    if (eventType) params.append('event_type', eventType);
-    
-    return apiFetch<any[]>(`/api/users/audit/logs?${params}`);
-  }
-
-  // Token refresh method (called automatically by apiFetch)
-  async refreshToken(): Promise<void> {
-    await refreshAccessToken();
-  }
-
-  // Check if user has admin privileges
-  hasAdminPrivileges(): boolean {
-    const user = this.getCurrentUser();
-    if (!user) return false;
-    
-    const adminRoles = ['system admin', 'administrator', 'admin'];
-    return adminRoles.some(role => user.role.toLowerCase().includes(role.toLowerCase()));
-  }
-
-  // Check if user has manager or admin privileges
-  hasManagerPrivileges(): boolean {
-    const user = this.getCurrentUser();
-    if (!user) return false;
-    
-    const privilegedRoles = ['system admin', 'administrator', 'admin', 'manager', 'boss', 'director'];
-    return privilegedRoles.some(role => user.role.toLowerCase().includes(role.toLowerCase()));
+  // ADDED: Separate method for sending welcome emails
+  async sendWelcomeEmail(userId: string): Promise<void> {
+    await apiFetch(`/api/users/auth/send-welcome-email/${userId}`, {
+      method: 'POST',
+    });
   }
 }
 
