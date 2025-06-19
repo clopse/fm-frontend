@@ -95,8 +95,8 @@ export default function ResetPasswordPage() {
         },
         body: JSON.stringify({ 
           token,
-          new_password: password 
-        }),
+          password 
+        }),        
       });
 
       const data = await response.json();
