@@ -158,7 +158,21 @@ export default function ResetPasswordPage() {
         try {
           const errorData = await response.json();
           addDebugLog(`Error response data: ${JSON.stringify(errorData)}`);
-          errorMessage = errorData?.detail || errorData?.message || `Server error (${response.status})`;
+          
+          // Handle FastAPI validation errors (422)
+          if (response.status === 422 && errorData.detail) {
+            if (Array.isArray(errorData.detail)) {
+              // FastAPI validation errors are arrays
+              const validationErrors = errorData.detail.map(err => 
+                `${err.loc?.join('.')}: ${err.msg}`
+              ).join(', ');
+              errorMessage = `Validation error: ${validationErrors}`;
+            } else {
+              errorMessage = errorData.detail;
+            }
+          } else {
+            errorMessage = errorData?.detail || errorData?.message || `Server error (${response.status})`;
+          }
         } catch (parseError) {
           addDebugLog(`Error parsing error response: ${parseError}`);
           errorMessage = `Server error (${response.status})`;
