@@ -163,7 +163,7 @@ export default function ResetPasswordPage() {
           if (response.status === 422 && errorData.detail) {
             if (Array.isArray(errorData.detail)) {
               // FastAPI validation errors are arrays
-              const validationErrors = errorData.detail.map(err => 
+              const validationErrors = errorData.detail.map(err: any) => 
                 `${err.loc?.join('.')}: ${err.msg}`
               ).join(', ');
               errorMessage = `Validation error: ${validationErrors}`;
