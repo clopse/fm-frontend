@@ -14,10 +14,15 @@ export default function ResetPasswordPage() {
   const [isValidToken, setIsValidToken] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
   
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+
+  const addDebugLog = (message: string) => {
+    setDebugLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
 
   // Validate token on page load
   useEffect(() => {
@@ -65,55 +70,109 @@ export default function ResetPasswordPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!password || !confirmPassword) {
-      setError('Please fill in all fields');
-      return;
-    }
-
-    const passwordError = validatePassword(password);
-    if (passwordError) {
-      setError(passwordError);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    setIsLoading(true);
-    setError('');
-    setMessage('');
-
     try {
+      e.preventDefault();
+      addDebugLog('Form submitted - starting validation');
+      
+      if (!password || !confirmPassword) {
+        setError('Please fill in all fields');
+        addDebugLog('Validation failed: Empty fields');
+        return;
+      }
+
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        setError(passwordError);
+        addDebugLog(`Validation failed: ${passwordError}`);
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        addDebugLog('Validation failed: Passwords do not match');
+        return;
+      }
+
+      if (!token) {
+        setError('Reset token is missing');
+        addDebugLog('Validation failed: No reset token');
+        return;
+      }
+
+      addDebugLog('All validation passed - starting API call');
+      setIsLoading(true);
+      setError('');
+      setMessage('');
+
+      addDebugLog(`Making API request to: https://api.jmkfacilities.ie/api/users/auth/reset-password`);
+      addDebugLog(`Request body: {"token": "${token.substring(0, 10)}...", "password": "[hidden]"}`);
+      
       const response = await fetch(`https://api.jmkfacilities.ie/api/users/auth/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          token,
-          password 
+          token: token,
+          password: password 
         }),
       });
 
-      const data = await response.json();
+      addDebugLog(`Response received - Status: ${response.status} ${response.statusText}`);
+
+      if (!response) {
+        throw new Error('No response received from server');
+      }
 
       if (response.ok) {
+        addDebugLog('Response OK - parsing success response');
+        let successData = null;
+        try {
+          successData = await response.json();
+          addDebugLog(`Success response: ${JSON.stringify(successData)}`);
+        } catch (jsonError) {
+          addDebugLog('Success but no JSON response (this is OK)');
+        }
+        
         setMessage('Password updated successfully! Redirecting to login...');
+        addDebugLog('Setting success message and preparing redirect');
+        
         setTimeout(() => {
-          router.push('/login?message=Password reset successful');
+          addDebugLog('Attempting redirect to login page');
+          try {
+            if (router && router.push) {
+              router.push('/login?message=Password reset successful');
+              addDebugLog('Router.push executed');
+            } else {
+              addDebugLog('Router not available, using window.location');
+              window.location.href = '/login?message=Password reset successful';
+            }
+          } catch (redirectError) {
+            addDebugLog(`Redirect error: ${redirectError}`);
+          }
         }, 2000);
+
       } else {
-        setError(data.detail || 'Failed to reset password. Please try again.');
+        addDebugLog(`Response not OK - Status: ${response.status}`);
+        let errorMessage = 'Failed to reset password. Please try again.';
+        try {
+          const errorData = await response.json();
+          addDebugLog(`Error response data: ${JSON.stringify(errorData)}`);
+          errorMessage = errorData?.detail || errorData?.message || `Server error (${response.status})`;
+        } catch (parseError) {
+          addDebugLog(`Error parsing error response: ${parseError}`);
+          errorMessage = `Server error (${response.status})`;
+        }
+        setError(errorMessage);
       }
     } catch (error) {
-      console.error('Reset password error:', error);
-      setError('Network error. Please check your connection and try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      addDebugLog(`Caught error: ${errorMessage}`);
+      addDebugLog(`Error stack: ${error instanceof Error ? error.stack : 'No stack trace'}`);
+      setError(`Network error: ${errorMessage}`);
     } finally {
       setIsLoading(false);
+      addDebugLog('Request completed - loading state reset');
     }
   };
 
@@ -272,6 +331,25 @@ export default function ResetPasswordPage() {
             {message && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md text-sm">
                 {message}
+              </div>
+            )}
+
+            {/* Debug Logs - Remove this section in production */}
+            {debugLogs.length > 0 && (
+              <div className="bg-gray-50 border border-gray-200 text-gray-700 px-4 py-3 rounded-md text-xs max-h-40 overflow-y-auto">
+                <div className="font-medium mb-2 flex justify-between items-center">
+                  Debug Logs:
+                  <button 
+                    type="button"
+                    onClick={() => setDebugLogs([])}
+                    className="text-gray-500 hover:text-gray-700 text-xs underline"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {debugLogs.map((log, index) => (
+                  <div key={index} className="mb-1 font-mono">{log}</div>
+                ))}
               </div>
             )}
 
