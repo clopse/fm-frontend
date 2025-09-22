@@ -15,12 +15,10 @@ export default function LoginPage() {
   
   const searchParams = useSearchParams();
 
-  // Check for success messages from URL params (e.g., after password reset)
   useEffect(() => {
     const urlMessage = searchParams.get('message');
     if (urlMessage) {
       setMessage(urlMessage);
-      // Clear the message after 5 seconds
       setTimeout(() => setMessage(''), 5000);
     }
   }, [searchParams]);
@@ -32,42 +30,30 @@ export default function LoginPage() {
     setMessage('');
 
     try {
-      // Normalize email to lowercase before sending to API
       const normalizedEmail = email.trim().toLowerCase();
-      
-      // Validate inputs
       if (!normalizedEmail || !password) {
         throw new Error('Please fill in all fields');
       }
 
-      // Use the real API login
-      const response = await userService.login({
+      await userService.login({
         email: normalizedEmail,
         password
       });
 
-      // Login successful - redirect to dashboard
       window.location.href = '/hotels';
     } catch (err) {
-      // Enhanced error handling
       let errorMessage = 'Login failed';
-      
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      } else if (typeof err === 'string') {
-        errorMessage = err;
-      }
+      if (err instanceof Error) errorMessage = err.message;
+      else if (typeof err === 'string') errorMessage = err;
 
-      // Make error messages more user-friendly
-      if (errorMessage.toLowerCase().includes('unauthorized') || 
-          errorMessage.toLowerCase().includes('invalid credentials')) {
+      const low = errorMessage.toLowerCase();
+      if (low.includes('unauthorized') || low.includes('invalid credentials')) {
         errorMessage = 'Invalid email or password';
-      } else if (errorMessage.toLowerCase().includes('network')) {
+      } else if (low.includes('network')) {
         errorMessage = 'Connection error. Please check your internet and try again.';
-      } else if (errorMessage.toLowerCase().includes('timeout')) {
+      } else if (low.includes('timeout')) {
         errorMessage = 'Request timed out. Please try again.';
       }
-
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -75,52 +61,51 @@ export default function LoginPage() {
   };
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Store the email as typed (preserving user's input visually)
-    // but we'll normalize it when submitting
     setEmail(e.target.value);
-    // Clear errors when user starts typing
     if (error) setError('');
   };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
-    // Clear errors when user starts typing
     if (error) setError('');
   };
 
   return (
-    <div className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center p-4" 
-         style={{ backgroundImage: "url('/background-login.jpg')" }}>
+    <div
+      className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center p-4"
+      style={{ backgroundImage: "url('/background-login.jpg')" }}
+    >
       <div className="bg-white bg-opacity-95 p-6 sm:p-8 rounded-xl shadow-lg text-center w-full max-w-sm mx-auto">
         <div className="mb-1">
-          <img 
-            src="/jmk-logo2.png" 
-            alt="JMK Logo" 
-            className="mx-auto w-full max-w-xs h-auto" 
+          <img
+            src="/jmk-logo2.png"
+            alt="JMK Logo"
+            className="mx-auto w-full max-w-xs h-auto"
           />
         </div>
-        
+
         <h2 className="mt-0 mb-6 text-xl font-medium text-center text-blue-900">
           Facilities
         </h2>
-        
-        {/* Success message (e.g., after password reset) */}
+
         {message && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
             {message}
           </div>
         )}
-        
-        {/* Error message */}
+
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
             {error}
           </div>
         )}
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
+
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
           <div>
+            <label htmlFor="email" className="sr-only">Email</label>
             <input
+              id="email"
+              name="email"                  // important for autofill
               type="email"
               placeholder="Email"
               value={email}
@@ -128,15 +113,20 @@ export default function LoginPage() {
               required
               disabled={loading}
               className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-              autoComplete="email"
-              autoCapitalize="none"
-              aria-label="Email address"
+              autoComplete="username"       // preferred hint for login identifiers
+              inputMode="email"
+              autoCapitalize="off"
+              spellCheck={false}
+              aria-label="Email"
             />
           </div>
-          
+
           <div className="relative">
+            <label htmlFor="password" className="sr-only">Password</label>
             <input
-              type={showPassword ? "text" : "password"}
+              id="password"
+              name="password"               // important for autofill
+              type={showPassword ? 'text' : 'password'}
               placeholder="Password"
               value={password}
               onChange={handlePasswordChange}
@@ -151,7 +141,7 @@ export default function LoginPage() {
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
               onClick={() => setShowPassword(!showPassword)}
               disabled={loading}
-              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
             >
               {showPassword ? (
                 <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -165,8 +155,8 @@ export default function LoginPage() {
               )}
             </button>
           </div>
-          
-          <button 
+
+          <button
             type="submit"
             disabled={loading || !email.trim() || !password}
             className="w-full py-3 bg-blue-700 text-white border-none rounded-md font-medium text-base cursor-pointer hover:bg-blue-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -185,9 +175,8 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Forgot Password Link */}
         <div className="mt-4 text-center">
-          <Link 
+          <Link
             href="/forgot-password"
             className="text-sm text-blue-600 hover:text-blue-800 underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
           >
@@ -195,7 +184,6 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        {/* Additional help text */}
         <div className="mt-6 text-xs text-gray-500 text-center">
           <p>Having trouble logging in?</p>
           <p>Contact your system administrator for assistance.</p>
