@@ -114,7 +114,7 @@ export default function LoginPage() {
             <label htmlFor="email" className="sr-only">Email</label>
             <input
               id="email"
-              name="email"
+              name="username"
               type="email"
               placeholder="Email"
               ref={emailRef}
