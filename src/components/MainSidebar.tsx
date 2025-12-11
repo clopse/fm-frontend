@@ -100,8 +100,8 @@ export default function MainSidebar({
       ]
     },
     {
-      label: 'Tenders',
-      href: `/hotels/${hotelId}/tenders`,
+      label: 'Assets',
+      href: `/hotels/${hotelId}/assets`,
       icon: FileText,
       description: 'Procurement and contracts'
     },
