@@ -1,15 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,  // Still helpful for dev
-  swcMinify: true,        // Also good to keep
+  reactStrictMode: true,  // still fine
   images: {
-    unoptimized: true,    // ✅ Disable Next.js image optimization
+    unoptimized: true,    // leave this if you want to avoid Next image optimization
   },
   async redirects() {
     return [
       {
-        source: '/old-url',
-        destination: '/new-url',
+        source: "/old-url",
+        destination: "/new-url",
         permanent: true,
       },
     ];
