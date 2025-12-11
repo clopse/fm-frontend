@@ -11,7 +11,5 @@ type CompliancePageProps = {
 export default function CompliancePage({ params }: CompliancePageProps) {
   const { hotelId } = params;
 
-  return (
-    <ComplianceClient hotelId={hotelId} />
-  );
+  return <ComplianceClient hotelId={hotelId} />;
 }
