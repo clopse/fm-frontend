@@ -45,12 +45,8 @@ type AssetCreate = {
 
 const steps = ["Basic info", "Technical", "Cost & warranty", "Maintenance & notes"];
 
-interface Props {
-  params: { hotelId: string };
-}
-
-export default function AssetWizardPage({ params }: Props) {
-  const hotelId = params.hotelId;
+export default function AssetWizardPage(props: any) {
+  const hotelId = props.params?.hotelId as string;
 
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
