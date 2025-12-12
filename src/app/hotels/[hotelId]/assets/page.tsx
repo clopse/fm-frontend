@@ -65,6 +65,7 @@ type Asset = {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 const ASSET_CATEGORIES = [
+  "FF&E",
   "Bedrooms",
   "HVAC",
   "Plantroom",
