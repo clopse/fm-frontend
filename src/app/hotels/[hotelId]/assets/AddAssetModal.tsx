@@ -185,6 +185,7 @@ export default function AddAssetModal({ hotelId, existingAssets, onClose, onAdd 
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                   <select value={formData.category} onChange={(e) => updateField("category", e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
                     <option value="">Select category...</option>
+                    <option value="FF&E">FF&E</option>
                     <option value="Bedrooms">Bedrooms</option>
                     <option value="HVAC">HVAC</option>
                     <option value="Plantroom">Plantroom</option>
@@ -193,6 +194,10 @@ export default function AddAssetModal({ hotelId, existingAssets, onClose, onAdd 
                     <option value="Kitchen">Kitchen</option>
                     <option value="Bathrooms">Bathrooms</option>
                     <option value="IT / AV">IT / AV</option>
+                    <option value="Living">Living</option>
+                    <option value="Electrical">Electrical</option>
+                    <option value="Plumbing">Plumbing</option>
+                    <option value="Security">Security</option>
                   </select>
                 </div>
                 <div>
