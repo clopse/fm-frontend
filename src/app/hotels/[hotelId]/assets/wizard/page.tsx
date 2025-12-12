@@ -19,6 +19,27 @@ interface HotelConfig {
   propertyType: "hotel" | "aparthotel" | "serviced_apartments";
 }
 
+interface AssetCreate {
+  asset_code: string;
+  hotel_id: string;
+  location?: string;
+  category?: string;
+  subcategory?: string;
+  description?: string;
+  quantity?: number;
+  manufacturer?: string | null;
+  model?: string | null;
+  serial_number?: string | null;
+  supplier?: string | null;
+  installation_date?: string | null;
+  purchase_cost?: number | null;
+  expected_lifespan_years?: number | null;
+  capex_or_opex?: string | null;
+  status?: string | null;
+  condition?: string | null;
+  created_by?: string | null;
+}
+
 export default function AssetWizardPage() {
   const params = useParams<{ hotelId: string }>();
   const router = useRouter();
@@ -29,7 +50,7 @@ export default function AssetWizardPage() {
   // Step 1 - Hotel configuration
   const [hotelConfig, setHotelConfig] = useState<HotelConfig>({
     hotelName: "",
-    hotelCode: hotelId || "",
+    hotelCode: hotelId ? hotelId.toUpperCase() : "", // Store as uppercase for asset codes
     totalFloors: 4,
     hasBasement: false,
     hasGroundFloor: false,
@@ -61,8 +82,15 @@ export default function AssetWizardPage() {
 
   // Step 3 - Item selection
   const [selectedItems, setSelectedItems] = useState<string[]>([
-    "bed", "mattress", "tv", "wardrobe", "desk", "desk_chair",
-    "wc", "basin", "shower",
+    "bed",
+    "mattress",
+    "tv",
+    "wardrobe",
+    "desk",
+    "desk_chair",
+    "wc",
+    "basin",
+    "shower",
   ]);
 
   const [itemCosts, setItemCosts] = useState<Record<string, number>>({});
@@ -79,18 +107,27 @@ export default function AssetWizardPage() {
     return sum + cost;
   }, 0);
 
-  // Generate all assets
-  const generateAssets = () => {
+  // Generate room numbers for all floors
+  const generateAllRoomNumbers = (): Array<{ room: number; floor: FloorConfig }> => {
     const rooms: Array<{ room: number; floor: FloorConfig }> = [];
     
     for (const floor of floors) {
       const first = floor.firstRoomNumber;
       for (let i = 0; i < floor.roomCount; i++) {
-        rooms.push({ room: first + i, floor });
+        rooms.push({
+          room: first + i,
+          floor,
+        });
       }
     }
+    
+    return rooms;
+  };
 
-    const assets: any[] = [];
+  // Generate all assets
+  const generateAssets = (): AssetCreate[] => {
+    const rooms = generateAllRoomNumbers();
+    const assets: AssetCreate[] = [];
 
     for (const { room, floor } of rooms) {
       for (const key of selectedItems) {
@@ -98,15 +135,12 @@ export default function AssetWizardPage() {
         if (!item) continue;
 
         const cost = itemCosts[item.key] ?? item.defaultCost;
-        const shortKey = item.subcategory
-          .replace(/\s+/g, "")
-          .replace(/[^A-Z0-9]/gi, "")
-          .toUpperCase();
-        const assetCode = `${hotelConfig.hotelCode}-RM${room}-${shortKey}`;
+        const shortKey = item.subcategory.replace(/\s+/g, "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
+        const assetCode = `${hotelConfig.hotelCode}-RM${room}-${shortKey}`; // hotelCode is uppercase
 
         assets.push({
           asset_code: assetCode,
-          hotel_id: hotelConfig.hotelCode,
+          hotel_id: hotelConfig.hotelCode.toLowerCase(), // API expects lowercase
           location: `Room ${room} - ${floor.floorName}`,
           category: item.category,
           subcategory: item.subcategory,
@@ -126,7 +160,7 @@ export default function AssetWizardPage() {
     return assets;
   };
 
-  // Generate and save to API
+  // Generate assets and save to API
   const handleGenerate = async () => {
     if (!API_BASE) {
       throw new Error("NEXT_PUBLIC_API_URL is not configured");
@@ -134,9 +168,9 @@ export default function AssetWizardPage() {
 
     const assets = generateAssets();
     
-    // Chunk requests to avoid overwhelming API
+    // Chunk the requests to avoid overwhelming the API
     const chunkSize = 50;
-    const chunks: any[][] = [];
+    const chunks: AssetCreate[][] = [];
     
     for (let i = 0; i < assets.length; i += chunkSize) {
       chunks.push(assets.slice(i, i + chunkSize));
@@ -178,7 +212,7 @@ export default function AssetWizardPage() {
               </p>
             </div>
             <button
-              onClick={() => router.push(`/hotels/${hotelId}/assets`)}
+              onClick={() => router.back()}
               className="text-sm text-gray-600 hover:text-gray-900"
             >
               Cancel
