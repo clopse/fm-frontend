@@ -13,8 +13,11 @@ import {
   Package,
   TrendingDown,
   X,
+  Edit,
 } from "lucide-react";
 import DepreciationTracker from "./DepreciationTracker";
+import AssetDetailModal from "./AssetDetailModal";
+import AddAssetModal from "./AddAssetModal";
 
 type Asset = {
   id: number;
@@ -140,6 +143,7 @@ export default function AssetsPage() {
 
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [showDepreciationTracker, setShowDepreciationTracker] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   async function loadAssets() {
     if (!hotelId || !API_BASE) {
@@ -179,6 +183,23 @@ export default function AssetsPage() {
   useEffect(() => {
     loadAssets();
   }, [hotelId]);
+
+  const handleSaveAsset = (updatedAsset: Asset) => {
+    setAssets((prev) =>
+      prev.map((a) => (a.id === updatedAsset.id ? updatedAsset : a))
+    );
+    setSelectedAsset(updatedAsset);
+  };
+
+  const handleDeleteAsset = (id: number) => {
+    setAssets((prev) => prev.filter((a) => a.id !== id));
+    setSelectedAsset(null);
+  };
+
+  const handleAddAsset = (newAsset: Asset) => {
+    setAssets((prev) => [newAsset, ...prev]);
+    setShowAddModal(false);
+  };
 
   const handleSort = (field: keyof Asset) => {
     if (sortField === field) {
@@ -619,6 +640,9 @@ export default function AssetsPage() {
                             <SortIcon field="updated_at" />
                           </button>
                         </th>
+                        <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
@@ -650,6 +674,18 @@ export default function AssetsPage() {
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">
                             {new Date(asset.updated_at).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedAsset(asset);
+                              }}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Edit asset"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -692,6 +728,13 @@ export default function AssetsPage() {
               <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
               <div className="space-y-2">
                 <button 
+                  onClick={() => setShowAddModal(true)}
+                  className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Asset
+                </button>
+                <button 
                   onClick={() => setShowDepreciationTracker(true)}
                   className="w-full px-4 py-2 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700"
                 >
@@ -722,66 +765,21 @@ export default function AssetsPage() {
 
       {/* Asset Detail Modal */}
       {selectedAsset && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {selectedAsset.asset_code}
-                </h2>
-                <p className="text-sm text-gray-500">{selectedAsset.location}</p>
-              </div>
-              <button
-                onClick={() => setSelectedAsset(null)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Category</p>
-                  <p className="text-gray-900">{selectedAsset.category || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Value</p>
-                  <p className="text-gray-900 font-semibold">
-                    {selectedAsset.purchase_cost
-                      ? `€${(selectedAsset.purchase_cost * selectedAsset.quantity).toLocaleString()}`
-                      : "-"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Manufacturer</p>
-                  <p className="text-gray-900">{selectedAsset.manufacturer || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Model</p>
-                  <p className="text-gray-900">{selectedAsset.model || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Created</p>
-                  <p className="text-gray-900">
-                    {new Date(selectedAsset.created_at).toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Last Updated</p>
-                  <p className="text-gray-900">
-                    {new Date(selectedAsset.updated_at).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              {selectedAsset.description && (
-                <div className="mt-6">
-                  <p className="text-sm text-gray-600 mb-1">Description</p>
-                  <p className="text-gray-900">{selectedAsset.description}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+        <AssetDetailModal
+          asset={selectedAsset}
+          onClose={() => setSelectedAsset(null)}
+          onSave={handleSaveAsset}
+          onDelete={handleDeleteAsset}
+        />
+      )}
+
+      {/* Add Asset Modal */}
+      {showAddModal && (
+        <AddAssetModal
+          hotelId={hotelId}
+          onClose={() => setShowAddModal(false)}
+          onAdd={handleAddAsset}
+        />
       )}
     </div>
   );
