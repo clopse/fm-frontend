@@ -256,55 +256,118 @@ export default function DepreciationTracker({ assets, onClose }: DepreciationTra
   const grandTotal = Array.from(categories.values()).reduce((sum, cat) => sum + cat.totalValue, 0);
 
   const exportToExcel = () => {
-    // Create CSV content (Excel can open CSV files)
-    const headers = ["Category", "Total Value", ...years.map(y => y.toString())];
+    // Create detailed asset list with yearly depreciation values
+    const headers = [
+      "Asset Code",
+      "Category",
+      "Location",
+      "Description",
+      "Purchase Cost",
+      "Quantity",
+      "Installation Date",
+      "Lifespan (years)",
+      "Total Cost",
+      ...years.map(y => y.toString())
+    ];
     const rows: string[][] = [];
 
-    // Add category rows
-    filteredCategories.sort((a, b) => b.totalValue - a.totalValue).forEach(catData => {
-      const row = [
-        catData.category,
-        Math.round(catData.totalValue).toString(),
-      ];
-      
-      years.forEach(year => {
-        const yearData = catData.years.get(year);
-        const value = yearData?.depreciatedValue || 0;
-        const purchases = yearData?.newPurchases || 0;
+    // Filter assets based on selected category
+    const assetsToExport = selectedCategory === "All" 
+      ? assets 
+      : assets.filter(a => (a.category || "Uncategorized") === selectedCategory);
+
+    // Process each asset
+    assetsToExport
+      .filter(asset => asset.purchase_cost && asset.installation_date && asset.expected_lifespan_years)
+      .forEach(asset => {
+        const installYear = new Date(asset.installation_date!).getFullYear();
+        const totalCost = asset.purchase_cost! * asset.quantity;
         
-        // Format: value (or value +purchases if there are purchases)
-        if (purchases > 0) {
-          row.push(`${Math.round(value)} (+${Math.round(purchases)})`);
-        } else {
-          row.push(Math.round(value).toString());
-        }
+        const row = [
+          asset.asset_code,
+          asset.category || "Uncategorized",
+          asset.location || "",
+          asset.description || "",
+          Math.round(asset.purchase_cost!).toString(),
+          asset.quantity.toString(),
+          asset.installation_date!,
+          asset.expected_lifespan_years!.toString(),
+          Math.round(totalCost).toString(),
+        ];
+        
+        // Add yearly depreciated values
+        years.forEach(year => {
+          const yearsOwned = year - installYear;
+          
+          if (yearsOwned < 0) {
+            // Not yet installed
+            row.push("0");
+          } else if (yearsOwned >= asset.expected_lifespan_years!) {
+            // Fully depreciated
+            row.push("0");
+          } else {
+            // Calculate remaining value
+            const depreciationRate = yearsOwned / asset.expected_lifespan_years!;
+            const remainingValue = totalCost * (1 - depreciationRate);
+            
+            // Show new purchase indicator
+            if (year === installYear) {
+              row.push(`${Math.round(remainingValue)} (NEW)`);
+            } else {
+              row.push(Math.round(remainingValue).toString());
+            }
+          }
+        });
+        
+        rows.push(row);
       });
-      
-      rows.push(row);
-    });
 
     // Add totals row
-    const totalsRow = ["TOTAL", Math.round(grandTotal).toString()];
+    const totalsRow = [
+      "TOTAL",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      Math.round(
+        assetsToExport
+          .filter(a => a.purchase_cost)
+          .reduce((sum, a) => sum + a.purchase_cost! * a.quantity, 0)
+      ).toString(),
+    ];
+    
     years.forEach(year => {
-      const totals = yearTotals.get(year);
-      const value = totals?.depreciated || 0;
-      const purchases = totals?.purchases || 0;
+      const total = assetsToExport
+        .filter(a => a.purchase_cost && a.installation_date && a.expected_lifespan_years)
+        .reduce((sum, asset) => {
+          const installYear = new Date(asset.installation_date!).getFullYear();
+          const yearsOwned = year - installYear;
+          const totalCost = asset.purchase_cost! * asset.quantity;
+          
+          if (yearsOwned < 0 || yearsOwned >= asset.expected_lifespan_years!) {
+            return sum;
+          }
+          
+          const depreciationRate = yearsOwned / asset.expected_lifespan_years!;
+          const remainingValue = totalCost * (1 - depreciationRate);
+          return sum + remainingValue;
+        }, 0);
       
-      if (purchases > 0) {
-        totalsRow.push(`${Math.round(value)} (+${Math.round(purchases)})`);
-      } else {
-        totalsRow.push(Math.round(value).toString());
-      }
+      totalsRow.push(Math.round(total).toString());
     });
+    
     rows.push(totalsRow);
 
     // Convert to CSV
     const csvContent = [
       headers.join(","),
       ...rows.map(row => row.map(cell => {
-        // Escape cells that contain commas
-        if (cell.includes(",")) {
-          return `"${cell}"`;
+        // Escape cells that contain commas or quotes
+        if (cell.includes(",") || cell.includes('"')) {
+          return `"${cell.replace(/"/g, '""')}"`;
         }
         return cell;
       }).join(","))
@@ -315,7 +378,8 @@ export default function DepreciationTracker({ assets, onClose }: DepreciationTra
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `depreciation-schedule-${new Date().toISOString().split("T")[0]}.csv`;
+    const categoryFilter = selectedCategory === "All" ? "all" : selectedCategory.toLowerCase().replace(/\s+/g, "-");
+    link.download = `depreciation-asset-list-${categoryFilter}-${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };

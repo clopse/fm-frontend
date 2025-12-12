@@ -1,20 +1,28 @@
 "use client";
 
 import { X, Plus } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+interface Asset {
+  id: number;
+  asset_code: string;
+  hotel_id: string;
+  [key: string]: any;
+}
 
 interface AddAssetModalProps {
   hotelId: string;
+  existingAssets: Asset[];
   onClose: () => void;
   onAdd: (asset: any) => void;
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
-export default function AddAssetModal({ hotelId, onClose, onAdd }: AddAssetModalProps) {
+export default function AddAssetModal({ hotelId, existingAssets, onClose, onAdd }: AddAssetModalProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
-    hotel_id: hotelId,
+    hotel_id: hotelId.toLowerCase(), // Backend expects lowercase
     asset_code: "",
     location: "",
     category: "",
@@ -39,6 +47,55 @@ export default function AddAssetModal({ hotelId, onClose, onAdd }: AddAssetModal
     voltage_phase: "",
     capex_or_opex: "CAPEX",
   });
+
+  // Auto-prefix and auto-increment asset code
+  const handleAssetCodeChange = (value: string) => {
+    const hotelPrefix = hotelId.toUpperCase();
+    
+    // If user enters something like "car-001" or "CAR-001"
+    let cleanCode = value.trim().toUpperCase();
+    
+    // Remove hotel prefix if user already typed it
+    if (cleanCode.startsWith(hotelPrefix + "-")) {
+      cleanCode = cleanCode.substring(hotelPrefix.length + 1);
+    }
+    
+    // Build the full code with prefix
+    const fullCode = `${hotelPrefix}-${cleanCode}`;
+    
+    // Check if this code exists and auto-increment if needed
+    let finalCode = fullCode;
+    let counter = 1;
+    
+    // Extract base and number (e.g., "CAR-001" -> base="CAR", num=1)
+    const match = cleanCode.match(/^(.+?)-(\d+)$/);
+    if (match) {
+      const base = match[1];
+      let num = parseInt(match[2]);
+      
+      // Find highest existing number for this base
+      const existingCodes = existingAssets
+        .map(a => a.asset_code)
+        .filter(code => code.startsWith(`${hotelPrefix}-${base}-`));
+      
+      existingCodes.forEach(code => {
+        const numMatch = code.match(/-(\d+)$/);
+        if (numMatch) {
+          const existingNum = parseInt(numMatch[1]);
+          if (existingNum >= num) {
+            num = existingNum + 1;
+          }
+        }
+      });
+      
+      // Pad with zeros to match original length
+      const originalLength = match[2].length;
+      const paddedNum = num.toString().padStart(originalLength, '0');
+      finalCode = `${hotelPrefix}-${base}-${paddedNum}`;
+    }
+    
+    setFormData(prev => ({ ...prev, asset_code: finalCode }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,8 +164,18 @@ export default function AddAssetModal({ hotelId, onClose, onAdd }: AddAssetModal
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Basic Information</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Asset Code <span className="text-red-600">*</span></label>
-                  <input type="text" required value={formData.asset_code} onChange={(e) => updateField("asset_code", e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., TV-621-001" />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Asset Code <span className="text-red-600">*</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    required 
+                    value={formData.asset_code} 
+                    onChange={(e) => handleAssetCodeChange(e.target.value)} 
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                    placeholder={`e.g., TV-001 (becomes ${hotelId.toUpperCase()}-TV-001)`}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Auto-prefixed with {hotelId.toUpperCase()}-</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
