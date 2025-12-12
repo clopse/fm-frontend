@@ -47,7 +47,7 @@ export default function DepreciationTracker({ assets, onClose }: DepreciationTra
       return min;
     }, currentYear);
 
-    const years = [];
+    const years: number[] = [];
     for (let year = currentYear; year >= oldestYear; year--) {
       years.push(year);
     }
