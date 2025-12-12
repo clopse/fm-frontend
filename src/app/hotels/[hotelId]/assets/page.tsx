@@ -170,7 +170,14 @@ export default function AssetsPage() {
       }
 
       const data: Asset[] = await res.json();
-      setAssets(data || []);
+      
+      // Filter by hotel prefix (e.g., HIEX- for hiex hotel)
+      const hotelPrefix = hotelId.toUpperCase();
+      const filteredData = data.filter((asset: Asset) => 
+        asset.asset_code.startsWith(hotelPrefix + "-")
+      );
+      
+      setAssets(filteredData || []);
     } catch (e) {
       console.error("Error loading assets", e);
       setError("Error loading assets");
@@ -276,6 +283,31 @@ export default function AssetsPage() {
     (sum, a) => sum + (a.purchase_cost || 0) * a.quantity,
     0
   );
+
+  // Calculate current depreciated value
+  const currentYear = new Date().getFullYear();
+  const totalDepreciatedValue = assets.reduce((sum, asset) => {
+    if (!asset.purchase_cost || !asset.installation_date || !asset.expected_lifespan_years) {
+      return sum;
+    }
+    
+    const installYear = new Date(asset.installation_date).getFullYear();
+    const yearsOwned = currentYear - installYear;
+    const totalCost = asset.purchase_cost * asset.quantity;
+    
+    if (yearsOwned >= asset.expected_lifespan_years) {
+      // Fully depreciated
+      return sum;
+    } else if (yearsOwned < 0) {
+      // Not yet installed
+      return sum + totalCost;
+    } else {
+      // Calculate remaining value
+      const depreciationRate = yearsOwned / asset.expected_lifespan_years;
+      const remainingValue = totalCost * (1 - depreciationRate);
+      return sum + remainingValue;
+    }
+  }, 0);
 
   const categoryBreakdown = assets.reduce((acc, asset) => {
     const cat = asset.category || "Uncategorized";
@@ -390,7 +422,10 @@ export default function AssetsPage() {
 
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-600 font-medium">Total Value</p>
+              <p className="text-sm text-gray-600 font-medium flex items-center gap-1">
+                Total Replacement Cost
+                <span className="text-xs text-gray-400" title="Total cost if all assets were replaced new today">ⓘ</span>
+              </p>
               <Euro className="w-5 h-5 text-green-600" />
             </div>
             <p className="text-3xl font-bold text-gray-900">
@@ -407,9 +442,15 @@ export default function AssetsPage() {
 
           <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-600 font-medium">Depreciation</p>
+              <p className="text-sm text-gray-600 font-medium flex items-center gap-1">
+                Current Depreciated Value
+                <span className="text-xs text-gray-400" title="Current value after depreciation">ⓘ</span>
+              </p>
               <TrendingDown className="w-5 h-5 text-orange-600" />
             </div>
+            <p className="text-3xl font-bold text-gray-900">
+              €{Math.round(totalDepreciatedValue).toLocaleString()}
+            </p>
             <button
               onClick={() => setShowDepreciationTracker(true)}
               className="w-full mt-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium"
@@ -777,6 +818,7 @@ export default function AssetsPage() {
       {showAddModal && (
         <AddAssetModal
           hotelId={hotelId}
+          existingAssets={assets}
           onClose={() => setShowAddModal(false)}
           onAdd={handleAddAsset}
         />
