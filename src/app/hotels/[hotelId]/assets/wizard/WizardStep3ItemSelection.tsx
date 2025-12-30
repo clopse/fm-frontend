@@ -1,109 +1,72 @@
 import { useState } from "react";
-import { Search, Info, DollarSign, TrendingUp } from "lucide-react";
+import { Info, Plus, Minus, Upload, FileText } from "lucide-react";
 
-export interface StandardItem {
-  key: string;
-  label: string;
-  category: string;
-  subcategory: string;
-  area: "Bedroom" | "Appliances" | "Kitchen" | "Living/Dining" | "Bathroom" | "Other";
-  defaultCost: number;
-  estimatedLifeYears: number;
-  insuranceCategory: "Contents" | "FF&E" | "Equipment" | "Fixed";
-}
-
-// Extended item list with cost data
-export const STANDARD_ITEMS: StandardItem[] = [
-  // Bedroom furniture
-  { key: "bed", label: "Bed Frame", category: "Bedrooms", subcategory: "Bed", area: "Bedroom", defaultCost: 450, estimatedLifeYears: 10, insuranceCategory: "FF&E" },
-  { key: "mattress", label: "Mattress", category: "Bedrooms", subcategory: "Mattress", area: "Bedroom", defaultCost: 380, estimatedLifeYears: 7, insuranceCategory: "FF&E" },
-  { key: "headboard", label: "Headboard", category: "Bedrooms", subcategory: "Headboard", area: "Bedroom", defaultCost: 220, estimatedLifeYears: 10, insuranceCategory: "FF&E" },
-  { key: "bedside_lockers", label: "Bedside Lockers (pair)", category: "Bedrooms", subcategory: "Bedside locker", area: "Bedroom", defaultCost: 180, estimatedLifeYears: 10, insuranceCategory: "FF&E" },
-  { key: "wardrobe", label: "Wardrobe", category: "Bedrooms", subcategory: "Wardrobe", area: "Bedroom", defaultCost: 520, estimatedLifeYears: 12, insuranceCategory: "FF&E" },
-  { key: "luggage_rack", label: "Luggage Rack", category: "Bedrooms", subcategory: "Luggage rack", area: "Bedroom", defaultCost: 85, estimatedLifeYears: 8, insuranceCategory: "Contents" },
-  { key: "desk", label: "Desk", category: "Bedrooms", subcategory: "Desk", area: "Bedroom", defaultCost: 320, estimatedLifeYears: 10, insuranceCategory: "FF&E" },
-  { key: "desk_chair", label: "Desk Chair", category: "Bedrooms", subcategory: "Desk chair", area: "Bedroom", defaultCost: 145, estimatedLifeYears: 7, insuranceCategory: "FF&E" },
-  { key: "armchair", label: "Armchair", category: "Bedrooms", subcategory: "Armchair", area: "Bedroom", defaultCost: 380, estimatedLifeYears: 8, insuranceCategory: "FF&E" },
-  { key: "sofa_bed", label: "Sofa Bed", category: "Bedrooms", subcategory: "Sofa bed", area: "Bedroom", defaultCost: 680, estimatedLifeYears: 8, insuranceCategory: "FF&E" },
-  { key: "room_carpet", label: "Bedroom Carpet", category: "Bedrooms", subcategory: "Carpet - bedroom", area: "Bedroom", defaultCost: 420, estimatedLifeYears: 5, insuranceCategory: "Fixed" },
-  { key: "blackout_curtains", label: "Blackout Curtains", category: "Bedrooms", subcategory: "Curtains - blackout", area: "Bedroom", defaultCost: 160, estimatedLifeYears: 6, insuranceCategory: "Contents" },
-  { key: "sheer_curtains", label: "Sheer Curtains", category: "Bedrooms", subcategory: "Curtains - sheer", area: "Bedroom", defaultCost: 95, estimatedLifeYears: 5, insuranceCategory: "Contents" },
-  { key: "reading_lights", label: "Reading Lights (pair)", category: "Bedrooms", subcategory: "Light - reading", area: "Bedroom", defaultCost: 120, estimatedLifeYears: 8, insuranceCategory: "Contents" },
-  { key: "room_main_light", label: "Main Room Light", category: "Bedrooms", subcategory: "Light - main", area: "Bedroom", defaultCost: 180, estimatedLifeYears: 10, insuranceCategory: "Fixed" },
-  { key: "full_length_mirror", label: "Full-Length Mirror", category: "Bedrooms", subcategory: "Mirror - full length", area: "Bedroom", defaultCost: 95, estimatedLifeYears: 12, insuranceCategory: "Contents" },
-  { key: "in_room_safe", label: "In-Room Safe", category: "Bedrooms", subcategory: "Safe", area: "Bedroom", defaultCost: 280, estimatedLifeYears: 15, insuranceCategory: "Equipment" },
-
-  // Appliances
-  { key: "tv", label: "Television (43\")", category: "Bedrooms", subcategory: "Television", area: "Appliances", defaultCost: 420, estimatedLifeYears: 6, insuranceCategory: "Equipment" },
-  { key: "mini_fridge", label: "Mini-Fridge / Minibar", category: "Bedrooms", subcategory: "Fridge - minibar", area: "Appliances", defaultCost: 320, estimatedLifeYears: 8, insuranceCategory: "Equipment" },
-  { key: "kettle", label: "Kettle", category: "Bedrooms", subcategory: "Kettle", area: "Appliances", defaultCost: 35, estimatedLifeYears: 4, insuranceCategory: "Contents" },
-  { key: "coffee_machine", label: "Coffee Machine", category: "Bedrooms", subcategory: "Coffee machine", area: "Appliances", defaultCost: 85, estimatedLifeYears: 5, insuranceCategory: "Contents" },
-  { key: "hairdryer", label: "Hairdryer", category: "Bedrooms", subcategory: "Hairdryer", area: "Appliances", defaultCost: 28, estimatedLifeYears: 4, insuranceCategory: "Contents" },
-  { key: "iron", label: "Iron", category: "Bedrooms", subcategory: "Iron", area: "Appliances", defaultCost: 32, estimatedLifeYears: 5, insuranceCategory: "Contents" },
-  { key: "ironing_board", label: "Ironing Board", category: "Bedrooms", subcategory: "Ironing board", area: "Appliances", defaultCost: 45, estimatedLifeYears: 8, insuranceCategory: "Contents" },
-  { key: "room_thermostat", label: "Room Thermostat", category: "Bedrooms", subcategory: "Room thermostat", area: "Appliances", defaultCost: 185, estimatedLifeYears: 10, insuranceCategory: "Equipment" },
-  { key: "keycard_switch", label: "Keycard Power Switch", category: "Bedrooms", subcategory: "Keycard switch", area: "Appliances", defaultCost: 95, estimatedLifeYears: 12, insuranceCategory: "Equipment" },
-
+export const STANDARD_ITEMS = [
+  // Bedroom Items
+  { key: "bed", label: "Bed Frame", category: "Bedrooms", subcategory: "Bed frame", defaultCost: 450, estimatedLifeYears: 10 },
+  { key: "mattress", label: "Mattress", category: "Bedrooms", subcategory: "Mattress", defaultCost: 380, estimatedLifeYears: 7 },
+  { key: "tv", label: "Television", category: "Bedrooms", subcategory: "Television", defaultCost: 600, estimatedLifeYears: 7 },
+  { key: "tv_remote", label: "TV Remote", category: "Bedrooms", subcategory: "TV Remote", defaultCost: 15, estimatedLifeYears: 3 },
+  { key: "wardrobe", label: "Wardrobe", category: "Bedrooms", subcategory: "Wardrobe", defaultCost: 350, estimatedLifeYears: 12 },
+  { key: "desk", label: "Desk", category: "Bedrooms", subcategory: "Desk", defaultCost: 280, estimatedLifeYears: 10 },
+  { key: "desk_chair", label: "Desk Chair", category: "Bedrooms", subcategory: "Desk chair", defaultCost: 120, estimatedLifeYears: 8 },
+  { key: "bedside_table", label: "Bedside Table", category: "Bedrooms", subcategory: "Bedside table", defaultCost: 85, estimatedLifeYears: 10 },
+  { key: "lamp", label: "Lamp", category: "Bedrooms", subcategory: "Lamp", defaultCost: 45, estimatedLifeYears: 5 },
+  { key: "safe", label: "Safe", category: "Bedrooms", subcategory: "Safe", defaultCost: 220, estimatedLifeYears: 15 },
+  { key: "door_lock", label: "Electronic Door Lock", category: "Bedrooms", subcategory: "Door lock", defaultCost: 380, estimatedLifeYears: 10 },
+  { key: "mirror_bedroom", label: "Mirror - Bedroom", category: "Bedrooms", subcategory: "Mirror - bedroom", defaultCost: 65, estimatedLifeYears: 15 },
+  { key: "curtains_blackout", label: "Curtains - Blackout", category: "Bedrooms", subcategory: "Curtains - blackout", defaultCost: 180, estimatedLifeYears: 7 },
+  { key: "curtains_sheer", label: "Curtains - Sheer", category: "Bedrooms", subcategory: "Curtains - sheer", defaultCost: 95, estimatedLifeYears: 5 },
+  
+  // Bathroom Items
+  { key: "wc", label: "Toilet", category: "Bathrooms", subcategory: "WC", defaultCost: 320, estimatedLifeYears: 20 },
+  { key: "basin", label: "Basin", category: "Bathrooms", subcategory: "Basin", defaultCost: 280, estimatedLifeYears: 20 },
+  { key: "shower", label: "Shower", category: "Bathrooms", subcategory: "Shower", defaultCost: 450, estimatedLifeYears: 15 },
+  { key: "bath", label: "Bath", category: "Bathrooms", subcategory: "Bath", defaultCost: 680, estimatedLifeYears: 20 },
+  { key: "shower_screen", label: "Shower Screen", category: "Bathrooms", subcategory: "Shower screen", defaultCost: 280, estimatedLifeYears: 10 },
+  { key: "mirror_bathroom", label: "Mirror - Bathroom", category: "Bathrooms", subcategory: "Mirror - bathroom", defaultCost: 85, estimatedLifeYears: 15 },
+  { key: "extractor_fan", label: "Extractor Fan", category: "Bathrooms", subcategory: "Extractor fan", defaultCost: 120, estimatedLifeYears: 10 },
+  
+  // HVAC Items
+  { key: "ac_unit", label: "AC Unit", category: "HVAC", subcategory: "AC unit", defaultCost: 850, estimatedLifeYears: 12 },
+  { key: "radiator", label: "Radiator", category: "HVAC", subcategory: "Radiator", defaultCost: 280, estimatedLifeYears: 20 },
+  
   // Kitchen (Aparthotel)
-  { key: "kitchen_base_units", label: "Kitchen Base Units", category: "Kitchen", subcategory: "Cabinet - base units", area: "Kitchen", defaultCost: 1200, estimatedLifeYears: 15, insuranceCategory: "Fixed" },
-  { key: "kitchen_wall_units", label: "Kitchen Wall Units", category: "Kitchen", subcategory: "Cabinet - wall units", area: "Kitchen", defaultCost: 850, estimatedLifeYears: 15, insuranceCategory: "Fixed" },
-  { key: "kitchen_worktop", label: "Kitchen Worktop", category: "Kitchen", subcategory: "Worktop", area: "Kitchen", defaultCost: 680, estimatedLifeYears: 12, insuranceCategory: "Fixed" },
-  { key: "kitchen_sink", label: "Kitchen Sink & Tap", category: "Kitchen", subcategory: "Sink & tap", area: "Kitchen", defaultCost: 320, estimatedLifeYears: 15, insuranceCategory: "Fixed" },
-  { key: "microwave", label: "Microwave", category: "Kitchen", subcategory: "Microwave", area: "Kitchen", defaultCost: 145, estimatedLifeYears: 6, insuranceCategory: "Equipment" },
-  { key: "hob", label: "Hob (4 ring)", category: "Kitchen", subcategory: "Hob", area: "Kitchen", defaultCost: 380, estimatedLifeYears: 10, insuranceCategory: "Equipment" },
-  { key: "oven", label: "Built-in Oven", category: "Kitchen", subcategory: "Oven", area: "Kitchen", defaultCost: 520, estimatedLifeYears: 10, insuranceCategory: "Equipment" },
-  { key: "extractor_hood", label: "Extractor Hood", category: "Kitchen", subcategory: "Extractor hood", area: "Kitchen", defaultCost: 280, estimatedLifeYears: 10, insuranceCategory: "Equipment" },
-  { key: "dishwasher", label: "Dishwasher", category: "Kitchen", subcategory: "Dishwasher", area: "Kitchen", defaultCost: 580, estimatedLifeYears: 8, insuranceCategory: "Equipment" },
-  { key: "full_fridge_freezer", label: "Full-Height Fridge/Freezer", category: "Kitchen", subcategory: "Fridge-freezer", area: "Kitchen", defaultCost: 680, estimatedLifeYears: 10, insuranceCategory: "Equipment" },
-  { key: "washer_dryer", label: "Washer-Dryer", category: "Kitchen", subcategory: "Washer-dryer", area: "Kitchen", defaultCost: 780, estimatedLifeYears: 8, insuranceCategory: "Equipment" },
-  { key: "kitchen_small_pack", label: "Kitchen Equipment Pack", category: "Kitchen", subcategory: "Kitchen pack", area: "Kitchen", defaultCost: 220, estimatedLifeYears: 5, insuranceCategory: "Contents" },
-
-  // Living/Dining
-  { key: "sofa", label: "Sofa (2-3 seater)", category: "Living", subcategory: "Sofa", area: "Living/Dining", defaultCost: 680, estimatedLifeYears: 8, insuranceCategory: "FF&E" },
-  { key: "living_armchair", label: "Armchair (Living)", category: "Living", subcategory: "Armchair", area: "Living/Dining", defaultCost: 380, estimatedLifeYears: 8, insuranceCategory: "FF&E" },
-  { key: "coffee_table", label: "Coffee Table", category: "Living", subcategory: "Coffee table", area: "Living/Dining", defaultCost: 220, estimatedLifeYears: 10, insuranceCategory: "FF&E" },
-  { key: "dining_table", label: "Dining Table", category: "Living", subcategory: "Dining table", area: "Living/Dining", defaultCost: 420, estimatedLifeYears: 12, insuranceCategory: "FF&E" },
-  { key: "dining_chairs", label: "Dining Chairs (set of 4)", category: "Living", subcategory: "Dining chair", area: "Living/Dining", defaultCost: 320, estimatedLifeYears: 10, insuranceCategory: "FF&E" },
-  { key: "living_tv", label: "TV (Living Area, 55\")", category: "Living", subcategory: "Television - living", area: "Living/Dining", defaultCost: 620, estimatedLifeYears: 6, insuranceCategory: "Equipment" },
-
-  // Bathroom
-  { key: "wc", label: "WC", category: "Bathrooms", subcategory: "WC", area: "Bathroom", defaultCost: 280, estimatedLifeYears: 20, insuranceCategory: "Fixed" },
-  { key: "basin", label: "Basin & Tap", category: "Bathrooms", subcategory: "Basin & tap", area: "Bathroom", defaultCost: 320, estimatedLifeYears: 15, insuranceCategory: "Fixed" },
-  { key: "shower", label: "Shower Enclosure", category: "Bathrooms", subcategory: "Shower", area: "Bathroom", defaultCost: 680, estimatedLifeYears: 15, insuranceCategory: "Fixed" },
-  { key: "bath", label: "Bath", category: "Bathrooms", subcategory: "Bath", area: "Bathroom", defaultCost: 520, estimatedLifeYears: 20, insuranceCategory: "Fixed" },
-  { key: "bathroom_mirror", label: "Bathroom Mirror", category: "Bathrooms", subcategory: "Mirror - bathroom", area: "Bathroom", defaultCost: 85, estimatedLifeYears: 12, insuranceCategory: "Contents" },
-  { key: "heated_towel_rail", label: "Heated Towel Rail", category: "Bathrooms", subcategory: "Heated towel rail", area: "Bathroom", defaultCost: 220, estimatedLifeYears: 12, insuranceCategory: "Equipment" },
-  { key: "bathroom_extractor", label: "Bathroom Extractor Fan", category: "Bathrooms", subcategory: "Extractor fan", area: "Bathroom", defaultCost: 145, estimatedLifeYears: 10, insuranceCategory: "Equipment" },
-
-  // Other
-  { key: "router_ap", label: "WiFi Access Point", category: "IT / AV", subcategory: "WiFi access point", area: "Other", defaultCost: 180, estimatedLifeYears: 5, insuranceCategory: "Equipment" },
-  { key: "door_lock", label: "Electronic Door Lock", category: "Bedrooms", subcategory: "Door lock", area: "Other", defaultCost: 380, estimatedLifeYears: 10, insuranceCategory: "Equipment" },
+  { key: "fridge", label: "Fridge", category: "Kitchen", subcategory: "Fridge", defaultCost: 480, estimatedLifeYears: 10 },
+  { key: "microwave", label: "Microwave", category: "Kitchen", subcategory: "Microwave", defaultCost: 120, estimatedLifeYears: 7 },
+  { key: "hob", label: "Hob", category: "Kitchen", subcategory: "Hob", defaultCost: 380, estimatedLifeYears: 12 },
+  { key: "oven", label: "Oven", category: "Kitchen", subcategory: "Oven", defaultCost: 550, estimatedLifeYears: 12 },
+  { key: "dishwasher", label: "Dishwasher", category: "Kitchen", subcategory: "Dishwasher", defaultCost: 480, estimatedLifeYears: 10 },
+  { key: "kettle", label: "Kettle", category: "Kitchen", subcategory: "Kettle", defaultCost: 35, estimatedLifeYears: 3 },
 ];
 
 interface WizardStep3Props {
   selectedItems: string[];
   itemCosts: Record<string, number>;
+  itemQuantities: Record<string, number>; // NEW
   onUpdateSelection: (items: string[]) => void;
-  onUpdateCost: (itemKey: string, cost: number) => void;
+  onUpdateCost: (key: string, cost: number) => void;
+  onUpdateQuantity: (key: string, quantity: number) => void; // NEW
   onNext: () => void;
   onBack: () => void;
-  propertyType: string;
+  propertyType: "hotel" | "aparthotel" | "serviced_apartments";
   totalRooms: number;
 }
 
 export default function WizardStep3ItemSelection({
   selectedItems,
   itemCosts,
+  itemQuantities,
   onUpdateSelection,
   onUpdateCost,
+  onUpdateQuantity,
   onNext,
   onBack,
   propertyType,
   totalRooms,
 }: WizardStep3Props) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedArea, setSelectedArea] = useState<string>("all");
-  const [showCostEdit, setShowCostEdit] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
   const toggleItem = (key: string) => {
     if (selectedItems.includes(key)) {
@@ -113,48 +76,34 @@ export default function WizardStep3ItemSelection({
     }
   };
 
-  const selectAllInArea = (area: string) => {
-    const itemsInArea = filteredItems
-      .filter(item => area === "all" || item.area === area)
-      .map(item => item.key);
-    
-    const allSelected = itemsInArea.every(key => selectedItems.includes(key));
-    
-    if (allSelected) {
-      onUpdateSelection(selectedItems.filter(key => !itemsInArea.includes(key)));
-    } else {
-      const newSelection = [...new Set([...selectedItems, ...itemsInArea])];
-      onUpdateSelection(newSelection);
-    }
-  };
-
-  const areas = ["Bedroom", "Appliances", "Kitchen", "Living/Dining", "Bathroom", "Other"];
-  
+  // Filter items
   const filteredItems = STANDARD_ITEMS.filter(item => {
-    const matchesSearch = searchTerm === "" || 
-      item.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.subcategory.toLowerCase().includes(searchTerm.toLowerCase());
+    // Filter by property type
+    if (propertyType === "hotel" && item.category === "Kitchen") return false;
     
-    const matchesArea = selectedArea === "all" || item.area === selectedArea;
+    // Filter by category
+    if (selectedCategory !== "All" && item.category !== selectedCategory) return false;
     
-    // Filter out kitchen/living items for standard hotels
-    const matchesPropertyType = propertyType === "hotel" 
-      ? !["Kitchen", "Living/Dining"].includes(item.area)
-      : true;
+    // Filter by search
+    if (searchTerm && !item.label.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     
-    return matchesSearch && matchesArea && matchesPropertyType;
+    return true;
   });
 
+  const categories = ["All", ...new Set(STANDARD_ITEMS.map(i => i.category))];
+
+  // Calculate totals
   const selectedItemsData = STANDARD_ITEMS.filter(item => selectedItems.includes(item.key));
-  
   const totalCostPerRoom = selectedItemsData.reduce((sum, item) => {
     const cost = itemCosts[item.key] ?? item.defaultCost;
-    return sum + cost;
+    const qty = itemQuantities[item.key] ?? 1;
+    return sum + (cost * qty);
   }, 0);
 
-  const totalPropertyValue = totalCostPerRoom * totalRooms;
-
-  const canProceed = selectedItems.length > 0;
+  const totalAssets = selectedItemsData.reduce((sum, item) => {
+    const qty = itemQuantities[item.key] ?? 1;
+    return sum + (totalRooms * qty);
+  }, 0);
 
   return (
     <div className="space-y-6">
@@ -162,163 +111,157 @@ export default function WizardStep3ItemSelection({
         <div className="flex items-start">
           <Info className="w-5 h-5 text-blue-600 mt-0.5 mr-3" />
           <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Room Item Selection & Costing</p>
-            <p>Select standard items for each room and set their costs. These values are used for insurance valuation, depreciation calculations, and property assessment.</p>
+            <p className="font-medium mb-1">Item Selection & Configuration</p>
+            <p>Select items for each room. Adjust quantities if some rooms have 2 TVs, 2 beds, etc. Set costs and you can bulk update later.</p>
           </div>
         </div>
       </div>
 
-      {/* Value Summary */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Summary Stats */}
+      <div className="grid grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-600">Items Selected</p>
-            <DollarSign className="w-4 h-4 text-gray-400" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900">{selectedItems.length}</p>
-          <p className="text-xs text-gray-500 mt-1">per room</p>
+          <p className="text-sm text-gray-600 mb-1">Items Selected</p>
+          <p className="text-2xl font-bold text-blue-600">{selectedItems.length}</p>
         </div>
-        
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-blue-700">Cost Per Room</p>
-            <TrendingUp className="w-4 h-4 text-blue-500" />
-          </div>
-          <p className="text-2xl font-bold text-blue-900">
-            €{totalCostPerRoom.toLocaleString()}
-          </p>
-          <p className="text-xs text-blue-600 mt-1">replacement value</p>
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <p className="text-sm text-gray-600 mb-1">Cost Per Room</p>
+          <p className="text-2xl font-bold text-gray-900">€{totalCostPerRoom.toLocaleString()}</p>
         </div>
-
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-green-700">Total Property Value</p>
-            <DollarSign className="w-4 h-4 text-green-500" />
-          </div>
-          <p className="text-2xl font-bold text-green-900">
-            €{totalPropertyValue.toLocaleString()}
-          </p>
-          <p className="text-xs text-green-600 mt-1">{totalRooms} rooms</p>
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <p className="text-sm text-gray-600 mb-1">Total Assets</p>
+          <p className="text-2xl font-bold text-gray-900">{totalAssets.toLocaleString()}</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <p className="text-sm text-gray-600 mb-1">Total Value</p>
+          <p className="text-2xl font-bold text-green-600">€{(totalCostPerRoom * totalRooms).toLocaleString()}</p>
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+      {/* Filters */}
+      <div className="flex gap-4">
+        <div className="flex-1">
           <input
             type="text"
             placeholder="Search items..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>
-
-        <select
-          value={selectedArea}
-          onChange={(e) => setSelectedArea(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="all">All Areas</option>
-          {areas.map(area => (
-            <option key={area} value={area}>{area}</option>
+        <div className="flex gap-2">
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                selectedCategory === cat
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {cat}
+            </button>
           ))}
-        </select>
-
-        <button
-          onClick={() => setShowCostEdit(!showCostEdit)}
-          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center"
-        >
-          <DollarSign className="w-4 h-4 mr-2" />
-          {showCostEdit ? "Hide" : "Edit"} Costs
-        </button>
+        </div>
       </div>
 
-      {/* Item Grid */}
-      <div className="space-y-4">
-        {areas.map(area => {
-          const areaItems = filteredItems.filter(item => item.area === area);
-          if (areaItems.length === 0) return null;
-
-          const areaSelected = areaItems.filter(item => selectedItems.includes(item.key)).length;
-          const allSelected = areaSelected === areaItems.length;
+      {/* Items List */}
+      <div className="space-y-3">
+        {filteredItems.map(item => {
+          const isSelected = selectedItems.includes(item.key);
+          const cost = itemCosts[item.key] ?? item.defaultCost;
+          const quantity = itemQuantities[item.key] ?? 1;
 
           return (
-            <div key={area} className="border border-gray-200 rounded-lg overflow-hidden">
-              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                <h3 className="font-medium text-gray-900">{area}</h3>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-gray-600">
-                    {areaSelected} of {areaItems.length} selected
-                  </span>
-                  <button
-                    onClick={() => selectAllInArea(area)}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    {allSelected ? "Deselect" : "Select"} All
-                  </button>
-                </div>
-              </div>
+            <div
+              key={item.key}
+              className={`bg-white border-2 rounded-lg p-4 transition-all ${
+                isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+              }`}
+            >
+              <div className="flex items-center gap-4">
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggleItem(item.key)}
+                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
 
-              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-                {areaItems.map(item => {
-                  const isSelected = selectedItems.includes(item.key);
-                  const cost = itemCosts[item.key] ?? item.defaultCost;
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-gray-900">{item.label}</p>
+                      <p className="text-sm text-gray-500">
+                        {item.category} • {item.estimatedLifeYears} year lifespan
+                      </p>
+                    </div>
 
-                  return (
-                    <div
-                      key={item.key}
-                      className={`border rounded-lg p-3 cursor-pointer transition-all ${
-                        isSelected 
-                          ? "border-blue-500 bg-blue-50" 
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                      onClick={() => toggleItem(item.key)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-3">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleItem(item.key)}
-                            className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <div>
-                            <p className="font-medium text-gray-900">{item.label}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {item.subcategory} · {item.estimatedLifeYears}yr lifespan
-                            </p>
+                    {isSelected && (
+                      <div className="flex items-center gap-6">
+                        {/* Quantity Controls */}
+                        <div className="flex items-center gap-3">
+                          <label className="text-sm text-gray-600 font-medium">Qty per room:</label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => quantity > 1 && onUpdateQuantity(item.key, quantity - 1)}
+                              disabled={quantity <= 1}
+                              className="p-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-30"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            <span className="w-8 text-center font-medium">{quantity}</span>
+                            <button
+                              onClick={() => quantity < 5 && onUpdateQuantity(item.key, quantity + 1)}
+                              disabled={quantity >= 5}
+                              className="p-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-30"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          {showCostEdit && isSelected ? (
+                        {/* Cost Input */}
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm text-gray-600 font-medium">Cost:</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">€</span>
                             <input
                               type="number"
                               value={cost}
                               onChange={(e) => onUpdateCost(item.key, parseFloat(e.target.value) || 0)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                              className="w-24 pl-7 pr-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                             />
-                          ) : (
-                            <p className="text-sm font-medium text-gray-900">
-                              €{cost.toLocaleString()}
-                            </p>
-                          )}
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {item.insuranceCategory}
+                          </div>
+                        </div>
+
+                        {/* Total */}
+                        <div className="text-right min-w-[100px]">
+                          <p className="text-xs text-gray-500">Total</p>
+                          <p className="text-lg font-bold text-gray-900">
+                            €{(cost * quantity).toLocaleString()}
                           </p>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           );
         })}
+      </div>
+
+      {/* Info Box */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <p className="text-sm text-yellow-800">
+          <strong>Tip:</strong> Don't worry about getting everything perfect! After creating assets, you can use <strong>Bulk Management</strong> to:
+        </p>
+        <ul className="text-sm text-yellow-800 mt-2 ml-4 space-y-1">
+          <li>• Update prices for all TVs at once (€600 → €500)</li>
+          <li>• Add manuals to all items of same type</li>
+          <li>• Update manufacturer/model details later</li>
+          <li>• Handle special cases (Room 601 has 2 TVs)</li>
+        </ul>
       </div>
 
       {/* Navigation */}
@@ -331,7 +274,7 @@ export default function WizardStep3ItemSelection({
         </button>
         <button
           onClick={onNext}
-          disabled={!canProceed}
+          disabled={selectedItems.length === 0}
           className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           Next: Review & Generate
