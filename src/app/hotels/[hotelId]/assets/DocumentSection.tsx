@@ -249,43 +249,45 @@ export default function DocumentSection({ assetId, isEditing }: DocumentSectionP
 
       {/* Document Viewer Modal */}
       {viewingDoc && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[70] p-4">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">{viewingDoc.type}</h3>
-              <button
-                onClick={() => setViewingDoc(null)}
-                className="p-2 hover:bg-gray-200 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <a
+                  href={viewingDoc.url}
+                  download
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  title="Download"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </a>
+                <button
+                  onClick={() => setViewingDoc(null)}
+                  className="p-2 hover:bg-gray-200 rounded-lg"
+                  title="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             
-            <div className="flex-1 overflow-auto bg-gray-100">
+            <div className="flex-1 overflow-auto bg-gray-100 min-h-[600px]">
               {viewingDoc.url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                 <img
                   src={viewingDoc.url}
                   alt={viewingDoc.type}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain p-4"
                 />
               ) : (
                 <iframe
-                  src={`${viewingDoc.url}#toolbar=0&navpanes=0`}
+                  src={`${viewingDoc.url}#toolbar=0&navpanes=0&view=FitH`}
                   className="w-full h-full border-0"
+                  style={{ minHeight: '800px' }}
                   title={viewingDoc.type}
                 />
               )}
-            </div>
-            
-            <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-end">
-              <a
-                href={viewingDoc.url}
-                download
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Download className="w-4 h-4" />
-                Download
-              </a>
             </div>
           </div>
         </div>
