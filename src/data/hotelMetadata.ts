@@ -6,6 +6,7 @@ export const hotelNames: Record<string, string> = {
     hbhe: "Hampton Ealing",
     sera: "Seraphine Kensington",
     marina: "Waterford Marina",
-    belfast: "Hamilton Dock"
+    hiltonth: "Home2 Suites Dublin",
+    belfast: "Aloft Residence Inn"
   };
   
