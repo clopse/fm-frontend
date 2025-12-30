@@ -25,12 +25,10 @@ export default function LoginPage() {
     return () => clearTimeout(t);
   }, [searchParams]);
 
-  useEffect(() => {
-    if (emailRef.current?.value || passwordRef.current?.value) setError('');
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (loading) return;
+
     setLoading(true);
     setError('');
     setMessage('');
@@ -38,7 +36,6 @@ export default function LoginPage() {
     try {
       const email = (emailRef.current?.value || '').trim().toLowerCase();
       const password = passwordRef.current?.value || '';
-
       if (!email || !password) throw new Error('Please fill in all fields');
 
       await userService.login({ email, password });
@@ -56,10 +53,17 @@ export default function LoginPage() {
       } else if (low.includes('timeout')) {
         errorMessage = 'Request timed out. Please try again.';
       }
+
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleShowPassword = () => {
+    setShowPassword((v) => !v);
+    // Keep focus in the password field after toggling
+    requestAnimationFrame(() => passwordRef.current?.focus());
   };
 
   return (
@@ -81,46 +85,36 @@ export default function LoginPage() {
         </h2>
 
         {message && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm"
-          >
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
             {message}
           </div>
         )}
 
         {error && (
-          <div
-            role="alert"
-            aria-live="assertive"
-            className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm"
-          >
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
             {error}
           </div>
         )}
 
         <form
-          onSubmit={handleSubmit}
-          onKeyDown={(e) => loading && e.key === 'Enter' && e.preventDefault()}
-          className="space-y-4"
+          method="post"
+          action="/login"
           autoComplete="on"
-          name="login"
+          onSubmit={handleSubmit}
+          className="space-y-4"
         >
-          <input type="hidden" name="form-name" value="login" />
-          
           <div>
-            <label htmlFor="email" className="sr-only">Email</label>
+            <label htmlFor="username" className="sr-only">Email</label>
             <input
-              id="email"
-              name="email"
-              type="text"
+              id="username"
+              name="username"
+              type="email"
               placeholder="Email"
               ref={emailRef}
               disabled={loading}
               className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               autoFocus
-              autoComplete="username email"
+              autoComplete="username"
               inputMode="email"
               autoCapitalize="off"
               spellCheck={false}
@@ -143,19 +137,13 @@ export default function LoginPage() {
               autoComplete="current-password"
               aria-label="Password"
               onInput={() => error && setError('')}
-              onFocus={(e) => {
-                if (!showPassword && e.target.type !== 'password') {
-                  e.target.type = 'password';
-                }
-              }}
               required
             />
 
             <button
               type="button"
-              tabIndex={-1}
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              onClick={() => setShowPassword((v) => !v)}
+              onClick={toggleShowPassword}
               disabled={loading}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               aria-pressed={showPassword}
@@ -179,17 +167,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-3 bg-blue-700 text-white border-none rounded-md font-medium text-base cursor-pointer hover:bg-blue-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? (
-              <div className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Logging in...
-              </div>
-            ) : (
-              'Login'
-            )}
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
