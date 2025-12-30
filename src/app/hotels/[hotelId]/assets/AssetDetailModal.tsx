@@ -2,6 +2,7 @@
 
 import { X, Save, Trash2 } from "lucide-react";
 import { useState } from "react";
+import DocumentSection from "./DocumentSection";
 
 interface Asset {
   id: number;
@@ -518,23 +519,7 @@ export default function AssetDetailModal({
           )}
 
           {activeTab === "documents" && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                <InputField label="O&M Manual Path" field="om_manual_path" />
-                <InputField
-                  label="Commissioning Cert Path"
-                  field="commissioning_cert_path"
-                />
-                <InputField label="Warranty Doc Path" field="warranty_doc_path" />
-                <InputField label="Photos Path" field="photos_path" />
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <p className="text-sm text-gray-600">
-                  Document upload functionality can be integrated with S3 storage.
-                  Currently showing file paths.
-                </p>
-              </div>
-            </div>
+            <DocumentSection assetId={asset.id} isEditing={isEditing} />
           )}
         </div>
 
