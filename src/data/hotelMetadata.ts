@@ -1,5 +1,5 @@
 export const hotelNames: Record<string, string> = {
-    hiex: "Holiday Inn Express",
+    HIEX: "Holiday Inn Express",
     moxy: "Moxy Cork",
     hida: "Holiday Inn Dublin Airport",
     hbhdcc: "Hampton Dublin",
