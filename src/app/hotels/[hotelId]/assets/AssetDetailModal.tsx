@@ -81,6 +81,7 @@ export default function AssetDetailModal({
       if (!res.ok) throw new Error("Failed to save");
 
       const updated = await res.json();
+      setEditedAsset(updated); // Update local state with fresh data
       onSave(updated);
       setIsEditing(false);
     } catch (error) {
@@ -542,12 +543,12 @@ export default function AssetDetailModal({
           <div className="flex items-center justify-between text-xs text-gray-600">
             <div>
               <span className="font-medium">Created:</span>{" "}
-              {new Date(asset.created_at).toLocaleString()}
-              {asset.created_by && ` by ${asset.created_by}`}
+              {new Date(editedAsset.created_at).toLocaleString()}
+              {editedAsset.created_by && ` by ${editedAsset.created_by}`}
             </div>
             <div>
               <span className="font-medium">Last Updated:</span>{" "}
-              {new Date(asset.updated_at).toLocaleString()}
+              {new Date(editedAsset.updated_at).toLocaleString()}
             </div>
           </div>
         </div>
