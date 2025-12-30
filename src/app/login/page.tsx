@@ -13,7 +13,6 @@ export default function LoginPage() {
   const passwordRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
@@ -36,22 +35,22 @@ export default function LoginPage() {
     try {
       const email = (emailRef.current?.value || '').trim().toLowerCase();
       const password = passwordRef.current?.value || '';
-      if (!email || !password) throw new Error('Please fill in all fields');
+
+      if (!email || !password) {
+        throw new Error('Please fill in all fields');
+      }
 
       await userService.login({ email, password });
       router.push('/hotels');
     } catch (err) {
       let errorMessage = 'Login failed';
       if (err instanceof Error) errorMessage = err.message;
-      else if (typeof err === 'string') errorMessage = err;
 
       const low = errorMessage.toLowerCase();
       if (low.includes('unauthorized') || low.includes('invalid credentials')) {
         errorMessage = 'Invalid email or password';
       } else if (low.includes('network')) {
-        errorMessage = 'Connection error. Please check your internet and try again.';
-      } else if (low.includes('timeout')) {
-        errorMessage = 'Request timed out. Please try again.';
+        errorMessage = 'Connection error. Please try again.';
       }
 
       setError(errorMessage);
@@ -60,27 +59,19 @@ export default function LoginPage() {
     }
   };
 
-  const toggleShowPassword = () => {
-    setShowPassword((v) => !v);
-    // Keep focus in the password field after toggling
-    requestAnimationFrame(() => passwordRef.current?.focus());
-  };
-
   return (
     <div
       className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center p-4"
       style={{ backgroundImage: "url('/background-login.jpg')" }}
     >
-      <div className="bg-white bg-opacity-95 p-6 sm:p-8 rounded-xl shadow-lg text-center w-full max-w-sm mx-auto">
-        <div className="mb-1">
-          <img
-            src="/jmk-logo2.png"
-            alt="JMK Logo"
-            className="mx-auto w-full max-w-xs h-auto"
-          />
-        </div>
+      <div className="bg-white bg-opacity-95 p-6 sm:p-8 rounded-xl shadow-lg w-full max-w-sm">
+        <img
+          src="/jmk-logo2.png"
+          alt="JMK Logo"
+          className="mx-auto mb-4 w-full max-w-xs"
+        />
 
-        <h2 className="mt-0 mb-6 text-xl font-medium text-center text-blue-900">
+        <h2 className="mb-6 text-xl font-medium text-center text-blue-900">
           Facilities
         </h2>
 
@@ -112,69 +103,44 @@ export default function LoginPage() {
               placeholder="Email"
               ref={emailRef}
               disabled={loading}
-              className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               autoFocus
               autoComplete="username"
               inputMode="email"
               autoCapitalize="off"
               spellCheck={false}
-              aria-label="Email"
-              onInput={() => error && setError('')}
+              className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
               required
             />
           </div>
 
-          <div className="relative">
+          <div>
             <label htmlFor="password" className="sr-only">Password</label>
             <input
               id="password"
               name="password"
-              type={showPassword ? 'text' : 'password'}
+              type="password"
               placeholder="Password"
               ref={passwordRef}
               disabled={loading}
-              className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               autoComplete="current-password"
-              aria-label="Password"
-              onInput={() => error && setError('')}
+              className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
               required
             />
-
-            <button
-              type="button"
-              className="absolute inset-y-0 right-0 pr-3 flex items-center"
-              onClick={toggleShowPassword}
-              disabled={loading}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-              aria-pressed={showPassword}
-              title={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {showPassword ? (
-                <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                </svg>
-              ) : (
-                <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              )}
-            </button>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-700 text-white border-none rounded-md font-medium text-base cursor-pointer hover:bg-blue-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 bg-blue-700 text-white rounded-md font-medium hover:bg-blue-800 transition disabled:opacity-50"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Logging in…' : 'Login'}
           </button>
         </form>
 
         <div className="mt-4 text-center">
           <Link
             href="/forgot-password"
-            className="text-sm text-blue-600 hover:text-blue-800 underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
+            className="text-sm text-blue-600 hover:text-blue-800 underline"
           >
             Forgot your password?
           </Link>
