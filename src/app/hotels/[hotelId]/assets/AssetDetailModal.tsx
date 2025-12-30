@@ -73,10 +73,13 @@ export default function AssetDetailModal({
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Exclude document fields - they're managed separately via DocumentSection
+      const { om_manual_path, commissioning_cert_path, warranty_doc_path, photos_path, ...assetDataToSave } = editedAsset;
+      
       const res = await fetch(`${API_BASE}/api/assets/${asset.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editedAsset),
+        body: JSON.stringify(assetDataToSave),
       });
 
       if (!res.ok) throw new Error("Failed to save");
