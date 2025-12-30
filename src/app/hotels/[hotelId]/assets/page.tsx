@@ -158,7 +158,7 @@ export default function AssetsPage() {
 
     try {
       const res = await fetch(
-        `${API_BASE}/assets/?hotel_id=${encodeURIComponent(hotelId)}`,
+        `${API_BASE}/api/assets/?hotel_id=${encodeURIComponent(hotelId)}`,
         { cache: "no-store" }
       );
 
