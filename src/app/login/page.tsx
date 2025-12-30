@@ -109,21 +109,19 @@ export default function LoginPage() {
           onKeyDown={(e) => loading && e.key === 'Enter' && e.preventDefault()}
           className="space-y-4"
           autoComplete="on"
-          method="post"
-          action="#"
         >
           <div>
             <label htmlFor="email" className="sr-only">Email</label>
             <input
               id="email"
               name="email"
-              type="email"
+              type="text"
               placeholder="Email"
               ref={emailRef}
               disabled={loading}
               className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               autoFocus
-              autoComplete="email"
+              autoComplete="email webauthn"
               inputMode="email"
               autoCapitalize="off"
               spellCheck={false}
