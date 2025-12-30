@@ -10,7 +10,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Uncontrolled inputs to let the browser password manager autofill
+  // Uncontrolled inputs so the browser password manager can fill/save reliably
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -19,7 +19,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  // Read optional message from query string and clear after 5s
   useEffect(() => {
     const urlMessage = searchParams.get('message');
     if (!urlMessage) return;
@@ -28,13 +27,13 @@ export default function LoginPage() {
     return () => clearTimeout(t);
   }, [searchParams]);
 
-  // If the browser prefilled on mount, clear any stale error
   useEffect(() => {
     if (emailRef.current?.value || passwordRef.current?.value) setError('');
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
     setLoading(true);
     setError('');
     setMessage('');
@@ -45,7 +44,10 @@ export default function LoginPage() {
 
       if (!email || !password) throw new Error('Please fill in all fields');
 
+      // Log in via API
       await userService.login({ email, password });
+
+      // Keep navigation after successful login
       router.push('/hotels');
     } catch (err) {
       let errorMessage = 'Login failed';
@@ -60,6 +62,7 @@ export default function LoginPage() {
       } else if (low.includes('timeout')) {
         errorMessage = 'Request timed out. Please try again.';
       }
+
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -105,25 +108,25 @@ export default function LoginPage() {
         )}
 
         <form
-          onSubmit={handleSubmit}
-          onKeyDown={(e) => loading && e.key === 'Enter' && e.preventDefault()}
-          className="space-y-4"
-          autoComplete="on"
+          // These two help Chrome confidently classify this as a login form
           method="post"
-          action="#"
+          action="/login"
+          autoComplete="on"
+          onSubmit={handleSubmit}
+          className="space-y-4"
         >
           <div>
             <label htmlFor="email" className="sr-only">Email</label>
             <input
               id="email"
-              name="email"
+              name="username"
               type="email"
               placeholder="Email"
               ref={emailRef}
               disabled={loading}
               className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               autoFocus
-              autoComplete="email"
+              autoComplete="username"
               inputMode="email"
               autoCapitalize="off"
               spellCheck={false}
@@ -157,14 +160,13 @@ export default function LoginPage() {
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               aria-pressed={showPassword}
               title={showPassword ? 'Hide password' : 'Show password'}
+              tabIndex={-1}
             >
               {showPassword ? (
-                // eye-off
                 <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
                 </svg>
               ) : (
-                // eye
                 <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -178,17 +180,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-3 bg-blue-700 text-white border-none rounded-md font-medium text-base cursor-pointer hover:bg-blue-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? (
-              <div className="flex items-center justify-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Logging in...
-              </div>
-            ) : (
-              'Login'
-            )}
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
