@@ -1,21 +1,9 @@
 // src/components/HotelSelectorModal.tsx
 'use client';
-
 import Link from 'next/link';
 import HotelImage from './HotelImage';
 import styles from '@/styles/HotelSelectorModal.module.css';
-
-const hotels = [
-  { name: 'Holiday Inn Express', id: 'hiex' },
-  { name: 'Moxy Cork', id: 'moxy' },
-  { name: 'Holiday Inn Dublin Airport', id: 'hida' },
-  { name: 'Hampton Dublin', id: 'hbhdcc' },
-  { name: 'Hampton Ealing', id: 'hbhe' },
-  { name: 'Seraphine', id: 'sera' },
-  { name: 'Waterford Marina', id: 'marina' },
-  { name: 'Telephone House', id: 'hiltonth' },
-  { name: 'Hamilton Dock', id: 'belfast' },
-];
+import { hotelNames } from '@/data/hotelMetadata';
 
 export default function HotelSelectorModal({
   isOpen,
@@ -24,11 +12,17 @@ export default function HotelSelectorModal({
 }: {
   isOpen: boolean;
   setIsOpen: (val: boolean) => void;
-  onSelectHotel?: (hotelName: string) => void; // <-- added optional
+  onSelectHotel?: (hotelName: string) => void;
 }) {
   if (!isOpen) return null;
 
   const closeModal = () => setIsOpen(false);
+
+  // Convert hotelNames object to array format
+  const hotels = Object.entries(hotelNames).map(([id, name]) => ({
+    id,
+    name,
+  }));
 
   return (
     <div className={styles.overlay} onClick={closeModal}>
@@ -40,7 +34,11 @@ export default function HotelSelectorModal({
         </div>
         <div className={styles.grid}>
           {hotels.map((hotel) => (
-            <Link key={hotel.id} href={`/hotels/${hotel.id}`} onClick={() => onSelectHotel?.(hotel.name)}>
+            <Link 
+              key={hotel.id} 
+              href={`/hotels/${hotel.id}`} 
+              onClick={() => onSelectHotel?.(hotel.name)}
+            >
               <div className={styles.card} onClick={closeModal}>
                 <HotelImage hotelId={hotel.id} alt={hotel.name} />
                 <span className={styles.name}>{hotel.name}</span>
