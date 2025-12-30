@@ -8,8 +8,8 @@ export const hotels = [
   { id: 'hbhe', name: 'Hampton Ealing' },
   { id: 'sera', name: 'Seraphine Kensington' },
   { id: 'marina', name: 'Waterford Marina' },
-  { id: 'belfast', name: 'Hamilton Dock' },
-  { id: 'hiltonth', name: 'Telephone House' },
+  { id: 'belfast', name: 'Aloft Residence Inn Belfast' },
+  { id: 'hiltonth', name: 'Home2 Suites Dublin' },
 ];
 
 // Backward-compatible map: hotel ID → hotel name
