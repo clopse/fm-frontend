@@ -36,7 +36,7 @@ export default function DocumentSection({ assetId, isEditing }: DocumentSectionP
   const loadDocuments = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/assets/${assetId}/documents`);
+      const res = await fetch(`${API_BASE}/api/assets/${assetId}/documents`);
       if (!res.ok) throw new Error("Failed to load documents");
       const data = await res.json();
       setDocuments(data);
@@ -54,7 +54,7 @@ export default function DocumentSection({ assetId, isEditing }: DocumentSectionP
       const formData = new FormData();
       formData.append("file", file);
       
-      const res = await fetch(`${API_BASE}/assets/${assetId}/upload/${docType}`, {
+      const res = await fetch(`${API_BASE}/api/assets/${assetId}/upload/${docType}`, {
         method: "POST",
         body: formData,
       });
@@ -77,8 +77,8 @@ export default function DocumentSection({ assetId, isEditing }: DocumentSectionP
     
     try {
       const url = photoIndex !== undefined 
-        ? `${API_BASE}/assets/${assetId}/document/${docType}?photo_index=${photoIndex}`
-        : `${API_BASE}/assets/${assetId}/document/${docType}`;
+        ? `${API_BASE}/api/assets/${assetId}/document/${docType}?photo_index=${photoIndex}`
+        : `${API_BASE}/api/assets/${assetId}/document/${docType}`;
       
       const res = await fetch(url, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
