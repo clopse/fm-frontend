@@ -26,11 +26,13 @@ export default function HotelSelectorModal({
     setShowSearch(false);
   };
 
-  // Convert hotelNames object to array format
-  const hotels = Object.entries(hotelNames).map(([id, name]) => ({
-    id,
-    name,
-  }));
+  // Convert hotelNames object to array format and sort alphabetically
+  const hotels = Object.entries(hotelNames)
+    .map(([id, name]) => ({
+      id,
+      name,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   // Filter hotels based on search
   const filteredHotels = searchTerm
@@ -45,45 +47,48 @@ export default function HotelSelectorModal({
       onClick={closeModal}
     >
       <div 
-        className="bg-white rounded-2xl p-8 shadow-[0_5px_20px_rgba(0,0,0,0.3)] w-full max-w-[960px] max-h-[90vh] overflow-y-auto relative"
+        className="bg-white rounded-2xl shadow-[0_5px_20px_rgba(0,0,0,0.3)] w-full max-w-[960px] max-h-[90vh] overflow-y-auto relative"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Search Icon / Input */}
-        <div className="absolute top-2.5 right-14 z-10">
-          {showSearch ? (
-            <input
-              type="text"
-              placeholder="Search hotels..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onBlur={() => {
-                if (!searchTerm) setShowSearch(false);
-              }}
-              autoFocus
-              className="w-48 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-            />
-          ) : (
+        {/* Header */}
+        <div className="sticky top-0 bg-white z-20 px-8 pt-6 pb-4 border-b border-gray-100 rounded-t-2xl">
+          <div className="flex items-center justify-end gap-3">
+            {/* Search Icon / Input */}
+            {showSearch ? (
+              <input
+                type="text"
+                placeholder="Search hotels..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onBlur={() => {
+                  if (!searchTerm) setShowSearch(false);
+                }}
+                autoFocus
+                className="w-56 px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+              />
+            ) : (
+              <button
+                onClick={() => setShowSearch(true)}
+                className="text-gray-600 hover:text-gray-800 p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Search hotels"
+              >
+                <Search className="w-5 h-5" />
+              </button>
+            )}
+
+            {/* Close Button */}
             <button
-              onClick={() => setShowSearch(true)}
-              className="text-gray-600 hover:text-gray-800 text-2xl bg-none border-none cursor-pointer p-1"
-              title="Search hotels"
+              onClick={closeModal}
+              className="text-gray-600 hover:text-gray-800 p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Close"
             >
-              <Search className="w-5 h-5" />
+              <X className="w-5 h-5" />
             </button>
-          )}
+          </div>
         </div>
 
-        {/* Close Button */}
-        <button
-          onClick={closeModal}
-          className="absolute top-2.5 right-4 z-10 text-gray-600 hover:text-gray-800 text-2xl bg-none border-none cursor-pointer"
-          aria-label="Close"
-        >
-          <X className="w-6 h-6" />
-        </button>
-
         {/* Hotel Grid */}
-        <div className="grid gap-6 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
+        <div className="p-8 grid gap-6 grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
           {filteredHotels.map((hotel) => (
             <Link 
               key={hotel.id} 
@@ -104,14 +109,14 @@ export default function HotelSelectorModal({
               </div>
             </Link>
           ))}
-        </div>
 
-        {/* No Results Message */}
-        {filteredHotels.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
-            No hotels found matching "{searchTerm}"
-          </div>
-        )}
+          {/* No Results Message */}
+          {filteredHotels.length === 0 && (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              No hotels found matching "{searchTerm}"
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
