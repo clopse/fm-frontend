@@ -7,8 +7,6 @@ import {
   Filter, 
   Edit, 
   Save, 
-  Upload, 
-  FileText, 
   AlertCircle,
   CheckCircle,
   X
@@ -51,7 +49,6 @@ export default function BulkAssetManagementPage() {
   const [bulkUpdate, setBulkUpdate] = useState<BulkUpdate>({});
   const [excludedAssets, setExcludedAssets] = useState<Set<number>>(new Set());
   
-  const [uploadingManual, setUploadingManual] = useState(false);
   const [savingChanges, setSavingChanges] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -64,9 +61,19 @@ export default function BulkAssetManagementPage() {
 
   const loadAssets = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/assets/?hotel_id=${hotelId}`);
+      // Add cache-busting timestamp to ensure fresh data
+      const url = `${API_BASE}/api/assets/?hotel_id=${hotelId}&t=${Date.now()}`;
+      console.log('Loading assets from:', url);
+      
+      const res = await fetch(url, {
+        cache: 'no-store' // Prevent caching
+      });
+      
       if (!res.ok) throw new Error("Failed to load assets");
       const data = await res.json();
+      
+      console.log(`Loaded ${data.length} assets`);
+      
       setAssets(data);
       setFilteredAssets(data);
     } catch (error) {
@@ -112,72 +119,79 @@ export default function BulkAssetManagementPage() {
       return;
     }
 
+    // Debug: Log what we're sending
+    console.log('Bulk Update Data:', bulkUpdate);
+    console.log('API Base:', API_BASE);
+    console.log('Assets to update:', assetsToUpdate.length);
+
     setSavingChanges(true);
     setMessage(null);
+
+    let successCount = 0;
+    let failCount = 0;
+    const errors: string[] = [];
 
     try {
       // Update each asset
       for (const asset of assetsToUpdate) {
-        await fetch(`${API_BASE}/api/assets/${asset.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...bulkUpdate
-          })
-        });
+        try {
+          const url = `${API_BASE}/api/assets/${asset.id}`;
+          console.log(`Updating ${asset.asset_code} at ${url}`);
+          
+          const res = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bulkUpdate)
+          });
+
+          if (!res.ok) {
+            const errorText = await res.text();
+            failCount++;
+            errors.push(`${asset.asset_code}: ${errorText}`);
+            console.error(`Failed to update ${asset.asset_code}:`, res.status, errorText);
+          } else {
+            successCount++;
+            console.log(`✓ Successfully updated ${asset.asset_code}`);
+          }
+        } catch (error) {
+          failCount++;
+          errors.push(`${asset.asset_code}: ${error}`);
+          console.error(`Error updating ${asset.asset_code}:`, error);
+        }
       }
 
-      setMessage({ 
-        type: 'success', 
-        text: `Successfully updated ${assetsToUpdate.length} assets` 
-      });
+      // Show results
+      if (successCount > 0 && failCount === 0) {
+        setMessage({ 
+          type: 'success', 
+          text: `Successfully updated ${successCount} assets` 
+        });
+      } else if (successCount > 0 && failCount > 0) {
+        setMessage({ 
+          type: 'error', 
+          text: `Updated ${successCount} assets, but ${failCount} failed. Check console for details.` 
+        });
+      } else {
+        setMessage({ 
+          type: 'error', 
+          text: `Failed to update all ${failCount} assets. Check console for details.` 
+        });
+      }
       
-      // Reload assets
+      // Reload assets to show changes
       await loadAssets();
       
-      // Reset form
-      setBulkUpdate({});
-      setExcludedAssets(new Set());
+      // Reset form only if fully successful
+      if (failCount === 0) {
+        setBulkUpdate({});
+        setExcludedAssets(new Set());
+      }
       
     } catch (error) {
+      console.error('Bulk update error:', error);
       setMessage({ type: 'error', text: 'Failed to update assets' });
     } finally {
       setSavingChanges(false);
-    }
-  };
-
-  const handleManualUpload = async (file: File) => {
-    if (!selectedSubcategory) {
-      setMessage({ type: 'error', text: 'Please select a subcategory first' });
-      return;
-    }
-
-    setUploadingManual(true);
-    setMessage(null);
-
-    try {
-      // Upload manual for each asset
-      for (const asset of assetsToUpdate) {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        await fetch(`${API_BASE}/api/assets/${asset.id}/upload/manual`, {
-          method: 'POST',
-          body: formData
-        });
-      }
-
-      setMessage({ 
-        type: 'success', 
-        text: `Manual uploaded to ${assetsToUpdate.length} assets` 
-      });
-      
-      await loadAssets();
-      
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to upload manuals' });
-    } finally {
-      setUploadingManual(false);
     }
   };
 
@@ -198,7 +212,7 @@ export default function BulkAssetManagementPage() {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <h1 className="text-2xl font-bold text-gray-900">Bulk Asset Management</h1>
           <p className="text-gray-600 mt-1">
-            Update multiple assets at once - perfect for adding manuals, updating prices, or fixing specs across all items
+            Update multiple assets at once - perfect for updating prices or fixing specs across all items
           </p>
         </div>
       </div>
@@ -383,42 +397,6 @@ export default function BulkAssetManagementPage() {
                 <Save className="w-5 h-5" />
                 {savingChanges ? 'Saving...' : `Update ${assetsToUpdate.length} Assets`}
               </button>
-            </div>
-
-            {/* Upload Manual */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <FileText className="w-5 h-5 text-gray-600" />
-                <h2 className="text-lg font-semibold text-gray-900">Upload Manual</h2>
-              </div>
-
-              <p className="text-sm text-gray-600 mb-4">
-                Upload a PDF manual that will be attached to all {assetsToUpdate.length} filtered assets
-              </p>
-
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleManualUpload(file);
-                }}
-                className="hidden"
-                id="manual-upload"
-                disabled={uploadingManual || assetsToUpdate.length === 0}
-              />
-              
-              <label
-                htmlFor="manual-upload"
-                className={`w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 ${
-                  uploadingManual || assetsToUpdate.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                <Upload className="w-5 h-5 text-gray-600" />
-                <span className="text-sm text-gray-700">
-                  {uploadingManual ? 'Uploading...' : 'Choose PDF Manual'}
-                </span>
-              </label>
             </div>
           </div>
 
