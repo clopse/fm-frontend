@@ -50,7 +50,7 @@ export default function AssetWizardPage() {
   // Step 1 - Hotel configuration
   const [hotelConfig, setHotelConfig] = useState<HotelConfig>({
     hotelName: "",
-    hotelCode: hotelId ? hotelId.toUpperCase() : "", // Store as uppercase for asset codes
+    hotelCode: hotelId ? hotelId.toUpperCase() : "",
     totalFloors: 4,
     hasBasement: false,
     hasGroundFloor: false,
@@ -94,6 +94,7 @@ export default function AssetWizardPage() {
   ]);
 
   const [itemCosts, setItemCosts] = useState<Record<string, number>>({});
+  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({}); // NEW
 
   // Calculate totals
   const totalRooms = floors.reduce((sum, f) => sum + f.roomCount, 0);
@@ -104,7 +105,8 @@ export default function AssetWizardPage() {
 
   const totalCostPerRoom = selectedItemsData.reduce((sum, item) => {
     const cost = itemCosts[item.key] ?? item.defaultCost;
-    return sum + cost;
+    const quantity = itemQuantities[item.key] ?? 1; // NEW
+    return sum + (cost * quantity);
   }, 0);
 
   // Generate room numbers for all floors
@@ -124,7 +126,7 @@ export default function AssetWizardPage() {
     return rooms;
   };
 
-  // Generate all assets
+  // Generate all assets with quantity support
   const generateAssets = (): AssetCreate[] => {
     const rooms = generateAllRoomNumbers();
     const assets: AssetCreate[] = [];
@@ -135,25 +137,33 @@ export default function AssetWizardPage() {
         if (!item) continue;
 
         const cost = itemCosts[item.key] ?? item.defaultCost;
-        const shortKey = item.subcategory.replace(/\s+/g, "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
-        const assetCode = `${hotelConfig.hotelCode}-RM${room}-${shortKey}`; // hotelCode is uppercase
+        const quantity = itemQuantities[item.key] ?? 1; // NEW
 
-        assets.push({
-          asset_code: assetCode,
-          hotel_id: hotelConfig.hotelCode.toLowerCase(), // API expects lowercase
-          location: `Room ${room} - ${floor.floorName}`,
-          category: item.category,
-          subcategory: item.subcategory,
-          description: `${item.label} in ${floor.roomType} room ${room}`,
-          quantity: 1,
-          status: "Active",
-          condition: "Unknown",
-          capex_or_opex: "CAPEX",
-          installation_date: hotelConfig.openingDate,
-          purchase_cost: cost,
-          expected_lifespan_years: item.estimatedLifeYears,
-          created_by: "asset_wizard",
-        });
+        // Create multiple assets if quantity > 1
+        for (let q = 1; q <= quantity; q++) {
+          const shortKey = item.subcategory.replace(/\s+/g, "").replace(/[^A-Z0-9]/gi, "").toUpperCase();
+          const suffix = quantity > 1 ? `-${q}` : ""; // Add suffix for multiple items
+          const assetCode = `${hotelConfig.hotelCode}-RM${room}-${shortKey}${suffix}`;
+
+          assets.push({
+            asset_code: assetCode,
+            hotel_id: hotelConfig.hotelCode.toLowerCase(),
+            location: `Room ${room} - ${floor.floorName}`,
+            category: item.category,
+            subcategory: item.subcategory,
+            description: quantity > 1 
+              ? `${item.label} #${q} in ${floor.roomType} room ${room}`
+              : `${item.label} in ${floor.roomType} room ${room}`,
+            quantity: 1, // Each asset is quantity 1 (we create multiple assets)
+            status: "Active",
+            condition: "Unknown",
+            capex_or_opex: "CAPEX",
+            installation_date: hotelConfig.openingDate,
+            purchase_cost: cost,
+            expected_lifespan_years: item.estimatedLifeYears,
+            created_by: "asset_wizard",
+          });
+        }
       }
     }
 
@@ -284,8 +294,10 @@ export default function AssetWizardPage() {
             <WizardStep3ItemSelection
               selectedItems={selectedItems}
               itemCosts={itemCosts}
+              itemQuantities={itemQuantities}
               onUpdateSelection={setSelectedItems}
               onUpdateCost={(key, cost) => setItemCosts({ ...itemCosts, [key]: cost })}
+              onUpdateQuantity={(key, qty) => setItemQuantities({ ...itemQuantities, [key]: qty })}
               onNext={() => setStep(4)}
               onBack={() => setStep(2)}
               propertyType={hotelConfig.propertyType}
