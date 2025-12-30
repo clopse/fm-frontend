@@ -10,7 +10,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Uncontrolled inputs so the browser password manager can fill/save reliably
+  // Uncontrolled inputs so password managers can autofill/save reliably
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -34,6 +34,8 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    if (loading) return;
+
     setLoading(true);
     setError('');
     setMessage('');
@@ -44,10 +46,8 @@ export default function LoginPage() {
 
       if (!email || !password) throw new Error('Please fill in all fields');
 
-      // Log in via API
       await userService.login({ email, password });
 
-      // Keep navigation after successful login
       router.push('/hotels');
     } catch (err) {
       let errorMessage = 'Login failed';
@@ -108,7 +108,6 @@ export default function LoginPage() {
         )}
 
         <form
-          // These two help Chrome confidently classify this as a login form
           method="post"
           action="/login"
           autoComplete="on"
@@ -116,9 +115,9 @@ export default function LoginPage() {
           className="space-y-4"
         >
           <div>
-            <label htmlFor="email" className="sr-only">Email</label>
+            <label htmlFor="username" className="sr-only">Email</label>
             <input
-              id="email"
+              id="username"
               name="username"
               type="email"
               placeholder="Email"
@@ -137,9 +136,9 @@ export default function LoginPage() {
           </div>
 
           <div className="relative">
-            <label htmlFor="password" className="sr-only">Password</label>
+            <label htmlFor="current-password" className="sr-only">Password</label>
             <input
-              id="password"
+              id="current-password"
               name="password"
               type={showPassword ? 'text' : 'password'}
               placeholder="Password"
@@ -169,7 +168,7 @@ export default function LoginPage() {
               ) : (
                 <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
               )}
             </button>
