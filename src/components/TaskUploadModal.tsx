@@ -73,7 +73,8 @@ const TaskUploadModal = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [hoveredBadge, setHoveredBadge] = useState<string | null>(null);
-  const [hoveredApproval, setHoveredApproval] = useState<string | null>(null);
+  const [hoveredApproval, setHoveredApproval] = useState<{ id: string; approved: boolean } | null>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
   const [activeTab, setActiveTab] = useState<'current' | 'historic'>('current');
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -562,33 +563,26 @@ const TaskUploadModal = ({
                             </div>
                           </div>
                           
-                          {/* Approval Badge - Tooltip shows BELOW to avoid cutoff */}
+                          {/* Approval Badge - Tooltip at mouse pointer */}
                           {entry.approved !== undefined && (
                             <div 
                               className="ml-2 relative flex items-center"
-                              onMouseEnter={() => setHoveredApproval(`approval-${i}`)}
-                              onMouseLeave={() => setHoveredApproval(null)}
+                              onMouseEnter={(e) => {
+                                setHoveredApproval({ id: `approval-${i}`, approved: entry.approved });
+                                setMousePos({ x: e.clientX, y: e.clientY });
+                              }}
+                              onMouseMove={(e) => {
+                                setMousePos({ x: e.clientX, y: e.clientY });
+                              }}
+                              onMouseLeave={() => {
+                                setHoveredApproval(null);
+                                setMousePos(null);
+                              }}
                             >
                               {entry.approved ? (
-                                <>
-                                  <CheckCircle className="w-4 h-4 text-green-500 cursor-help" />
-                                  {hoveredApproval === `approval-${i}` && (
-                                    <div className="absolute z-50 top-full left-0 mt-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
-                                      Approved by management
-                                      <div className="absolute bottom-full left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-slate-900"></div>
-                                    </div>
-                                  )}
-                                </>
+                                <CheckCircle className="w-4 h-4 text-green-500 cursor-help" />
                               ) : (
-                                <>
-                                  <AlertTriangle className="w-4 h-4 text-amber-500 cursor-help" />
-                                  {hoveredApproval === `approval-${i}` && (
-                                    <div className="absolute z-50 top-full left-0 mt-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
-                                      Pending review by management
-                                      <div className="absolute bottom-full left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-slate-900"></div>
-                                    </div>
-                                  )}
-                                </>
+                                <AlertTriangle className="w-4 h-4 text-amber-500 cursor-help" />
                               )}
                             </div>
                           )}
@@ -600,6 +594,24 @@ const TaskUploadModal = ({
             )}
           </div>
         </div>
+
+        {/* Floating Approval Tooltip at Mouse Position */}
+        {hoveredApproval && mousePos && (
+          <div 
+            className="fixed z-[9999] pointer-events-none"
+            style={{
+              left: `${mousePos.x + 10}px`,
+              top: `${mousePos.y + 10}px`,
+            }}
+          >
+            <div className="px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+              {hoveredApproval.approved ? 
+                'Approved by management' : 
+                'Pending review by management'
+              }
+            </div>
+          </div>
+        )}
 
         {/* File Preview */}
         {selectedFile && (
