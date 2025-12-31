@@ -8,6 +8,7 @@ import TaskUploadModal from "@/components/TaskUploadModal";
 import TaskCard from "@/components/TaskCard";
 import FilterPanel from "@/components/FilterPanel";
 import ScoreCard from "@/components/ScoreCard";
+import { ComplianceDashboardSkeleton, ScoreCardSkeleton } from "@/components/ComplianceSkeletons";
 
 interface Upload {
   url: string;
@@ -63,17 +64,17 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   const [visible, setVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [scoresLoading, setScoresLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filters, setFilters] = useState({
     category: [] as string[],
-    frequency: [] as string[],
     mandatoryOnly: false,
     search: "",
     type: "",
-    itemsNeeded: false, // ✅ NEW: Show only incomplete tasks
+    itemsNeeded: false,
   });
 
   const [graphPoints, setGraphPoints] = useState<
@@ -83,9 +84,15 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([loadTasks(), loadHistory(), loadScores()]).finally(() =>
-      setLoading(false),
-    );
+    
+    // Load tasks first (most important)
+    loadTasks().then(() => {
+      setLoading(false); // Show UI as soon as tasks load
+    });
+    
+    // Load scores and history in parallel (less critical)
+    Promise.all([loadScores(), loadHistory()]);
+    
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hotelId]);
 
@@ -118,6 +125,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
 
   const loadScores = async () => {
     try {
+      setScoresLoading(true);
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`,
       );
@@ -155,6 +163,8 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
       );
     } catch (err) {
       console.error(err);
+    } finally {
+      setScoresLoading(false);
     }
   };
 
@@ -172,7 +182,6 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   );
 
   const categories = Array.from(new Set(tasks.map((t) => t.category)));
-  const frequencies = Array.from(new Set(tasks.map((t) => t.frequency)));
 
   // ✅ IMPROVED: Filter logic with "Items Needed"
   const filteredTasks = useMemo(() => {
@@ -180,20 +189,17 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
       const categoryMatch =
         filters.category.length === 0 ||
         filters.category.includes(task.category);
-      const freqMatch =
-        filters.frequency.length === 0 ||
-        filters.frequency.includes(task.frequency);
       const searchMatch = task.label
         .toLowerCase()
         .includes(filters.search.toLowerCase());
       const mandatoryMatch = !filters.mandatoryOnly || task.mandatory;
       const typeMatch = !filters.type || task.type === filters.type;
       
-      // ✅ NEW: Items Needed filter
+      // ✅ Items Needed filter
       const itemsNeededMatch = !filters.itemsNeeded || 
         (scoreBreakdown[task.task_id] ?? 0) < task.points;
 
-      return categoryMatch && freqMatch && searchMatch && mandatoryMatch && typeMatch && itemsNeededMatch;
+      return categoryMatch && searchMatch && mandatoryMatch && typeMatch && itemsNeededMatch;
     });
   }, [tasks, filters, scoreBreakdown]);
 
@@ -230,14 +236,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   }, [tasks, scoreBreakdown]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-          <p className="text-slate-600 font-medium">Loading compliance data...</p>
-        </div>
-      </div>
-    );
+    return <ComplianceDashboardSkeleton />;
   }
 
   return (
@@ -267,12 +266,16 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
           </div>
 
           {/* Score Card */}
-          <ScoreCard
-            scoreData={scoreData}
-            earnedPoints={earnedPoints}
-            totalPoints={totalPoints}
-            graphPoints={graphPoints}
-          />
+          {scoresLoading ? (
+            <ScoreCardSkeleton />
+          ) : (
+            <ScoreCard
+              scoreData={scoreData}
+              earnedPoints={earnedPoints}
+              totalPoints={totalPoints}
+              graphPoints={graphPoints}
+            />
+          )}
 
           {/* ✅ MOVED: Filters now under score card */}
           <div className="mt-6">
@@ -284,7 +287,6 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
                 <Filter className="w-5 h-5 text-slate-600" />
                 <span className="font-medium text-slate-900">Filters</span>
                 {(filters.category.length > 0 || 
-                  filters.frequency.length > 0 || 
                   filters.mandatoryOnly || 
                   filters.search ||
                   filters.itemsNeeded) && (
@@ -320,7 +322,6 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
                 filters={filters}
                 onChange={setFilters}
                 categories={categories}
-                frequencies={frequencies}
                 onClose={() => setFiltersOpen(false)}
                 itemsNeededCount={itemsNeededStats.count}
               />
