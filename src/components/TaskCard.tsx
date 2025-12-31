@@ -70,7 +70,15 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
       'Every 5 Years': 1
     };
     
-    const expected = frequencyMap[task.frequency] || 1;
+    // Try exact match first, then default to 1
+    let expected = frequencyMap[task.frequency];
+    
+    // If no exact match, check for 5-year variations
+    if (!expected && task.frequency.includes('5') && task.frequency.toLowerCase().includes('year')) {
+      expected = 1;
+    }
+    
+    expected = expected || 1;
     
     // Calculate actual from score
     // score = (actual / expected) × total_points
@@ -88,7 +96,8 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
 
   // ✅ NEW: Get validity period text
   const getValidityPeriod = () => {
-    if (task.frequency === 'Every 5 Years') {
+    // Check for 5-year tasks (handle variations)
+    if (task.frequency.includes('5') && task.frequency.toLowerCase().includes('year')) {
       return '5 years';
     }
     return '12 months';  // All other tasks valid for 1 year
