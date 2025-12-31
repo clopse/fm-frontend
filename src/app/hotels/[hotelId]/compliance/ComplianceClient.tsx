@@ -2,30 +2,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from "recharts";
-import {
-  Search,
-  Filter,
-  TrendingUp,
-  Award,
-  Target,
-  Calendar,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  ChevronDown,
-  X,
-} from "lucide-react";
+import { Search, Filter, CheckCircle, AlertCircle, Clock, ChevronDown } from "lucide-react";
 
 import TaskUploadModal from "@/components/TaskUploadModal";
 import TaskCard from "@/components/TaskCard";
@@ -96,6 +73,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
     mandatoryOnly: false,
     search: "",
     type: "",
+    itemsNeeded: false, // ✅ NEW: Show only incomplete tasks
   });
 
   const [graphPoints, setGraphPoints] = useState<
@@ -196,6 +174,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   const categories = Array.from(new Set(tasks.map((t) => t.category)));
   const frequencies = Array.from(new Set(tasks.map((t) => t.frequency)));
 
+  // ✅ IMPROVED: Filter logic with "Items Needed"
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const categoryMatch =
@@ -208,9 +187,15 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
         .toLowerCase()
         .includes(filters.search.toLowerCase());
       const mandatoryMatch = !filters.mandatoryOnly || task.mandatory;
-      return categoryMatch && freqMatch && searchMatch && mandatoryMatch;
+      const typeMatch = !filters.type || task.type === filters.type;
+      
+      // ✅ NEW: Items Needed filter
+      const itemsNeededMatch = !filters.itemsNeeded || 
+        (scoreBreakdown[task.task_id] ?? 0) < task.points;
+
+      return categoryMatch && freqMatch && searchMatch && mandatoryMatch && typeMatch && itemsNeededMatch;
     });
-  }, [tasks, filters]);
+  }, [tasks, filters, scoreBreakdown]);
 
   const grouped = useMemo(() => {
     return filteredTasks.reduce((acc, task) => {
@@ -229,6 +214,20 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
     (sum, score) => sum + score,
     0,
   );
+
+  // ✅ NEW: Calculate items needed stats
+  const itemsNeededStats = useMemo(() => {
+    const incomplete = tasks.filter(task => 
+      (scoreBreakdown[task.task_id] ?? 0) < task.points
+    );
+    const pointsMissing = incomplete.reduce((sum, task) => 
+      sum + (task.points - (scoreBreakdown[task.task_id] ?? 0)), 0
+    );
+    return {
+      count: incomplete.length,
+      points: pointsMissing
+    };
+  }, [tasks, scoreBreakdown]);
 
   if (loading) {
     return (
@@ -256,59 +255,123 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
           </div>
         )}
 
+        {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                Compliance Dashboard
-              </h1>
-              <p className="text-slate-600">
-                Track and manage your compliance requirements
-              </p>
-            </div>
-            <button
-              onClick={() => setFiltersOpen(!filtersOpen)}
-              className="flex items-center space-x-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 hover:bg-slate-50 transition-colors"
-            >
-              <Filter className="w-4 h-4" />
-              <span>Filters</span>
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${
-                  filtersOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+              Compliance Dashboard
+            </h1>
+            <p className="text-slate-600">
+              Track and manage your compliance requirements
+            </p>
           </div>
 
+          {/* Score Card */}
           <ScoreCard
             scoreData={scoreData}
             earnedPoints={earnedPoints}
             totalPoints={totalPoints}
             graphPoints={graphPoints}
           />
+
+          {/* ✅ MOVED: Filters now under score card */}
+          <div className="mt-6">
+            <button
+              onClick={() => setFiltersOpen(!filtersOpen)}
+              className="flex items-center justify-between w-full bg-white px-6 py-4 rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              <div className="flex items-center space-x-3">
+                <Filter className="w-5 h-5 text-slate-600" />
+                <span className="font-medium text-slate-900">Filters</span>
+                {(filters.category.length > 0 || 
+                  filters.frequency.length > 0 || 
+                  filters.mandatoryOnly || 
+                  filters.search ||
+                  filters.itemsNeeded) && (
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                    Active
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center space-x-4">
+                {/* ✅ NEW: Items Needed Quick Stats */}
+                {itemsNeededStats.count > 0 && (
+                  <div className="flex items-center space-x-2 text-sm">
+                    <AlertCircle className="w-4 h-4 text-orange-500" />
+                    <span className="text-slate-600">
+                      <span className="font-semibold text-orange-600">{itemsNeededStats.count}</span> items needed
+                      <span className="text-slate-400 mx-1">·</span>
+                      <span className="font-semibold text-orange-600">{itemsNeededStats.points}</span> points available
+                    </span>
+                  </div>
+                )}
+                <ChevronDown
+                  className={`w-5 h-5 text-slate-400 transition-transform ${
+                    filtersOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </div>
+            </button>
+          </div>
+
+          {filtersOpen && (
+            <div className="mt-4">
+              <FilterPanel
+                filters={filters}
+                onChange={setFilters}
+                categories={categories}
+                frequencies={frequencies}
+                onClose={() => setFiltersOpen(false)}
+                itemsNeededCount={itemsNeededStats.count}
+              />
+            </div>
+          )}
         </div>
 
-        {filtersOpen && (
-          <FilterPanel
-            filters={filters}
-            onChange={setFilters}
-            categories={categories}
-            frequencies={frequencies}
-            onClose={() => setFiltersOpen(false)}
-          />
-        )}
-
+        {/* Tasks Grid */}
         <div className="space-y-8">
           {Object.keys(grouped).map((category) => (
             <div key={category} className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <h2 className="text-xl font-semibold text-slate-900">
-                  {category}
-                </h2>
-                <div className="bg-slate-200 text-slate-700 px-2 py-1 rounded-full text-sm font-medium">
-                  {grouped[category].length} task
-                  {grouped[category].length !== 1 ? "s" : ""}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <h2 className="text-xl font-semibold text-slate-900">
+                    {category}
+                  </h2>
+                  <div className="bg-slate-200 text-slate-700 px-3 py-1 rounded-full text-sm font-medium">
+                    {grouped[category].length} task
+                    {grouped[category].length !== 1 ? "s" : ""}
+                  </div>
                 </div>
+                
+                {/* ✅ NEW: Category completion stats */}
+                {(() => {
+                  const categoryTasks = grouped[category];
+                  const categoryTotal = categoryTasks.reduce((sum, t) => sum + t.points, 0);
+                  const categoryEarned = categoryTasks.reduce(
+                    (sum, t) => sum + (scoreBreakdown[t.task_id] ?? 0), 0
+                  );
+                  const categoryPercent = categoryTotal > 0 
+                    ? Math.round((categoryEarned / categoryTotal) * 100) 
+                    : 0;
+                  
+                  return (
+                    <div className="flex items-center space-x-2 text-sm">
+                      {categoryPercent === 100 ? (
+                        <>
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <span className="text-green-600 font-medium">Complete</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-4 h-4 text-orange-500" />
+                          <span className="text-slate-600">
+                            {categoryPercent}% complete
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
