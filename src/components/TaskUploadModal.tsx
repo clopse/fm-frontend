@@ -74,7 +74,7 @@ const TaskUploadModal = ({
   const [dragActive, setDragActive] = useState(false);
   const [hoveredBadge, setHoveredBadge] = useState<string | null>(null);
   const [hoveredApproval, setHoveredApproval] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'current' | 'historic'>('current');  // ✅ NEW: Tab state
+  const [activeTab, setActiveTab] = useState<'current' | 'historic'>('current');
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
@@ -562,10 +562,10 @@ const TaskUploadModal = ({
                             </div>
                           </div>
                           
-                          {/* Approval Badge (if present) */}
+                          {/* Approval Badge - Tooltip shows BELOW to avoid cutoff */}
                           {entry.approved !== undefined && (
                             <div 
-                              className="ml-2 relative"
+                              className="ml-2 relative flex items-center"
                               onMouseEnter={() => setHoveredApproval(`approval-${i}`)}
                               onMouseLeave={() => setHoveredApproval(null)}
                             >
@@ -573,9 +573,9 @@ const TaskUploadModal = ({
                                 <>
                                   <CheckCircle className="w-4 h-4 text-green-500 cursor-help" />
                                   {hoveredApproval === `approval-${i}` && (
-                                    <div className="absolute z-50 bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+                                    <div className="absolute z-50 top-full left-0 mt-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
                                       Approved by management
-                                      <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+                                      <div className="absolute bottom-full left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-slate-900"></div>
                                     </div>
                                   )}
                                 </>
@@ -583,9 +583,9 @@ const TaskUploadModal = ({
                                 <>
                                   <AlertTriangle className="w-4 h-4 text-amber-500 cursor-help" />
                                   {hoveredApproval === `approval-${i}` && (
-                                    <div className="absolute z-50 bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+                                    <div className="absolute z-50 top-full left-0 mt-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
                                       Pending review by management
-                                      <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+                                      <div className="absolute bottom-full left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-slate-900"></div>
                                     </div>
                                   )}
                                 </>
