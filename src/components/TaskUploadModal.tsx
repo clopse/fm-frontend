@@ -13,7 +13,9 @@ import {
   Eye,
   Download,
   Shield,
-  Info
+  Info,
+  XCircle,
+  Filter
 } from 'lucide-react';
 
 interface HistoryEntry {
@@ -39,6 +41,7 @@ interface TaskUploadModalProps {
   taskId: string;
   label: string;
   info: string;
+  frequency: string;  // ✅ NEW: To calculate validity
   isMandatory: boolean;
   canConfirm: boolean;
   isConfirmed: boolean;
@@ -54,6 +57,7 @@ const TaskUploadModal = ({
   taskId,
   label,
   info,
+  frequency,
   isMandatory,
   canConfirm,
   isConfirmed,
@@ -69,6 +73,8 @@ const TaskUploadModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [showOnlyValid, setShowOnlyValid] = useState(false);  // ✅ NEW: Filter toggle
+  const [hoveredBadge, setHoveredBadge] = useState<string | null>(null);  // ✅ NEW: Tooltip state
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
@@ -77,16 +83,146 @@ const TaskUploadModal = ({
     return [main?.trim(), law?.trim()];
   }, [info]);
 
+  // ✅ NEW: Calculate validity period based on frequency
+  const getValidityDays = useMemo(() => {
+    if (frequency.includes('5') && frequency.toLowerCase().includes('year')) {
+      return 1825 + 30;  // 5 years + grace
+    }
+    return 365 + 30;  // 1 year + grace for all other tasks
+  }, [frequency]);
+
+  // ✅ NEW: Check if a file is currently valid
+  const getFileValidity = (reportDateStr: string) => {
+    if (!reportDateStr) return { status: 'unknown', daysLeft: 0, text: 'No date' };
+    
+    const reportDate = new Date(reportDateStr.split('T')[0]);
+    const now = new Date();
+    const daysSinceReport = Math.floor((now.getTime() - reportDate.getTime()) / (1000 * 60 * 60 * 24));
+    const daysLeft = getValidityDays - daysSinceReport;
+    
+    if (daysLeft < 0) {
+      return { 
+        status: 'expired', 
+        daysLeft, 
+        text: `Expired ${Math.abs(daysLeft)} days ago`,
+        color: 'red'
+      };
+    }
+    
+    if (daysLeft <= 30) {
+      return { 
+        status: 'expiring', 
+        daysLeft, 
+        text: `Expiring in ${daysLeft} days`,
+        color: 'yellow'
+      };
+    }
+    
+    return { 
+      status: 'valid', 
+      daysLeft, 
+      text: `Valid for ${daysLeft} days`,
+      color: 'green'
+    };
+  };
+
+  // ✅ NEW: Get validity badge component
+  const ValidityBadge = ({ reportDate, showTooltip = false }: { reportDate: string, showTooltip?: boolean }) => {
+    const validity = getFileValidity(reportDate);
+    const badgeId = `badge-${reportDate}`;
+    
+    if (validity.status === 'unknown') return null;
+    
+    const Badge = () => {
+      if (validity.status === 'expired') {
+        return (
+          <div 
+            className="relative"
+            onMouseEnter={() => showTooltip && setHoveredBadge(badgeId)}
+            onMouseLeave={() => showTooltip && setHoveredBadge(null)}
+          >
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+              <XCircle className="w-3 h-3 mr-1" />
+              Expired
+            </span>
+            {showTooltip && hoveredBadge === badgeId && (
+              <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+                {validity.text}
+                <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+              </div>
+            )}
+          </div>
+        );
+      }
+      
+      if (validity.status === 'expiring') {
+        return (
+          <div 
+            className="relative"
+            onMouseEnter={() => showTooltip && setHoveredBadge(badgeId)}
+            onMouseLeave={() => showTooltip && setHoveredBadge(null)}
+          >
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 cursor-help">
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              Expiring Soon
+            </span>
+            {showTooltip && hoveredBadge === badgeId && (
+              <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+                {validity.text} - Please upload a new report soon
+                <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+              </div>
+            )}
+          </div>
+        );
+      }
+      
+      return (
+        <div 
+          className="relative"
+          onMouseEnter={() => showTooltip && setHoveredBadge(badgeId)}
+          onMouseLeave={() => showTooltip && setHoveredBadge(null)}
+        >
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Valid
+          </span>
+          {showTooltip && hoveredBadge === badgeId && (
+            <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+              {validity.text}
+              <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+            </div>
+          )}
+        </div>
+      );
+    };
+    
+    return <Badge />;
+  };
+
   const normalizedHistory = useMemo(() => {
-    return history.map(entry => ({
-      ...entry,
-      reportDate: entry.report_date || entry.reportDate || '',
-      uploadedAt: entry.uploaded_at || entry.uploadedAt || '',
-      uploadedBy: entry.uploaded_by || entry.uploadedBy || '',
-      fileUrl: entry.fileUrl || '',
-      fileName: entry.filename || entry.fileName || '',
-    }));
-  }, [history]);
+    return history.map(entry => {
+      const reportDateStr = entry.report_date || entry.reportDate || '';
+      return {
+        ...entry,
+        reportDate: reportDateStr,
+        uploadedAt: entry.uploaded_at || entry.uploadedAt || '',
+        uploadedBy: entry.uploaded_by || entry.uploadedBy || '',
+        fileUrl: entry.fileUrl || '',
+        fileName: entry.filename || entry.fileName || '',
+        validity: getFileValidity(reportDateStr)  // ✅ Add validity info
+      };
+    });
+  }, [history, getValidityDays]);
+
+  // ✅ NEW: Filter logic
+  const displayedHistory = useMemo(() => {
+    if (!showOnlyValid) return normalizedHistory;
+    return normalizedHistory.filter(entry => entry.validity.status === 'valid');
+  }, [normalizedHistory, showOnlyValid]);
+
+  // ✅ NEW: Count valid vs total
+  const validCount = normalizedHistory.filter(e => e.validity.status === 'valid').length;
+  const totalCount = normalizedHistory.length;
 
   const latestUpload = useMemo(() => {
     return [...normalizedHistory]
@@ -100,13 +236,14 @@ const TaskUploadModal = ({
     }
   }, [visible, latestUpload]);
 
-  const handleClose = () => {
-    if (file && !submitting) {
-      const confirmLeave = confirm('⚠️ You have uploaded a file but not submitted it. Are you sure you want to close?');
-      if (!confirmLeave) return;
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(null), 3000);
+      return () => clearTimeout(timer);
     }
-    onClose();
-  };
+  }, [successMessage]);
+
+  if (!visible) return null;
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -124,227 +261,233 @@ const TaskUploadModal = ({
     setDragActive(false);
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileSelection(e.dataTransfer.files[0]);
+      setFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0] || null;
-    if (selected) {
-      handleFileSelection(selected);
-    }
-  };
-
-  const handleFileSelection = (selected: File) => {
-    setFile(selected);
-    const tempUrl = URL.createObjectURL(selected);
-    setSelectedFile(tempUrl);
-
-    try {
-      const modifiedDate = new Date(selected.lastModified);
-      const now = new Date();
-      const safeDate = modifiedDate > now ? now : modifiedDate;
-      setReportDate(safeDate.toISOString().split('T')[0]);
-    } catch {
-      setReportDate(today);
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
     }
   };
 
   const handleSubmit = async () => {
-    if (!file || !reportDate) {
-      alert('Please select a file and report date.');
-      return;
-    }
+    if (!file || !reportDate) return;
 
+    setSubmitting(true);
     const formData = new FormData();
-    formData.append('hotel_id', hotelId);
-    formData.append('task_id', taskId);
     formData.append('file', file);
     formData.append('report_date', reportDate);
+    formData.append('hotel_id', hotelId);
+    formData.append('task_id', taskId);
 
     try {
-      setSubmitting(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`, {
-        method: 'POST',
-        body: formData,
-      });
-      if (!res.ok) throw new Error('Upload failed');
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/compliance/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
 
-      onSuccess();
-      setFile(null);
-      setSelectedFile(null);
-      setSuccessMessage('Upload successful!');
-      setTimeout(() => setSuccessMessage(null), 3000);
+      if (res.ok) {
+        setSuccessMessage('✅ File uploaded successfully!');
+        setFile(null);
+        setReportDate('');
+        setTimeout(() => {
+          onSuccess();
+          onClose();
+        }, 1500);
+      } else {
+        alert('Upload failed. Please try again.');
+      }
     } catch (err) {
-      console.error(err);
-      alert('Error uploading file.');
+      alert('Network error during upload.');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleConfirm = async () => {
+    setSubmitting(true);
     try {
-      setSubmitting(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ hotel_id: hotelId, task_id: taskId, user_email: 'admin@jmk.ie' }),
-      });
-      if (!res.ok) throw new Error('Confirmation failed');
-      setSuccessMessage('Task confirmed!');
-      setTimeout(() => setSuccessMessage(null), 3000);
-      onSuccess();
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hotel_id: hotelId,
+            task_id: taskId,
+          }),
+        }
+      );
+
+      if (res.ok) {
+        setSuccessMessage('✅ Task confirmed!');
+        setTimeout(() => {
+          onSuccess();
+          onClose();
+        }, 1500);
+      } else {
+        alert('Confirmation failed.');
+      }
     } catch (err) {
-      console.error(err);
-      alert('Error confirming task.');
+      alert('Network error.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (!visible) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-hidden">
-        
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="relative bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-2">
-                {isMandatory && <Shield className="w-5 h-5" />}
-                <h2 className="text-xl font-bold">{label}</h2>
-              </div>
-              
+        <div className="flex items-center justify-between p-6 border-b border-slate-200">
+          <div className="flex items-center space-x-3">
+            {isMandatory && <Shield className="w-5 h-5 text-blue-600" />}
+            <h2 className="text-2xl font-bold text-slate-900">{label}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-slate-500" />
+          </button>
+        </div>
+
+        {/* Success Message */}
+        {successMessage && (
+          <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-10 animate-slide-down">
+            {successMessage}
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-200">
+            {/* Left Side - Upload/Confirm */}
+            <div className="p-6 space-y-6">
+              {/* Info Section */}
               {mainInfo && (
-                <div className="bg-white bg-opacity-20 rounded-lg p-3 mt-3">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-start space-x-2">
-                    <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm">
-                      <p>{mainInfo}</p>
+                    <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm text-slate-700">{mainInfo}</p>
                       {lawInfo && (
-                        <p className="mt-1 text-blue-100 italic">⚖️ {lawInfo}</p>
+                        <p className="text-xs text-slate-600 mt-2 italic">
+                          ⚖️ {lawInfo}
+                        </p>
                       )}
                     </div>
                   </div>
                 </div>
               )}
-            </div>
-            
-            <button 
-              onClick={handleClose}
-              className="ml-4 p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
 
-        {/* Success Message */}
-        {successMessage && (
-          <div className="bg-green-50 border-l-4 border-green-400 p-4 m-4 rounded">
-            <div className="flex items-center">
-              <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
-              <span className="text-green-700 font-medium">{successMessage}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Main Content */}
-        <div className="flex h-[calc(95vh-200px)]">
-          
-          {/* Left Panel - Upload & History */}
-          <div className="w-1/3 border-r border-slate-200 flex flex-col">
-            
-            {/* Action Buttons */}
-            <div className="p-6 border-b border-slate-200">
-              <div className="space-y-3">
-                
-                {/* Confirm Button */}
-                {canConfirm && (
-                  <button
-                    onClick={handleConfirm}
-                    disabled={submitting}
-                    className="w-full flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-3 rounded-lg font-medium transition-colors"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    <span>{submitting ? 'Confirming...' : 'Confirm Task'}</span>
-                  </button>
-                )}
-
-                {/* Upload Area */}
-                <div
-                  className={`
-                    border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
-                    ${dragActive ? 'border-blue-400 bg-blue-50' : 'border-slate-300 hover:border-slate-400'}
-                  `}
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
+              {/* Confirmation Button */}
+              {canConfirm && (
+                <button
+                  onClick={handleConfirm}
+                  disabled={submitting || isConfirmed}
+                  className="w-full flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white px-4 py-3 rounded-lg font-medium transition-colors"
                 >
-                  <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-slate-700 mb-1">
-                    Click to upload or drag and drop
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    PDF, JPG, PNG files {!isMandatory && '(Optional)'}
-                  </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </div>
+                  <CheckCircle className="w-4 h-4" />
+                  <span>{submitting ? 'Confirming...' : isConfirmed ? 'Already Confirmed' : 'Confirm Task'}</span>
+                </button>
+              )}
 
-                {/* Report Date */}
-                {file && (
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-700">
-                      Report Date
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4 text-slate-400" />
-                      <input
-                        type="date"
-                        value={reportDate}
-                        onChange={(e) => setReportDate(e.target.value)}
-                        max={today}
-                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Submit Button */}
-                {file && (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={submitting || !reportDate}
-                    className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-3 rounded-lg font-medium transition-colors"
-                  >
-                    <Upload className="w-4 h-4" />
-                    <span>{submitting ? 'Submitting...' : 'Submit File'}</span>
-                  </button>
-                )}
+              {/* Upload Area */}
+              <div
+                className={`
+                  border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
+                  ${dragActive ? 'border-blue-400 bg-blue-50' : 'border-slate-300 hover:border-slate-400'}
+                `}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                <p className="text-sm font-medium text-slate-700 mb-1">
+                  Click to upload or drag and drop
+                </p>
+                <p className="text-xs text-slate-500">
+                  PDF, JPG, PNG files {!isMandatory && '(Optional)'}
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
               </div>
+
+              {/* Report Date */}
+              {file && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-slate-700">
+                    Report Date
+                  </label>
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="w-4 h-4 text-slate-400" />
+                    <input
+                      type="date"
+                      value={reportDate}
+                      onChange={(e) => setReportDate(e.target.value)}
+                      max={today}
+                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Valid for: {frequency.includes('5') && frequency.toLowerCase().includes('year') ? '5 years' : '12 months'}
+                  </p>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              {file && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting || !reportDate}
+                  className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-3 rounded-lg font-medium transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>{submitting ? 'Submitting...' : 'Submit File'}</span>
+                </button>
+              )}
             </div>
 
-            {/* History */}
+            {/* Right Side - History */}
             {normalizedHistory.length > 0 && (
-              <div className="flex-1 p-6">
-                <h4 className="font-semibold text-slate-900 mb-4 flex items-center space-x-2">
-                  <Clock className="w-4 h-4" />
-                  <span>Upload History</span>
-                </h4>
+              <div className="p-6 flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold text-slate-900 flex items-center space-x-2">
+                    <Clock className="w-4 h-4" />
+                    <span>Upload History</span>
+                    <span className="text-sm font-normal text-slate-500">
+                      ({validCount}/{totalCount} valid)
+                    </span>
+                  </h4>
+                  
+                  {/* ✅ NEW: Filter Toggle */}
+                  <button
+                    onClick={() => setShowOnlyValid(!showOnlyValid)}
+                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      showOnlyValid 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                    <span>{showOnlyValid ? 'Show All' : 'Valid Only'}</span>
+                  </button>
+                </div>
                 
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {normalizedHistory
+                <div className="space-y-2 flex-1 overflow-y-auto">
+                  {displayedHistory
                     .filter(entry => entry.type === 'upload')
                     .map((entry, i) => (
                       <div
@@ -358,7 +501,7 @@ const TaskUploadModal = ({
                           }
                         `}
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-slate-900 truncate">
                               {entry.fileName || 'Untitled'}
@@ -375,14 +518,20 @@ const TaskUploadModal = ({
                                 </span>
                               )}
                             </div>
+                            
+                            {/* ✅ NEW: Validity Badge with Tooltip */}
+                            <div className="mt-2">
+                              <ValidityBadge reportDate={entry.reportDate} showTooltip={true} />
+                            </div>
                           </div>
                           
+                          {/* Approval Badge (if present) */}
                           {entry.approved !== undefined && (
                             <div className="ml-2">
                               {entry.approved ? (
                                 <CheckCircle className="w-4 h-4 text-green-500" />
                               ) : (
-                                <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                                <AlertTriangle className="w-4 h-4 text-amber-500" />
                               )}
                             </div>
                           )}
@@ -393,35 +542,43 @@ const TaskUploadModal = ({
               </div>
             )}
           </div>
+        </div>
 
-          {/* Right Panel - Preview */}
-          <div className="flex-1 flex flex-col">
-            <div className="p-4 border-b border-slate-200 bg-slate-50">
-              <h3 className="font-medium text-slate-900 flex items-center space-x-2">
+        {/* File Preview */}
+        {selectedFile && (
+          <div className="border-t border-slate-200 p-4 bg-slate-50">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="font-medium text-slate-900 flex items-center space-x-2">
                 <Eye className="w-4 h-4" />
-                <span>File Preview</span>
-              </h3>
+                <span>Selected File Preview</span>
+              </h4>
+              <a
+                href={selectedFile}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download</span>
+              </a>
             </div>
-            
-            <div className="flex-1 relative">
-              {!selectedFile ? (
-                <div className="h-full flex items-center justify-center text-slate-500">
-                  <div className="text-center">
-                    <File className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                    <p className="text-lg font-medium mb-2">No file selected</p>
-                    <p className="text-sm">Upload a file or select from history to preview</p>
-                  </div>
-                </div>
-              ) : (
+            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+              {selectedFile.toLowerCase().endsWith('.pdf') ? (
                 <iframe
-                  src={selectedFile + '#page=1'}
-                  className="w-full h-full border-0"
-                  title="File Preview"
+                  src={selectedFile}
+                  className="w-full h-96"
+                  title="PDF Preview"
+                />
+              ) : (
+                <img
+                  src={selectedFile}
+                  alt="File preview"
+                  className="w-full h-96 object-contain"
                 />
               )}
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
