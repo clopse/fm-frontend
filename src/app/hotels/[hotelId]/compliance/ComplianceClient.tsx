@@ -69,8 +69,14 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    category: [] as string[],
+  const [filters, setFilters] = useState<{
+    category: string[];
+    mandatoryOnly: boolean;
+    search: string;
+    type: string;
+    itemsNeeded: boolean;
+  }>({
+    category: [],
     mandatoryOnly: false,
     search: "",
     type: "",
@@ -82,16 +88,96 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   >([]);
   const [scoreData, setScoreData] = useState<any>(null);
 
+  // ✅ NEW: Cache key and duration
+  const CACHE_KEY = `compliance_cache_${hotelId}`;
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  // ✅ NEW: Check if cached data is still fresh
+  const isCacheFresh = () => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (!cached) return false;
+      
+      const { timestamp } = JSON.parse(cached);
+      const age = Date.now() - timestamp;
+      return age < CACHE_DURATION;
+    } catch {
+      return false;
+    }
+  };
+
+  // ✅ NEW: Load from cache
+  const loadFromCache = () => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (!cached) return false;
+      
+      const { tasks, history, scores, timestamp } = JSON.parse(cached);
+      
+      setTasks(tasks || []);
+      setHistory(history || {});
+      setScoreBreakdown(scores?.task_breakdown || {});
+      setScoreData(scores);
+      
+      // Process graph points
+      if (scores) {
+        const monthlyData = Object.entries(scores.monthly_history || {}).map(
+          ([month, m]: [string, any]) => ({
+            month,
+            score: m.score || 0,
+            max: m.max || 0,
+            percent: m.max > 0 ? Math.round((m.score / m.max) * 100) : 0,
+          })
+        );
+        setGraphPoints(monthlyData.sort((a, b) => a.month.localeCompare(b.month)));
+      }
+      
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // ✅ NEW: Save to cache
+  const saveToCache = (tasksData: any, historyData: any, scoresData: any) => {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({
+        tasks: tasksData,
+        history: historyData,
+        scores: scoresData,
+        timestamp: Date.now()
+      }));
+    } catch (err) {
+      console.warn('Failed to cache data:', err);
+    }
+  };
+
   useEffect(() => {
+    // ✅ Try to load from cache first
+    if (isCacheFresh() && loadFromCache()) {
+      setLoading(false);
+      setScoresLoading(false);
+      return; // Use cached data, skip fetch
+    }
+    
+    // Cache is stale or missing - fetch fresh data
     setLoading(true);
     
-    // Load tasks first (most important)
-    loadTasks().then(() => {
+    // Load all data and save to cache
+    const fetchAndCache = async () => {
+      const tasksData = await loadTasks();
       setLoading(false); // Show UI as soon as tasks load
-    });
+      
+      const [scoresData, historyData] = await Promise.all([
+        loadScores(), 
+        loadHistory()
+      ]);
+      
+      // ✅ Save everything to cache
+      saveToCache(tasksData, historyData, scoresData);
+    };
     
-    // Load scores and history in parallel (less critical)
-    Promise.all([loadScores(), loadHistory()]);
+    fetchAndCache();
     
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hotelId]);
@@ -104,9 +190,11 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
       const data = await res.json();
       if (!Array.isArray(data.tasks)) throw new Error("Invalid task list format");
       setTasks(data.tasks);
+      return data.tasks; // ✅ Return for caching
     } catch (err) {
       console.error(err);
       setError("Unable to load compliance tasks.");
+      return [];
     }
   };
 
@@ -117,9 +205,11 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
       );
       const data = await res.json();
       setHistory(data.history || {});
+      return data.history || {}; // ✅ Return for caching
     } catch (err) {
       console.error(err);
       setError("Unable to load compliance history.");
+      return {};
     }
   };
 
@@ -161,8 +251,11 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
       setGraphPoints(
         monthlyData.sort((a, b) => a.month.localeCompare(b.month)),
       );
+      
+      return data; // ✅ Return for caching
     } catch (err) {
       console.error(err);
+      return null;
     } finally {
       setScoresLoading(false);
     }
@@ -170,9 +263,24 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
 
   const handleUploadSuccess = async () => {
     setSuccessMessage("✅ Upload successful!");
-    await loadTasks();
-    await loadHistory();
-    await loadScores();
+    
+    // ✅ Clear cache to force fresh data
+    try {
+      localStorage.removeItem(CACHE_KEY);
+    } catch (err) {
+      console.warn('Failed to clear cache:', err);
+    }
+    
+    // Reload all data
+    const tasksData = await loadTasks();
+    const [scoresData, historyData] = await Promise.all([
+      loadScores(),
+      loadHistory()
+    ]);
+    
+    // ✅ Save fresh data to cache
+    saveToCache(tasksData, historyData, scoresData);
+    
     setTimeout(() => setSuccessMessage(null), 3000);
   };
 
@@ -413,6 +521,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
             taskId={selectedTask}
             label={selectedTaskObj.label}
             info={selectedTaskObj.info_popup}
+            frequency={selectedTaskObj.frequency}
             isMandatory={selectedTaskObj.mandatory}
             canConfirm={selectedTaskObj.can_confirm}
             isConfirmed={selectedTaskObj.is_confirmed_this_month}
