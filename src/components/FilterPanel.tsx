@@ -1,30 +1,27 @@
 'use client';
 
-import { Search, X, Shield, Clock, AlertCircle } from 'lucide-react';
+import { Search, X, Shield, AlertCircle } from 'lucide-react';
 
 interface FilterState {
   category: string[];
-  frequency: string[];
   mandatoryOnly: boolean;
   search: string;
   type: string;
-  itemsNeeded: boolean; // ✅ NEW
+  itemsNeeded: boolean;
 }
 
 interface FilterPanelProps {
   filters: FilterState;
   onChange: (filters: FilterState) => void;
   categories: string[];
-  frequencies: string[];
   onClose: () => void;
-  itemsNeededCount: number; // ✅ NEW
+  itemsNeededCount: number;
 }
 
 const FilterPanel = ({ 
   filters, 
   onChange, 
   categories, 
-  frequencies, 
   onClose,
   itemsNeededCount 
 }: FilterPanelProps) => {
@@ -32,7 +29,7 @@ const FilterPanel = ({
     onChange({ ...filters, [key]: value });
   };
 
-  const handleArrayFilterChange = (key: 'category' | 'frequency', value: string) => {
+  const handleArrayFilterChange = (key: 'category', value: string) => {
     let newArray;
     if (filters[key].includes(value)) {
       newArray = filters[key].filter(item => item !== value);
@@ -45,7 +42,6 @@ const FilterPanel = ({
   const clearFilters = () => {
     onChange({
       category: [],
-      frequency: [],
       mandatoryOnly: false,
       search: '',
       type: '',
@@ -55,7 +51,6 @@ const FilterPanel = ({
 
   const hasActiveFilters = filters.search || 
     filters.category.length > 0 || 
-    filters.frequency.length > 0 || 
     filters.mandatoryOnly ||
     filters.type ||
     filters.itemsNeeded;
@@ -121,29 +116,6 @@ const FilterPanel = ({
                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
                   <span className="text-sm text-slate-700">{category}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Frequencies */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">
-              Frequency
-            </label>
-            <div className="space-y-2">
-              {frequencies.map((frequency) => (
-                <label key={frequency} className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.frequency.includes(frequency)}
-                    onChange={() => handleArrayFilterChange('frequency', frequency)}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-slate-700 flex items-center space-x-1">
-                    <Clock className="w-3 h-3" />
-                    <span>{frequency}</span>
-                  </span>
                 </label>
               ))}
             </div>
