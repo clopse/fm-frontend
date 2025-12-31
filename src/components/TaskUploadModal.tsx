@@ -568,7 +568,7 @@ const TaskUploadModal = ({
                             <div 
                               className="ml-2 relative flex items-center"
                               onMouseEnter={(e) => {
-                                setHoveredApproval({ id: `approval-${i}`, approved: entry.approved });
+                                setHoveredApproval({ id: `approval-${i}`, approved: !!entry.approved });
                                 setMousePos({ x: e.clientX, y: e.clientY });
                               }}
                               onMouseMove={(e) => {
