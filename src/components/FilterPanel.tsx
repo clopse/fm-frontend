@@ -188,11 +188,6 @@ const FilterPanel = ({
                   {cat}
                 </span>
               ))}
-              {filters.frequency.map(freq => (
-                <span key={freq} className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                  {freq}
-                </span>
-              ))}
               {filters.mandatoryOnly && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                   Mandatory Only
