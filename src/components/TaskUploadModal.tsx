@@ -273,17 +273,26 @@ const TaskUploadModal = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+      console.log('📁 File selected:', selectedFile.name);
       setFile(selectedFile);
       
       // Auto-fill date from file's last modified date
       const fileDate = new Date(selectedFile.lastModified);
       const formattedDate = fileDate.toISOString().split('T')[0];
+      console.log('📅 Auto-filled date:', formattedDate);
       setReportDate(formattedDate);
     }
   };
 
   const handleSubmit = async () => {
-    if (!file || !reportDate) return;
+    console.log('🚀 Upload started');
+    console.log('📁 File:', file?.name);
+    console.log('📅 Report Date:', reportDate);
+    
+    if (!file || !reportDate) {
+      console.log('❌ Missing file or date');
+      return;
+    }
 
     setSubmitting(true);
     const formData = new FormData();
@@ -291,17 +300,22 @@ const TaskUploadModal = ({
     formData.append('report_date', reportDate);
     formData.append('hotel_id', hotelId);
     formData.append('task_id', taskId);
+    
+    console.log('📤 Sending to:', `${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`);
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/compliance/upload`,
+        `${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`,
         {
           method: 'POST',
           body: formData,
         }
       );
 
+      console.log('📬 Response status:', res.status);
+
       if (res.ok) {
+        console.log('✅ Upload successful!');
         setSuccessMessage('✅ File uploaded successfully!');
         setFile(null);
         setReportDate('');
@@ -310,9 +324,12 @@ const TaskUploadModal = ({
           onClose();
         }, 1500);
       } else {
+        const errorText = await res.text();
+        console.error('❌ Upload failed:', res.status, errorText);
         alert('Upload failed. Please try again.');
       }
     } catch (err) {
+      console.error('💥 Network error:', err);
       alert('Network error during upload.');
     } finally {
       setSubmitting(false);
