@@ -71,7 +71,13 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
     };
     
     const expected = frequencyMap[task.frequency] || 1;
-    const actual = task.uploads?.length || 0;
+    
+    // Calculate actual from score
+    // score = (actual / expected) × total_points
+    // actual = (score × expected) / total_points
+    const actual = task.points > 0 
+      ? Math.round((score * expected) / task.points)
+      : 0;
     
     return { expected, actual };
   };
@@ -82,15 +88,10 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
 
   // ✅ NEW: Get validity period text
   const getValidityPeriod = () => {
-    const periodMap: Record<string, string> = {
-      'Monthly': '30 days',
-      'Quarterly': '90 days',
-      'Twice Annually': '6 months',
-      'Annually': '12 months',
-      'Biennially': '24 months',
-      'Every 5 Years': '5 years'
-    };
-    return periodMap[task.frequency] || task.frequency;
+    if (task.frequency === 'Every 5 Years') {
+      return '5 years';
+    }
+    return '12 months';  // All other tasks valid for 1 year
   };
 
   return (
@@ -208,15 +209,6 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
           <div className="flex items-center space-x-2 text-sm text-slate-500">
             <Calendar className="w-4 h-4" />
             <span>Last confirmed: {new Date(task.last_confirmed_date).toLocaleDateString()}</span>
-          </div>
-        )}
-
-        {task.type === 'upload' && task.uploads && task.uploads.length > 0 && (
-          <div className="flex items-center space-x-2 text-sm text-slate-500">
-            <Calendar className="w-4 h-4" />
-            <span>
-              Latest: {new Date(task.uploads[0].report_date).toLocaleDateString()}
-            </span>
           </div>
         )}
 
