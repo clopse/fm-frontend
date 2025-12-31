@@ -14,8 +14,7 @@ import {
   Download,
   Shield,
   Info,
-  XCircle,
-  Filter
+  XCircle
 } from 'lucide-react';
 
 interface HistoryEntry {
@@ -73,8 +72,9 @@ const TaskUploadModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [showOnlyValid, setShowOnlyValid] = useState(false);  // ✅ NEW: Filter toggle
-  const [hoveredBadge, setHoveredBadge] = useState<string | null>(null);  // ✅ NEW: Tooltip state
+  const [hoveredBadge, setHoveredBadge] = useState<string | null>(null);
+  const [hoveredApproval, setHoveredApproval] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'current' | 'historic'>('current');  // ✅ NEW: Tab state
 
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
@@ -214,14 +214,19 @@ const TaskUploadModal = ({
     });
   }, [history, getValidityDays]);
 
-  // ✅ NEW: Filter logic
-  const displayedHistory = useMemo(() => {
-    if (!showOnlyValid) return normalizedHistory;
+  // ✅ NEW: Tab-based filtering
+  const currentFiles = useMemo(() => {
     return normalizedHistory.filter(entry => entry.validity.status === 'valid');
-  }, [normalizedHistory, showOnlyValid]);
+  }, [normalizedHistory]);
+
+  const historicFiles = useMemo(() => {
+    return normalizedHistory; // All files including expired
+  }, [normalizedHistory]);
+
+  const displayedHistory = activeTab === 'current' ? currentFiles : historicFiles;
 
   // ✅ NEW: Count valid vs total
-  const validCount = normalizedHistory.filter(e => e.validity.status === 'valid').length;
+  const validCount = currentFiles.length;
   const totalCount = normalizedHistory.length;
 
   const latestUpload = useMemo(() => {
@@ -267,7 +272,13 @@ const TaskUploadModal = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      
+      // Auto-fill date from file's last modified date
+      const fileDate = new Date(selectedFile.lastModified);
+      const formattedDate = fileDate.toISOString().split('T')[0];
+      setReportDate(formattedDate);
     }
   };
 
@@ -460,30 +471,39 @@ const TaskUploadModal = ({
               )}
             </div>
 
-            {/* Right Side - History */}
+            {/* Right Side - History with Tabs */}
             {normalizedHistory.length > 0 && (
               <div className="p-6 flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-semibold text-slate-900 flex items-center space-x-2">
+                {/* Tab Header */}
+                <div className="mb-4">
+                  <h4 className="font-semibold text-slate-900 flex items-center space-x-2 mb-3">
                     <Clock className="w-4 h-4" />
-                    <span>Upload History</span>
-                    <span className="text-sm font-normal text-slate-500">
-                      ({validCount}/{totalCount} valid)
-                    </span>
+                    <span>Files</span>
                   </h4>
                   
-                  {/* ✅ NEW: Filter Toggle */}
-                  <button
-                    onClick={() => setShowOnlyValid(!showOnlyValid)}
-                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      showOnlyValid 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    }`}
-                  >
-                    <Filter className="w-3.5 h-3.5" />
-                    <span>{showOnlyValid ? 'Show All' : 'Valid Only'}</span>
-                  </button>
+                  {/* ✅ NEW: Tabs */}
+                  <div className="flex space-x-2 border-b border-slate-200">
+                    <button
+                      onClick={() => setActiveTab('current')}
+                      className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                        activeTab === 'current'
+                          ? 'border-blue-600 text-blue-600'
+                          : 'border-transparent text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      Current ({validCount})
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('historic')}
+                      className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+                        activeTab === 'historic'
+                          ? 'border-blue-600 text-blue-600'
+                          : 'border-transparent text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      All Files ({totalCount})
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="space-y-2 flex-1 overflow-y-auto">
@@ -527,11 +547,31 @@ const TaskUploadModal = ({
                           
                           {/* Approval Badge (if present) */}
                           {entry.approved !== undefined && (
-                            <div className="ml-2">
+                            <div 
+                              className="ml-2 relative"
+                              onMouseEnter={() => setHoveredApproval(`approval-${i}`)}
+                              onMouseLeave={() => setHoveredApproval(null)}
+                            >
                               {entry.approved ? (
-                                <CheckCircle className="w-4 h-4 text-green-500" />
+                                <>
+                                  <CheckCircle className="w-4 h-4 text-green-500 cursor-help" />
+                                  {hoveredApproval === `approval-${i}` && (
+                                    <div className="absolute z-50 bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+                                      Approved by management
+                                      <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+                                    </div>
+                                  )}
+                                </>
                               ) : (
-                                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                <>
+                                  <AlertTriangle className="w-4 h-4 text-amber-500 cursor-help" />
+                                  {hoveredApproval === `approval-${i}` && (
+                                    <div className="absolute z-50 bottom-full right-0 mb-2 px-3 py-2 bg-slate-900 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+                                      Pending review by management
+                                      <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           )}
@@ -566,14 +606,14 @@ const TaskUploadModal = ({
               {selectedFile.toLowerCase().endsWith('.pdf') ? (
                 <iframe
                   src={selectedFile}
-                  className="w-full h-96"
+                  className="w-full h-[600px]"
                   title="PDF Preview"
                 />
               ) : (
                 <img
                   src={selectedFile}
                   alt="File preview"
-                  className="w-full h-96 object-contain"
+                  className="w-full h-[600px] object-contain"
                 />
               )}
             </div>
