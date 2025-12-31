@@ -68,6 +68,26 @@ export default function HotelDashboard() {
   const [incompleteTasks, setIncompleteTasks] = useState<TaskItem[]>([]);
   const [refreshToggle, setRefreshToggle] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [weatherData, setWeatherData] = useState<{
+    current: {
+      temp: number;
+      condition: string;
+      icon: string;
+    };
+    forecast: Array<{
+      day: string;
+      high: number;
+      low: number;
+      condition: string;
+      icon: string;
+      precipChance: number;
+    }>;
+    warnings: Array<{
+      title: string;
+      severity: 'yellow' | 'amber' | 'red';
+      description: string;
+    }>;
+  } | null>(null);
 
   const [allHistoryEntries, setAllHistoryEntries] = useState<HistoryEntry[]>([]);
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
@@ -99,6 +119,9 @@ export default function HotelDashboard() {
       setPoints(data.points || '0/0');
       setIncompleteTasks(data.incompleteTasks || []);
       setAllHistoryEntries(data.history || []);
+      if (data.weather) {
+        setWeatherData(data.weather);
+      }
       
       return true;
     } catch {
@@ -139,12 +162,16 @@ export default function HotelDashboard() {
         fetchAllHistory()
       ]);
 
+      // Fetch weather separately (non-blocking)
+      fetchWeather(); // Fire and forget - doesn't block dashboard
+
       // Save to cache
       saveToCache({
         score: scoreData.percent,
         points: `${scoreData.score}/${scoreData.max_score}`,
         incompleteTasks: tasksData,
-        history: historyData
+        history: historyData,
+        weather: weatherData // Will be null first time, updated on next cache
       });
     } catch (err) {
       console.error('Error loading dashboard:', err);
@@ -199,6 +226,49 @@ export default function HotelDashboard() {
     } catch (e) {
       console.error('Error loading history:', e);
       return [];
+    }
+  };
+
+  const fetchWeather = async () => {
+    try {
+      const res = await fetch('/api/weather/warnings');
+      const data = await res.json();
+      
+      // Find forecast for hotel's location
+      const forecast = data.forecasts?.find((f: any) => 
+        f.hotel_ids.includes(hotelId)
+      );
+      
+      // Find warnings for hotel's location
+      const hotelWarnings = data.warnings?.filter((w: any) =>
+        w.hotel_ids.includes(hotelId)
+      ) || [];
+      
+      if (forecast) {
+        setWeatherData({
+          current: {
+            temp: Math.round(forecast.current.temperature),
+            condition: forecast.current.description,
+            icon: forecast.current.icon
+          },
+          forecast: forecast.forecast.map((day: any) => ({
+            day: day.day_name,
+            high: Math.round(day.high),
+            low: Math.round(day.low),
+            condition: day.description,
+            icon: day.icon,
+            precipChance: day.precipitation_chance
+          })),
+          warnings: hotelWarnings.map((w: any) => ({
+            title: w.title,
+            severity: w.severity,
+            description: w.description
+          }))
+        });
+      }
+    } catch (e) {
+      console.error('Error loading weather:', e);
+      // Keep weatherData as null - will show placeholder
     }
   };
 
@@ -452,43 +522,103 @@ export default function HotelDashboard() {
             </div>
           </div>
 
-          {/* Weather & Location Info */}
+          {/* Weather Forecast & Warnings */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-4">
               <h2 className="text-xl font-bold flex items-center">
                 <CloudRain className="w-6 h-6 mr-2" />
-                Local Conditions
+                5-Day Forecast
               </h2>
-              <p className="text-cyan-100 text-sm mt-1">Dublin, Ireland</p>
+              <p className="text-cyan-100 text-sm mt-1">
+                {weatherData ? 'Weather outlook' : 'Loading weather...'}
+              </p>
             </div>
             <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <div className="text-4xl font-bold text-slate-900 mb-1">12°C</div>
-                  <p className="text-slate-600">Partly Cloudy</p>
+              {/* Storm Warnings */}
+              {weatherData?.warnings && weatherData.warnings.length > 0 && (
+                <div className="mb-6">
+                  {weatherData.warnings.map((warning, idx) => (
+                    <div 
+                      key={idx}
+                      className={`rounded-lg p-4 mb-3 border-l-4 ${
+                        warning.severity === 'red' 
+                          ? 'bg-red-50 border-red-500' 
+                          : warning.severity === 'amber'
+                          ? 'bg-orange-50 border-orange-500'
+                          : 'bg-yellow-50 border-yellow-500'
+                      }`}
+                    >
+                      <div className="flex items-start space-x-2">
+                        <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                          warning.severity === 'red' 
+                            ? 'text-red-600' 
+                            : warning.severity === 'amber'
+                            ? 'text-orange-600'
+                            : 'text-yellow-600'
+                        }`} />
+                        <div>
+                          <h4 className="font-semibold text-slate-900 mb-1">
+                            {warning.title}
+                          </h4>
+                          <p className="text-sm text-slate-600">
+                            {warning.description}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <CloudRain className="w-16 h-16 text-slate-400" />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <p className="text-xs text-slate-500 mb-1">Humidity</p>
-                  <p className="text-lg font-semibold text-slate-900">78%</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <p className="text-xs text-slate-500 mb-1">Wind</p>
-                  <p className="text-lg font-semibold text-slate-900">15 km/h</p>
-                </div>
-              </div>
+              )}
 
-              <div className="border-t border-slate-200 pt-4">
-                <h4 className="text-sm font-medium text-slate-700 mb-2">Maintenance Notes</h4>
-                <ul className="text-sm text-slate-600 space-y-1">
-                  <li>• Check roof drainage systems</li>
-                  <li>• Inspect window seals</li>
-                  <li>• Monitor HVAC performance</li>
-                </ul>
-              </div>
+              {/* 5-Day Forecast */}
+              {weatherData ? (
+                <div className="space-y-3">
+                  {weatherData.forecast.map((day, idx) => (
+                    <div 
+                      key={idx}
+                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
+                    >
+                      <div className="flex items-center space-x-4 flex-1">
+                        <div className="w-16 text-sm font-medium text-slate-700">
+                          {idx === 0 ? 'Today' : day.day}
+                        </div>
+                        <img 
+                          src={`https://openweathermap.org/img/wn/${day.icon}@2x.png`}
+                          alt={day.condition}
+                          className="w-10 h-10"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm text-slate-900 capitalize">
+                            {day.condition}
+                          </p>
+                          {day.precipChance > 20 && (
+                            <p className="text-xs text-blue-600">
+                              💧 {day.precipChance}% chance rain
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2 text-sm">
+                        <span className="font-semibold text-slate-900">
+                          {day.high}°
+                        </span>
+                        <span className="text-slate-400">/</span>
+                        <span className="text-slate-600">
+                          {day.low}°
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-16 bg-slate-100 rounded-lg"></div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
