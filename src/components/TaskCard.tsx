@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, Clock, AlertTriangle, Award, Calendar, FileText, Shield } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, Award, Calendar, FileText, Shield, Info } from 'lucide-react';
 
 interface TaskItem {
   task_id: string;
@@ -59,6 +59,40 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
     }
   };
 
+  // ✅ NEW: Calculate expected vs actual uploads
+  const getUploadRequirement = () => {
+    const frequencyMap: Record<string, number> = {
+      'Monthly': 12,
+      'Quarterly': 4,
+      'Twice Annually': 2,
+      'Annually': 1,
+      'Biennially': 1,
+      'Every 5 Years': 1
+    };
+    
+    const expected = frequencyMap[task.frequency] || 1;
+    const actual = task.uploads?.length || 0;
+    
+    return { expected, actual };
+  };
+
+  const uploadReq = getUploadRequirement();
+  const pointsPerUpload = uploadReq.expected > 0 ? task.points / uploadReq.expected : task.points;
+  const pointsMissing = task.points - score;
+
+  // ✅ NEW: Get validity period text
+  const getValidityPeriod = () => {
+    const periodMap: Record<string, string> = {
+      'Monthly': '30 days',
+      'Quarterly': '90 days',
+      'Twice Annually': '6 months',
+      'Annually': '12 months',
+      'Biennially': '24 months',
+      'Every 5 Years': '5 years'
+    };
+    return periodMap[task.frequency] || task.frequency;
+  };
+
   return (
     <div 
       onClick={onClick}
@@ -80,6 +114,11 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
               {score}
               <span className="text-sm font-normal text-slate-500">/{task.points}</span>
             </div>
+            {pointsMissing > 0 && (
+              <div className="text-xs text-orange-600 font-medium mt-1">
+                -{pointsMissing} pts
+              </div>
+            )}
           </div>
         </div>
 
@@ -104,6 +143,45 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
           )}
         </div>
 
+        {/* ✅ NEW: Upload Status for upload-type tasks */}
+        {task.type === 'upload' && (
+          <div className="mb-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-slate-600">Upload Status</span>
+              <span className={`text-xs font-semibold ${
+                uploadReq.actual >= uploadReq.expected ? 'text-green-600' : 'text-orange-600'
+              }`}>
+                {uploadReq.actual}/{uploadReq.expected} files
+              </span>
+            </div>
+            
+            {uploadReq.actual < uploadReq.expected && (
+              <div className="text-xs text-slate-600 space-y-1">
+                <div className="flex items-center space-x-1">
+                  <AlertTriangle className="w-3 h-3 text-orange-500" />
+                  <span>
+                    Need {uploadReq.expected - uploadReq.actual} more {uploadReq.expected - uploadReq.actual === 1 ? 'file' : 'files'}
+                  </span>
+                </div>
+                <div className="text-slate-500">
+                  ({Math.round(pointsPerUpload)} pts per file)
+                </div>
+              </div>
+            )}
+            
+            {uploadReq.actual >= uploadReq.expected && (
+              <div className="text-xs text-green-600 flex items-center space-x-1">
+                <CheckCircle className="w-3 h-3" />
+                <span>All required files uploaded</span>
+              </div>
+            )}
+            
+            <div className="mt-2 text-xs text-slate-500">
+              Valid for: {getValidityPeriod()}
+            </div>
+          </div>
+        )}
+
         {/* Progress Bar */}
         <div className="mb-4">
           <div className="flex items-center justify-between text-sm text-slate-600 mb-1">
@@ -125,11 +203,20 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
           </p>
         )}
 
-        {/* Last Confirmed Date */}
+        {/* Last Confirmed/Upload Date */}
         {task.can_confirm && task.last_confirmed_date && (
           <div className="flex items-center space-x-2 text-sm text-slate-500">
             <Calendar className="w-4 h-4" />
             <span>Last confirmed: {new Date(task.last_confirmed_date).toLocaleDateString()}</span>
+          </div>
+        )}
+
+        {task.type === 'upload' && task.uploads && task.uploads.length > 0 && (
+          <div className="flex items-center space-x-2 text-sm text-slate-500">
+            <Calendar className="w-4 h-4" />
+            <span>
+              Latest: {new Date(task.uploads[0].report_date).toLocaleDateString()}
+            </span>
           </div>
         )}
 

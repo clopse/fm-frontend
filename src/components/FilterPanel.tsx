@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, X, Shield, Clock } from 'lucide-react';
+import { Search, X, Shield, Clock, AlertCircle } from 'lucide-react';
 
 interface FilterState {
   category: string[];
@@ -8,6 +8,7 @@ interface FilterState {
   mandatoryOnly: boolean;
   search: string;
   type: string;
+  itemsNeeded: boolean; // ✅ NEW
 }
 
 interface FilterPanelProps {
@@ -16,9 +17,17 @@ interface FilterPanelProps {
   categories: string[];
   frequencies: string[];
   onClose: () => void;
+  itemsNeededCount: number; // ✅ NEW
 }
 
-const FilterPanel = ({ filters, onChange, categories, frequencies, onClose }: FilterPanelProps) => {
+const FilterPanel = ({ 
+  filters, 
+  onChange, 
+  categories, 
+  frequencies, 
+  onClose,
+  itemsNeededCount 
+}: FilterPanelProps) => {
   const handleFilterChange = (key: keyof FilterState, value: any) => {
     onChange({ ...filters, [key]: value });
   };
@@ -40,6 +49,7 @@ const FilterPanel = ({ filters, onChange, categories, frequencies, onClose }: Fi
       mandatoryOnly: false,
       search: '',
       type: '',
+      itemsNeeded: false,
     });
   };
 
@@ -47,10 +57,11 @@ const FilterPanel = ({ filters, onChange, categories, frequencies, onClose }: Fi
     filters.category.length > 0 || 
     filters.frequency.length > 0 || 
     filters.mandatoryOnly ||
-    filters.type;
+    filters.type ||
+    filters.itemsNeeded;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm mb-8 overflow-hidden">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       {/* Filter Header */}
       <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
         <h3 className="font-semibold text-slate-900 flex items-center space-x-2">
@@ -100,7 +111,7 @@ const FilterPanel = ({ filters, onChange, categories, frequencies, onClose }: Fi
             <label className="block text-sm font-medium text-slate-700 mb-3">
               Categories
             </label>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-48 overflow-y-auto">
               {categories.map((category) => (
                 <label key={category} className="flex items-center space-x-2 cursor-pointer">
                   <input
@@ -155,7 +166,7 @@ const FilterPanel = ({ filters, onChange, categories, frequencies, onClose }: Fi
               </select>
             </div>
 
-            <div>
+            <div className="space-y-2">
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -166,6 +177,25 @@ const FilterPanel = ({ filters, onChange, categories, frequencies, onClose }: Fi
                 <span className="text-sm text-slate-700 flex items-center space-x-1">
                   <Shield className="w-4 h-4 text-blue-600" />
                   <span>Mandatory Only</span>
+                </span>
+              </label>
+
+              {/* ✅ NEW: Items Needed Filter */}
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filters.itemsNeeded}
+                  onChange={(e) => handleFilterChange('itemsNeeded', e.target.checked)}
+                  className="rounded border-slate-300 text-orange-600 focus:ring-orange-500"
+                />
+                <span className="text-sm text-slate-700 flex items-center space-x-1">
+                  <AlertCircle className="w-4 h-4 text-orange-600" />
+                  <span>Items Needed</span>
+                  {itemsNeededCount > 0 && (
+                    <span className="ml-1 bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full text-xs font-medium">
+                      {itemsNeededCount}
+                    </span>
+                  )}
                 </span>
               </label>
             </div>
@@ -194,6 +224,11 @@ const FilterPanel = ({ filters, onChange, categories, frequencies, onClose }: Fi
               {filters.mandatoryOnly && (
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                   Mandatory Only
+                </span>
+              )}
+              {filters.itemsNeeded && (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                  Items Needed ({itemsNeededCount})
                 </span>
               )}
               {filters.type && (
