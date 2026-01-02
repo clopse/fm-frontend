@@ -25,7 +25,7 @@ import {
 } from "./types";
 
 // Hooks
-import { useUtilitiesData } from "./hooks/useUtilitiesData";
+import { useUtilitiesData, PeriodMode } from "./hooks/useUtilitiesData";
 import { useUtilitiesFilters } from "./hooks/useUtilitiesFilters";
 
 export default function UtilitiesDashboard() {
@@ -35,10 +35,9 @@ export default function UtilitiesDashboard() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showBillsList, setShowBillsList] = useState(false);
   const [showMetricsModal, setShowMetricsModal] = useState(false);
-  const [selectedYears, setSelectedYears] = useState<number[]>([2025]);
+  const [selectedYears, setSelectedYears] = useState<number[]>([]);
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
   
-  // Add state for bills list filtering
   const [billsListFilter, setBillsListFilter] = useState<{
     month?: string;
     year?: string;
@@ -51,6 +50,9 @@ export default function UtilitiesDashboard() {
     loading,
     year,
     setYear,
+    periodMode,
+    setPeriodMode,
+    availableYears,
     viewMode,
     setViewMode,
     refetch
@@ -63,11 +65,35 @@ export default function UtilitiesDashboard() {
     availableMonths
   } = useUtilitiesFilters(data);
 
+  // Auto-select first year when available years load and in yearly mode
+  useEffect(() => {
+    if (periodMode === 'yearly' && availableYears.length > 0 && selectedYears.length === 0) {
+      setSelectedYears([availableYears[0]]);
+      setYear(availableYears[0]);
+    }
+  }, [availableYears, periodMode, selectedYears.length]);
+
+  const handlePeriodModeChange = useCallback((mode: PeriodMode) => {
+    setPeriodMode(mode);
+    if (mode === 'rolling') {
+      // Clear year selections when switching to rolling mode
+      setSelectedYears([]);
+    } else if (mode === 'yearly' && availableYears.length > 0) {
+      // Auto-select current year or most recent year when switching to yearly mode
+      const currentYear = new Date().getFullYear();
+      const defaultYear = availableYears.includes(currentYear) 
+        ? currentYear 
+        : availableYears[0];
+      setSelectedYears([defaultYear]);
+      setYear(defaultYear);
+    }
+  }, [setPeriodMode, availableYears, setYear]);
+
   const handleYearSync = useCallback(() => {
-    if (selectedYears.length > 0 && selectedYears[0] !== year) {
+    if (periodMode === 'yearly' && selectedYears.length > 0 && selectedYears[0] !== year) {
       setYear(selectedYears[0]);
     }
-  }, [selectedYears, year]);
+  }, [selectedYears, year, periodMode, setYear]);
 
   const handleMonthFilterSync = useCallback(() => {
     if (selectedMonths.length === 0) {
@@ -77,10 +103,10 @@ export default function UtilitiesDashboard() {
     } else {
       updateFilter('month', 'all');
     }
-  }, [selectedMonths]);
+  }, [selectedMonths, updateFilter]);
 
-  useEffect(() => { handleYearSync(); }, [selectedYears]);
-  useEffect(() => { handleMonthFilterSync(); }, [selectedMonths]);
+  useEffect(() => { handleYearSync(); }, [selectedYears, handleYearSync]);
+  useEffect(() => { handleMonthFilterSync(); }, [selectedMonths, handleMonthFilterSync]);
 
   const handleExport = async (format: string, includeRaw: boolean = false) => {
     try {
@@ -113,18 +139,25 @@ export default function UtilitiesDashboard() {
     updateFilter('month', 'all');
     updateFilter('billType', 'all');
     setViewMode('kwh');
-    setSelectedYears([2025]);
+    setPeriodMode('rolling');
+    setSelectedYears([]);
     setSelectedMonths([]);
-  }, [updateFilter, setViewMode]);
+  }, [updateFilter, setViewMode, setPeriodMode]);
 
-  const handleYearChange = useCallback((years: number[]) => { setSelectedYears(years); }, []);
-  const handleMonthChange = useCallback((months: number[]) => { setSelectedMonths(months); }, []);
+  const handleYearChange = useCallback((years: number[]) => { 
+    setSelectedYears(years);
+    if (years.length > 0) {
+      setYear(years[0]);
+    }
+  }, [setYear]);
 
-  // Updated handleShowBills function to set proper filter parameters
+  const handleMonthChange = useCallback((months: number[]) => { 
+    setSelectedMonths(months); 
+  }, []);
+
   const handleShowBills = useCallback((monthFilter?: string, utilityType?: 'electricity' | 'gas') => {
     console.log('🎯 CHART CLICKED - Setting Bills Filter:', { monthFilter, utilityType, year, hotelId });
     
-    // Convert month number to month name for filtering
     let monthName: string | undefined;
     if (monthFilter && monthFilter !== 'all') {
       const monthNum = parseInt(monthFilter);
@@ -133,7 +166,6 @@ export default function UtilitiesDashboard() {
       }
     }
     
-    // Set the bills filter with all the necessary parameters
     setBillsListFilter({
       month: monthName,
       year: year.toString(),
@@ -183,18 +215,32 @@ export default function UtilitiesDashboard() {
     filters.month !== 'all' || 
     filters.billType !== 'all' || 
     filters.metric !== 'overview' || 
-    selectedYears.length !== 1 || 
+    (periodMode === 'yearly' && selectedYears.length > 0 && selectedYears.length < availableYears.length) ||
     selectedMonths.length > 0
   );
+
+  const getPeriodLabel = () => {
+    if (periodMode === 'rolling') {
+      return 'Last 12 Months';
+    } else if (selectedYears.length > 1) {
+      return `${selectedYears.join(', ')}`;
+    } else if (selectedYears.length === 1) {
+      return selectedYears[0].toString();
+    }
+    return 'Overview';
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <DashboardHeader
         hotelName={hotelNames[hotelId] || hotelId.toUpperCase()}
+        periodMode={periodMode}
         selectedYears={selectedYears}
         selectedMonths={selectedMonths}
+        availableYears={availableYears}
         onShowMetrics={() => setShowMetricsModal(true)}
         onUpload={() => setShowUploadModal(true)}
+        onPeriodModeChange={handlePeriodModeChange}
         onYearChange={handleYearChange}
         onMonthChange={handleMonthChange}
         onResetFilters={handleResetFilters}
@@ -206,6 +252,16 @@ export default function UtilitiesDashboard() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4 text-sm">
                 <span className="text-blue-700 font-medium">Active Filters:</span>
+                {periodMode === 'rolling' && (
+                  <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded">
+                    Last 12 Months View
+                  </span>
+                )}
+                {periodMode === 'yearly' && selectedYears.length > 0 && selectedYears.length < availableYears.length && (
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                    Years: {selectedYears.join(', ')}
+                  </span>
+                )}
                 {filters.month !== 'all' && (
                   <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
                     Month: {new Date(0, parseInt(filters.month) - 1).toLocaleString('default', { month: 'long' })}
@@ -274,10 +330,16 @@ export default function UtilitiesDashboard() {
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">
-            {year} Summary {filters.month !== 'all' && `• ${new Date(0, parseInt(filters.month) - 1).toLocaleString('default', { month: 'long' })}`}
+            {getPeriodLabel()} Summary
+            {filters.month !== 'all' && ` • ${new Date(0, parseInt(filters.month) - 1).toLocaleString('default', { month: 'long' })}`}
             {selectedYears.length > 1 && (
               <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
                 Comparison View
+              </span>
+            )}
+            {periodMode === 'rolling' && (
+              <span className="ml-2 px-2 py-1 bg-emerald-100 text-emerald-800 text-sm rounded">
+                Rolling Period
               </span>
             )}
           </h3>
@@ -308,9 +370,22 @@ export default function UtilitiesDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Date Range Info */}
+        {data.date_range && (
+          <div className="bg-slate-50 rounded-lg p-4 mb-8 text-sm text-slate-600">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-medium">Data Period:</span> {new Date(data.date_range.start).toLocaleDateString()} - {new Date(data.date_range.end).toLocaleDateString()}
+              </div>
+              <div>
+                <span className="font-medium">Mode:</span> {data.date_range.mode === 'rolling' ? 'Last 12 Months' : 'Calendar Year'}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Updated BillsListModal call with proper filtering parameters */}
       {showBillsList && (
         <BillsListModal
           bills={data.bills || []}
