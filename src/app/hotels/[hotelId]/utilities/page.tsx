@@ -36,7 +36,6 @@ export default function UtilitiesDashboard() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showBillsList, setShowBillsList] = useState(false);
   const [showMetricsModal, setShowMetricsModal] = useState(false);
-  const [selectedYears, setSelectedYears] = useState<number[]>([]);
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
   
   const [billsListFilter, setBillsListFilter] = useState<{
@@ -49,8 +48,8 @@ export default function UtilitiesDashboard() {
   const {
     data,
     loading,
-    year,
-    setYear,
+    selectedYears,
+    setSelectedYears,
     periodMode,
     setPeriodMode,
     availableYears,
@@ -74,16 +73,8 @@ export default function UtilitiesDashboard() {
         ? currentYear 
         : availableYears[0];
       setSelectedYears([defaultYear]);
-      setYear(defaultYear);
     }
-  }, [periodMode, availableYears.length]); // Simplified dependencies
-
-  // Sync selected year to hook's year state
-  useEffect(() => {
-    if (periodMode === 'yearly' && selectedYears.length > 0 && selectedYears[0] !== year) {
-      setYear(selectedYears[0]);
-    }
-  }, [selectedYears, periodMode]); // Remove year and setYear from dependencies
+  }, [periodMode, availableYears.length]);
 
   // Sync selected months to filter
   useEffect(() => {
@@ -94,7 +85,7 @@ export default function UtilitiesDashboard() {
     } else {
       updateFilter('month', 'all');
     }
-  }, [selectedMonths]); // Remove updateFilter from dependencies
+  }, [selectedMonths]);
 
   const handlePeriodModeChange = useCallback((mode: PeriodMode) => {
     setPeriodMode(mode);
@@ -106,35 +97,8 @@ export default function UtilitiesDashboard() {
         ? currentYear 
         : availableYears[0];
       setSelectedYears([defaultYear]);
-      setYear(defaultYear);
     }
-  }, [availableYears, setPeriodMode, setYear]);
-
-  const handleExport = async (format: string, includeRaw: boolean = false) => {
-    try {
-      const params = new URLSearchParams({
-        format,
-        year: year.toString(),
-        include_raw: includeRaw.toString(),
-        ...(filters.billType !== 'all' && { utility_type: filters.billType })
-      });
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/export?${params}`);
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${hotelId}_utilities_${year}.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      }
-    } catch (error) {
-      console.error('Export failed:', error);
-    }
-  };
+  }, [availableYears, setPeriodMode, setSelectedYears]);
 
   const handleResetFilters = useCallback(() => {
     updateFilter('metric', 'overview');
@@ -144,19 +108,17 @@ export default function UtilitiesDashboard() {
     setPeriodMode('rolling');
     setSelectedYears([]);
     setSelectedMonths([]);
-  }, [updateFilter, setViewMode, setPeriodMode]);
+  }, [updateFilter, setViewMode, setPeriodMode, setSelectedYears]);
 
   const handleYearChange = useCallback((years: number[]) => { 
     setSelectedYears(years);
-  }, []);
+  }, [setSelectedYears]);
 
   const handleMonthChange = useCallback((months: number[]) => { 
     setSelectedMonths(months); 
   }, []);
 
   const handleShowBills = useCallback((monthFilter?: string, utilityType?: 'electricity' | 'gas') => {
-    console.log('🎯 CHART CLICKED - Setting Bills Filter:', { monthFilter, utilityType, year, hotelId });
-    
     let monthName: string | undefined;
     if (monthFilter && monthFilter !== 'all') {
       const monthNum = parseInt(monthFilter);
@@ -165,32 +127,18 @@ export default function UtilitiesDashboard() {
       }
     }
     
+    // Use first selected year or current year
+    const yearToUse = selectedYears.length > 0 ? selectedYears[0] : new Date().getFullYear();
+    
     setBillsListFilter({
       month: monthName,
-      year: year.toString(),
+      year: yearToUse.toString(),
       utilityType: utilityType || 'all',
       hotelId: hotelId
     });
     
     setShowBillsList(true);
-  }, [year, hotelId]);
-
-  const getFilteredBills = useCallback(() => {
-    if (!data.bills) return [];
-    let filtered = data.bills;
-    if (filters.month && filters.month !== 'all') {
-      const targetMonth = parseInt(filters.month);
-      filtered = filtered.filter(bill => {
-        const billDate = bill.summary?.bill_date || bill.upload_date;
-        if (!billDate) return false;
-        return new Date(billDate).getMonth() + 1 === targetMonth;
-      });
-    }
-    if (filters.billType && filters.billType !== 'all') {
-      filtered = filtered.filter(bill => bill.utility_type === filters.billType);
-    }
-    return filtered;
-  }, [data.bills, filters.month, filters.billType]);
+  }, [selectedYears, hotelId]);
 
   if (!hotelId) {
     return (
@@ -215,12 +163,14 @@ export default function UtilitiesDashboard() {
     if (periodMode === 'rolling') {
       return 'Last 12 Months';
     } else if (selectedYears.length > 1) {
-      return `${selectedYears.join(', ')}`;
+      return `Comparing ${selectedYears.join(' vs ')}`;
     } else if (selectedYears.length === 1) {
       return selectedYears[0].toString();
     }
     return 'Overview';
   };
+
+  const isComparisonMode = data.comparison_mode || false;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -239,7 +189,25 @@ export default function UtilitiesDashboard() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {hasActiveFilters && (
+        {isComparisonMode && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-lg">
+            <div className="flex items-center space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-blue-900">Multi-Year Comparison Mode</h3>
+                <p className="text-sm text-blue-700">
+                  Comparing {selectedYears.join(', ')} • Charts show data side-by-side by month
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hasActiveFilters && !isComparisonMode && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4 text-sm">
@@ -257,11 +225,6 @@ export default function UtilitiesDashboard() {
                 {filters.month !== 'all' && (
                   <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
                     Month: {new Date(0, parseInt(filters.month) - 1).toLocaleString('default', { month: 'long' })}
-                  </span>
-                )}
-                {selectedYears.length > 1 && (
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                    Comparing {selectedYears.length} years
                   </span>
                 )}
                 {selectedMonths.length > 0 && selectedMonths.length < 12 && (
@@ -301,12 +264,16 @@ export default function UtilitiesDashboard() {
             data={filteredData.electricity}
             viewMode={viewMode}
             loading={loading}
+            comparisonMode={isComparisonMode}
+            comparisonYears={data.comparison_years}
             onMonthClick={(month) => handleShowBills(month, 'electricity')}
           />
           <GasChart
             data={filteredData.gas}
             viewMode={viewMode}
             loading={loading}
+            comparisonMode={isComparisonMode}
+            comparisonYears={data.comparison_years}
             onMonthClick={(month) => handleShowBills(month, 'gas')}
           />
         </div>
@@ -324,9 +291,9 @@ export default function UtilitiesDashboard() {
           <h3 className="text-lg font-semibold text-slate-900 mb-4">
             {getPeriodLabel()} Summary
             {filters.month !== 'all' && ` • ${new Date(0, parseInt(filters.month) - 1).toLocaleString('default', { month: 'long' })}`}
-            {selectedYears.length > 1 && (
-              <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
-                Comparison View
+            {isComparisonMode && (
+              <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-800 text-sm rounded">
+                Multi-Year Comparison
               </span>
             )}
             {periodMode === 'rolling' && (
@@ -371,7 +338,7 @@ export default function UtilitiesDashboard() {
                 <span className="font-medium">Data Period:</span> {new Date(data.date_range.start).toLocaleDateString()} - {new Date(data.date_range.end).toLocaleDateString()}
               </div>
               <div>
-                <span className="font-medium">Mode:</span> {data.date_range.mode === 'rolling' ? 'Last 12 Months' : 'Calendar Year'}
+                <span className="font-medium">Mode:</span> {data.date_range.mode === 'rolling' ? 'Last 12 Months' : isComparisonMode ? `Comparing ${selectedYears.length} Years` : 'Calendar Year'}
               </div>
             </div>
           </div>
@@ -392,7 +359,7 @@ export default function UtilitiesDashboard() {
       {showMetricsModal && (
         <MetricsModal
           hotelId={hotelId}
-          year={year}
+          year={selectedYears[0] || new Date().getFullYear()}
           filters={filters}
           onClose={() => setShowMetricsModal(false)}
         />
