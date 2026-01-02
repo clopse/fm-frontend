@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
 import { 
@@ -93,11 +93,23 @@ export default function HotelDashboard() {
   const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
   const [activeHistory, setActiveHistory] = useState<HistoryEntry[]>([]);
 
+  // ✅ Debounce ref for batching refreshes
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // ✅ Initial load only
   useEffect(() => {
     if (!hotelId) return;
     loadInitialData();
   }, [hotelId]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // ✅ Load everything on first render
   const loadInitialData = async () => {
@@ -197,10 +209,17 @@ export default function HotelDashboard() {
     }
   };
 
-  // ✅ Instant update handler - NO waiting!
+  // ✅ Debounced update handler - batches multiple confirms into ONE refresh
   const handleChecklistUpdate = useCallback(() => {
-    // Refresh in background - user doesn't wait
-    refreshData();
+    // Clear existing timeout
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+    
+    // Set new timeout - refresh happens 500ms after LAST click
+    refreshTimeoutRef.current = setTimeout(() => {
+      refreshData();
+    }, 500);
   }, [refreshData]);
 
   const handleUploadOpen = (task: TaskItem) => {
