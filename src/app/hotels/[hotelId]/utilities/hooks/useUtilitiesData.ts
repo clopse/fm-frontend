@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { ElectricityEntry, GasEntry, BillEntry, UtilitiesData as UtilitiesDataType, ViewMode } from '../types';
+import { ElectricityEntry, GasEntry, BillEntry, UtilitiesData as UtilitiesDataType, ViewMode, PeriodMode } from '../types';
 
 // Internal types for our calculations
 interface DailyUtilityData {
@@ -37,8 +37,6 @@ interface MonthData {
     type: string;
   }>;
 }
-
-export type PeriodMode = 'rolling' | 'yearly';
 
 export function useUtilitiesData(hotelId: string | undefined): {
   data: UtilitiesDataType;
@@ -96,6 +94,11 @@ export function useUtilitiesData(hotelId: string | undefined): {
         
         const bills = Array.isArray(json.bills) ? json.bills : [];
         
+        console.log('🔍 DEBUG: Fetched bills count:', bills.length);
+        if (bills.length > 0) {
+          console.log('🔍 DEBUG: First bill sample:', bills[0]);
+        }
+        
         if (bills.length === 0) {
           setError('No bills found for this hotel');
           setLoading(false);
@@ -121,15 +124,21 @@ export function useUtilitiesData(hotelId: string | undefined): {
 
   // Extract available years from raw data
   const availableYears = useMemo(() => {
-    if (rawData.length === 0) return [];
+    if (rawData.length === 0) {
+      console.log('🔍 DEBUG: No raw data, returning empty years');
+      return [];
+    }
     
     const years = new Set<number>();
+    let dateFieldsFound = { billing_period_start: 0, billing_period_end: 0, bill_date: 0, upload_date: 0, bill_period: 0 };
     
     rawData.forEach((bill: BillEntry) => {
       try {
         const summary = bill.summary || {};
         
+        // Try summary dates first
         if (summary.billing_period_start) {
+          dateFieldsFound.billing_period_start++;
           const startDate = new Date(summary.billing_period_start);
           if (!isNaN(startDate.getTime())) {
             years.add(startDate.getFullYear());
@@ -137,6 +146,7 @@ export function useUtilitiesData(hotelId: string | undefined): {
         }
         
         if (summary.billing_period_end) {
+          dateFieldsFound.billing_period_end++;
           const endDate = new Date(summary.billing_period_end);
           if (!isNaN(endDate.getTime())) {
             years.add(endDate.getFullYear());
@@ -144,17 +154,48 @@ export function useUtilitiesData(hotelId: string | undefined): {
         }
         
         if (summary.bill_date) {
+          dateFieldsFound.bill_date++;
           const billDate = new Date(summary.bill_date);
           if (!isNaN(billDate.getTime())) {
             years.add(billDate.getFullYear());
           }
         }
+        
+        // Fallback to bill-level dates
+        if (bill.upload_date) {
+          dateFieldsFound.upload_date++;
+          const uploadDate = new Date(bill.upload_date);
+          if (!isNaN(uploadDate.getTime())) {
+            years.add(uploadDate.getFullYear());
+          }
+        }
+        
+        if (bill.bill_period) {
+          dateFieldsFound.bill_period++;
+          // Try to parse bill_period which might be like "2024-01" or "January 2024"
+          const yearMatch = bill.bill_period.match(/\d{4}/);
+          if (yearMatch) {
+            years.add(parseInt(yearMatch[0]));
+          }
+        }
       } catch (e) {
-        // Skip invalid dates
+        console.error('🔍 DEBUG: Error parsing bill date:', e);
       }
     });
     
-    return Array.from(years).sort((a, b) => b - a); // Sort descending (newest first)
+    console.log('🔍 DEBUG: Date fields found in bills:', dateFieldsFound);
+    console.log('🔍 DEBUG: Extracted years:', Array.from(years).sort((a, b) => b - a));
+    
+    const yearArray = Array.from(years).sort((a, b) => b - a);
+    
+    // Fallback: if no years found but we have bills, use current year and previous 2 years
+    if (yearArray.length === 0 && rawData.length > 0) {
+      const currentYear = new Date().getFullYear();
+      console.log('⚠️ DEBUG: No years detected, using fallback years');
+      return [currentYear, currentYear - 1, currentYear - 2];
+    }
+    
+    return yearArray;
   }, [rawData]);
 
   // Calculate the date range based on mode
@@ -163,8 +204,13 @@ export function useUtilitiesData(hotelId: string | undefined): {
       // Last 12 months from today
       const endDate = new Date();
       const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 11); // Go back 11 months (12 months total including current)
-      startDate.setDate(1); // Start from the 1st of that month
+      startDate.setMonth(startDate.getMonth() - 11);
+      startDate.setDate(1);
+      
+      console.log('🔍 DEBUG: Rolling mode date range:', {
+        start: startDate.toISOString().split('T')[0],
+        end: endDate.toISOString().split('T')[0]
+      });
       
       return {
         start: startDate,
@@ -172,12 +218,19 @@ export function useUtilitiesData(hotelId: string | undefined): {
         isRolling: true
       };
     } else {
-      // Specific year
-      return {
+      const range = {
         start: new Date(year, 0, 1),
         end: new Date(year, 11, 31),
         isRolling: false
       };
+      
+      console.log('🔍 DEBUG: Yearly mode date range:', {
+        year,
+        start: range.start.toISOString().split('T')[0],
+        end: range.end.toISOString().split('T')[0]
+      });
+      
+      return range;
     }
   }, [periodMode, year]);
 
@@ -197,11 +250,16 @@ export function useUtilitiesData(hotelId: string | undefined): {
     };
     
     if (rawData.length === 0) {
+      console.log('🔍 DEBUG: No raw data to process');
       return emptyData;
     }
 
+    console.log('🔍 DEBUG: Processing', rawData.length, 'bills for period:', periodMode, dateRange);
+
     // Process the raw data into daily values
     const dailyData: Record<string, DailyUtilityData> = {};
+    let billsProcessed = 0;
+    let billsSkipped = 0;
     
     rawData.forEach((bill: BillEntry) => {
       try {
@@ -219,14 +277,21 @@ export function useUtilitiesData(hotelId: string | undefined): {
           startDate = new Date(summary.bill_date);
           endDate = new Date(summary.bill_date);
           endDate.setDate(endDate.getDate() + 30);
+        } else if (bill.upload_date) {
+          // Last resort fallback
+          startDate = new Date(bill.upload_date);
+          endDate = new Date(bill.upload_date);
+          endDate.setDate(endDate.getDate() + 30);
         }
         
         if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          billsSkipped++;
           return;
         }
         
         const type = bill.utility_type as 'electricity' | 'gas';
         if (!type || !['electricity', 'gas'].includes(type)) {
+          billsSkipped++;
           return;
         }
         
@@ -296,10 +361,16 @@ export function useUtilitiesData(hotelId: string | undefined): {
           
           currentDate.setDate(currentDate.getDate() + 1);
         }
+        
+        billsProcessed++;
       } catch (error) {
-        // Skip invalid bills
+        billsSkipped++;
+        console.error('🔍 DEBUG: Error processing bill:', error);
       }
     });
+    
+    console.log('🔍 DEBUG: Bills processed:', billsProcessed, 'skipped:', billsSkipped);
+    console.log('🔍 DEBUG: Daily data entries:', Object.keys(dailyData).length);
     
     // Aggregate daily data into monthly data based on date range
     const monthlyData: MonthData[] = [];
@@ -310,6 +381,8 @@ export function useUtilitiesData(hotelId: string | undefined): {
       const date = new Date(dayData.date);
       return date >= dateRange.start && date <= dateRange.end;
     });
+    
+    console.log('🔍 DEBUG: Filtered daily data entries:', filteredDailyData.length);
     
     // Calculate days in each relevant month
     const daysInMonth: Record<string, number> = {};
@@ -374,10 +447,18 @@ export function useUtilitiesData(hotelId: string | undefined): {
     
     monthlyData.sort((a, b) => a.month.localeCompare(b.month));
     
+    console.log('🔍 DEBUG: Monthly data entries:', monthlyData.length);
+    if (monthlyData.length > 0) {
+      console.log('🔍 DEBUG: First month sample:', monthlyData[0]);
+      console.log('🔍 DEBUG: Last month sample:', monthlyData[monthlyData.length - 1]);
+    }
+    
     const electricityTotal = monthlyData.reduce((sum: number, m: MonthData) => sum + m.electricity_kwh, 0);
     const gasTotal = monthlyData.reduce((sum: number, m: MonthData) => sum + m.gas_kwh, 0);
     const electricityCost = monthlyData.reduce((sum: number, m: MonthData) => sum + m.electricity_eur, 0);
     const gasCost = monthlyData.reduce((sum: number, m: MonthData) => sum + m.gas_eur, 0);
+    
+    console.log('🔍 DEBUG: Totals:', { electricityTotal, gasTotal, electricityCost, gasCost });
     
     const electricityChartData: ElectricityEntry[] = monthlyData.map(month => ({
       month: month.month,
@@ -426,11 +507,18 @@ export function useUtilitiesData(hotelId: string | undefined): {
           return billDate >= dateRange.start && billDate <= dateRange.end;
         }
         
+        if (b.upload_date) {
+          const uploadDate = new Date(b.upload_date);
+          return uploadDate >= dateRange.start && uploadDate <= dateRange.end;
+        }
+        
         return false;
       } catch (e) {
         return false;
       }
     });
+    
+    console.log('🔍 DEBUG: Filtered bills for display:', filteredBills.length);
     
     return {
       electricity: electricityChartData,
