@@ -62,12 +62,28 @@ const hydrateFromStorage = (hotelId: string): boolean => {
     
     const data = JSON.parse(stored);
     
-    // With Infinity TTL, we always trust the cache
-    // Only user clicking "Refresh" updates it
-    DASH_CACHE.set(hotelId, data);
+    // Validate cache structure before using it
+    if (!data || typeof data !== 'object') {
+      console.warn('Invalid cache structure, clearing...');
+      localStorage.removeItem(getStorageKey(hotelId));
+      return false;
+    }
+    
+    // With Infinity TTL, we always trust the cache (if valid)
+    DASH_CACHE.set(hotelId, {
+      fetchedAt: data.fetchedAt || Date.now(),
+      score: data.score || 0,
+      points: data.points || '0/0',
+      taskBreakdown: data.taskBreakdown || {},
+      incompleteTasks: data.incompleteTasks || []
+    });
     return true;
   } catch (err) {
     console.warn('Failed to load from localStorage:', err);
+    // Clear corrupted cache
+    try {
+      localStorage.removeItem(getStorageKey(hotelId));
+    } catch {}
     return false;
   }
 };
@@ -83,15 +99,93 @@ const persistToStorage = (hotelId: string) => {
   }
 };
 
-// ✅ Lightweight skeleton - only for first-ever load per hotel
+// ✅ Better skeleton - shows actual page structure with loading states
 const InitialLoadingSkeleton = () => (
-  <div className="animate-pulse">
-    <div className="h-96 bg-slate-300 mb-8"></div>
+  <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">
+    {/* Hero Section Skeleton */}
+    <div className="relative h-96 bg-slate-300 animate-pulse">
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+      <div className="relative h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-12 w-96 bg-white/20 rounded-lg mx-auto mb-4"></div>
+          <div className="h-6 w-64 bg-white/20 rounded-lg mx-auto"></div>
+        </div>
+      </div>
+    </div>
+
+    {/* Main Content */}
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Stats Grid Skeleton */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="h-40 bg-slate-200 rounded-xl"></div>
-        <div className="h-40 bg-slate-200 rounded-xl"></div>
-        <div className="h-40 bg-slate-200 rounded-xl"></div>
+        {/* Score Card Skeleton */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-300 to-slate-400 p-6 animate-pulse">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="h-6 w-40 bg-white/20 rounded mb-2"></div>
+                <div className="h-10 w-24 bg-white/20 rounded"></div>
+              </div>
+              <div>
+                <div className="h-4 w-16 bg-white/20 rounded mb-1"></div>
+                <div className="h-3 w-12 bg-white/20 rounded"></div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-slate-50 px-6 py-3 border-t border-slate-200">
+            <div className="flex items-center justify-between">
+              <div className="h-4 w-24 bg-slate-200 rounded animate-pulse"></div>
+              <div className="h-4 w-16 bg-slate-200 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Items Needed Skeleton */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-pulse">
+          <div className="flex items-center justify-between mb-4">
+            <div className="h-6 w-32 bg-slate-200 rounded"></div>
+            <div className="h-6 w-8 bg-slate-200 rounded-full"></div>
+          </div>
+          <div className="h-10 w-16 bg-slate-200 rounded mb-2"></div>
+          <div className="h-4 w-40 bg-slate-200 rounded"></div>
+        </div>
+
+        {/* Quick Actions Skeleton */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-pulse">
+          <div className="h-6 w-32 bg-slate-200 rounded mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-12 bg-slate-100 rounded-lg"></div>
+            <div className="h-12 bg-slate-100 rounded-lg"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Content Grid Skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Monthly Checklist Skeleton */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4">
+            <div className="h-6 w-48 bg-white/20 rounded mb-1"></div>
+            <div className="h-4 w-40 bg-white/20 rounded"></div>
+          </div>
+          <div className="p-6 space-y-3 animate-pulse">
+            <div className="h-20 bg-slate-100 rounded-lg"></div>
+            <div className="h-20 bg-slate-100 rounded-lg"></div>
+            <div className="h-20 bg-slate-100 rounded-lg"></div>
+          </div>
+        </div>
+
+        {/* Items Needed Skeleton */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-4">
+            <div className="h-6 w-48 bg-white/20 rounded mb-1"></div>
+            <div className="h-4 w-56 bg-white/20 rounded"></div>
+          </div>
+          <div className="p-6 space-y-3 animate-pulse">
+            <div className="h-24 bg-slate-100 rounded-lg"></div>
+            <div className="h-24 bg-slate-100 rounded-lg"></div>
+            <div className="h-24 bg-slate-100 rounded-lg"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -409,11 +503,11 @@ export default function HotelDashboard() {
     
     // Step 3: Use cache if exists (Infinity TTL - always valid)
     if (cached) {
-      setScore(cached.score);
-      setPoints(cached.points);
-      setTaskBreakdown(cached.taskBreakdown);
-      setIncompleteTasks(cached.incompleteTasks);
-      setLastUpdated(cached.fetchedAt);
+      setScore(cached.score || 0);
+      setPoints(cached.points || '0/0');
+      setTaskBreakdown(cached.taskBreakdown || {});
+      setIncompleteTasks(cached.incompleteTasks || []);
+      setLastUpdated(cached.fetchedAt || Date.now());
       setInitialLoading(false);
     } else {
       // No cache at all - load fresh
