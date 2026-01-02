@@ -13,8 +13,7 @@ import {
   Award,
   FileText,
   Info,
-  CloudRain,
-  Newspaper
+  RefreshCw
 } from 'lucide-react';
 import MonthlyChecklist from '@/components/MonthlyChecklist';
 import TaskUploadModal from '@/components/TaskUploadModal';
@@ -39,28 +38,19 @@ interface HistoryEntry {
   reportDate?: string;
 }
 
-interface WeatherData {
-  current: {
-    temp: number;
-    condition: string;
-    icon: string;
-  };
-  forecast: Array<{
-    day: string;
-    high: number;
-    low: number;
-    condition: string;
-    icon: string;
-    precipChance: number;
-  }>;
-  warnings: Array<{
-    title: string;
-    severity: 'yellow' | 'amber' | 'red';
-    description: string;
-  }>;
-}
+// ✅ Module-level cache for instant hydration
+type DashboardCache = {
+  fetchedAt: number;
+  score: number;
+  points: string;
+  taskBreakdown: Record<string, number>;
+  incompleteTasks: TaskItem[];
+};
 
-// ✅ Lightweight skeleton - only for initial load
+const DASH_CACHE = new Map<string, DashboardCache>();
+const CACHE_TTL_MS = 60_000; // 1 minute
+
+// ✅ Lightweight skeleton - only for first-ever load per hotel
 const InitialLoadingSkeleton = () => (
   <div className="animate-pulse">
     <div className="h-96 bg-slate-300 mb-8"></div>
@@ -85,51 +75,50 @@ export default function HotelDashboard() {
   const [taskBreakdown, setTaskBreakdown] = useState<Record<string, number>>({});
   const [incompleteTasks, setIncompleteTasks] = useState<TaskItem[]>([]);
   const [allHistoryEntries, setAllHistoryEntries] = useState<HistoryEntry[]>([]);
-  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
-  const [weatherLoading, setWeatherLoading] = useState(true);
-  const [weatherError, setWeatherError] = useState(false);
   
-  // UI state - only show skeleton on INITIAL load
+  // UI state
   const [initialLoading, setInitialLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
+  const [isDirty, setIsDirty] = useState(false);
   
   // Modal state
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
   const [activeHistory, setActiveHistory] = useState<HistoryEntry[]>([]);
 
-  // ✅ Debounce ref for batching refreshes
-  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // ✅ Initial load only
+  // ✅ Initial load with cache hydration
   useEffect(() => {
     if (!hotelId) return;
-    loadInitialData();
+    
+    // Try to load from cache first
+    const cached = DASH_CACHE.get(hotelId);
+    const now = Date.now();
+    
+    if (cached && (now - cached.fetchedAt) < CACHE_TTL_MS) {
+      // Cache is fresh - hydrate instantly (no skeleton!)
+      setScore(cached.score);
+      setPoints(cached.points);
+      setTaskBreakdown(cached.taskBreakdown);
+      setIncompleteTasks(cached.incompleteTasks);
+      setLastUpdated(cached.fetchedAt);
+      setInitialLoading(false);
+      
+      // Optionally refresh in background if somewhat stale
+      if (now - cached.fetchedAt > CACHE_TTL_MS / 2) {
+        refreshDataSilently();
+      }
+    } else {
+      // No cache or stale - load fresh
+      loadInitialData();
+    }
   }, [hotelId]);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  // ✅ Load everything on first render
+  // ✅ Load fresh data on initial mount or cache miss
   const loadInitialData = async () => {
     setInitialLoading(true);
     try {
-      // Fetch score first to get breakdown
-      const scoreData = await fetchScore();
-      
-      // Fetch tasks using the breakdown we just got
-      await fetchIncompleteTasks(scoreData.task_breakdown);
-      
-      // Fetch weather in background (non-blocking - won't delay dashboard)
-      fetchWeather();
-      
-      // History loaded lazily - only when upload modal opens
-      // This prevents blocking initial render
+      await refreshData();
     } catch (err) {
       console.error('Error loading dashboard:', err);
     } finally {
@@ -137,18 +126,47 @@ export default function HotelDashboard() {
     }
   };
 
-  // ✅ Lightweight refresh - NO loading state, just update data
-  const refreshData = useCallback(async () => {
+  // ✅ Refresh data and update cache
+  const refreshData = async () => {
     try {
-      // Fetch score first
+      // Fetch score first to get breakdown
       const scoreData = await fetchScore();
       
-      // Use breakdown from score fetch
-      await fetchIncompleteTasks(scoreData.task_breakdown);
+      // Fetch tasks using the breakdown we just got
+      const tasks = await fetchIncompleteTasks(scoreData.task_breakdown);
+      
+      // Update cache
+      const now = Date.now();
+      DASH_CACHE.set(hotelId, {
+        fetchedAt: now,
+        score: scoreData.percent || 0,
+        points: `${scoreData.score}/${scoreData.max_score}`,
+        taskBreakdown: scoreData.task_breakdown || {},
+        incompleteTasks: tasks
+      });
+      
+      setLastUpdated(now);
+      setIsDirty(false);
     } catch (err) {
-      console.error('Background refresh error:', err);
+      console.error('Refresh error:', err);
     }
-  }, [hotelId]);
+  };
+
+  // ✅ Silent background refresh (doesn't show loading state)
+  const refreshDataSilently = async () => {
+    try {
+      await refreshData();
+    } catch (err) {
+      console.error('Silent refresh error:', err);
+    }
+  };
+
+  // ✅ Manual refresh with visual feedback
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshData();
+    setIsRefreshing(false);
+  };
 
   const fetchScore = async () => {
     try {
@@ -199,54 +217,10 @@ export default function HotelDashboard() {
     }
   };
 
-  const fetchWeather = async () => {
-    setWeatherLoading(true);
-    setWeatherError(false);
-    
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/weather/${hotelId}`);
-      
-      if (!res.ok) {
-        if (res.status === 429) {
-          console.log('Weather API rate limit reached');
-          setWeatherError(true);
-        } else if (res.status === 404) {
-          console.log('Weather endpoint not found');
-          setWeatherError(true);
-        } else {
-          setWeatherError(true);
-        }
-        setWeatherLoading(false);
-        return;
-      }
-      
-      const data = await res.json();
-      if (data && data.forecast) {
-        setWeatherData(data);
-        setWeatherError(false);
-      } else {
-        setWeatherError(true);
-      }
-    } catch (e) {
-      console.error('Weather fetch error:', e);
-      setWeatherError(true);
-    } finally {
-      setWeatherLoading(false);
-    }
-  };
-
-  // ✅ Debounced update handler - batches multiple confirms into ONE refresh
+  // ✅ NO auto-refresh - just set dirty flag
   const handleChecklistUpdate = useCallback(() => {
-    // Clear existing timeout
-    if (refreshTimeoutRef.current) {
-      clearTimeout(refreshTimeoutRef.current);
-    }
-    
-    // Set new timeout - refresh happens 500ms after LAST click
-    refreshTimeoutRef.current = setTimeout(() => {
-      refreshData();
-    }, 500);
-  }, [refreshData]);
+    setIsDirty(true);
+  }, []);
 
   const handleUploadOpen = async (task: TaskItem) => {
     // Lazy load history if not already loaded
@@ -279,7 +253,17 @@ export default function HotelDashboard() {
 
   const potentialPoints = incompleteTasks.reduce((sum, task) => sum + task.points, 0);
 
-  // ✅ Show skeleton ONLY on initial load
+  // Format last updated time
+  const getLastUpdatedText = () => {
+    const seconds = Math.floor((Date.now() - lastUpdated) / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ago`;
+  };
+
+  // ✅ Show skeleton ONLY on initial load (no cache)
   if (initialLoading) {
     return <InitialLoadingSkeleton />;
   }
@@ -329,6 +313,27 @@ export default function HotelDashboard() {
                   <div className="text-xs opacity-75">Points</div>
                 </div>
               </div>
+            </div>
+            
+            {/* Last Updated + Refresh Button */}
+            <div className="bg-slate-50 px-6 py-3 flex items-center justify-between border-t border-slate-200">
+              <div className="flex items-center space-x-2 text-xs">
+                <Clock className="w-3 h-3 text-slate-400" />
+                <span className="text-slate-600">
+                  {getLastUpdatedText()}
+                </span>
+                {isDirty && (
+                  <span className="text-orange-600 font-medium">• Changes pending</span>
+                )}
+              </div>
+              <button
+                onClick={handleManualRefresh}
+                disabled={isRefreshing}
+                className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+              </button>
             </div>
           </div>
 
@@ -459,165 +464,6 @@ export default function HotelDashboard() {
                   <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-400" />
                   <p className="text-lg font-medium text-slate-700">Perfect!</p>
                   <p className="text-sm">All compliance tasks complete</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Industry Updates */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-4">
-              <h2 className="text-xl font-bold flex items-center">
-                <Newspaper className="w-6 h-6 mr-2" />
-                Industry Updates
-              </h2>
-              <p className="text-purple-100 text-sm mt-1">Latest compliance news</p>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="border-l-4 border-purple-500 pl-4">
-                <h3 className="font-medium text-slate-900 mb-1">New Fire Safety Guidelines</h3>
-                <p className="text-sm text-slate-600 mb-2">
-                  Updated BS 9999:2024 now in effect for all commercial premises.
-                </p>
-                <p className="text-xs text-slate-400">2 days ago</p>
-              </div>
-              
-              <div className="border-l-4 border-blue-500 pl-4">
-                <h3 className="font-medium text-slate-900 mb-1">EICR Testing Reminder</h3>
-                <p className="text-sm text-slate-600 mb-2">
-                  5-yearly electrical inspection due dates approaching for 2020 installations.
-                </p>
-                <p className="text-xs text-slate-400">1 week ago</p>
-              </div>
-              
-              <div className="border-l-4 border-green-500 pl-4">
-                <h3 className="font-medium text-slate-900 mb-1">Energy Efficiency Update</h3>
-                <p className="text-sm text-slate-600 mb-2">
-                  New MEES regulations for commercial properties from April 2026.
-                </p>
-                <p className="text-xs text-slate-400">2 weeks ago</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Weather Forecast */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-4">
-              <h2 className="text-xl font-bold flex items-center">
-                <CloudRain className="w-6 h-6 mr-2" />
-                5-Day Forecast
-              </h2>
-              <p className="text-cyan-100 text-sm mt-1">
-                Weather outlook for {hotelName}
-              </p>
-            </div>
-            <div className="p-6">
-              {/* Storm Warnings */}
-              {weatherData?.warnings && weatherData.warnings.length > 0 && (
-                <div className="mb-6">
-                  {weatherData.warnings.map((warning, idx) => (
-                    <div 
-                      key={idx}
-                      className={`rounded-lg p-4 mb-3 border-l-4 ${
-                        warning.severity === 'red' 
-                          ? 'bg-red-50 border-red-500' 
-                          : warning.severity === 'amber'
-                          ? 'bg-orange-50 border-orange-500'
-                          : 'bg-yellow-50 border-yellow-500'
-                      }`}
-                    >
-                      <div className="flex items-start space-x-2">
-                        <AlertTriangle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-                          warning.severity === 'red' 
-                            ? 'text-red-600' 
-                            : warning.severity === 'amber'
-                            ? 'text-orange-600'
-                            : 'text-yellow-600'
-                        }`} />
-                        <div>
-                          <h4 className="font-semibold text-slate-900 mb-1">
-                            {warning.title}
-                          </h4>
-                          <p className="text-sm text-slate-600">
-                            {warning.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* 5-Day Forecast */}
-              {weatherLoading ? (
-                // Loading state
-                <div className="space-y-3">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-slate-100 rounded-lg"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : weatherError ? (
-                // Error fallback - nice UI
-                <div className="text-center py-8">
-                  <CloudRain className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                  <p className="text-sm font-medium text-slate-700 mb-1">Weather Unavailable</p>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Unable to load forecast at this time
-                  </p>
-                  <button
-                    onClick={() => fetchWeather()}
-                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              ) : weatherData && weatherData.forecast ? (
-                // Success - show forecast
-                <div className="space-y-3">
-                  {weatherData.forecast.map((day, idx) => (
-                    <div 
-                      key={idx}
-                      className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-center space-x-4 flex-1">
-                        <div className="w-16 text-sm font-medium text-slate-700">
-                          {idx === 0 ? 'Today' : day.day}
-                        </div>
-                        <img 
-                          src={`https://openweathermap.org/img/wn/${day.icon}@2x.png`}
-                          alt={day.condition}
-                          className="w-10 h-10"
-                        />
-                        <div className="flex-1">
-                          <p className="text-sm text-slate-900 capitalize">
-                            {day.condition}
-                          </p>
-                          {day.precipChance > 20 && (
-                            <p className="text-xs text-blue-600">
-                              {day.precipChance}% chance rain
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2 text-sm">
-                        <span className="font-semibold text-slate-900">
-                          {day.high}°
-                        </span>
-                        <span className="text-slate-400">/</span>
-                        <span className="text-slate-600">
-                          {day.low}°
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                // Fallback if data structure is unexpected
-                <div className="text-center py-8 text-slate-500">
-                  <CloudRain className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                  <p className="text-sm">No forecast data available</p>
                 </div>
               )}
             </div>
