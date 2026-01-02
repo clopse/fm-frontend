@@ -501,16 +501,23 @@ export default function HotelDashboard() {
       }
     }
     
-    // Step 3: Use cache if exists (Infinity TTL - always valid)
-    if (cached) {
+    // Step 3: Validate cache has actual data (not just empty structure)
+    const cacheHasData = cached && 
+                         cached.taskBreakdown &&
+                         Object.keys(cached.taskBreakdown).length > 0;
+    
+    if (cacheHasData) {
+      // Cache is valid and has data - use it
+      console.log('Loading from cache for', hotelId);
       setScore(cached.score || 0);
       setPoints(cached.points || '0/0');
-      setTaskBreakdown(cached.taskBreakdown || {});
+      setTaskBreakdown(cached.taskBreakdown);
       setIncompleteTasks(cached.incompleteTasks || []);
       setLastUpdated(cached.fetchedAt || Date.now());
       setInitialLoading(false);
     } else {
-      // No cache at all - load fresh
+      // No cache or empty cache - load fresh data
+      console.log('No valid cache found - loading fresh data for', hotelId);
       loadInitialData();
     }
     
