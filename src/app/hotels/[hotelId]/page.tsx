@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
 import { 
   TrendingUp, 
@@ -76,11 +76,13 @@ const InitialLoadingSkeleton = () => (
 
 export default function HotelDashboard() {
   const { hotelId } = useParams<{ hotelId: string }>();
+  const router = useRouter();
   const hotelName = hotelNames[hotelId as keyof typeof hotelNames] || 'Unknown Hotel';
 
   // Core state
   const [score, setScore] = useState<number>(0);
   const [points, setPoints] = useState<string>('0/0');
+  const [taskBreakdown, setTaskBreakdown] = useState<Record<string, number>>({});
   const [incompleteTasks, setIncompleteTasks] = useState<TaskItem[]>([]);
   const [allHistoryEntries, setAllHistoryEntries] = useState<HistoryEntry[]>([]);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
@@ -115,15 +117,17 @@ export default function HotelDashboard() {
   const loadInitialData = async () => {
     setInitialLoading(true);
     try {
-      // Fetch core data in parallel
-      await Promise.all([
-        fetchScore(),
-        fetchIncompleteTasks(),
-        fetchAllHistory()
-      ]);
+      // Fetch score first to get breakdown
+      const scoreData = await fetchScore();
+      
+      // Fetch tasks using the breakdown we just got
+      await fetchIncompleteTasks(scoreData.task_breakdown);
       
       // Fetch weather in background (non-blocking, handles rate limits gracefully)
       fetchWeather();
+      
+      // History loaded lazily - only when upload modal opens
+      // This prevents blocking initial render
     } catch (err) {
       console.error('Error loading dashboard:', err);
     } finally {
@@ -133,11 +137,15 @@ export default function HotelDashboard() {
 
   // ✅ Lightweight refresh - NO loading state, just update data
   const refreshData = useCallback(async () => {
-    // Fire and forget - updates happen in background
-    Promise.all([
-      fetchScore(),
-      fetchIncompleteTasks()
-    ]).catch(err => console.error('Background refresh error:', err));
+    try {
+      // Fetch score first
+      const scoreData = await fetchScore();
+      
+      // Use breakdown from score fetch
+      await fetchIncompleteTasks(scoreData.task_breakdown);
+    } catch (err) {
+      console.error('Background refresh error:', err);
+    }
   }, [hotelId]);
 
   const fetchScore = async () => {
@@ -146,25 +154,25 @@ export default function HotelDashboard() {
       const data = await res.json();
       setScore(data.percent || 0);
       setPoints(`${data.score}/${data.max_score}`);
+      setTaskBreakdown(data.task_breakdown || {});
       return data;
     } catch (e) {
       console.error('Error loading score:', e);
-      return { percent: 0, score: 0, max_score: 0 };
+      return { percent: 0, score: 0, max_score: 0, task_breakdown: {} };
     }
   };
 
-  const fetchIncompleteTasks = async () => {
+  const fetchIncompleteTasks = async (breakdown?: Record<string, number>) => {
     try {
       const tasksRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
       const tasksData = await tasksRes.json();
       
-      const scoresRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
-      const scoresData = await scoresRes.json();
+      // Use passed breakdown or state - no duplicate score fetch!
+      const scoreBreakdown = breakdown || taskBreakdown;
       
-      // Add null safety
       const tasks = tasksData?.tasks || [];
       const incomplete = tasks.filter((task: TaskItem) => {
-        const taskScore = scoresData.task_breakdown?.[task.task_id] || 0;
+        const taskScore = scoreBreakdown[task.task_id] || 0;
         return taskScore < task.points;
       });
       
@@ -172,7 +180,7 @@ export default function HotelDashboard() {
       return incomplete;
     } catch (e) {
       console.error('Error loading incomplete tasks:', e);
-      setIncompleteTasks([]); // Ensure state is set even on error
+      setIncompleteTasks([]);
       return [];
     }
   };
@@ -222,7 +230,12 @@ export default function HotelDashboard() {
     }, 500);
   }, [refreshData]);
 
-  const handleUploadOpen = (task: TaskItem) => {
+  const handleUploadOpen = async (task: TaskItem) => {
+    // Lazy load history if not already loaded
+    if (allHistoryEntries.length === 0) {
+      await fetchAllHistory();
+    }
+    
     const seen = new Set<string>();
     const taskHistory = allHistoryEntries
       .filter(e => e.task_id === task.task_id && e.type === 'upload')
@@ -336,13 +349,13 @@ export default function HotelDashboard() {
             </div>
             <div className="space-y-3">
               <button 
-                onClick={() => window.location.href = `/hotels/${hotelId}/compliance`}
+                onClick={() => router.push(`/hotels/${hotelId}/compliance`)}
                 className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium"
               >
                 View Full Compliance
               </button>
               <button 
-                onClick={() => window.location.href = `/hotels/${hotelId}/compliance`}
+                onClick={() => router.push(`/hotels/${hotelId}/compliance`)}
                 className="w-full bg-green-50 hover:bg-green-100 text-green-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium"
               >
                 Upload Documents
@@ -540,7 +553,7 @@ export default function HotelDashboard() {
                           </p>
                           {day.precipChance > 20 && (
                             <p className="text-xs text-blue-600">
-                              💧 {day.precipChance}% chance rain
+                              {day.precipChance}% chance rain
                             </p>
                           )}
                         </div>
