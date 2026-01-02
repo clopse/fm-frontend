@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from 'react';
-import { Zap, BarChart3, Upload, Building2, Calendar, Filter, TrendingUp } from 'lucide-react';
+import { Zap, BarChart3, Upload, Building2, Calendar, Filter, TrendingUp, Clock } from 'lucide-react';
 
 interface DashboardHeaderProps {
   hotelName: string;
+  periodMode: 'rolling' | 'yearly';
   selectedYears: number[];
   selectedMonths: number[];
+  availableYears: number[];
   onShowMetrics: () => void;
   onUpload: () => void;
+  onPeriodModeChange: (mode: 'rolling' | 'yearly') => void;
   onYearChange: (years: number[]) => void;
   onMonthChange: (months: number[]) => void;
   onResetFilters: () => void;
@@ -16,10 +19,13 @@ interface DashboardHeaderProps {
 
 export default function DashboardHeader({
   hotelName,
+  periodMode,
   selectedYears,
   selectedMonths,
+  availableYears,
   onShowMetrics,
   onUpload,
+  onPeriodModeChange,
   onYearChange,
   onMonthChange,
   onResetFilters
@@ -27,7 +33,6 @@ export default function DashboardHeader({
   const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
 
-  const availableYears = [2023, 2024, 2025];
   const months = [
     { value: 1, name: 'Jan' },
     { value: 2, name: 'Feb' },
@@ -74,8 +79,18 @@ export default function DashboardHeader({
     return `${selectedMonths.length} Months`;
   };
 
-  const hasActiveFilters = selectedYears.length > 0 && selectedYears.length < availableYears.length || 
-                          selectedMonths.length > 0 && selectedMonths.length < 12;
+  const getPeriodDisplayText = () => {
+    if (periodMode === 'rolling') {
+      return 'Last 12 Months';
+    } else {
+      return getYearDisplayText();
+    }
+  };
+
+  const hasActiveFilters = (
+    periodMode === 'yearly' && 
+    (selectedYears.length > 0 && selectedYears.length < availableYears.length)
+  ) || selectedMonths.length > 0 && selectedMonths.length < 12;
 
   return (
     <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-slate-700">
@@ -83,7 +98,6 @@ export default function DashboardHeader({
         <div className="flex items-center justify-between py-6">
           {/* Left side - Branding and info */}
           <div className="flex items-center space-x-6">
-            {/* Logo/Icon section */}
             <div className="flex items-center space-x-4">
               <div className="relative">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -92,7 +106,6 @@ export default function DashboardHeader({
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-slate-900"></div>
               </div>
 
-              {/* Hotel info */}
               <div>
                 <div className="flex items-center space-x-3">
                   <h1 className="text-2xl font-bold text-white">
@@ -105,18 +118,28 @@ export default function DashboardHeader({
                 </div>
                 <div className="flex items-center space-x-6 mt-2">
                   <div className="flex items-center space-x-2 text-slate-300">
-                    <Calendar className="w-4 h-4" />
+                    {periodMode === 'rolling' ? (
+                      <Clock className="w-4 h-4" />
+                    ) : (
+                      <Calendar className="w-4 h-4" />
+                    )}
                     <span className="text-sm font-medium">
-                      {getYearDisplayText()}
+                      {getPeriodDisplayText()}
                       {selectedMonths.length > 0 && selectedMonths.length < 12 && (
                         <span className="ml-1">• {getMonthDisplayText()}</span>
                       )}
                     </span>
                   </div>
-                  {selectedYears.length > 1 && (
+                  {selectedYears.length > 1 && periodMode === 'yearly' && (
                     <div className="flex items-center space-x-1 px-2 py-1 bg-blue-600 rounded-lg">
                       <TrendingUp className="w-3 h-3 text-blue-100" />
                       <span className="text-xs font-medium text-blue-100">Compare Mode</span>
+                    </div>
+                  )}
+                  {periodMode === 'rolling' && (
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-emerald-600 rounded-lg">
+                      <Clock className="w-3 h-3 text-emerald-100" />
+                      <span className="text-xs font-medium text-emerald-100">Rolling Period</span>
                     </div>
                   )}
                 </div>
@@ -124,63 +147,93 @@ export default function DashboardHeader({
             </div>
           </div>
 
-          {/* Center - Time Filters */}
+          {/* Center - Period Mode Toggle and Filters */}
           <div className="flex items-center space-x-3">
-            {/* Year Filter */}
-            <div className="relative">
+            {/* Period Mode Toggle */}
+            <div className="flex items-center bg-slate-700 rounded-lg p-1">
               <button
-                onClick={() => setShowYearDropdown(!showYearDropdown)}
-                className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg border transition-all duration-200 ${
-                  selectedYears.length > 0 && selectedYears.length < availableYears.length
-                    ? 'bg-blue-600 border-blue-500 text-white'
-                    : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                onClick={() => onPeriodModeChange('rolling')}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-all duration-200 ${
+                  periodMode === 'rolling'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <Clock className="w-4 h-4" />
+                <span className="text-sm font-medium">Last 12 Months</span>
+              </button>
+              <button
+                onClick={() => onPeriodModeChange('yearly')}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-all duration-200 ${
+                  periodMode === 'yearly'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-300 hover:text-white'
                 }`}
               >
                 <Calendar className="w-4 h-4" />
-                <span className="text-sm font-medium">{getYearDisplayText()}</span>
-                {selectedYears.length > 0 && selectedYears.length < availableYears.length && (
-                  <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
-                )}
+                <span className="text-sm font-medium">By Year</span>
               </button>
+            </div>
 
-              {showYearDropdown && (
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-200 z-50">
-                  <div className="p-3">
-                    <div className="text-xs font-medium text-slate-500 mb-2">Select Years (Multi-select)</div>
-                    <div className="space-y-1">
-                      {availableYears.map(year => (
-                        <label key={year} className="flex items-center space-x-2 p-2 hover:bg-slate-50 rounded cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedYears.includes(year)}
-                            onChange={() => toggleYear(year)}
-                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-slate-700">{year}</span>
-                          {selectedYears.includes(year) && (
-                            <span className="text-xs text-blue-600 ml-auto">✓</span>
-                          )}
-                        </label>
-                      ))}
-                    </div>
-                    <div className="border-t border-slate-200 mt-3 pt-2">
-                      <button
-                        onClick={() => onYearChange([])}
-                        className="text-xs text-slate-500 hover:text-slate-700"
-                      >
-                        Clear Selection
-                      </button>
-                      <button
-                        onClick={() => onYearChange([...availableYears])}
-                        className="text-xs text-blue-600 hover:text-blue-700 ml-3"
-                      >
-                        Select All
-                      </button>
+            {/* Year Filter - Only show in yearly mode */}
+            {periodMode === 'yearly' && availableYears.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowYearDropdown(!showYearDropdown)}
+                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg border transition-all duration-200 ${
+                    selectedYears.length > 0 && selectedYears.length < availableYears.length
+                      ? 'bg-blue-600 border-blue-500 text-white'
+                      : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-sm font-medium">{getYearDisplayText()}</span>
+                  {selectedYears.length > 0 && selectedYears.length < availableYears.length && (
+                    <div className="w-2 h-2 bg-blue-300 rounded-full"></div>
+                  )}
+                </button>
+
+                {showYearDropdown && (
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-200 z-50">
+                    <div className="p-3">
+                      <div className="text-xs font-medium text-slate-500 mb-2">
+                        Select Years {availableYears.length > 1 && '(Multi-select)'}
+                      </div>
+                      <div className="space-y-1 max-h-64 overflow-y-auto">
+                        {availableYears.map(year => (
+                          <label key={year} className="flex items-center space-x-2 p-2 hover:bg-slate-50 rounded cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={selectedYears.includes(year)}
+                              onChange={() => toggleYear(year)}
+                              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-slate-700">{year}</span>
+                            {selectedYears.includes(year) && (
+                              <span className="text-xs text-blue-600 ml-auto">✓</span>
+                            )}
+                          </label>
+                        ))}
+                      </div>
+                      <div className="border-t border-slate-200 mt-3 pt-2">
+                        <button
+                          onClick={() => onYearChange([])}
+                          className="text-xs text-slate-500 hover:text-slate-700"
+                        >
+                          Clear Selection
+                        </button>
+                        <button
+                          onClick={() => onYearChange([...availableYears])}
+                          className="text-xs text-blue-600 hover:text-blue-700 ml-3"
+                        >
+                          Select All
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             {/* Month Filter */}
             <div className="relative">
@@ -272,7 +325,7 @@ export default function DashboardHeader({
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center space-x-4">
                 <span className="text-slate-400">Active Filters:</span>
-                {selectedYears.length > 0 && selectedYears.length < availableYears.length && (
+                {periodMode === 'yearly' && selectedYears.length > 0 && selectedYears.length < availableYears.length && (
                   <div className="flex items-center space-x-1">
                     <span className="text-slate-300">Years:</span>
                     <div className="flex space-x-1">
@@ -315,7 +368,14 @@ export default function DashboardHeader({
         {/* Bottom status bar */}
         <div className="border-t border-slate-700 py-3">
           <div className="flex items-center justify-between text-sm">
-            <div className="text-slate-400">Utilities Dashboard</div>
+            <div className="text-slate-400">
+              Utilities Dashboard
+              {availableYears.length > 0 && (
+                <span className="ml-2 text-slate-500">
+                  • Data available: {Math.min(...availableYears)} - {Math.max(...availableYears)}
+                </span>
+              )}
+            </div>
             <div className="text-slate-500">
               Last updated: {new Date().toLocaleTimeString('en-US', { 
                 hour12: false, 
