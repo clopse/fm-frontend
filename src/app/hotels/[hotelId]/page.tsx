@@ -38,7 +38,7 @@ interface HistoryEntry {
   reportDate?: string;
 }
 
-// ✅ Module-level cache for instant hydration
+// ✅ Module-level cache for instant reads (no JSON parsing)
 type DashboardCache = {
   fetchedAt: number;
   score: number;
@@ -48,7 +48,40 @@ type DashboardCache = {
 };
 
 const DASH_CACHE = new Map<string, DashboardCache>();
-const CACHE_TTL_MS = 60_000; // 1 minute
+
+// ✅ INFINITY TTL - Cache never expires, manual refresh only
+const CACHE_TTL_MS = Infinity;
+
+// ✅ Helpers for localStorage persistence
+const getStorageKey = (hotelId: string) => `dash_cache_${hotelId}`;
+
+const hydrateFromStorage = (hotelId: string): boolean => {
+  try {
+    const stored = localStorage.getItem(getStorageKey(hotelId));
+    if (!stored) return false;
+    
+    const data = JSON.parse(stored);
+    
+    // With Infinity TTL, we always trust the cache
+    // Only user clicking "Refresh" updates it
+    DASH_CACHE.set(hotelId, data);
+    return true;
+  } catch (err) {
+    console.warn('Failed to load from localStorage:', err);
+    return false;
+  }
+};
+
+const persistToStorage = (hotelId: string) => {
+  try {
+    const cached = DASH_CACHE.get(hotelId);
+    if (cached) {
+      localStorage.setItem(getStorageKey(hotelId), JSON.stringify(cached));
+    }
+  } catch (err) {
+    console.warn('Failed to persist to localStorage:', err);
+  }
+};
 
 // ✅ Lightweight skeleton - only for first-ever load per hotel
 const InitialLoadingSkeleton = () => (
@@ -118,7 +151,9 @@ const ComplianceScoreCard = memo(function ComplianceScoreCard({
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) return `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
-    return `${hours}h ago`;
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
   };
 
   return (
@@ -232,7 +267,7 @@ const QuickActionsCard = memo(function QuickActionsCard({
   );
 });
 
-// ✅ MEMOIZED: Monthly Checklist Section - only re-renders when hotelId/onConfirm change
+// ✅ MEMOIZED: Monthly Checklist Section
 const MonthlyChecklistSection = memo(function MonthlyChecklistSection({
   hotelId,
   userEmail,
@@ -262,7 +297,7 @@ const MonthlyChecklistSection = memo(function MonthlyChecklistSection({
   );
 });
 
-// ✅ MEMOIZED: Items Needed Section - only re-renders when incompleteTasks change
+// ✅ MEMOIZED: Items Needed Section
 const ItemsNeededSection = memo(function ItemsNeededSection({
   incompleteTasks,
   onUploadOpen
@@ -358,34 +393,39 @@ export default function HotelDashboard() {
   const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
   const [activeHistory, setActiveHistory] = useState<HistoryEntry[]>([]);
 
-  // ✅ Initial load with cache hydration
+  // ✅ Hybrid cache: Check module cache, then localStorage, then fetch
   useEffect(() => {
     if (!hotelId) return;
     
-    // Try to load from cache first
-    const cached = DASH_CACHE.get(hotelId);
-    const now = Date.now();
+    // Step 1: Check module cache (instant - no parsing)
+    let cached = DASH_CACHE.get(hotelId);
     
-    if (cached && (now - cached.fetchedAt) < CACHE_TTL_MS) {
-      // Cache is fresh - hydrate instantly (no skeleton!)
+    // Step 2: If not in module cache, try localStorage
+    if (!cached) {
+      if (hydrateFromStorage(hotelId)) {
+        cached = DASH_CACHE.get(hotelId);
+      }
+    }
+    
+    // Step 3: Use cache if exists (Infinity TTL - always valid)
+    if (cached) {
       setScore(cached.score);
       setPoints(cached.points);
       setTaskBreakdown(cached.taskBreakdown);
       setIncompleteTasks(cached.incompleteTasks);
       setLastUpdated(cached.fetchedAt);
       setInitialLoading(false);
-      
-      // Optionally refresh in background if somewhat stale
-      if (now - cached.fetchedAt > CACHE_TTL_MS / 2) {
-        refreshDataSilently();
-      }
     } else {
-      // No cache or stale - load fresh
+      // No cache at all - load fresh
       loadInitialData();
     }
+    
+    // Step 4: Persist to localStorage on unmount
+    return () => {
+      persistToStorage(hotelId);
+    };
   }, [hotelId]);
 
-  // ✅ Load fresh data on initial mount or cache miss
   const loadInitialData = async () => {
     setInitialLoading(true);
     try {
@@ -397,24 +437,25 @@ export default function HotelDashboard() {
     }
   };
 
-  // ✅ Refresh data and update cache
   const refreshData = async () => {
     try {
-      // Fetch score first to get breakdown
       const scoreData = await fetchScore();
-      
-      // Fetch tasks using the breakdown we just got
       const tasks = await fetchIncompleteTasks(scoreData.task_breakdown);
       
-      // Update cache
       const now = Date.now();
-      DASH_CACHE.set(hotelId, {
+      const cacheData: DashboardCache = {
         fetchedAt: now,
         score: scoreData.percent || 0,
         points: `${scoreData.score}/${scoreData.max_score}`,
         taskBreakdown: scoreData.task_breakdown || {},
         incompleteTasks: tasks
-      });
+      };
+      
+      // Update module cache
+      DASH_CACHE.set(hotelId, cacheData);
+      
+      // Persist to localStorage
+      persistToStorage(hotelId);
       
       setLastUpdated(now);
       setIsDirty(false);
@@ -423,16 +464,6 @@ export default function HotelDashboard() {
     }
   };
 
-  // ✅ Silent background refresh (doesn't show loading state)
-  const refreshDataSilently = async () => {
-    try {
-      await refreshData();
-    } catch (err) {
-      console.error('Silent refresh error:', err);
-    }
-  };
-
-  // ✅ Manual refresh with visual feedback
   const handleManualRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await refreshData();
@@ -458,7 +489,6 @@ export default function HotelDashboard() {
       const tasksRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
       const tasksData = await tasksRes.json();
       
-      // Use passed breakdown or state - no duplicate score fetch!
       const scoreBreakdown = breakdown || taskBreakdown;
       
       const tasks = tasksData?.tasks || [];
@@ -488,13 +518,11 @@ export default function HotelDashboard() {
     }
   };
 
-  // ✅ NO auto-refresh - just set dirty flag
   const handleChecklistUpdate = useCallback(() => {
     setIsDirty(true);
   }, []);
 
   const handleUploadOpen = useCallback(async (task: TaskItem) => {
-    // Lazy load history if not already loaded
     if (allHistoryEntries.length === 0) {
       await fetchAllHistory();
     }
@@ -519,22 +547,17 @@ export default function HotelDashboard() {
     router.push(path);
   }, [router]);
 
-  // ✅ Show skeleton ONLY on initial load (no cache)
   if (initialLoading) {
     return <InitialLoadingSkeleton />;
   }
 
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* ✅ MEMOIZED: Hero - never re-renders */}
       <HeroSection hotelId={hotelId} hotelName={hotelName} />
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* ✅ SPLIT: Only re-renders when score/points/lastUpdated/isDirty change */}
           <ComplianceScoreCard
             score={score}
             points={points}
@@ -544,23 +567,18 @@ export default function HotelDashboard() {
             onRefresh={handleManualRefresh}
           />
 
-          {/* ✅ SPLIT: Only re-renders when incompleteTasks change */}
           <ItemsNeededCard incompleteTasks={incompleteTasks} />
 
-          {/* ✅ MEMOIZED: Never re-renders for same hotelId */}
           <QuickActionsCard hotelId={hotelId} onNavigate={handleNavigate} />
         </div>
 
-        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* ✅ MEMOIZED: Only re-renders when hotelId/onConfirm change */}
           <MonthlyChecklistSection
             hotelId={hotelId}
             userEmail="admin@jmk.ie"
             onConfirm={handleChecklistUpdate}
           />
 
-          {/* ✅ MEMOIZED: Only re-renders when incompleteTasks change */}
           <ItemsNeededSection
             incompleteTasks={incompleteTasks}
             onUploadOpen={handleUploadOpen}
@@ -568,7 +586,6 @@ export default function HotelDashboard() {
         </div>
       </div>
 
-      {/* Upload Modal */}
       {activeTask && (
         <TaskUploadModal
           visible={uploadModalVisible}
