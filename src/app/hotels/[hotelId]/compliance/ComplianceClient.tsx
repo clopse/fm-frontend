@@ -361,7 +361,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   const [isDirty, setIsDirty] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // ✅ Hybrid cache: Check module cache, then localStorage, then fetch
+  // ✅ Hybrid cache with smart initial load
   useEffect(() => {
     if (!hotelId) return;
     
@@ -370,23 +370,33 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
     
     // Step 2: If not in module cache, try localStorage
     if (!cached) {
-      if (hydrateFromStorage(hotelId)) {
+      const hydratedFromStorage = hydrateFromStorage(hotelId);
+      if (hydratedFromStorage) {
         cached = COMPLIANCE_CACHE.get(hotelId);
       }
     }
     
-    // Step 3: Use cache if exists (Infinity TTL - always valid)
-    if (cached) {
-      setTasks(cached.tasks || []);
+    // Step 3: Validate cache has actual data (not just empty structure)
+    const cacheHasData = cached && 
+                         cached.tasks && 
+                         cached.tasks.length > 0 &&
+                         cached.scoreBreakdown &&
+                         Object.keys(cached.scoreBreakdown).length > 0;
+    
+    if (cacheHasData) {
+      // Cache is valid and has data - use it
+      console.log('Loading from cache for', hotelId);
+      setTasks(cached.tasks);
       setHistory(cached.history || {});
-      setScoreBreakdown(cached.scoreBreakdown || {});
+      setScoreBreakdown(cached.scoreBreakdown);
       setScoreData(cached.scoreData || null);
       setGraphPoints(cached.graphPoints || []);
       setLastUpdated(cached.fetchedAt || Date.now());
       setLoading(false);
       setScoresLoading(false);
     } else {
-      // No cache at all - load fresh
+      // No cache or empty cache - load fresh data
+      console.log('No valid cache found - loading fresh data for', hotelId);
       loadInitialData();
     }
     
