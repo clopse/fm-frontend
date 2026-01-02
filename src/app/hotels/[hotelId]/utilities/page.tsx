@@ -21,11 +21,12 @@ import {
   GasEntry,
   UtilitiesData,
   DashboardFilters,
-  ViewMode
+  ViewMode,
+  PeriodMode
 } from "./types";
 
 // Hooks
-import { useUtilitiesData, PeriodMode } from "./hooks/useUtilitiesData";
+import { useUtilitiesData } from "./hooks/useUtilitiesData";
 import { useUtilitiesFilters } from "./hooks/useUtilitiesFilters";
 
 export default function UtilitiesDashboard() {
@@ -68,18 +69,6 @@ export default function UtilitiesDashboard() {
   // Auto-select first year when available years load and in yearly mode
   useEffect(() => {
     if (periodMode === 'yearly' && availableYears.length > 0 && selectedYears.length === 0) {
-      setSelectedYears([availableYears[0]]);
-      setYear(availableYears[0]);
-    }
-  }, [availableYears, periodMode, selectedYears.length]);
-
-  const handlePeriodModeChange = useCallback((mode: PeriodMode) => {
-    setPeriodMode(mode);
-    if (mode === 'rolling') {
-      // Clear year selections when switching to rolling mode
-      setSelectedYears([]);
-    } else if (mode === 'yearly' && availableYears.length > 0) {
-      // Auto-select current year or most recent year when switching to yearly mode
       const currentYear = new Date().getFullYear();
       const defaultYear = availableYears.includes(currentYear) 
         ? currentYear 
@@ -87,15 +76,17 @@ export default function UtilitiesDashboard() {
       setSelectedYears([defaultYear]);
       setYear(defaultYear);
     }
-  }, [setPeriodMode, availableYears, setYear]);
+  }, [periodMode, availableYears.length]); // Simplified dependencies
 
-  const handleYearSync = useCallback(() => {
+  // Sync selected year to hook's year state
+  useEffect(() => {
     if (periodMode === 'yearly' && selectedYears.length > 0 && selectedYears[0] !== year) {
       setYear(selectedYears[0]);
     }
-  }, [selectedYears, year, periodMode, setYear]);
+  }, [selectedYears, periodMode]); // Remove year and setYear from dependencies
 
-  const handleMonthFilterSync = useCallback(() => {
+  // Sync selected months to filter
+  useEffect(() => {
     if (selectedMonths.length === 0) {
       updateFilter('month', 'all');
     } else if (selectedMonths.length === 1) {
@@ -103,10 +94,21 @@ export default function UtilitiesDashboard() {
     } else {
       updateFilter('month', 'all');
     }
-  }, [selectedMonths, updateFilter]);
+  }, [selectedMonths]); // Remove updateFilter from dependencies
 
-  useEffect(() => { handleYearSync(); }, [selectedYears, handleYearSync]);
-  useEffect(() => { handleMonthFilterSync(); }, [selectedMonths, handleMonthFilterSync]);
+  const handlePeriodModeChange = useCallback((mode: PeriodMode) => {
+    setPeriodMode(mode);
+    if (mode === 'rolling') {
+      setSelectedYears([]);
+    } else if (mode === 'yearly' && availableYears.length > 0) {
+      const currentYear = new Date().getFullYear();
+      const defaultYear = availableYears.includes(currentYear) 
+        ? currentYear 
+        : availableYears[0];
+      setSelectedYears([defaultYear]);
+      setYear(defaultYear);
+    }
+  }, [availableYears, setPeriodMode, setYear]);
 
   const handleExport = async (format: string, includeRaw: boolean = false) => {
     try {
@@ -146,10 +148,7 @@ export default function UtilitiesDashboard() {
 
   const handleYearChange = useCallback((years: number[]) => { 
     setSelectedYears(years);
-    if (years.length > 0) {
-      setYear(years[0]);
-    }
-  }, [setYear]);
+  }, []);
 
   const handleMonthChange = useCallback((months: number[]) => { 
     setSelectedMonths(months); 
@@ -167,13 +166,6 @@ export default function UtilitiesDashboard() {
     }
     
     setBillsListFilter({
-      month: monthName,
-      year: year.toString(),
-      utilityType: utilityType || 'all',
-      hotelId: hotelId
-    });
-    
-    console.log('🎯 Final Bills Filter:', {
       month: monthName,
       year: year.toString(),
       utilityType: utilityType || 'all',
