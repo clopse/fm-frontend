@@ -1,8 +1,8 @@
 // src/app/hotels/[hotelId]/compliance/ComplianceClient.tsx
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { Search, Filter, CheckCircle, AlertCircle, Clock, ChevronDown } from "lucide-react";
+import { useEffect, useState, useMemo, useCallback, memo } from "react";
+import { Search, Filter, CheckCircle, AlertCircle, Clock, ChevronDown, RefreshCw } from "lucide-react";
 
 import TaskUploadModal from "@/components/TaskUploadModal";
 import TaskCard from "@/components/TaskCard";
@@ -46,16 +46,236 @@ interface ScoreBreakdown {
   [taskId: string]: number;
 }
 
-interface ScoreHistoryEntry {
-  month: string;
-  score: number;
-  max: number;
-  percent?: number;
-}
-
 type ComplianceClientProps = {
   hotelId: string;
 };
+
+// ✅ Module-level cache for instant hydration
+type ComplianceCache = {
+  fetchedAt: number;
+  tasks: TaskItem[];
+  history: Record<string, HistoryEntry[]>;
+  scoreBreakdown: ScoreBreakdown;
+  scoreData: any;
+  graphPoints: any[];
+};
+
+const COMPLIANCE_CACHE = new Map<string, ComplianceCache>();
+const CACHE_TTL_MS = 60_000; // 1 minute
+
+// ✅ MEMOIZED: Page Header - static
+const PageHeader = memo(function PageHeader() {
+  return (
+    <div className="mb-6">
+      <h1 className="text-3xl font-bold text-slate-900 mb-2">
+        Compliance Dashboard
+      </h1>
+      <p className="text-slate-600">
+        Track and manage your compliance requirements
+      </p>
+    </div>
+  );
+});
+
+// ✅ MEMOIZED: Score Card Section - only re-renders when score data changes
+const ScoreSection = memo(function ScoreSection({
+  scoresLoading,
+  scoreData,
+  earnedPoints,
+  totalPoints,
+  graphPoints,
+  lastUpdated,
+  isDirty,
+  isRefreshing,
+  onRefresh
+}: {
+  scoresLoading: boolean;
+  scoreData: any;
+  earnedPoints: number;
+  totalPoints: number;
+  graphPoints: any[];
+  lastUpdated: number;
+  isDirty: boolean;
+  isRefreshing: boolean;
+  onRefresh: () => void;
+}) {
+  const getLastUpdatedText = () => {
+    const seconds = Math.floor((Date.now() - lastUpdated) / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ago`;
+  };
+
+  return (
+    <>
+      {scoresLoading ? (
+        <ScoreCardSkeleton />
+      ) : (
+        <div>
+          <ScoreCard
+            scoreData={scoreData}
+            earnedPoints={earnedPoints}
+            totalPoints={totalPoints}
+            graphPoints={graphPoints}
+          />
+          {/* Refresh indicator under score card */}
+          <div className="mt-3 flex items-center justify-end space-x-4 text-xs">
+            <div className="flex items-center space-x-2 text-slate-600">
+              <Clock className="w-3 h-3 text-slate-400" />
+              <span>{getLastUpdatedText()}</span>
+              {isDirty && (
+                <span className="text-orange-600 font-medium">• Changes pending</span>
+              )}
+            </div>
+            <button
+              onClick={onRefresh}
+              disabled={isRefreshing}
+              className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+});
+
+// ✅ MEMOIZED: Filter Section - only re-renders when filters/stats change
+const FilterSection = memo(function FilterSection({
+  filtersOpen,
+  filters,
+  itemsNeededStats,
+  categories,
+  onToggle,
+  onChange,
+  onClose
+}: {
+  filtersOpen: boolean;
+  filters: any;
+  itemsNeededStats: { count: number; points: number };
+  categories: string[];
+  onToggle: () => void;
+  onChange: (filters: any) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="mt-6">
+      <button
+        onClick={onToggle}
+        className="flex items-center justify-between w-full bg-white px-6 py-4 rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 transition-colors"
+      >
+        <div className="flex items-center space-x-3">
+          <Filter className="w-5 h-5 text-slate-600" />
+          <span className="font-medium text-slate-900">Filters</span>
+          {(filters.category.length > 0 || 
+            filters.mandatoryOnly || 
+            filters.search ||
+            filters.itemsNeeded) && (
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+              Active
+            </span>
+          )}
+        </div>
+        <div className="flex items-center space-x-4">
+          {itemsNeededStats.count > 0 && (
+            <div className="flex items-center space-x-2 text-sm">
+              <AlertCircle className="w-4 h-4 text-orange-500" />
+              <span className="text-slate-600">
+                <span className="font-semibold text-orange-600">{itemsNeededStats.count}</span> items needed
+                <span className="text-slate-400 mx-1">·</span>
+                <span className="font-semibold text-orange-600">{itemsNeededStats.points}</span> points available
+              </span>
+            </div>
+          )}
+          <ChevronDown
+            className={`w-5 h-5 text-slate-400 transition-transform ${
+              filtersOpen ? "rotate-180" : ""
+            }`}
+          />
+        </div>
+      </button>
+
+      {filtersOpen && (
+        <div className="mt-4">
+          <FilterPanel
+            filters={filters}
+            onChange={onChange}
+            categories={categories}
+            onClose={onClose}
+            itemsNeededCount={itemsNeededStats.count}
+          />
+        </div>
+      )}
+    </div>
+  );
+});
+
+// ✅ MEMOIZED: Category Section - only re-renders when tasks/scores for this category change
+const CategorySection = memo(function CategorySection({
+  category,
+  tasks,
+  scoreBreakdown,
+  onTaskClick
+}: {
+  category: string;
+  tasks: TaskItem[];
+  scoreBreakdown: ScoreBreakdown;
+  onTaskClick: (taskId: string) => void;
+}) {
+  const categoryTotal = tasks.reduce((sum, t) => sum + t.points, 0);
+  const categoryEarned = tasks.reduce(
+    (sum, t) => sum + (scoreBreakdown[t.task_id] ?? 0), 0
+  );
+  const categoryPercent = categoryTotal > 0 
+    ? Math.round((categoryEarned / categoryTotal) * 100) 
+    : 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <h2 className="text-xl font-semibold text-slate-900">
+            {category}
+          </h2>
+          <div className="bg-slate-200 text-slate-700 px-3 py-1 rounded-full text-sm font-medium">
+            {tasks.length} task{tasks.length !== 1 ? "s" : ""}
+          </div>
+        </div>
+        
+        <div className="flex items-center space-x-2 text-sm">
+          {categoryPercent === 100 ? (
+            <>
+              <CheckCircle className="w-4 h-4 text-green-600" />
+              <span className="text-green-600 font-medium">Complete</span>
+            </>
+          ) : (
+            <>
+              <Clock className="w-4 h-4 text-orange-500" />
+              <span className="text-slate-600">
+                {categoryPercent}% complete
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {tasks.map((task) => (
+          <TaskCard
+            key={task.task_id}
+            task={task}
+            score={scoreBreakdown[task.task_id] ?? 0}
+            onClick={() => onTaskClick(task.task_id)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+});
 
 const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -83,103 +303,97 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
     itemsNeeded: false,
   });
 
-  const [graphPoints, setGraphPoints] = useState<
-    { month: string; score: number; max: number; percent: number }[]
-  >([]);
+  const [graphPoints, setGraphPoints] = useState<any[]>([]);
   const [scoreData, setScoreData] = useState<any>(null);
+  
+  // ✅ NEW: Manual refresh state
+  const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
+  const [isDirty, setIsDirty] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // ✅ NEW: Cache key and duration
-  const CACHE_KEY = `compliance_cache_${hotelId}`;
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-  // ✅ NEW: Check if cached data is still fresh
-  const isCacheFresh = () => {
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (!cached) return false;
-      
-      const { timestamp } = JSON.parse(cached);
-      const age = Date.now() - timestamp;
-      return age < CACHE_DURATION;
-    } catch {
-      return false;
-    }
-  };
-
-  // ✅ NEW: Load from cache
-  const loadFromCache = () => {
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (!cached) return false;
-      
-      const { tasks, history, scores, timestamp } = JSON.parse(cached);
-      
-      setTasks(tasks || []);
-      setHistory(history || {});
-      setScoreBreakdown(scores?.task_breakdown || {});
-      setScoreData(scores);
-      
-      // Process graph points
-      if (scores) {
-        const monthlyData = Object.entries(scores.monthly_history || {}).map(
-          ([month, m]: [string, any]) => ({
-            month,
-            score: m.score || 0,
-            max: m.max || 0,
-            percent: m.max > 0 ? Math.round((m.score / m.max) * 100) : 0,
-          })
-        );
-        setGraphPoints(monthlyData.sort((a, b) => a.month.localeCompare(b.month)));
-      }
-      
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  // ✅ NEW: Save to cache
-  const saveToCache = (tasksData: any, historyData: any, scoresData: any) => {
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-        tasks: tasksData,
-        history: historyData,
-        scores: scoresData,
-        timestamp: Date.now()
-      }));
-    } catch (err) {
-      console.warn('Failed to cache data:', err);
-    }
-  };
-
+  // ✅ Initial load with cache hydration
   useEffect(() => {
-    // ✅ Try to load from cache first
-    if (isCacheFresh() && loadFromCache()) {
+    if (!hotelId) return;
+    
+    // Try to load from cache first
+    const cached = COMPLIANCE_CACHE.get(hotelId);
+    const now = Date.now();
+    
+    if (cached && (now - cached.fetchedAt) < CACHE_TTL_MS) {
+      // Cache is fresh - hydrate instantly (no skeleton!)
+      setTasks(cached.tasks);
+      setHistory(cached.history);
+      setScoreBreakdown(cached.scoreBreakdown);
+      setScoreData(cached.scoreData);
+      setGraphPoints(cached.graphPoints);
+      setLastUpdated(cached.fetchedAt);
       setLoading(false);
       setScoresLoading(false);
-      return; // Use cached data, skip fetch
-    }
-    
-    // Cache is stale or missing - fetch fresh data
-    setLoading(true);
-    
-    // Load all data and save to cache
-    const fetchAndCache = async () => {
-      const tasksData = await loadTasks();
-      setLoading(false); // Show UI as soon as tasks load
       
-      const [scoresData, historyData] = await Promise.all([
-        loadScores(), 
-        loadHistory()
+      // Optionally refresh in background if somewhat stale
+      if (now - cached.fetchedAt > CACHE_TTL_MS / 2) {
+        refreshDataSilently();
+      }
+    } else {
+      // No cache or stale - load fresh
+      loadInitialData();
+    }
+  }, [hotelId]);
+
+  // ✅ Load fresh data on initial mount or cache miss
+  const loadInitialData = async () => {
+    setLoading(true);
+    try {
+      await refreshData();
+    } catch (err) {
+      console.error('Error loading compliance:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Refresh data and update cache
+  const refreshData = async () => {
+    try {
+      // Fetch all data
+      const [tasksData, historyData, scoresData] = await Promise.all([
+        loadTasks(),
+        loadHistory(),
+        loadScores()
       ]);
       
-      // ✅ Save everything to cache
-      saveToCache(tasksData, historyData, scoresData);
-    };
-    
-    fetchAndCache();
-    
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      // Update cache
+      const now = Date.now();
+      COMPLIANCE_CACHE.set(hotelId, {
+        fetchedAt: now,
+        tasks: tasksData,
+        history: historyData,
+        scoreBreakdown: scoresData.task_breakdown || {},
+        scoreData: scoresData,
+        graphPoints: scoresData.graphPoints || []
+      });
+      
+      setLastUpdated(now);
+      setIsDirty(false);
+    } catch (err) {
+      console.error('Refresh error:', err);
+    }
+  };
+
+  // ✅ Silent background refresh
+  const refreshDataSilently = async () => {
+    try {
+      await refreshData();
+    } catch (err) {
+      console.error('Silent refresh error:', err);
+    }
+  };
+
+  // ✅ Manual refresh with visual feedback
+  const handleManualRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await refreshData();
+    setIsRefreshing(false);
   }, [hotelId]);
 
   const loadTasks = async () => {
@@ -190,7 +404,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
       const data = await res.json();
       if (!Array.isArray(data.tasks)) throw new Error("Invalid task list format");
       setTasks(data.tasks);
-      return data.tasks; // ✅ Return for caching
+      return data.tasks;
     } catch (err) {
       console.error(err);
       setError("Unable to load compliance tasks.");
@@ -205,7 +419,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
       );
       const data = await res.json();
       setHistory(data.history || {});
-      return data.history || {}; // ✅ Return for caching
+      return data.history || {};
     } catch (err) {
       console.error(err);
       setError("Unable to load compliance history.");
@@ -248,50 +462,45 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
         });
       }
 
-      setGraphPoints(
-        monthlyData.sort((a, b) => a.month.localeCompare(b.month)),
+      const sortedData = monthlyData.sort((a, b) =>
+        a.month.localeCompare(b.month),
       );
+      setGraphPoints(sortedData);
       
-      return data; // ✅ Return for caching
+      return {
+        ...data,
+        graphPoints: sortedData
+      };
     } catch (err) {
       console.error(err);
-      return null;
+      setError("Unable to load compliance scores.");
+      return {
+        task_breakdown: {},
+        graphPoints: []
+      };
     } finally {
       setScoresLoading(false);
     }
   };
 
-  const handleUploadSuccess = async () => {
-    setSuccessMessage("✅ Upload successful!");
-    
-    // ✅ Clear cache to force fresh data
-    try {
-      localStorage.removeItem(CACHE_KEY);
-    } catch (err) {
-      console.warn('Failed to clear cache:', err);
-    }
-    
-    // Reload all data
-    const tasksData = await loadTasks();
-    const [scoresData, historyData] = await Promise.all([
-      loadScores(),
-      loadHistory()
-    ]);
-    
-    // ✅ Save fresh data to cache
-    saveToCache(tasksData, historyData, scoresData);
-    
+  // ✅ NO auto-refresh - just set dirty flag
+  const handleUploadSuccess = useCallback(() => {
+    setIsDirty(true);
+    setSuccessMessage("Upload successful!");
     setTimeout(() => setSuccessMessage(null), 3000);
-  };
+    setVisible(false);
+  }, []);
 
   const selectedTaskObj = useMemo(
-    () => tasks.find((t) => t.task_id === selectedTask) || null,
+    () => tasks.find((t) => t.task_id === selectedTask),
     [tasks, selectedTask],
   );
 
-  const categories = Array.from(new Set(tasks.map((t) => t.category)));
+  const categories = useMemo(
+    () => Array.from(new Set(tasks.map((t) => t.category))),
+    [tasks],
+  );
 
-  // ✅ IMPROVED: Filter logic with "Items Needed"
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const categoryMatch =
@@ -303,7 +512,6 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
       const mandatoryMatch = !filters.mandatoryOnly || task.mandatory;
       const typeMatch = !filters.type || task.type === filters.type;
       
-      // ✅ Items Needed filter
       const itemsNeededMatch = !filters.itemsNeeded || 
         (scoreBreakdown[task.task_id] ?? 0) < task.points;
 
@@ -320,16 +528,16 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
     }, {} as Record<string, TaskItem[]>);
   }, [filteredTasks]);
 
-  const totalPoints = tasks.reduce(
-    (sum, task) => sum + (task.points ?? 0),
-    0,
+  const totalPoints = useMemo(() => 
+    tasks.reduce((sum, task) => sum + (task.points ?? 0), 0),
+    [tasks]
   );
-  const earnedPoints = Object.values(scoreBreakdown).reduce(
-    (sum, score) => sum + score,
-    0,
+  
+  const earnedPoints = useMemo(() => 
+    Object.values(scoreBreakdown).reduce((sum, score) => sum + score, 0),
+    [scoreBreakdown]
   );
 
-  // ✅ NEW: Calculate items needed stats
   const itemsNeededStats = useMemo(() => {
     const incomplete = tasks.filter(task => 
       (scoreBreakdown[task.task_id] ?? 0) < task.points
@@ -342,6 +550,19 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
       points: pointsMissing
     };
   }, [tasks, scoreBreakdown]);
+
+  const handleTaskClick = useCallback((taskId: string) => {
+    setSelectedTask(taskId);
+    setVisible(true);
+  }, []);
+
+  const handleFiltersToggle = useCallback(() => {
+    setFiltersOpen(prev => !prev);
+  }, []);
+
+  const handleFiltersClose = useCallback(() => {
+    setFiltersOpen(false);
+  }, []);
 
   if (loading) {
     return <ComplianceDashboardSkeleton />;
@@ -364,139 +585,44 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
 
         {/* Header */}
         <div className="mb-8">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">
-              Compliance Dashboard
-            </h1>
-            <p className="text-slate-600">
-              Track and manage your compliance requirements
-            </p>
-          </div>
+          {/* ✅ MEMOIZED: Static header */}
+          <PageHeader />
 
-          {/* Score Card */}
-          {scoresLoading ? (
-            <ScoreCardSkeleton />
-          ) : (
-            <ScoreCard
-              scoreData={scoreData}
-              earnedPoints={earnedPoints}
-              totalPoints={totalPoints}
-              graphPoints={graphPoints}
-            />
-          )}
+          {/* ✅ MEMOIZED: Score section with refresh */}
+          <ScoreSection
+            scoresLoading={scoresLoading}
+            scoreData={scoreData}
+            earnedPoints={earnedPoints}
+            totalPoints={totalPoints}
+            graphPoints={graphPoints}
+            lastUpdated={lastUpdated}
+            isDirty={isDirty}
+            isRefreshing={isRefreshing}
+            onRefresh={handleManualRefresh}
+          />
 
-          {/* ✅ MOVED: Filters now under score card */}
-          <div className="mt-6">
-            <button
-              onClick={() => setFiltersOpen(!filtersOpen)}
-              className="flex items-center justify-between w-full bg-white px-6 py-4 rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex items-center space-x-3">
-                <Filter className="w-5 h-5 text-slate-600" />
-                <span className="font-medium text-slate-900">Filters</span>
-                {(filters.category.length > 0 || 
-                  filters.mandatoryOnly || 
-                  filters.search ||
-                  filters.itemsNeeded) && (
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                    Active
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center space-x-4">
-                {/* ✅ NEW: Items Needed Quick Stats */}
-                {itemsNeededStats.count > 0 && (
-                  <div className="flex items-center space-x-2 text-sm">
-                    <AlertCircle className="w-4 h-4 text-orange-500" />
-                    <span className="text-slate-600">
-                      <span className="font-semibold text-orange-600">{itemsNeededStats.count}</span> items needed
-                      <span className="text-slate-400 mx-1">·</span>
-                      <span className="font-semibold text-orange-600">{itemsNeededStats.points}</span> points available
-                    </span>
-                  </div>
-                )}
-                <ChevronDown
-                  className={`w-5 h-5 text-slate-400 transition-transform ${
-                    filtersOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </div>
-            </button>
-          </div>
-
-          {filtersOpen && (
-            <div className="mt-4">
-              <FilterPanel
-                filters={filters}
-                onChange={setFilters}
-                categories={categories}
-                onClose={() => setFiltersOpen(false)}
-                itemsNeededCount={itemsNeededStats.count}
-              />
-            </div>
-          )}
+          {/* ✅ MEMOIZED: Filter section */}
+          <FilterSection
+            filtersOpen={filtersOpen}
+            filters={filters}
+            itemsNeededStats={itemsNeededStats}
+            categories={categories}
+            onToggle={handleFiltersToggle}
+            onChange={setFilters}
+            onClose={handleFiltersClose}
+          />
         </div>
 
         {/* Tasks Grid */}
         <div className="space-y-8">
           {Object.keys(grouped).map((category) => (
-            <div key={category} className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <h2 className="text-xl font-semibold text-slate-900">
-                    {category}
-                  </h2>
-                  <div className="bg-slate-200 text-slate-700 px-3 py-1 rounded-full text-sm font-medium">
-                    {grouped[category].length} task
-                    {grouped[category].length !== 1 ? "s" : ""}
-                  </div>
-                </div>
-                
-                {/* ✅ NEW: Category completion stats */}
-                {(() => {
-                  const categoryTasks = grouped[category];
-                  const categoryTotal = categoryTasks.reduce((sum, t) => sum + t.points, 0);
-                  const categoryEarned = categoryTasks.reduce(
-                    (sum, t) => sum + (scoreBreakdown[t.task_id] ?? 0), 0
-                  );
-                  const categoryPercent = categoryTotal > 0 
-                    ? Math.round((categoryEarned / categoryTotal) * 100) 
-                    : 0;
-                  
-                  return (
-                    <div className="flex items-center space-x-2 text-sm">
-                      {categoryPercent === 100 ? (
-                        <>
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                          <span className="text-green-600 font-medium">Complete</span>
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="w-4 h-4 text-orange-500" />
-                          <span className="text-slate-600">
-                            {categoryPercent}% complete
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {grouped[category].map((task) => (
-                  <TaskCard
-                    key={task.task_id}
-                    task={task}
-                    score={scoreBreakdown[task.task_id] ?? 0}
-                    onClick={() => {
-                      setSelectedTask(task.task_id);
-                      setVisible(true);
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
+            <CategorySection
+              key={category}
+              category={category}
+              tasks={grouped[category]}
+              scoreBreakdown={scoreBreakdown}
+              onTaskClick={handleTaskClick}
+            />
           ))}
 
           {filteredTasks.length === 0 && (
