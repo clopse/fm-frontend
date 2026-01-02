@@ -127,7 +127,6 @@ export default function UtilitiesDashboard() {
       }
     }
     
-    // Use first selected year or current year
     const yearToUse = selectedYears.length > 0 ? selectedYears[0] : new Date().getFullYear();
     
     setBillsListFilter({
@@ -330,7 +329,6 @@ export default function UtilitiesDashboard() {
           </div>
         </div>
 
-        {/* Date Range Info */}
         {data.date_range && (
           <div className="bg-slate-50 rounded-lg p-4 mb-8 text-sm text-slate-600">
             <div className="flex items-center justify-between">
