@@ -86,6 +86,8 @@ export default function HotelDashboard() {
   const [incompleteTasks, setIncompleteTasks] = useState<TaskItem[]>([]);
   const [allHistoryEntries, setAllHistoryEntries] = useState<HistoryEntry[]>([]);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [weatherError, setWeatherError] = useState(false);
   
   // UI state - only show skeleton on INITIAL load
   const [initialLoading, setInitialLoading] = useState(true);
@@ -123,7 +125,7 @@ export default function HotelDashboard() {
       // Fetch tasks using the breakdown we just got
       await fetchIncompleteTasks(scoreData.task_breakdown);
       
-      // Fetch weather in background (non-blocking, handles rate limits gracefully)
+      // Fetch weather in background (non-blocking - won't delay dashboard)
       fetchWeather();
       
       // History loaded lazily - only when upload modal opens
@@ -198,22 +200,38 @@ export default function HotelDashboard() {
   };
 
   const fetchWeather = async () => {
+    setWeatherLoading(true);
+    setWeatherError(false);
+    
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/weather/${hotelId}`);
+      
       if (!res.ok) {
         if (res.status === 429) {
-          console.log('Weather API rate limit reached - will retry later');
+          console.log('Weather API rate limit reached');
+          setWeatherError(true);
         } else if (res.status === 404) {
           console.log('Weather endpoint not found');
+          setWeatherError(true);
+        } else {
+          setWeatherError(true);
         }
+        setWeatherLoading(false);
         return;
       }
+      
       const data = await res.json();
       if (data && data.forecast) {
         setWeatherData(data);
+        setWeatherError(false);
+      } else {
+        setWeatherError(true);
       }
     } catch (e) {
-      // Silent fail - weather is optional and shouldn't break the dashboard
+      console.error('Weather fetch error:', e);
+      setWeatherError(true);
+    } finally {
+      setWeatherLoading(false);
     }
   };
 
@@ -531,7 +549,32 @@ export default function HotelDashboard() {
               )}
 
               {/* 5-Day Forecast */}
-              {weatherData && weatherData.forecast ? (
+              {weatherLoading ? (
+                // Loading state
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-16 bg-slate-100 rounded-lg"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : weatherError ? (
+                // Error fallback - nice UI
+                <div className="text-center py-8">
+                  <CloudRain className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                  <p className="text-sm font-medium text-slate-700 mb-1">Weather Unavailable</p>
+                  <p className="text-xs text-slate-500 mb-4">
+                    Unable to load forecast at this time
+                  </p>
+                  <button
+                    onClick={() => fetchWeather()}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : weatherData && weatherData.forecast ? (
+                // Success - show forecast
                 <div className="space-y-3">
                   {weatherData.forecast.map((day, idx) => (
                     <div 
@@ -571,10 +614,10 @@ export default function HotelDashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
+                // Fallback if data structure is unexpected
+                <div className="text-center py-8 text-slate-500">
                   <CloudRain className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-                  <p className="text-sm text-slate-600 mb-1">Weather temporarily unavailable</p>
-                  <p className="text-xs text-slate-400">API rate limit reached - try refreshing later</p>
+                  <p className="text-sm">No forecast data available</p>
                 </div>
               )}
             </div>
