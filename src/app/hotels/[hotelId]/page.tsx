@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
 import { 
@@ -13,10 +13,8 @@ import {
   Award,
   FileText,
   Info,
-  Activity,
   CloudRain,
-  Newspaper,
-  Zap
+  Newspaper
 } from 'lucide-react';
 import MonthlyChecklist from '@/components/MonthlyChecklist';
 import TaskUploadModal from '@/components/TaskUploadModal';
@@ -41,8 +39,29 @@ interface HistoryEntry {
   reportDate?: string;
 }
 
-// ✅ Loading Skeletons
-const DashboardSkeleton = () => (
+interface WeatherData {
+  current: {
+    temp: number;
+    condition: string;
+    icon: string;
+  };
+  forecast: Array<{
+    day: string;
+    high: number;
+    low: number;
+    condition: string;
+    icon: string;
+    precipChance: number;
+  }>;
+  warnings: Array<{
+    title: string;
+    severity: 'yellow' | 'amber' | 'red';
+    description: string;
+  }>;
+}
+
+// ✅ Lightweight skeleton - only for initial load
+const InitialLoadingSkeleton = () => (
   <div className="animate-pulse">
     <div className="h-96 bg-slate-300 mb-8"></div>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -50,10 +69,6 @@ const DashboardSkeleton = () => (
         <div className="h-40 bg-slate-200 rounded-xl"></div>
         <div className="h-40 bg-slate-200 rounded-xl"></div>
         <div className="h-40 bg-slate-200 rounded-xl"></div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="h-96 bg-slate-200 rounded-xl"></div>
-        <div className="h-96 bg-slate-200 rounded-xl"></div>
       </div>
     </div>
   </div>
@@ -63,122 +78,55 @@ export default function HotelDashboard() {
   const { hotelId } = useParams<{ hotelId: string }>();
   const hotelName = hotelNames[hotelId as keyof typeof hotelNames] || 'Unknown Hotel';
 
+  // Core state
   const [score, setScore] = useState<number>(0);
   const [points, setPoints] = useState<string>('0/0');
   const [incompleteTasks, setIncompleteTasks] = useState<TaskItem[]>([]);
-  const [refreshToggle, setRefreshToggle] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [weatherData, setWeatherData] = useState<{
-    current: {
-      temp: number;
-      condition: string;
-      icon: string;
-    };
-    forecast: Array<{
-      day: string;
-      high: number;
-      low: number;
-      condition: string;
-      icon: string;
-      precipChance: number;
-    }>;
-    warnings: Array<{
-      title: string;
-      severity: 'yellow' | 'amber' | 'red';
-      description: string;
-    }>;
-  } | null>(null);
-
   const [allHistoryEntries, setAllHistoryEntries] = useState<HistoryEntry[]>([]);
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  
+  // UI state - only show skeleton on INITIAL load
+  const [initialLoading, setInitialLoading] = useState(true);
+  
+  // Modal state
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
   const [activeHistory, setActiveHistory] = useState<HistoryEntry[]>([]);
 
-  // ✅ Cache management
-  const CACHE_KEY = `dashboard_cache_${hotelId}`;
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-  const isCacheFresh = () => {
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (!cached) return false;
-      const { timestamp } = JSON.parse(cached);
-      return (Date.now() - timestamp) < CACHE_DURATION;
-    } catch {
-      return false;
-    }
-  };
-
-  const loadFromCache = () => {
-    try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (!cached) return false;
-      
-      const data = JSON.parse(cached);
-      setScore(data.score || 0);
-      setPoints(data.points || '0/0');
-      setIncompleteTasks(data.incompleteTasks || []);
-      setAllHistoryEntries(data.history || []);
-      if (data.weather) {
-        setWeatherData(data.weather);
-      }
-      
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const saveToCache = (data: any) => {
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({
-        ...data,
-        timestamp: Date.now()
-      }));
-    } catch (err) {
-      console.warn('Failed to cache:', err);
-    }
-  };
-
+  // ✅ Initial load only
   useEffect(() => {
     if (!hotelId) return;
+    loadInitialData();
+  }, [hotelId]);
 
-    // Try cache first
-    if (isCacheFresh() && loadFromCache()) {
-      setLoading(false);
-      return;
-    }
-
-    // Fetch fresh data
-    fetchAllData();
-  }, [hotelId, refreshToggle]);
-
-  const fetchAllData = async () => {
-    setLoading(true);
+  // ✅ Load everything on first render
+  const loadInitialData = async () => {
+    setInitialLoading(true);
     try {
-      const [scoreData, tasksData, historyData] = await Promise.all([
+      // Fetch core data in parallel
+      await Promise.all([
         fetchScore(),
         fetchIncompleteTasks(),
         fetchAllHistory()
       ]);
-
-      // Fetch weather separately (non-blocking)
-      fetchWeather(); // Fire and forget - doesn't block dashboard
-
-      // Save to cache
-      saveToCache({
-        score: scoreData.percent,
-        points: `${scoreData.score}/${scoreData.max_score}`,
-        incompleteTasks: tasksData,
-        history: historyData,
-        weather: weatherData // Will be null first time, updated on next cache
-      });
+      
+      // Fetch weather in background (non-blocking)
+      fetchWeather();
     } catch (err) {
       console.error('Error loading dashboard:', err);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   };
+
+  // ✅ Lightweight refresh - NO loading state, just update data
+  const refreshData = useCallback(async () => {
+    // Fire and forget - updates happen in background
+    Promise.all([
+      fetchScore(),
+      fetchIncompleteTasks()
+    ]).catch(err => console.error('Background refresh error:', err));
+  }, [hotelId]);
 
   const fetchScore = async () => {
     try {
@@ -195,15 +143,12 @@ export default function HotelDashboard() {
 
   const fetchIncompleteTasks = async () => {
     try {
-      // Get all tasks
       const tasksRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
       const tasksData = await tasksRes.json();
       
-      // Get current scores
       const scoresRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
       const scoresData = await scoresRes.json();
       
-      // Filter incomplete tasks (score < max points)
       const incomplete = tasksData.tasks.filter((task: TaskItem) => {
         const taskScore = scoresData.task_breakdown?.[task.task_id] || 0;
         return taskScore < task.points;
@@ -231,52 +176,19 @@ export default function HotelDashboard() {
 
   const fetchWeather = async () => {
     try {
-      const res = await fetch('/api/weather/warnings');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/weather/${hotelId}`);
       const data = await res.json();
-      
-      // Find forecast for hotel's location
-      const forecast = data.forecasts?.find((f: any) => 
-        f.hotel_ids.includes(hotelId)
-      );
-      
-      // Find warnings for hotel's location
-      const hotelWarnings = data.warnings?.filter((w: any) =>
-        w.hotel_ids.includes(hotelId)
-      ) || [];
-      
-      if (forecast) {
-        setWeatherData({
-          current: {
-            temp: Math.round(forecast.current.temperature),
-            condition: forecast.current.description,
-            icon: forecast.current.icon
-          },
-          forecast: forecast.forecast.map((day: any) => ({
-            day: day.day_name,
-            high: Math.round(day.high),
-            low: Math.round(day.low),
-            condition: day.description,
-            icon: day.icon,
-            precipChance: day.precipitation_chance
-          })),
-          warnings: hotelWarnings.map((w: any) => ({
-            title: w.title,
-            severity: w.severity,
-            description: w.description
-          }))
-        });
-      }
+      setWeatherData(data);
     } catch (e) {
       console.error('Error loading weather:', e);
-      // Keep weatherData as null - will show placeholder
     }
   };
 
-  const handleChecklistUpdate = () => {
-    // Clear cache and refresh
-    localStorage.removeItem(CACHE_KEY);
-    setRefreshToggle(prev => !prev);
-  };
+  // ✅ Instant update handler - NO waiting!
+  const handleChecklistUpdate = useCallback(() => {
+    // Refresh in background - user doesn't wait
+    refreshData();
+  }, [refreshData]);
 
   const handleUploadOpen = (task: TaskItem) => {
     const seen = new Set<string>();
@@ -302,16 +214,16 @@ export default function HotelDashboard() {
     return 'from-red-500 to-rose-600';
   };
 
-  if (loading) {
-    return <DashboardSkeleton />;
-  }
-
-  // Calculate potential points
   const potentialPoints = incompleteTasks.reduce((sum, task) => sum + task.points, 0);
+
+  // ✅ Show skeleton ONLY on initial load
+  if (initialLoading) {
+    return <InitialLoadingSkeleton />;
+  }
 
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Hero Section with Hotel Image Background */}
+      {/* Hero Section */}
       <div 
         className="relative h-96 bg-cover bg-center bg-gray-800 overflow-hidden"
         style={{ 
@@ -357,11 +269,11 @@ export default function HotelDashboard() {
             </div>
           </div>
 
-          {/* Items Needed Card */}
+          {/* Items Needed */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-                <AlertTriangle className="w-5 h-5 mr-2 text-orange-500" />
+                <Clock className="w-5 h-5 mr-2 text-orange-500" />
                 Items Needed
               </h3>
               <div className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -373,33 +285,36 @@ export default function HotelDashboard() {
               </div>
             </div>
             <div className="text-3xl font-bold text-slate-900 mb-2">
-              {potentialPoints}
+              {incompleteTasks.length}
             </div>
             <p className="text-sm text-slate-600">
-              {incompleteTasks.length === 0 ? 'All tasks complete!' : 'Points available'}
+              {incompleteTasks.length === 0 
+                ? 'All tasks complete!' 
+                : `Worth ${potentialPoints} points`}
             </p>
           </div>
 
-          {/* Recent Activity Card */}
+          {/* Quick Actions */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-                <Activity className="w-5 h-5 mr-2 text-blue-500" />
-                Recent Activity
+                <TrendingUp className="w-5 h-5 mr-2 text-green-500" />
+                Quick Actions
               </h3>
             </div>
-            <div className="space-y-2">
-              {allHistoryEntries.slice(0, 3).map((entry, idx) => (
-                <div key={idx} className="text-sm text-slate-600 flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span className="truncate">
-                    {entry.type === 'upload' ? '📄' : '✓'} {entry.fileName || 'Task confirmed'}
-                  </span>
-                </div>
-              ))}
-              {allHistoryEntries.length === 0 && (
-                <p className="text-sm text-slate-400">No recent activity</p>
-              )}
+            <div className="space-y-3">
+              <button 
+                onClick={() => window.location.href = `/hotels/${hotelId}/compliance`}
+                className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium"
+              >
+                View Full Compliance
+              </button>
+              <button 
+                onClick={() => window.location.href = `/hotels/${hotelId}/compliance`}
+                className="w-full bg-green-50 hover:bg-green-100 text-green-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium"
+              >
+                Upload Documents
+              </button>
             </div>
           </div>
         </div>
@@ -414,7 +329,7 @@ export default function HotelDashboard() {
                 <CheckCircle className="w-6 h-6 mr-2" />
                 Monthly Checklist
               </h2>
-              <p className="text-green-100 text-sm mt-1">Routine confirmation tasks</p>
+              <p className="text-green-100 text-sm mt-1">Complete your routine tasks</p>
             </div>
             <div className="p-6">
               <MonthlyChecklist
@@ -425,11 +340,11 @@ export default function HotelDashboard() {
             </div>
           </div>
 
-          {/* Items Needed - ALL Incomplete Tasks */}
+          {/* Items Needed This Month */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-4">
               <h2 className="text-xl font-bold flex items-center">
-                <Zap className="w-6 h-6 mr-2" />
+                <AlertTriangle className="w-6 h-6 mr-2" />
                 Items Needed
               </h2>
               <p className="text-orange-100 text-sm mt-1">
@@ -486,7 +401,7 @@ export default function HotelDashboard() {
             </div>
           </div>
 
-          {/* Industry Updates Widget */}
+          {/* Industry Updates */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-6 py-4">
               <h2 className="text-xl font-bold flex items-center">
@@ -522,7 +437,7 @@ export default function HotelDashboard() {
             </div>
           </div>
 
-          {/* Weather Forecast & Warnings */}
+          {/* Weather Forecast */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white px-6 py-4">
               <h2 className="text-xl font-bold flex items-center">
