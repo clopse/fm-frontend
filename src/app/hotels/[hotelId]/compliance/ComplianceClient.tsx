@@ -383,7 +383,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
                          cached.scoreBreakdown &&
                          Object.keys(cached.scoreBreakdown).length > 0;
     
-    if (cacheHasData) {
+    if (cached && cacheHasData) {
       // Cache is valid and has data - use it
       console.log('Loading from cache for', hotelId);
       setTasks(cached.tasks);
