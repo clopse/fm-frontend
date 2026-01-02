@@ -112,6 +112,11 @@ export interface UtilitiesData {
   incomplete_months?: string[];
   daily_data?: Record<string, unknown>;
   monthly_data?: MonthData[];
+  date_range?: {
+    start: string;
+    end: string;
+    mode: 'rolling' | 'yearly';
+  };
   trends?: {
     electricity: number;
     gas: number;
@@ -136,6 +141,7 @@ export interface DashboardFilters {
 }
 
 export type ViewMode = 'kwh' | 'eur' | 'room';
+export type PeriodMode = 'rolling' | 'yearly';
 
 export interface AnalyticsData {
   mic_charges?: {
