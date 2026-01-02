@@ -110,7 +110,7 @@ export default function HotelDashboard() {
         fetchAllHistory()
       ]);
       
-      // Fetch weather in background (non-blocking)
+      // Fetch weather in background (non-blocking, handles rate limits gracefully)
       fetchWeather();
     } catch (err) {
       console.error('Error loading dashboard:', err);
@@ -149,7 +149,9 @@ export default function HotelDashboard() {
       const scoresRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
       const scoresData = await scoresRes.json();
       
-      const incomplete = tasksData.tasks.filter((task: TaskItem) => {
+      // Add null safety
+      const tasks = tasksData?.tasks || [];
+      const incomplete = tasks.filter((task: TaskItem) => {
         const taskScore = scoresData.task_breakdown?.[task.task_id] || 0;
         return taskScore < task.points;
       });
@@ -158,6 +160,7 @@ export default function HotelDashboard() {
       return incomplete;
     } catch (e) {
       console.error('Error loading incomplete tasks:', e);
+      setIncompleteTasks([]); // Ensure state is set even on error
       return [];
     }
   };
@@ -177,10 +180,20 @@ export default function HotelDashboard() {
   const fetchWeather = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/weather/${hotelId}`);
+      if (!res.ok) {
+        if (res.status === 429) {
+          console.log('Weather API rate limit reached - will retry later');
+        } else if (res.status === 404) {
+          console.log('Weather endpoint not found');
+        }
+        return;
+      }
       const data = await res.json();
-      setWeatherData(data);
+      if (data && data.forecast) {
+        setWeatherData(data);
+      }
     } catch (e) {
-      console.error('Error loading weather:', e);
+      // Silent fail - weather is optional and shouldn't break the dashboard
     }
   };
 
@@ -352,7 +365,7 @@ export default function HotelDashboard() {
               </p>
             </div>
             <div className="p-6 max-h-96 overflow-y-auto">
-              {incompleteTasks.length > 0 ? (
+              {incompleteTasks && incompleteTasks.length > 0 ? (
                 <div className="space-y-3">
                   {incompleteTasks.map(task => (
                     <div key={task.task_id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
@@ -445,7 +458,7 @@ export default function HotelDashboard() {
                 5-Day Forecast
               </h2>
               <p className="text-cyan-100 text-sm mt-1">
-                {weatherData ? 'Weather outlook' : 'Loading weather...'}
+                Weather outlook for {hotelName}
               </p>
             </div>
             <div className="p-6">
@@ -486,7 +499,7 @@ export default function HotelDashboard() {
               )}
 
               {/* 5-Day Forecast */}
-              {weatherData ? (
+              {weatherData && weatherData.forecast ? (
                 <div className="space-y-3">
                   {weatherData.forecast.map((day, idx) => (
                     <div 
@@ -526,12 +539,10 @@ export default function HotelDashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-slate-100 rounded-lg"></div>
-                    </div>
-                  ))}
+                <div className="text-center py-8">
+                  <CloudRain className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                  <p className="text-sm text-slate-600 mb-1">Weather temporarily unavailable</p>
+                  <p className="text-xs text-slate-400">API rate limit reached - try refreshing later</p>
                 </div>
               )}
             </div>
