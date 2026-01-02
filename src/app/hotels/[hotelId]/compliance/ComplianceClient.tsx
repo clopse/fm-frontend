@@ -50,7 +50,7 @@ type ComplianceClientProps = {
   hotelId: string;
 };
 
-// ✅ Module-level cache for instant hydration
+// ✅ Module-level cache for instant reads
 type ComplianceCache = {
   fetchedAt: number;
   tasks: TaskItem[];
@@ -61,7 +61,39 @@ type ComplianceCache = {
 };
 
 const COMPLIANCE_CACHE = new Map<string, ComplianceCache>();
-const CACHE_TTL_MS = 60_000; // 1 minute
+
+// ✅ INFINITY TTL - Cache never expires, manual refresh only
+const CACHE_TTL_MS = Infinity;
+
+// ✅ Helpers for localStorage persistence
+const getStorageKey = (hotelId: string) => `compliance_cache_${hotelId}`;
+
+const hydrateFromStorage = (hotelId: string): boolean => {
+  try {
+    const stored = localStorage.getItem(getStorageKey(hotelId));
+    if (!stored) return false;
+    
+    const data = JSON.parse(stored);
+    
+    // With Infinity TTL, we always trust the cache
+    COMPLIANCE_CACHE.set(hotelId, data);
+    return true;
+  } catch (err) {
+    console.warn('Failed to load from localStorage:', err);
+    return false;
+  }
+};
+
+const persistToStorage = (hotelId: string) => {
+  try {
+    const cached = COMPLIANCE_CACHE.get(hotelId);
+    if (cached) {
+      localStorage.setItem(getStorageKey(hotelId), JSON.stringify(cached));
+    }
+  } catch (err) {
+    console.warn('Failed to persist to localStorage:', err);
+  }
+};
 
 // ✅ MEMOIZED: Page Header - static
 const PageHeader = memo(function PageHeader() {
@@ -77,7 +109,7 @@ const PageHeader = memo(function PageHeader() {
   );
 });
 
-// ✅ MEMOIZED: Score Card Section - only re-renders when score data changes
+// ✅ MEMOIZED: Score Card Section
 const ScoreSection = memo(function ScoreSection({
   scoresLoading,
   scoreData,
@@ -105,7 +137,9 @@ const ScoreSection = memo(function ScoreSection({
     const minutes = Math.floor(seconds / 60);
     if (minutes < 60) return `${minutes}m ago`;
     const hours = Math.floor(minutes / 60);
-    return `${hours}h ago`;
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
   };
 
   return (
@@ -120,7 +154,6 @@ const ScoreSection = memo(function ScoreSection({
             totalPoints={totalPoints}
             graphPoints={graphPoints}
           />
-          {/* Refresh indicator under score card */}
           <div className="mt-3 flex items-center justify-end space-x-4 text-xs">
             <div className="flex items-center space-x-2 text-slate-600">
               <Clock className="w-3 h-3 text-slate-400" />
@@ -144,7 +177,7 @@ const ScoreSection = memo(function ScoreSection({
   );
 });
 
-// ✅ MEMOIZED: Filter Section - only re-renders when filters/stats change
+// ✅ MEMOIZED: Filter Section
 const FilterSection = memo(function FilterSection({
   filtersOpen,
   filters,
@@ -214,7 +247,7 @@ const FilterSection = memo(function FilterSection({
   );
 });
 
-// ✅ MEMOIZED: Category Section - only re-renders when tasks/scores for this category change
+// ✅ MEMOIZED: Category Section
 const CategorySection = memo(function CategorySection({
   category,
   tasks,
@@ -306,21 +339,26 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   const [graphPoints, setGraphPoints] = useState<any[]>([]);
   const [scoreData, setScoreData] = useState<any>(null);
   
-  // ✅ NEW: Manual refresh state
   const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
   const [isDirty, setIsDirty] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // ✅ Initial load with cache hydration
+  // ✅ Hybrid cache: Check module cache, then localStorage, then fetch
   useEffect(() => {
     if (!hotelId) return;
     
-    // Try to load from cache first
-    const cached = COMPLIANCE_CACHE.get(hotelId);
-    const now = Date.now();
+    // Step 1: Check module cache
+    let cached = COMPLIANCE_CACHE.get(hotelId);
     
-    if (cached && (now - cached.fetchedAt) < CACHE_TTL_MS) {
-      // Cache is fresh - hydrate instantly (no skeleton!)
+    // Step 2: If not in module cache, try localStorage
+    if (!cached) {
+      if (hydrateFromStorage(hotelId)) {
+        cached = COMPLIANCE_CACHE.get(hotelId);
+      }
+    }
+    
+    // Step 3: Use cache if exists (Infinity TTL - always valid)
+    if (cached) {
       setTasks(cached.tasks);
       setHistory(cached.history);
       setScoreBreakdown(cached.scoreBreakdown);
@@ -329,18 +367,17 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
       setLastUpdated(cached.fetchedAt);
       setLoading(false);
       setScoresLoading(false);
-      
-      // Optionally refresh in background if somewhat stale
-      if (now - cached.fetchedAt > CACHE_TTL_MS / 2) {
-        refreshDataSilently();
-      }
     } else {
-      // No cache or stale - load fresh
+      // No cache at all - load fresh
       loadInitialData();
     }
+    
+    // Step 4: Persist to localStorage on unmount
+    return () => {
+      persistToStorage(hotelId);
+    };
   }, [hotelId]);
 
-  // ✅ Load fresh data on initial mount or cache miss
   const loadInitialData = async () => {
     setLoading(true);
     try {
@@ -352,26 +389,29 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
     }
   };
 
-  // ✅ Refresh data and update cache
   const refreshData = async () => {
     try {
-      // Fetch all data
       const [tasksData, historyData, scoresData] = await Promise.all([
         loadTasks(),
         loadHistory(),
         loadScores()
       ]);
       
-      // Update cache
       const now = Date.now();
-      COMPLIANCE_CACHE.set(hotelId, {
+      const cacheData: ComplianceCache = {
         fetchedAt: now,
         tasks: tasksData,
         history: historyData,
         scoreBreakdown: scoresData.task_breakdown || {},
         scoreData: scoresData,
         graphPoints: scoresData.graphPoints || []
-      });
+      };
+      
+      // Update module cache
+      COMPLIANCE_CACHE.set(hotelId, cacheData);
+      
+      // Persist to localStorage
+      persistToStorage(hotelId);
       
       setLastUpdated(now);
       setIsDirty(false);
@@ -380,16 +420,6 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
     }
   };
 
-  // ✅ Silent background refresh
-  const refreshDataSilently = async () => {
-    try {
-      await refreshData();
-    } catch (err) {
-      console.error('Silent refresh error:', err);
-    }
-  };
-
-  // ✅ Manual refresh with visual feedback
   const handleManualRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await refreshData();
@@ -483,7 +513,6 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
     }
   };
 
-  // ✅ NO auto-refresh - just set dirty flag
   const handleUploadSuccess = useCallback(() => {
     setIsDirty(true);
     setSuccessMessage("Upload successful!");
@@ -583,12 +612,9 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
           </div>
         )}
 
-        {/* Header */}
         <div className="mb-8">
-          {/* ✅ MEMOIZED: Static header */}
           <PageHeader />
 
-          {/* ✅ MEMOIZED: Score section with refresh */}
           <ScoreSection
             scoresLoading={scoresLoading}
             scoreData={scoreData}
@@ -601,7 +627,6 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
             onRefresh={handleManualRefresh}
           />
 
-          {/* ✅ MEMOIZED: Filter section */}
           <FilterSection
             filtersOpen={filtersOpen}
             filters={filters}
@@ -613,7 +638,6 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
           />
         </div>
 
-        {/* Tasks Grid */}
         <div className="space-y-8">
           {Object.keys(grouped).map((category) => (
             <CategorySection
