@@ -67,7 +67,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
     };
   }, []);
 
-  // Fetch raw data only when hotelId changes
   useEffect(() => {
     async function fetchUtilitiesData() {
       if (!hotelId) {
@@ -116,7 +115,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
     fetchUtilitiesData();
   }, [hotelId]);
 
-  // Extract available years from raw data
   const availableYears = useMemo(() => {
     if (rawData.length === 0) return [];
     
@@ -168,7 +166,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
     return Array.from(years).sort((a, b) => b - a);
   }, [rawData]);
 
-  // Calculate the date range based on mode
   const dateRange = useMemo(() => {
     if (periodMode === 'rolling') {
       const endDate = new Date();
@@ -180,10 +177,9 @@ export function useUtilitiesData(hotelId: string | undefined): {
         start: startDate,
         end: endDate,
         isRolling: true,
-        years: [] // Not used in rolling mode
+        years: []
       };
     } else {
-      // For yearly mode, support multiple years
       const years = selectedYears.length > 0 ? selectedYears : [new Date().getFullYear()];
       const minYear = Math.min(...years);
       const maxYear = Math.max(...years);
@@ -197,7 +193,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
     }
   }, [periodMode, selectedYears]);
 
-  // Process the bills data
   const data = useMemo<UtilitiesDataType>(() => {
     const emptyData: UtilitiesDataType = {
       electricity: [],
@@ -216,7 +211,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
       return emptyData;
     }
 
-    // Process the raw data into daily values
     const dailyData: Record<string, DailyUtilityData> = {};
     
     rawData.forEach((bill: BillEntry) => {
@@ -321,13 +315,11 @@ export function useUtilitiesData(hotelId: string | undefined): {
       }
     });
     
-    // Filter daily data to date range
     const filteredDailyData = Object.values(dailyData).filter(dayData => {
       const date = new Date(dayData.date);
       return date >= dateRange.start && date <= dateRange.end;
     });
     
-    // Aggregate into months with year tracking
     const monthlyData: MonthData[] = [];
     const monthMap: Record<string, MonthData> = {};
     
@@ -336,7 +328,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
       
-      // For multi-year comparison, include year in the key
       const monthKey = periodMode === 'yearly' && dateRange.years.length > 1
         ? `${year}-${String(month).padStart(2, '0')}`
         : `${year}-${String(month).padStart(2, '0')}`;
@@ -395,7 +386,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
     const electricityCost = monthlyData.reduce((sum: number, m: MonthData) => sum + m.electricity_eur, 0);
     const gasCost = monthlyData.reduce((sum: number, m: MonthData) => sum + m.gas_eur, 0);
     
-    // For multi-year comparison, include year in the display
     const electricityChartData: ElectricityEntry[] = monthlyData.map(month => ({
       month: month.month,
       year: month.year,
@@ -430,7 +420,6 @@ export function useUtilitiesData(hotelId: string | undefined): {
       }
     }));
     
-    // Filter bills for current date range
     const filteredBills = rawData.filter((b: BillEntry) => {
       try {
         const summary = b.summary || {};
