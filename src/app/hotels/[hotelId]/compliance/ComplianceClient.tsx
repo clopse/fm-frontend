@@ -75,11 +75,29 @@ const hydrateFromStorage = (hotelId: string): boolean => {
     
     const data = JSON.parse(stored);
     
-    // With Infinity TTL, we always trust the cache
-    COMPLIANCE_CACHE.set(hotelId, data);
+    // Validate cache structure before using it
+    if (!data || typeof data !== 'object') {
+      console.warn('Invalid cache structure, clearing...');
+      localStorage.removeItem(getStorageKey(hotelId));
+      return false;
+    }
+    
+    // With Infinity TTL, we always trust the cache (if valid)
+    COMPLIANCE_CACHE.set(hotelId, {
+      fetchedAt: data.fetchedAt || Date.now(),
+      tasks: data.tasks || [],
+      history: data.history || {},
+      scoreBreakdown: data.scoreBreakdown || {},
+      scoreData: data.scoreData || null,
+      graphPoints: data.graphPoints || []
+    });
     return true;
   } catch (err) {
     console.warn('Failed to load from localStorage:', err);
+    // Clear corrupted cache
+    try {
+      localStorage.removeItem(getStorageKey(hotelId));
+    } catch {}
     return false;
   }
 };
@@ -359,12 +377,12 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
     
     // Step 3: Use cache if exists (Infinity TTL - always valid)
     if (cached) {
-      setTasks(cached.tasks);
-      setHistory(cached.history);
-      setScoreBreakdown(cached.scoreBreakdown);
-      setScoreData(cached.scoreData);
-      setGraphPoints(cached.graphPoints);
-      setLastUpdated(cached.fetchedAt);
+      setTasks(cached.tasks || []);
+      setHistory(cached.history || {});
+      setScoreBreakdown(cached.scoreBreakdown || {});
+      setScoreData(cached.scoreData || null);
+      setGraphPoints(cached.graphPoints || []);
+      setLastUpdated(cached.fetchedAt || Date.now());
       setLoading(false);
       setScoresLoading(false);
     } else {
@@ -563,7 +581,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   );
   
   const earnedPoints = useMemo(() => 
-    Object.values(scoreBreakdown).reduce((sum, score) => sum + score, 0),
+    Object.values(scoreBreakdown || {}).reduce((sum, score) => sum + score, 0),
     [scoreBreakdown]
   );
 
