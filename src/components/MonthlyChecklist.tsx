@@ -36,10 +36,11 @@ interface TaskItem {
 
 export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Props) {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [confirmingTasks, setConfirmingTasks] = useState<Set<string>>(new Set());
+  const [expandedInfo, setExpandedInfo] = useState<string | null>(null);
 
-  // Memoize date calculations - these don't need to recalculate on every render
+  // Memoize date calculations
   const dateInfo = useMemo(() => {
     const now = new Date();
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -52,9 +53,9 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
         month: 'long',
       })
     };
-  }, []); // Empty dependency array - dates are calculated once per component mount
+  }, []);
 
-  // Memoize tasks summary to avoid recalculating on every render
+  // Memoize tasks summary
   const tasksSummary = useMemo(() => ({
     count: tasks.length,
     hasMultiple: tasks.length !== 1,
@@ -71,13 +72,15 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
       .then((data) => {
         const unconfirmed = data.filter((task: TaskItem) => !task.is_confirmed_this_month);
         setTasks(unconfirmed);
-        setLoading(false);
+        setInitialLoad(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => setInitialLoad(false));
   }, [hotelId]);
 
-  // Use useCallback to prevent function recreation on every render
+  // ✅ Optimistic update - remove task INSTANTLY from UI
   const confirmTask = useCallback(async (taskId: string) => {
+    // Optimistically remove from UI immediately
+    setTasks((prev) => prev.filter((task) => task.task_id !== taskId));
     setConfirmingTasks(prev => new Set(prev).add(taskId));
     
     try {
@@ -87,10 +90,17 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
         body: JSON.stringify({ hotel_id: hotelId, task_id: taskId, user_email: userEmail }),
       });
       
-      setTasks((prev) => prev.filter((task) => task.task_id !== taskId));
+      // Call parent's debounced refresh (batches multiple calls)
       if (onConfirm) onConfirm();
     } catch (error) {
       console.error('Failed to confirm task:', error);
+      // On error, re-fetch to restore correct state
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly-checklist/${hotelId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const unconfirmed = data.filter((task: TaskItem) => !task.is_confirmed_this_month);
+          setTasks(unconfirmed);
+        });
     } finally {
       setConfirmingTasks(prev => {
         const newSet = new Set(prev);
@@ -100,12 +110,13 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
     }
   }, [hotelId, userEmail, onConfirm]);
 
-  // Memoize the info popup handler
-  const showTaskInfo = useCallback((infoPopup: string) => {
-    alert(infoPopup);
+  // ✅ Replace alert() with inline expand/collapse
+  const toggleInfo = useCallback((taskId: string) => {
+    setExpandedInfo(prev => prev === taskId ? null : taskId);
   }, []);
 
-  if (loading) {
+  // ✅ Only show spinner on first load AND no tasks
+  if (initialLoad && tasks.length === 0) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
@@ -152,13 +163,24 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
                   <div className="flex items-center space-x-2 mb-2">
                     <h3 className="font-medium text-slate-900 truncate">{task.label}</h3>
                     <button
-                      onClick={() => showTaskInfo(task.info_popup)}
-                      className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+                      onClick={() => toggleInfo(task.task_id)}
+                      className={`p-1 rounded transition-colors ${
+                        expandedInfo === task.task_id 
+                          ? 'bg-blue-100 text-blue-600' 
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
                       title="More information"
                     >
                       <Info className="w-4 h-4" />
                     </button>
                   </div>
+
+                  {/* Expanded Info - replaces alert() */}
+                  {expandedInfo === task.task_id && task.info_popup && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-3 text-sm text-blue-800">
+                      {task.info_popup}
+                    </div>
+                  )}
 
                   {/* Task Meta */}
                   <div className="flex items-center space-x-4 text-sm text-slate-500 mb-3">
