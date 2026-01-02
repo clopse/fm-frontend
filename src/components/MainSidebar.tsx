@@ -48,7 +48,7 @@ export default function MainSidebar({
       description: 'Hotel overview'
     },
     {
-      label: 'Building Management',
+      label: 'Drawings',
       href: `/hotels/${hotelId}/building`,
       icon: Building2,
       description: 'Property and infrastructure'
