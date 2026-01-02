@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Zap, TrendingUp, TrendingDown, Clock, Euro, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
@@ -10,7 +11,36 @@ export default function ElectricityPage() {
   const rawParams = useParams();
   const hotelId = rawParams?.hotelId as string | undefined;
   
-  const { data, loading, year, setYear, viewMode, setViewMode } = useUtilitiesData(hotelId);
+  const { 
+    data, 
+    loading, 
+    selectedYears, 
+    setSelectedYears, 
+    periodMode, 
+    setPeriodMode, 
+    availableYears, 
+    viewMode, 
+    setViewMode 
+  } = useUtilitiesData(hotelId);
+
+  // Extract single year for this detail page
+  const year = selectedYears[0] || new Date().getFullYear();
+
+  // Ensure we're in yearly mode for detail pages
+  useEffect(() => {
+    if (periodMode !== 'yearly') {
+      setPeriodMode('yearly');
+    }
+  }, [periodMode, setPeriodMode]);
+
+  // Auto-select current year if no year selected
+  useEffect(() => {
+    if (selectedYears.length === 0 && availableYears.length > 0) {
+      const currentYear = new Date().getFullYear();
+      const defaultYear = availableYears.includes(currentYear) ? currentYear : availableYears[0];
+      setSelectedYears([defaultYear]);
+    }
+  }, [selectedYears.length, availableYears, setSelectedYears]);
 
   if (!hotelId) {
     return (
@@ -90,12 +120,12 @@ export default function ElectricityPage() {
               <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg px-4 py-2">
                 <select 
                   value={year} 
-                  onChange={(e) => setYear(parseInt(e.target.value))}
+                  onChange={(e) => setSelectedYears([parseInt(e.target.value)])}
                   className="bg-transparent text-white font-medium focus:outline-none"
                 >
-                  <option value="2023" className="text-slate-900">2023</option>
-                  <option value="2024" className="text-slate-900">2024</option>
-                  <option value="2025" className="text-slate-900">2025</option>
+                  {availableYears.map(y => (
+                    <option key={y} value={y} className="text-slate-900">{y}</option>
+                  ))}
                 </select>
               </div>
               
@@ -166,19 +196,19 @@ export default function ElectricityPage() {
           {/* Main consumption chart - larger */}
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-900">Monthly Consumption Trend</h3>
-              <p className="text-sm text-slate-600 mt-1">Day vs Night usage over time</p>
+              <h3 className="text-lg font-semibold text-slate-900">Consumption Pattern</h3>
+              <p className="text-sm text-slate-600 mt-1">Day vs Night usage breakdown</p>
             </div>
             <div className="p-6">
               <ResponsiveContainer width="100%" height={400}>
                 <AreaChart data={electricityData}>
                   <defs>
                     <linearGradient id="dayGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.6}/>
                       <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1}/>
                     </linearGradient>
                     <linearGradient id="nightGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.6}/>
                       <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1}/>
                     </linearGradient>
                   </defs>
