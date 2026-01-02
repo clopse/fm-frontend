@@ -1,5 +1,6 @@
 export interface ElectricityEntry {
   month: string;
+  year?: number; // Added for multi-year comparison
   day_kwh: number;
   night_kwh: number;
   total_kwh: number;
@@ -17,6 +18,7 @@ export interface ElectricityEntry {
 
 export interface GasEntry {
   period: string;
+  year?: number; // Added for multi-year comparison
   total_kwh: number;
   total_eur: number;
   per_room_kwh: number;
@@ -83,6 +85,7 @@ export interface BillEntry {
 
 export interface MonthData {
   month: string;
+  year?: number; // Added for multi-year comparison
   electricity_kwh: number;
   electricity_day_kwh: number;
   electricity_night_kwh: number;
@@ -117,6 +120,8 @@ export interface UtilitiesData {
     end: string;
     mode: 'rolling' | 'yearly';
   };
+  comparison_mode?: boolean; // Added for multi-year comparison
+  comparison_years?: number[]; // Added for multi-year comparison
   trends?: {
     electricity: number;
     gas: number;
