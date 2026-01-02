@@ -91,12 +91,6 @@ export default function MainSidebar({
           icon: Droplets,
           description: 'Water usage monitoring'
         },
-        {
-          label: 'Bills Archive',
-          href: `/hotels/${hotelId}/utilities/bills`,
-          icon: FileText,
-          description: 'All uploaded utility bills'
-        },
       ]
     },
     {
