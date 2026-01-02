@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, memo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
 import { 
@@ -63,6 +63,277 @@ const InitialLoadingSkeleton = () => (
     </div>
   </div>
 );
+
+// ✅ MEMOIZED: Hero Section - never changes
+const HeroSection = memo(function HeroSection({ hotelId, hotelName }: { hotelId: string; hotelName: string }) {
+  return (
+    <div 
+      className="relative h-96 bg-cover bg-center bg-gray-800 overflow-hidden"
+      style={{ 
+        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('/${hotelId}.jpg'), url('/fallback.jpg')`
+      }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+      
+      <div className="relative h-full flex items-center justify-center">
+        <div className="text-center text-white px-4">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">
+            {hotelName}
+          </h1>
+          <p className="text-xl text-gray-100 drop-shadow-md">
+            Management Dashboard
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+});
+
+// ✅ SPLIT: Compliance Score Card - only re-renders when score/points/lastUpdated/isDirty change
+const ComplianceScoreCard = memo(function ComplianceScoreCard({ 
+  score, 
+  points, 
+  lastUpdated, 
+  isDirty,
+  isRefreshing,
+  onRefresh 
+}: {
+  score: number;
+  points: string;
+  lastUpdated: number;
+  isDirty: boolean;
+  isRefreshing: boolean;
+  onRefresh: () => void;
+}) {
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return 'from-green-500 to-emerald-600';
+    if (score >= 70) return 'from-blue-500 to-indigo-600';
+    if (score >= 50) return 'from-yellow-500 to-orange-600';
+    return 'from-red-500 to-rose-600';
+  };
+
+  const getLastUpdatedText = () => {
+    const seconds = Math.floor((Date.now() - lastUpdated) / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ago`;
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className={`bg-gradient-to-r ${getScoreColor(score)} text-white p-6`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center mb-2">
+              <Award className="w-6 h-6 mr-2" />
+              <span className="text-lg font-semibold">Compliance Score</span>
+            </div>
+            <div className="text-3xl font-bold">{score}%</div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm opacity-90">{points}</div>
+            <div className="text-xs opacity-75">Points</div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Last Updated + Refresh Button */}
+      <div className="bg-slate-50 px-6 py-3 flex items-center justify-between border-t border-slate-200">
+        <div className="flex items-center space-x-2 text-xs">
+          <Clock className="w-3 h-3 text-slate-400" />
+          <span className="text-slate-600">
+            {getLastUpdatedText()}
+          </span>
+          {isDirty && (
+            <span className="text-orange-600 font-medium">• Changes pending</span>
+          )}
+        </div>
+        <button
+          onClick={onRefresh}
+          disabled={isRefreshing}
+          className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+        </button>
+      </div>
+    </div>
+  );
+});
+
+// ✅ SPLIT: Items Needed Card - only re-renders when incompleteTasks change
+const ItemsNeededCard = memo(function ItemsNeededCard({ 
+  incompleteTasks 
+}: {
+  incompleteTasks: TaskItem[];
+}) {
+  const potentialPoints = incompleteTasks.reduce((sum, task) => sum + task.points, 0);
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+          <Clock className="w-5 h-5 mr-2 text-orange-500" />
+          Items Needed
+        </h3>
+        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+          incompleteTasks.length > 0 
+            ? 'bg-orange-100 text-orange-800' 
+            : 'bg-green-100 text-green-800'
+        }`}>
+          {incompleteTasks.length}
+        </div>
+      </div>
+      <div className="text-3xl font-bold text-slate-900 mb-2">
+        {incompleteTasks.length}
+      </div>
+      <p className="text-sm text-slate-600">
+        {incompleteTasks.length === 0 
+          ? 'All tasks complete!' 
+          : `Worth ${potentialPoints} points`}
+      </p>
+    </div>
+  );
+});
+
+// ✅ MEMOIZED: Quick Actions - never changes for same hotelId
+const QuickActionsCard = memo(function QuickActionsCard({ 
+  hotelId,
+  onNavigate
+}: {
+  hotelId: string;
+  onNavigate: (path: string) => void;
+}) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-slate-900 flex items-center">
+          <TrendingUp className="w-5 h-5 mr-2 text-green-500" />
+          Quick Actions
+        </h3>
+      </div>
+      <div className="space-y-3">
+        <button 
+          onClick={() => onNavigate(`/hotels/${hotelId}/compliance`)}
+          className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium"
+        >
+          View Full Compliance
+        </button>
+        <button 
+          onClick={() => onNavigate(`/hotels/${hotelId}/compliance`)}
+          className="w-full bg-green-50 hover:bg-green-100 text-green-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium"
+        >
+          Upload Documents
+        </button>
+      </div>
+    </div>
+  );
+});
+
+// ✅ MEMOIZED: Monthly Checklist Section - only re-renders when hotelId/onConfirm change
+const MonthlyChecklistSection = memo(function MonthlyChecklistSection({
+  hotelId,
+  userEmail,
+  onConfirm
+}: {
+  hotelId: string;
+  userEmail: string;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4">
+        <h2 className="text-xl font-bold flex items-center">
+          <CheckCircle className="w-6 h-6 mr-2" />
+          Monthly Checklist
+        </h2>
+        <p className="text-green-100 text-sm mt-1">Complete your routine tasks</p>
+      </div>
+      <div className="p-6">
+        <MonthlyChecklist
+          hotelId={hotelId}
+          userEmail={userEmail}
+          onConfirm={onConfirm}
+        />
+      </div>
+    </div>
+  );
+});
+
+// ✅ MEMOIZED: Items Needed Section - only re-renders when incompleteTasks change
+const ItemsNeededSection = memo(function ItemsNeededSection({
+  incompleteTasks,
+  onUploadOpen
+}: {
+  incompleteTasks: TaskItem[];
+  onUploadOpen: (task: TaskItem) => void;
+}) {
+  const potentialPoints = incompleteTasks.reduce((sum, task) => sum + task.points, 0);
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-4">
+        <h2 className="text-xl font-bold flex items-center">
+          <AlertTriangle className="w-6 h-6 mr-2" />
+          Items Needed
+        </h2>
+        <p className="text-orange-100 text-sm mt-1">
+          {incompleteTasks.length} tasks requiring attention ({potentialPoints} points)
+        </p>
+      </div>
+      <div className="p-6 max-h-96 overflow-y-auto">
+        {incompleteTasks && incompleteTasks.length > 0 ? (
+          <div className="space-y-3">
+            {incompleteTasks.map(task => (
+              <div key={task.task_id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <h3 className="font-medium text-slate-900">{task.label}</h3>
+                    <button
+                      onClick={() => alert(task.info_popup)}
+                      className="p-1 text-slate-400 hover:text-slate-600 rounded"
+                      title="More info"
+                    >
+                      <Info className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex items-center space-x-4 text-sm text-slate-500">
+                    <span className="flex items-center">
+                      <Calendar className="w-3 h-3 mr-1" />
+                      {task.frequency}
+                    </span>
+                    <span className="flex items-center">
+                      <FileText className="w-3 h-3 mr-1" />
+                      {task.category}
+                    </span>
+                    <span className="text-orange-600 font-medium">
+                      +{task.points} pts
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => onUploadOpen(task)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 font-medium"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Upload</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-slate-500">
+            <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-400" />
+            <p className="text-lg font-medium text-slate-700">Perfect!</p>
+            <p className="text-sm">All compliance tasks complete</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
 
 export default function HotelDashboard() {
   const { hotelId } = useParams<{ hotelId: string }>();
@@ -162,11 +433,11 @@ export default function HotelDashboard() {
   };
 
   // ✅ Manual refresh with visual feedback
-  const handleManualRefresh = async () => {
+  const handleManualRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await refreshData();
     setIsRefreshing(false);
-  };
+  }, [hotelId]);
 
   const fetchScore = async () => {
     try {
@@ -222,7 +493,7 @@ export default function HotelDashboard() {
     setIsDirty(true);
   }, []);
 
-  const handleUploadOpen = async (task: TaskItem) => {
+  const handleUploadOpen = useCallback(async (task: TaskItem) => {
     // Lazy load history if not already loaded
     if (allHistoryEntries.length === 0) {
       await fetchAllHistory();
@@ -242,26 +513,11 @@ export default function HotelDashboard() {
     setActiveTask(task);
     setActiveHistory(taskHistory);
     setUploadModalVisible(true);
-  };
+  }, [allHistoryEntries]);
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return 'from-green-500 to-emerald-600';
-    if (score >= 70) return 'from-blue-500 to-indigo-600';
-    if (score >= 50) return 'from-yellow-500 to-orange-600';
-    return 'from-red-500 to-rose-600';
-  };
-
-  const potentialPoints = incompleteTasks.reduce((sum, task) => sum + task.points, 0);
-
-  // Format last updated time
-  const getLastUpdatedText = () => {
-    const seconds = Math.floor((Date.now() - lastUpdated) / 1000);
-    if (seconds < 60) return 'Just now';
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    return `${hours}h ago`;
-  };
+  const handleNavigate = useCallback((path: string) => {
+    router.push(path);
+  }, [router]);
 
   // ✅ Show skeleton ONLY on initial load (no cache)
   if (initialLoading) {
@@ -270,204 +526,45 @@ export default function HotelDashboard() {
 
   return (
     <div className="h-full bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Hero Section */}
-      <div 
-        className="relative h-96 bg-cover bg-center bg-gray-800 overflow-hidden"
-        style={{ 
-          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.6)), url('/${hotelId}.jpg'), url('/fallback.jpg')`
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-        
-        <div className="relative h-full flex items-center justify-center">
-          <div className="text-center text-white px-4">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">
-              {hotelName}
-            </h1>
-            <p className="text-xl text-gray-100 drop-shadow-md">
-              Management Dashboard
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* ✅ MEMOIZED: Hero - never re-renders */}
+      <HeroSection hotelId={hotelId} hotelName={hotelName} />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          
-          {/* Compliance Score Card */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className={`bg-gradient-to-r ${getScoreColor(score)} text-white p-6`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center mb-2">
-                    <Award className="w-6 h-6 mr-2" />
-                    <span className="text-lg font-semibold">Compliance Score</span>
-                  </div>
-                  <div className="text-3xl font-bold">{score}%</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm opacity-90">{points}</div>
-                  <div className="text-xs opacity-75">Points</div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Last Updated + Refresh Button */}
-            <div className="bg-slate-50 px-6 py-3 flex items-center justify-between border-t border-slate-200">
-              <div className="flex items-center space-x-2 text-xs">
-                <Clock className="w-3 h-3 text-slate-400" />
-                <span className="text-slate-600">
-                  {getLastUpdatedText()}
-                </span>
-                {isDirty && (
-                  <span className="text-orange-600 font-medium">• Changes pending</span>
-                )}
-              </div>
-              <button
-                onClick={handleManualRefresh}
-                disabled={isRefreshing}
-                className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50"
-              >
-                <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-                <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
-              </button>
-            </div>
-          </div>
+          {/* ✅ SPLIT: Only re-renders when score/points/lastUpdated/isDirty change */}
+          <ComplianceScoreCard
+            score={score}
+            points={points}
+            lastUpdated={lastUpdated}
+            isDirty={isDirty}
+            isRefreshing={isRefreshing}
+            onRefresh={handleManualRefresh}
+          />
 
-          {/* Items Needed */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-                <Clock className="w-5 h-5 mr-2 text-orange-500" />
-                Items Needed
-              </h3>
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                incompleteTasks.length > 0 
-                  ? 'bg-orange-100 text-orange-800' 
-                  : 'bg-green-100 text-green-800'
-              }`}>
-                {incompleteTasks.length}
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-slate-900 mb-2">
-              {incompleteTasks.length}
-            </div>
-            <p className="text-sm text-slate-600">
-              {incompleteTasks.length === 0 
-                ? 'All tasks complete!' 
-                : `Worth ${potentialPoints} points`}
-            </p>
-          </div>
+          {/* ✅ SPLIT: Only re-renders when incompleteTasks change */}
+          <ItemsNeededCard incompleteTasks={incompleteTasks} />
 
-          {/* Quick Actions */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900 flex items-center">
-                <TrendingUp className="w-5 h-5 mr-2 text-green-500" />
-                Quick Actions
-              </h3>
-            </div>
-            <div className="space-y-3">
-              <button 
-                onClick={() => router.push(`/hotels/${hotelId}/compliance`)}
-                className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium"
-              >
-                View Full Compliance
-              </button>
-              <button 
-                onClick={() => router.push(`/hotels/${hotelId}/compliance`)}
-                className="w-full bg-green-50 hover:bg-green-100 text-green-700 px-4 py-3 rounded-lg transition-colors text-sm font-medium"
-              >
-                Upload Documents
-              </button>
-            </div>
-          </div>
+          {/* ✅ MEMOIZED: Never re-renders for same hotelId */}
+          <QuickActionsCard hotelId={hotelId} onNavigate={handleNavigate} />
         </div>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* Monthly Checklist */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-4">
-              <h2 className="text-xl font-bold flex items-center">
-                <CheckCircle className="w-6 h-6 mr-2" />
-                Monthly Checklist
-              </h2>
-              <p className="text-green-100 text-sm mt-1">Complete your routine tasks</p>
-            </div>
-            <div className="p-6">
-              <MonthlyChecklist
-                hotelId={hotelId}
-                userEmail="admin@jmk.ie"
-                onConfirm={handleChecklistUpdate}
-              />
-            </div>
-          </div>
+          {/* ✅ MEMOIZED: Only re-renders when hotelId/onConfirm change */}
+          <MonthlyChecklistSection
+            hotelId={hotelId}
+            userEmail="admin@jmk.ie"
+            onConfirm={handleChecklistUpdate}
+          />
 
-          {/* Items Needed This Month */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-4">
-              <h2 className="text-xl font-bold flex items-center">
-                <AlertTriangle className="w-6 h-6 mr-2" />
-                Items Needed
-              </h2>
-              <p className="text-orange-100 text-sm mt-1">
-                {incompleteTasks.length} tasks requiring attention ({potentialPoints} points)
-              </p>
-            </div>
-            <div className="p-6 max-h-96 overflow-y-auto">
-              {incompleteTasks && incompleteTasks.length > 0 ? (
-                <div className="space-y-3">
-                  {incompleteTasks.map(task => (
-                    <div key={task.task_id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h3 className="font-medium text-slate-900">{task.label}</h3>
-                          <button
-                            onClick={() => alert(task.info_popup)}
-                            className="p-1 text-slate-400 hover:text-slate-600 rounded"
-                            title="More info"
-                          >
-                            <Info className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm text-slate-500">
-                          <span className="flex items-center">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            {task.frequency}
-                          </span>
-                          <span className="flex items-center">
-                            <FileText className="w-3 h-3 mr-1" />
-                            {task.category}
-                          </span>
-                          <span className="text-orange-600 font-medium">
-                            +{task.points} pts
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleUploadOpen(task)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 font-medium"
-                      >
-                        <Upload className="w-4 h-4" />
-                        <span>Upload</span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-slate-500">
-                  <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-400" />
-                  <p className="text-lg font-medium text-slate-700">Perfect!</p>
-                  <p className="text-sm">All compliance tasks complete</p>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* ✅ MEMOIZED: Only re-renders when incompleteTasks change */}
+          <ItemsNeededSection
+            incompleteTasks={incompleteTasks}
+            onUploadOpen={handleUploadOpen}
+          />
         </div>
       </div>
 
