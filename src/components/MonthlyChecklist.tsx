@@ -79,28 +79,40 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
 
   // ✅ Optimistic update - remove task INSTANTLY from UI
   const confirmTask = useCallback(async (taskId: string) => {
+    // Store the task before removing it (for error recovery)
+    const taskToConfirm = tasks.find(t => t.task_id === taskId);
+    if (!taskToConfirm) return;
+    
     // Optimistically remove from UI immediately
     setTasks((prev) => prev.filter((task) => task.task_id !== taskId));
     setConfirmingTasks(prev => new Set(prev).add(taskId));
     
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hotel_id: hotelId, task_id: taskId, user_email: userEmail }),
       });
       
+      if (!response.ok) {
+        throw new Error('Failed to confirm task');
+      }
+      
       // Call parent's debounced refresh (batches multiple calls)
       if (onConfirm) onConfirm();
     } catch (error) {
       console.error('Failed to confirm task:', error);
-      // On error, re-fetch to restore correct state
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly-checklist/${hotelId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          const unconfirmed = data.filter((task: TaskItem) => !task.is_confirmed_this_month);
-          setTasks(unconfirmed);
-        });
+      
+      // Re-add only the specific failed task
+      setTasks((prev) => {
+        // Check if it's already in the list (shouldn't be, but be safe)
+        if (prev.some(t => t.task_id === taskId)) return prev;
+        // Add it back in original position (or at the end)
+        return [...prev, taskToConfirm].sort((a, b) => a.label.localeCompare(b.label));
+      });
+      
+      // Still call onConfirm to let debounced refresh reconcile
+      if (onConfirm) onConfirm();
     } finally {
       setConfirmingTasks(prev => {
         const newSet = new Set(prev);
@@ -108,7 +120,7 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
         return newSet;
       });
     }
-  }, [hotelId, userEmail, onConfirm]);
+  }, [hotelId, userEmail, onConfirm, tasks]);
 
   // ✅ Replace alert() with inline expand/collapse
   const toggleInfo = useCallback((taskId: string) => {
