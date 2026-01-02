@@ -506,7 +506,7 @@ export default function HotelDashboard() {
                          cached.taskBreakdown &&
                          Object.keys(cached.taskBreakdown).length > 0;
     
-    if (cacheHasData) {
+    if (cached && cacheHasData) {
       // Cache is valid and has data - use it
       console.log('Loading from cache for', hotelId);
       setScore(cached.score || 0);
