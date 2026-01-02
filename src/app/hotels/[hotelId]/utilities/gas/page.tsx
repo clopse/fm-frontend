@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Flame, TrendingUp, TrendingDown, Thermometer, Euro, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, ComposedChart } from 'recharts';
@@ -32,7 +33,36 @@ export default function GasPage() {
   const rawParams = useParams();
   const hotelId = rawParams?.hotelId as string | undefined;
   
-  const { data, loading, year, setYear, viewMode, setViewMode } = useUtilitiesData(hotelId);
+  const { 
+    data, 
+    loading, 
+    selectedYears, 
+    setSelectedYears, 
+    periodMode, 
+    setPeriodMode, 
+    availableYears, 
+    viewMode, 
+    setViewMode 
+  } = useUtilitiesData(hotelId);
+
+  // Extract single year for this detail page
+  const year = selectedYears[0] || new Date().getFullYear();
+
+  // Ensure we're in yearly mode for detail pages
+  useEffect(() => {
+    if (periodMode !== 'yearly') {
+      setPeriodMode('yearly');
+    }
+  }, [periodMode, setPeriodMode]);
+
+  // Auto-select current year if no year selected
+  useEffect(() => {
+    if (selectedYears.length === 0 && availableYears.length > 0) {
+      const currentYear = new Date().getFullYear();
+      const defaultYear = availableYears.includes(currentYear) ? currentYear : availableYears[0];
+      setSelectedYears([defaultYear]);
+    }
+  }, [selectedYears.length, availableYears, setSelectedYears]);
 
   if (!hotelId) {
     return (
@@ -139,12 +169,12 @@ export default function GasPage() {
               <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg px-4 py-2">
                 <select 
                   value={year} 
-                  onChange={(e) => setYear(parseInt(e.target.value))}
+                  onChange={(e) => setSelectedYears([parseInt(e.target.value)])}
                   className="bg-transparent text-white font-medium focus:outline-none"
                 >
-                  <option value="2023" className="text-slate-900">2023</option>
-                  <option value="2024" className="text-slate-900">2024</option>
-                  <option value="2025" className="text-slate-900">2025</option>
+                  {availableYears.map(y => (
+                    <option key={y} value={y} className="text-slate-900">{y}</option>
+                  ))}
                 </select>
               </div>
               
@@ -184,7 +214,7 @@ export default function GasPage() {
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <Euro className="w-8 h-8 text-green-600" />
+              <Euro className="w-8 h-8 text-emerald-600" />
             </div>
             <h3 className="text-sm font-medium text-slate-600 mb-1">Total Cost</h3>
             <p className="text-2xl font-bold text-slate-900">€{totalCost.toLocaleString()}</p>
@@ -195,30 +225,28 @@ export default function GasPage() {
             <div className="flex items-center justify-between mb-4">
               <Thermometer className="w-8 h-8 text-orange-600" />
             </div>
-            <h3 className="text-sm font-medium text-slate-600 mb-1">Peak Month</h3>
-            <p className="text-2xl font-bold text-slate-900">{formatMonth(peakMonth.period)}</p>
-            <p className="text-sm text-slate-500">{peakMonth.total_kwh.toLocaleString()} kWh</p>
+            <h3 className="text-sm font-medium text-slate-600 mb-1">Monthly Average</h3>
+            <p className="text-2xl font-bold text-slate-900">{avgMonthlyConsumption.toLocaleString()}</p>
+            <p className="text-sm text-slate-500">kWh per month</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <BarChart3 className="w-8 h-8 text-purple-600" />
             </div>
-            <h3 className="text-sm font-medium text-slate-600 mb-1">Efficiency</h3>
-            <p className="text-2xl font-bold text-slate-900">
-              {avgPerRoomKwh.toFixed(1)}
-            </p>
-            <p className="text-sm text-slate-500">kWh/room avg</p>
+            <h3 className="text-sm font-medium text-slate-600 mb-1">Per Room</h3>
+            <p className="text-2xl font-bold text-slate-900">{avgPerRoomKwh.toFixed(1)}</p>
+            <p className="text-sm text-slate-500">kWh per room</p>
           </div>
         </div>
 
-        {/* Main Analysis Section */}
+        {/* Main Chart Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           {/* Main consumption chart */}
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-900">Gas Consumption Trend</h3>
-              <p className="text-sm text-slate-600 mt-1">Monthly usage patterns and seasonality</p>
+              <h3 className="text-lg font-semibold text-slate-900">Gas Consumption & Cost</h3>
+              <p className="text-sm text-slate-600 mt-1">Monthly usage and expenditure trends</p>
             </div>
             <div className="p-6">
               <ResponsiveContainer width="100%" height={400}>
