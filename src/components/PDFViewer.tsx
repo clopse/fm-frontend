@@ -30,8 +30,8 @@ interface PDFViewerProps {
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 
-const ZOOM_MIN = 0.5;
-const ZOOM_MAX = 4;
+const ZOOM_MIN = 0.4;
+const ZOOM_MAX = 1.90;
 const ZOOM_STEP_BUTTON = 0.25;
 const ZOOM_STEP_WHEEL = 0.15;
 
