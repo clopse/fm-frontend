@@ -132,17 +132,18 @@ export default function PDFViewer({
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     
     setIsDragging(true);
-    dragStartRef.current = { x: e.clientX - position.x, y: e.clientY - position.y };
-    e.preventDefault();
-  };
+    dragStartRef.current = { 
+  x: e.clientX / viewScale - position.x, 
+  y: e.clientY / viewScale - position.y 
+};
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging || pointerIdRef.current !== e.pointerId) return;
     
     setPosition({
-      x: e.clientX - dragStartRef.current.x,
-      y: e.clientY - dragStartRef.current.y
-    });
+  x: e.clientX / viewScale - dragStartRef.current.x,
+  y: e.clientY / viewScale - dragStartRef.current.y
+});
   };
 
   const stopDragging = (e?: React.PointerEvent) => {
@@ -181,8 +182,8 @@ export default function PDFViewer({
       const k = nextScale / oldScale;
 
       setPosition((prev) => ({
-        x: prev.x - ox * (k - 1),
-        y: prev.y - oy * (k - 1)
+        x: prev.x - (ox / oldScale) * (k - 1),
+        y: prev.y - (oy / oldScale) * (k - 1)
       }));
 
       setViewScale(nextScale); // Instant CSS zoom!
@@ -346,7 +347,7 @@ export default function PDFViewer({
           <div 
             className="relative"
             style={{
-              transform: `translate(${position.x}px, ${position.y}px) scale(${viewScale / renderScale})`,
+              transform: `translate(${position.x}px, ${position.y}px) scale(${viewScale})`,
               transformOrigin: 'center center',
               transition: isDragging ? 'none' : 'transform 0.06s ease-out',
               willChange: 'transform'
