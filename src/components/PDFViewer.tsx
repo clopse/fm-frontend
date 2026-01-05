@@ -392,7 +392,7 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
                   renderTextLayer={false}
                   renderAnnotationLayer={false}
                   // This helps keep text crisp on high DPI without you needing huge scale
-                  devicePixelRatio={typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1}
+                  devicePixelRatio={typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 1.5) : 1}
                   className="border border-gray-300 shadow-lg bg-white"
                 />
               </Document>
