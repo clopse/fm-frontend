@@ -18,8 +18,8 @@ import {
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Set up PDF.js worker - use cdnjs for better CORS support
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PDFViewerProps {
   filePath: string;
@@ -92,17 +92,17 @@ export default function PDFViewer({
   const toggleFullscreen = () => setIsFullscreen(prev => !prev);
 
   return (
-    <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-[#0a1929]' : ''}`}>
+    <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}>
       {/* Toolbar */}
-      <div className="bg-[#0d2137] border-b border-blue-900/30 px-4 py-3 flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center space-x-3 flex-1 min-w-0">
           {/* File Name */}
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-mono text-white truncate">
+            <h3 className="text-sm text-gray-900 truncate font-medium">
               {fileName}
             </h3>
             {compareMode && position && (
-              <p className="text-xs text-slate-500 font-mono">
+              <p className="text-xs text-gray-500">
                 {position === 'left' ? 'Left Panel' : 'Right Panel'}
               </p>
             )}
@@ -113,21 +113,21 @@ export default function PDFViewer({
         <div className="flex items-center space-x-2">
           {/* Page Navigation */}
           {numPages > 0 && (
-            <div className="flex items-center space-x-2 bg-slate-800/50 rounded-lg px-3 py-1.5 border border-slate-700">
+            <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-3 py-1.5 border border-gray-300">
               <button
                 onClick={handlePrevPage}
                 disabled={pageNumber <= 1}
-                className="text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-xs font-mono text-white">
-                {pageNumber} <span className="text-slate-500">/</span> {numPages}
+              <span className="text-xs text-gray-900">
+                {pageNumber} <span className="text-gray-400">/</span> {numPages}
               </span>
               <button
                 onClick={handleNextPage}
                 disabled={pageNumber >= numPages}
-                className="text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                className="text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -135,22 +135,22 @@ export default function PDFViewer({
           )}
 
           {/* Zoom Controls */}
-          <div className="flex items-center space-x-1 bg-slate-800/50 rounded-lg px-2 py-1.5 border border-slate-700">
+          <div className="flex items-center space-x-1 bg-gray-100 rounded-lg px-2 py-1.5 border border-gray-300">
             <button
               onClick={handleZoomOut}
               disabled={scale <= 0.5}
-              className="p-1 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1 text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               title="Zoom Out"
             >
               <ZoomOut className="w-4 h-4" />
             </button>
-            <span className="text-xs font-mono text-white px-2 min-w-[3rem] text-center">
+            <span className="text-xs text-gray-900 px-2 min-w-[3rem] text-center">
               {Math.round(scale * 100)}%
             </span>
             <button
               onClick={handleZoomIn}
               disabled={scale >= 3}
-              className="p-1 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="p-1 text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               title="Zoom In"
             >
               <ZoomIn className="w-4 h-4" />
@@ -160,7 +160,7 @@ export default function PDFViewer({
           {/* Rotate */}
           <button
             onClick={handleRotate}
-            className="p-2 bg-slate-800/50 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-400 hover:text-white transition-colors"
+            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 text-gray-600 hover:text-gray-900 transition-colors"
             title="Rotate 90°"
           >
             <RotateCw className="w-4 h-4" />
@@ -169,7 +169,7 @@ export default function PDFViewer({
           {/* Fullscreen */}
           <button
             onClick={toggleFullscreen}
-            className="p-2 bg-slate-800/50 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-400 hover:text-white transition-colors"
+            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 text-gray-600 hover:text-gray-900 transition-colors"
             title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
           >
             {isFullscreen ? (
@@ -183,7 +183,7 @@ export default function PDFViewer({
           <button
             onClick={handleDownload}
             disabled={!fileUrl}
-            className="p-2 bg-slate-800/50 hover:bg-slate-700 rounded-lg border border-slate-700 text-slate-400 hover:text-white transition-colors disabled:opacity-30"
+            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-30"
             title="Download"
           >
             <Download className="w-4 h-4" />
@@ -193,7 +193,7 @@ export default function PDFViewer({
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg border border-red-500/30 text-red-400 hover:text-red-300 transition-colors"
+              className="p-2 bg-red-50 hover:bg-red-100 rounded-lg border border-red-200 text-red-600 hover:text-red-700 transition-colors"
               title="Close"
             >
               <X className="w-4 h-4" />
@@ -203,26 +203,26 @@ export default function PDFViewer({
       </div>
 
       {/* PDF Viewer */}
-      <div className="flex-1 overflow-auto bg-[#0a1929] flex items-start justify-center p-6">
+      <div className="flex-1 overflow-auto bg-gray-100 flex items-start justify-center p-6">
         {error ? (
           <div className="text-center py-12">
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-8 inline-block">
-              <FileX className="w-12 h-12 text-red-400 mx-auto mb-3" />
-              <p className="text-red-300 font-medium">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-8 inline-block">
+              <FileX className="w-12 h-12 text-red-500 mx-auto mb-3" />
+              <p className="text-red-700 font-medium">{error}</p>
             </div>
           </div>
         ) : !fileUrl ? (
           <div className="text-center py-12">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-2" />
-            <p className="text-slate-400 text-sm font-mono">Loading file URL...</p>
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
+            <p className="text-gray-600 text-sm">Loading file URL...</p>
           </div>
         ) : (
           <div className="relative">
             {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-[#0a1929] z-10">
+              <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
                 <div className="text-center">
-                  <Loader2 className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-2" />
-                  <p className="text-slate-400 text-sm font-mono">Loading PDF...</p>
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
+                  <p className="text-gray-600 text-sm">Loading PDF...</p>
                 </div>
               </div>
             )}
@@ -232,7 +232,7 @@ export default function PDFViewer({
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
               loading=""
-              className="shadow-2xl"
+              className="shadow-lg"
             >
               <Page
                 pageNumber={pageNumber}
@@ -240,14 +240,14 @@ export default function PDFViewer({
                 rotate={rotation}
                 renderTextLayer={true}
                 renderAnnotationLayer={true}
-                className="border border-slate-700 shadow-2xl bg-white"
+                className="border border-gray-300 shadow-lg bg-white"
               />
             </Document>
 
             {/* Page Indicator Overlay */}
             {!isLoading && numPages > 1 && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm px-4 py-2 rounded-full border border-slate-700">
-                <p className="text-xs font-mono text-white">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-900/90 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-700">
+                <p className="text-xs text-white">
                   Page {pageNumber} of {numPages}
                 </p>
               </div>
@@ -258,13 +258,13 @@ export default function PDFViewer({
 
       {/* Keyboard Shortcuts Help */}
       {!compareMode && (
-        <div className="bg-[#0d2137] border-t border-blue-900/30 px-4 py-2">
-          <div className="flex items-center justify-center space-x-6 text-xs text-slate-500 font-mono">
-            <span><kbd className="bg-slate-800 px-1.5 py-0.5 rounded">←</kbd> Previous</span>
-            <span><kbd className="bg-slate-800 px-1.5 py-0.5 rounded">→</kbd> Next</span>
-            <span><kbd className="bg-slate-800 px-1.5 py-0.5 rounded">+</kbd> Zoom In</span>
-            <span><kbd className="bg-slate-800 px-1.5 py-0.5 rounded">-</kbd> Zoom Out</span>
-            <span><kbd className="bg-slate-800 px-1.5 py-0.5 rounded">R</kbd> Rotate</span>
+        <div className="bg-white border-t border-gray-200 px-4 py-2">
+          <div className="flex items-center justify-center space-x-6 text-xs text-gray-500">
+            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">←</kbd> Previous</span>
+            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">→</kbd> Next</span>
+            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">+</kbd> Zoom In</span>
+            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">-</kbd> Zoom Out</span>
+            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">R</kbd> Rotate</span>
           </div>
         </div>
       )}
