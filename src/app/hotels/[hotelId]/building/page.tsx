@@ -20,6 +20,8 @@ import PDFViewer from '@/components/PDFViewer';
 import { FileNode, searchInTree, countFiles } from '@/lib/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const S3_BASE_URL = "https://jmk-project-uploads.s3.amazonaws.com";
+
 
 export default function BuildingPage() {
   const { hotelId } = useParams<{ hotelId: string }>();
@@ -137,21 +139,10 @@ export default function BuildingPage() {
       .sort();
   }, [fileStructure]);
 
-  // Get file URL from API
+  // Get file URL - use direct S3 URL instead of signed URL for simplicity
   const getFileUrl = async (path: string): Promise<string> => {
-    try {
-      const response = await fetch(
-        `${API_URL}/drawings/${hotelId}/file?key=${encodeURIComponent(path)}`
-      );
-      if (!response.ok) {
-        throw new Error('Failed to get file URL');
-      }
-      const data = await response.json();
-      return data.url;
-    } catch (err) {
-      console.error('Error getting file URL:', err);
-      throw err;
-    }
+    // Direct S3 URL - simpler and works if bucket is public or has proper CORS
+    return `${S3_BASE_URL}/${hotelId}/drawings/${encodeURIComponent(path)}`;
   };
 
   const handleFileSelect = async (filePath: string) => {
@@ -391,9 +382,9 @@ export default function BuildingPage() {
             />
           ) : (
             // Comparison Mode
-            <div className="flex-1 flex">
+            <div className="flex-1 flex overflow-hidden">
               {selectedFiles[0] && (
-                <div className="flex-1 border-r border-gray-200">
+                <div className="flex-1 border-r border-gray-200 min-w-0">
                   <PDFViewer 
                     filePath={selectedFiles[0]}
                     hotelId={hotelId}
@@ -405,7 +396,7 @@ export default function BuildingPage() {
                 </div>
               )}
               {selectedFiles[1] ? (
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <PDFViewer 
                     filePath={selectedFiles[1]}
                     hotelId={hotelId}
@@ -416,7 +407,7 @@ export default function BuildingPage() {
                   />
                 </div>
               ) : (
-                <div className="flex-1 flex items-center justify-center bg-gray-50">
+                <div className="flex-1 flex items-center justify-center bg-gray-50 min-w-0">
                   <div className="text-center">
                     <Grid3x3 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                     <p className="text-gray-600 text-sm">
