@@ -67,7 +67,7 @@ export default function BuildingPage() {
     if (!fileStructure) return null;
     if (!searchQuery && !filterCategory) return fileStructure;
     
-    let result = fileStructure;
+    let result: FileNode | null = fileStructure;
     
     // Apply search filter
     if (searchQuery) {
@@ -94,7 +94,9 @@ export default function BuildingPage() {
         return null;
       };
       
-      result = filterNode(result);
+      const filtered = filterNode(result);
+      if (!filtered) return null;
+      result = filtered;
     }
     
     return result;
