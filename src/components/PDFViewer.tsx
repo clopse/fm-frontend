@@ -16,7 +16,6 @@ import {
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-// Keep your working worker setup
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url
@@ -35,13 +34,11 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
 
-  // Base scale fits the page to the container at load (A3 drawings start nicely sized)
+  // Fit scale (base) and zoom multiplier (view)
   const [baseScale, setBaseScale] = useState<number>(1);
-
-  // viewScale is a multiplier applied instantly via CSS (smooth like Adobe)
   const [viewScale, setViewScale] = useState<number>(1);
 
-  // renderScale is the actual PDF render scale (debounced for performance)
+  // Actual render scale (debounced)
   const [renderScale, setRenderScale] = useState<number>(1);
 
   const [rotation, setRotation] = useState<number>(0);
@@ -49,7 +46,7 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Pan/drag
+  // Pan
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const dragStartRef = useRef({ x: 0, y: 0 });
@@ -57,36 +54,64 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Keep refs to avoid stale closures
+  // Refs to avoid stale closures
   const viewScaleRef = useRef(1);
   useEffect(() => {
     viewScaleRef.current = viewScale;
   }, [viewScale]);
+
+  const baseScaleRef = useRef(1);
+  useEffect(() => {
+    baseScaleRef.current = baseScale;
+  }, [baseScale]);
+
+  const renderScaleRef = useRef(1);
+  useEffect(() => {
+    renderScaleRef.current = renderScale;
+  }, [renderScale]);
 
   const rotationRef = useRef(0);
   useEffect(() => {
     rotationRef.current = rotation;
   }, [rotation]);
 
+  // Cache the page viewport size for re-fitting on resize/fullscreen
+  const pageSizeRef = useRef<{ width: number; height: number } | null>(null);
+
   const fileName = useMemo(() => filePath.split('/').pop() || 'document.pdf', [filePath]);
 
-  // Debounce PDF re-render so wheel zoom feels instant
-  const renderTimerRef = useRef<number | null>(null);
-  const desiredRenderScale = useMemo(() => baseScale * viewScale, [baseScale, viewScale]);
+  // Effective desired scale (what the user wants to see)
+  const desiredScale = useMemo(() => baseScale * viewScale, [baseScale, viewScale]);
 
+  // Cap actual render scale to prevent huge canvases causing black/blank flashes
+  const MAX_RENDER_SCALE = 3.25;
+  const desiredRenderScale = useMemo(
+    () => clamp(desiredScale, 0.2, MAX_RENDER_SCALE),
+    [desiredScale]
+  );
+
+  // Wrapper CSS scale should bridge the gap between what is rendered and what user wants
+  // If renderScale is capped or lagging, CSS makes it feel instant.
+  const wrapperZoom = useMemo(() => {
+    const rs = renderScale || 1;
+    return desiredScale / rs;
+  }, [desiredScale, renderScale]);
+
+  // Debounce PDF rerender
+  const renderTimerRef = useRef<number | null>(null);
   useEffect(() => {
     if (!fileUrl) return;
 
     if (renderTimerRef.current) window.clearTimeout(renderTimerRef.current);
 
     renderTimerRef.current = window.setTimeout(() => {
-      setRenderScale(baseScale * viewScaleRef.current);
-    }, 120);
+      setRenderScale(desiredRenderScale);
+    }, 140);
 
     return () => {
       if (renderTimerRef.current) window.clearTimeout(renderTimerRef.current);
     };
-  }, [fileUrl, baseScale, viewScale]);
+  }, [fileUrl, desiredRenderScale]);
 
   // Fetch URL
   useEffect(() => {
@@ -95,13 +120,13 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
       setError(null);
       setFileUrl(null);
 
-      // Reset view state when file changes
       setNumPages(0);
       setRotation(0);
       setBaseScale(1);
       setViewScale(1);
       setRenderScale(1);
       setPosition({ x: 0, y: 0 });
+      pageSizeRef.current = null;
 
       try {
         const url = await getFileUrl(filePath);
@@ -122,6 +147,26 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
     setIsLoading(false);
   }, []);
 
+  // Fit function using cached page size
+  const fitToContainer = useCallback(() => {
+    const el = containerRef.current;
+    const size = pageSizeRef.current;
+    if (!el || !size) return;
+
+    const rect = el.getBoundingClientRect();
+    const pad = 24;
+    const availableW = Math.max(1, rect.width - pad);
+    const availableH = Math.max(1, rect.height - pad);
+
+    const fit = Math.min(availableW / size.width, availableH / size.height);
+    const fitClamped = clamp(fit, 0.1, 4);
+
+    setBaseScale(fitClamped);
+    setViewScale(1);
+    setRenderScale(clamp(fitClamped, 0.2, MAX_RENDER_SCALE));
+    setPosition({ x: 0, y: 0 });
+  }, []);
+
   // Auto-rotate to landscape and fit-to-container based on page 1
   const onDocumentLoadSuccess = useCallback(
     async (pdf: any) => {
@@ -130,40 +175,17 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
 
         const page1 = await pdf.getPage(1);
 
-        // Decide rotation to make it landscape
-        // Check natural orientation at rotation 0
+        // Determine if we should rotate to landscape (A3 drawings)
         const vp0 = page1.getViewport({ scale: 1, rotation: 0 });
         const shouldRotate = vp0.height > vp0.width;
         const nextRotation = shouldRotate ? 90 : 0;
-
         setRotation(nextRotation);
 
-        // Now compute viewport with that rotation
         const vp = page1.getViewport({ scale: 1, rotation: nextRotation });
+        pageSizeRef.current = { width: vp.width, height: vp.height };
 
-        // Fit to available container size
-        const el = containerRef.current;
-        if (el) {
-          const rect = el.getBoundingClientRect();
-          // Small padding so it does not touch edges
-          const pad = 24;
-          const availableW = Math.max(1, rect.width - pad);
-          const availableH = Math.max(1, rect.height - pad);
-
-          const fit = Math.min(availableW / vp.width, availableH / vp.height);
-          const fitClamped = clamp(fit, 0.1, 4);
-
-          setBaseScale(fitClamped);
-          setViewScale(1);
-          setRenderScale(fitClamped);
-          setPosition({ x: 0, y: 0 });
-        } else {
-          // Fallback
-          setBaseScale(1);
-          setViewScale(1);
-          setRenderScale(1);
-          setPosition({ x: 0, y: 0 });
-        }
+        // Fit now
+        fitToContainer();
 
         setIsLoading(false);
         setError(null);
@@ -173,10 +195,27 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
         setIsLoading(false);
       }
     },
-    []
+    [fitToContainer]
   );
 
-  // Pointer pan (only when zoomed in beyond fit)
+  // Re-fit on fullscreen toggle and resize
+  useEffect(() => {
+    fitToContainer();
+  }, [isFullscreen, fitToContainer]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const ro = new ResizeObserver(() => {
+      fitToContainer();
+    });
+
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [fitToContainer]);
+
+  // Pan only when zoomed beyond fit
   const panEnabled = viewScale > 1;
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -188,10 +227,10 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
 
     setIsDragging(true);
 
-    // Store drag start in unscaled coords
+    // Store drag start in wrapper-unscaled coords
     dragStartRef.current = {
-      x: e.clientX / viewScaleRef.current - position.x,
-      y: e.clientY / viewScaleRef.current - position.y,
+      x: e.clientX / wrapperZoom - position.x,
+      y: e.clientY / wrapperZoom - position.y,
     };
 
     e.preventDefault();
@@ -201,8 +240,8 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
     if (!isDragging || pointerIdRef.current !== e.pointerId) return;
 
     setPosition({
-      x: e.clientX / viewScaleRef.current - dragStartRef.current.x,
-      y: e.clientY / viewScaleRef.current - dragStartRef.current.y,
+      x: e.clientX / wrapperZoom - dragStartRef.current.x,
+      y: e.clientY / wrapperZoom - dragStartRef.current.y,
     });
   };
 
@@ -216,26 +255,21 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
     setIsDragging(false);
   };
 
-  // Non-passive wheel zoom
+  // Non-passive wheel zoom (zoom towards cursor)
   const wheelHandlerRef = useRef<(e: WheelEvent) => void>(() => {});
   useEffect(() => {
     wheelHandlerRef.current = (e: WheelEvent) => {
       const el = containerRef.current;
-      if (!el) return;
-      if (!fileUrl) return;
+      if (!el || !fileUrl) return;
 
-      // Stop page scroll inside viewer
       e.preventDefault();
 
-      const old = viewScaleRef.current;
+      const oldView = viewScaleRef.current;
       const direction = e.deltaY > 0 ? -1 : 1;
 
-      // Multiplier range (over the fitted baseScale)
-      const next = clamp(Number((old + direction * 0.15).toFixed(2)), 0.5, 6);
+      const nextView = clamp(Number((oldView + direction * 0.15).toFixed(2)), 0.5, 6);
+      if (nextView === oldView) return;
 
-      if (next === old) return;
-
-      // Zoom towards cursor (position is in unscaled coords)
       const rect = el.getBoundingClientRect();
       const cx = e.clientX - rect.left;
       const cy = e.clientY - rect.top;
@@ -243,18 +277,19 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
       const ox = cx - rect.width / 2;
       const oy = cy - rect.height / 2;
 
-      const k = next / old;
+      const k = nextView / oldView;
 
+      // position is in wrapper-unscaled coords
       setPosition((prev) => ({
-        x: prev.x - (ox / old) * (k - 1),
-        y: prev.y - (oy / old) * (k - 1),
+        x: prev.x - (ox / (wrapperZoom || 1)) * (k - 1),
+        y: prev.y - (oy / (wrapperZoom || 1)) * (k - 1),
       }));
 
-      setViewScale(next);
+      setViewScale(nextView);
 
-      if (next <= 1) setPosition({ x: 0, y: 0 });
+      if (nextView <= 1) setPosition({ x: 0, y: 0 });
     };
-  }, [fileUrl]);
+  }, [fileUrl, wrapperZoom]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -280,13 +315,18 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
     setRotation((prev) => (prev + 90) % 360);
     setPosition({ x: 0, y: 0 });
     setViewScale(1);
-    setRenderScale(baseScale);
+
+    // update cached size based on swap (rotation flips width/height)
+    const size = pageSizeRef.current;
+    if (size) pageSizeRef.current = { width: size.height, height: size.width };
+
+    // refit after rotation
+    requestAnimationFrame(() => fitToContainer());
   };
 
   const handleDownload = () => fileUrl && window.open(fileUrl, '_blank');
   const toggleFullscreen = () => setIsFullscreen((prev) => !prev);
 
-  // ESC exits fullscreen
   useEffect(() => {
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') setIsFullscreen(false);
@@ -296,13 +336,12 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
   }, []);
 
   const isCatchingUp =
-    !isLoading && fileUrl && Math.abs(renderScale - desiredRenderScale) > 0.002;
+    !isLoading && fileUrl && Math.abs(renderScale - desiredRenderScale) > 0.01;
 
-  const displayedPercent = Math.round(desiredRenderScale * 100);
+  const displayedPercent = Math.round(desiredScale * 100);
 
   return (
     <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}>
-      {/* Toolbar */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-3 flex-1 min-w-0">
           <div className="flex-1 min-w-0">
@@ -370,7 +409,6 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
         </div>
       </div>
 
-      {/* Viewer */}
       <div
         ref={containerRef}
         className="flex-1 overflow-hidden bg-gray-100 flex items-center justify-center min-h-0"
@@ -401,7 +439,7 @@ export default function PDFViewer({ filePath, hotelId, getFileUrl, onClose }: PD
           <div
             className="relative"
             style={{
-              transform: `translate(${position.x}px, ${position.y}px) scale(${viewScale})`,
+              transform: `translate(${position.x}px, ${position.y}px) scale(${wrapperZoom})`,
               transformOrigin: 'center center',
               transition: isDragging ? 'none' : 'transform 0.06s ease-out',
               willChange: 'transform',
