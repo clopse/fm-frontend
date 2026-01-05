@@ -18,8 +18,8 @@ import {
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-// Set up PDF.js worker - use cdnjs for better CORS support
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Set up PDF.js worker - use version 3.11.174 which is stable and available
+pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 interface PDFViewerProps {
   filePath: string;
@@ -94,7 +94,7 @@ export default function PDFViewer({
   return (
     <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}>
       {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-3 flex-1 min-w-0">
           {/* File Name */}
           <div className="flex-1 min-w-0">
@@ -110,7 +110,7 @@ export default function PDFViewer({
         </div>
 
         {/* Controls */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 flex-shrink-0">
           {/* Page Navigation */}
           {numPages > 0 && (
             <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-3 py-1.5 border border-gray-300">
@@ -166,18 +166,22 @@ export default function PDFViewer({
             <RotateCw className="w-4 h-4" />
           </button>
 
-          {/* Fullscreen */}
-          <button
-            onClick={toggleFullscreen}
-            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 text-gray-600 hover:text-gray-900 transition-colors"
-            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-          >
-            {isFullscreen ? (
-              <Minimize2 className="w-4 h-4" />
-            ) : (
-              <Maximize2 className="w-4 h-4" />
-            )}
-          </button>
+          {!compareMode && (
+            <>
+              {/* Fullscreen */}
+              <button
+                onClick={toggleFullscreen}
+                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 text-gray-600 hover:text-gray-900 transition-colors"
+                title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="w-4 h-4" />
+                ) : (
+                  <Maximize2 className="w-4 h-4" />
+                )}
+              </button>
+            </>
+          )}
 
           {/* Download */}
           <button
@@ -203,7 +207,7 @@ export default function PDFViewer({
       </div>
 
       {/* PDF Viewer */}
-      <div className="flex-1 overflow-auto bg-gray-100 flex items-start justify-center p-6">
+      <div className="flex-1 overflow-auto bg-gray-100 flex items-start justify-center p-4 min-h-0">
         {error ? (
           <div className="text-center py-12">
             <div className="bg-red-50 border border-red-200 rounded-xl p-8 inline-block">
@@ -214,7 +218,7 @@ export default function PDFViewer({
         ) : !fileUrl ? (
           <div className="text-center py-12">
             <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
-            <p className="text-gray-600 text-sm">Loading file URL...</p>
+            <p className="text-gray-600 text-sm">Loading file...</p>
           </div>
         ) : (
           <div className="relative">
@@ -258,7 +262,7 @@ export default function PDFViewer({
 
       {/* Keyboard Shortcuts Help */}
       {!compareMode && (
-        <div className="bg-white border-t border-gray-200 px-4 py-2">
+        <div className="bg-white border-t border-gray-200 px-4 py-2 flex-shrink-0">
           <div className="flex items-center justify-center space-x-6 text-xs text-gray-500">
             <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">←</kbd> Previous</span>
             <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">→</kbd> Next</span>
