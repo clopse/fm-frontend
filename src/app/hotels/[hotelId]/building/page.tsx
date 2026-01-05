@@ -138,9 +138,22 @@ export default function BuildingPage() {
   }, [fileStructure]);
 
   // Get file URL - use direct S3 URL instead of signed URL for simplicity
+  // Get file URL from API (signed URL for better CORS handling)
   const getFileUrl = async (path: string): Promise<string> => {
-    // Direct S3 URL - simpler and works if bucket is public or has proper CORS
-    return `${S3_BASE_URL}/${hotelId}/drawings/${encodeURIComponent(path)}`;
+    try {
+      const response = await fetch(
+        `${API_URL}/drawings/${hotelId}/file?key=${encodeURIComponent(path)}`
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to get file URL: ${response.status}`);
+      }
+      const data = await response.json();
+      return data.url;
+    } catch (err) {
+      console.error('Error getting file URL:', err);
+      // Fallback to direct S3 URL if API fails
+      return `${S3_BASE_URL}/${hotelId}/drawings/${path}`;
+    }
   };
 
   const handleFileSelect = async (filePath: string) => {
