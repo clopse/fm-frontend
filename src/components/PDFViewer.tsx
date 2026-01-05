@@ -39,7 +39,12 @@ export default function PDFViewer({
 }: PDFViewerProps) {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
-  const [scale, setScale] = useState<number>(1.0);
+  
+  // Two-scale model for Adobe-smooth zoom
+  const [viewScale, setViewScale] = useState<number>(1.0);     // Instant CSS zoom
+  const [renderScale, setRenderScale] = useState<number>(1.0); // Actual PDF render
+  const renderTimerRef = useRef<number | null>(null);
+  
   const [rotation, setRotation] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,16 +57,34 @@ export default function PDFViewer({
   const pointerIdRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Ref for scale to avoid stale closures in wheel handler
-  const scaleRef = useRef(1);
+  // Ref for viewScale to avoid stale closures in wheel handler
+  const viewScaleRef = useRef(1);
   useEffect(() => {
-    scaleRef.current = scale;
-  }, [scale]);
+    viewScaleRef.current = viewScale;
+  }, [viewScale]);
   
   // Wheel handler ref for non-passive listener
   const wheelHandlerRef = useRef<(e: WheelEvent) => void>(() => {});
 
   const fileName = filePath.split('/').pop() || 'document.pdf';
+
+  // Debounce renderScale updates - only re-render PDF after user stops zooming
+  useEffect(() => {
+    if (!fileUrl) return;
+
+    if (renderTimerRef.current) window.clearTimeout(renderTimerRef.current);
+
+    renderTimerRef.current = window.setTimeout(() => {
+      setRenderScale(viewScaleRef.current);
+    }, 120); // PDF re-renders 120ms after zoom stops
+  }, [viewScale, fileUrl]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (renderTimerRef.current) window.clearTimeout(renderTimerRef.current);
+    };
+  }, []);
 
   // KEEP THEIR WORKING URL FETCH
   useEffect(() => {
@@ -81,6 +104,10 @@ export default function PDFViewer({
     };
 
     if (filePath) {
+      // Reset scales when file changes
+      setViewScale(1.0);
+      setRenderScale(1.0);
+      setPosition({ x: 0, y: 0 });
       fetchUrl();
     }
   }, [filePath, getFileUrl]);
@@ -140,7 +167,7 @@ export default function PDFViewer({
       const delta = e.deltaY;
       const direction = delta > 0 ? -1 : 1;
 
-      const oldScale = scaleRef.current;
+      const oldScale = viewScaleRef.current;
       const nextScale = clamp(Number((oldScale + direction * 0.15).toFixed(2)), 0.5, 4);
 
       if (nextScale === oldScale) return;
@@ -158,7 +185,7 @@ export default function PDFViewer({
         y: prev.y - oy * (k - 1)
       }));
 
-      setScale(nextScale);
+      setViewScale(nextScale); // Instant CSS zoom!
 
       if (nextScale <= 1) setPosition({ x: 0, y: 0 });
     };
@@ -178,9 +205,9 @@ export default function PDFViewer({
     };
   }, []);
 
-  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.25, 3));
+  const handleZoomIn = () => setViewScale(prev => Math.min(prev + 0.25, 4));
   const handleZoomOut = () => {
-    setScale(prev => {
+    setViewScale(prev => {
       const newScale = Math.max(prev - 0.25, 0.5);
       if (newScale <= 1) setPosition({ x: 0, y: 0 });
       return newScale;
@@ -190,6 +217,8 @@ export default function PDFViewer({
   const handleRotate = () => {
     setRotation(prev => (prev + 90) % 360);
     setPosition({ x: 0, y: 0 });
+    setViewScale(1.0);
+    setRenderScale(1.0);
   };
   
   const handleDownload = () => fileUrl && window.open(fileUrl, '_blank');
@@ -222,18 +251,18 @@ export default function PDFViewer({
           <div className="flex items-center space-x-1 bg-gray-100 rounded-lg px-2 py-1.5 border border-gray-300">
             <button
               onClick={handleZoomOut}
-              disabled={scale <= 0.5}
+              disabled={viewScale <= 0.5}
               className="p-1 text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               title="Zoom Out"
             >
               <ZoomOut className="w-4 h-4" />
             </button>
             <span className="text-xs text-gray-900 px-2 min-w-[3rem] text-center">
-              {Math.round(scale * 100)}%
+              {Math.round(viewScale * 100)}%
             </span>
             <button
               onClick={handleZoomIn}
-              disabled={scale >= 3}
+              disabled={viewScale >= 4}
               className="p-1 text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
               title="Zoom In"
             >
@@ -317,8 +346,10 @@ export default function PDFViewer({
           <div 
             className="relative"
             style={{
-              transform: `translate(${position.x}px, ${position.y}px)`,
-              transition: isDragging ? 'none' : 'transform 0.08s ease-out'
+              transform: `translate(${position.x}px, ${position.y}px) scale(${viewScale / renderScale})`,
+              transformOrigin: 'center center',
+              transition: isDragging ? 'none' : 'transform 0.06s ease-out',
+              willChange: 'transform'
             }}
           >
             {isLoading && (
@@ -330,6 +361,13 @@ export default function PDFViewer({
               </div>
             )}
             
+            {/* Rendering indicator when quality is catching up */}
+            {renderScale !== viewScale && !isLoading && (
+              <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm border border-gray-200 text-xs text-gray-700 px-3 py-1.5 rounded-lg shadow-sm">
+                Rendering...
+              </div>
+            )}
+            
             <Document
               file={fileUrl}
               onLoadSuccess={onDocumentLoadSuccess}
@@ -338,8 +376,9 @@ export default function PDFViewer({
               className="shadow-lg"
             >
               <Page
+                key={`${fileUrl}-${renderScale}-${rotation}`}
                 pageNumber={1}
-                scale={scale}
+                scale={renderScale}
                 rotate={rotation}
                 renderTextLayer={false}
                 renderAnnotationLayer={false}
