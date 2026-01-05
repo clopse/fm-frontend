@@ -1,79 +1,94 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { 
   ZoomIn, 
   ZoomOut, 
   RotateCw, 
-  Download, 
-  Maximize2,
-  ChevronLeft,
-  ChevronRight,
+  Download,
   X,
   Loader2,
   FileX,
+  Maximize2,
   Minimize2
 } from 'lucide-react';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString();
+// Set up PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 interface PDFViewerProps {
   filePath: string;
   hotelId: string;
   getFileUrl: (path: string) => Promise<string>;
   onClose?: () => void;
-  compareMode?: boolean;
-  position?: 'left' | 'right';
 }
+
+// Simple in-memory cache for URLs
+const urlCache = new Map<string, string>();
 
 export default function PDFViewer({ 
   filePath, 
   hotelId,
   getFileUrl,
-  onClose,
-  compareMode = false,
-  position 
+  onClose
 }: PDFViewerProps) {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
   const [scale, setScale] = useState<number>(1.0);
   const [rotation, setRotation] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  // Pan/drag state
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const fileName = filePath.split('/').pop() || 'document.pdf';
 
-  // Fetch signed URL when filePath changes
+  // Fetch URL with caching - reloads when filePath changes
   useEffect(() => {
     const fetchUrl = async () => {
       setIsLoading(true);
       setError(null);
-      setFileUrl(null);
+      
+      // Check cache first
+      const cacheKey = `${hotelId}/${filePath}`;
+      if (urlCache.has(cacheKey)) {
+        console.log('Using cached URL for:', filePath);
+        setFileUrl(urlCache.get(cacheKey)!);
+        return;
+      }
       
       try {
+        console.log('Fetching URL for:', filePath);
         const url = await getFileUrl(filePath);
+        urlCache.set(cacheKey, url);
         setFileUrl(url);
       } catch (err) {
         console.error('Error fetching file URL:', err);
-        setError('Failed to load file URL');
+        setError('Failed to load file');
         setIsLoading(false);
       }
     };
 
+    // Reset state when file changes
+    setFileUrl(null);
+    setPosition({ x: 0, y: 0 });
+    setScale(1.0);
+    
     if (filePath) {
       fetchUrl();
     }
-  }, [filePath, getFileUrl]);
+  }, [filePath, hotelId, getFileUrl]);
 
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
+    console.log('PDF loaded successfully:', numPages, 'pages');
     setNumPages(numPages);
     setIsLoading(false);
     setError(null);
@@ -85,57 +100,72 @@ export default function PDFViewer({
     setIsLoading(false);
   }, []);
 
-  const handleZoomIn = () => setScale(prev => Math.min(prev + 0.25, 3));
-  const handleZoomOut = () => setScale(prev => Math.max(prev - 0.25, 0.5));
-  const handleRotate = () => setRotation(prev => (prev + 90) % 360);
-  const handlePrevPage = () => setPageNumber(prev => Math.max(prev - 1, 1));
-  const handleNextPage = () => setPageNumber(prev => Math.min(prev + 1, numPages));
-  const handleDownload = () => fileUrl && window.open(fileUrl, '_blank');
-  const toggleFullscreen = () => setIsFullscreen(prev => !prev);
+  // Pan/drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (scale > 1) {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+      e.preventDefault();
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  // Zoom handlers
+  const handleZoomIn = () => {
+    setScale(prev => Math.min(prev + 0.25, 3));
+  };
+
+  const handleZoomOut = () => {
+    setScale(prev => {
+      const newScale = Math.max(prev - 0.25, 0.5);
+      if (newScale === 1) {
+        setPosition({ x: 0, y: 0 });
+      }
+      return newScale;
+    });
+  };
+
+  const handleRotate = () => {
+    setRotation(prev => (prev + 90) % 360);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  const handleDownload = () => {
+    if (fileUrl) window.open(fileUrl, '_blank');
+  };
+
+  const toggleFullscreen = () => {
+    setIsFullscreen(prev => !prev);
+  };
 
   return (
     <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}>
       {/* Toolbar */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-3 flex-1 min-w-0">
-          {/* File Name */}
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm text-gray-900 truncate font-medium">
-              {fileName}
-            </h3>
-            {compareMode && position && (
-              <p className="text-xs text-gray-500">
-                {position === 'left' ? 'Left Panel' : 'Right Panel'}
-              </p>
-            )}
-          </div>
+          <h3 className="text-sm text-gray-900 truncate font-medium">
+            {fileName}
+          </h3>
         </div>
 
         {/* Controls */}
         <div className="flex items-center space-x-2 flex-shrink-0">
-          {/* Page Navigation */}
-          {numPages > 0 && (
-            <div className="flex items-center space-x-2 bg-gray-100 rounded-lg px-3 py-1.5 border border-gray-300">
-              <button
-                onClick={handlePrevPage}
-                disabled={pageNumber <= 1}
-                className="text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="text-xs text-gray-900">
-                {pageNumber} <span className="text-gray-400">/</span> {numPages}
-              </span>
-              <button
-                onClick={handleNextPage}
-                disabled={pageNumber >= numPages}
-                className="text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
           {/* Zoom Controls */}
           <div className="flex items-center space-x-1 bg-gray-100 rounded-lg px-2 py-1.5 border border-gray-300">
             <button
@@ -146,7 +176,7 @@ export default function PDFViewer({
             >
               <ZoomOut className="w-4 h-4" />
             </button>
-            <span className="text-xs text-gray-900 px-2 min-w-[3rem] text-center">
+            <span className="text-xs text-gray-900 px-2 min-w-[3rem] text-center font-medium">
               {Math.round(scale * 100)}%
             </span>
             <button
@@ -168,22 +198,18 @@ export default function PDFViewer({
             <RotateCw className="w-4 h-4" />
           </button>
 
-          {!compareMode && (
-            <>
-              {/* Fullscreen */}
-              <button
-                onClick={toggleFullscreen}
-                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 text-gray-600 hover:text-gray-900 transition-colors"
-                title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="w-4 h-4" />
-                ) : (
-                  <Maximize2 className="w-4 h-4" />
-                )}
-              </button>
-            </>
-          )}
+          {/* Fullscreen */}
+          <button
+            onClick={toggleFullscreen}
+            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 text-gray-600 hover:text-gray-900 transition-colors"
+            title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+          >
+            {isFullscreen ? (
+              <Minimize2 className="w-4 h-4" />
+            ) : (
+              <Maximize2 className="w-4 h-4" />
+            )}
+          </button>
 
           {/* Download */}
           <button
@@ -208,27 +234,50 @@ export default function PDFViewer({
         </div>
       </div>
 
-      {/* PDF Viewer */}
-      <div className="flex-1 overflow-auto bg-gray-100 flex items-start justify-center p-4 min-h-0">
+      {/* PDF Viewer with Pan/Drag */}
+      <div 
+        ref={containerRef}
+        className="flex-1 overflow-hidden bg-gray-100 flex items-center justify-center min-h-0"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        style={{ 
+          cursor: isDragging ? 'grabbing' : (scale > 1 ? 'grab' : 'default'),
+          userSelect: 'none'
+        }}
+      >
         {error ? (
           <div className="text-center py-12">
             <div className="bg-red-50 border border-red-200 rounded-xl p-8 inline-block">
               <FileX className="w-12 h-12 text-red-500 mx-auto mb-3" />
               <p className="text-red-700 font-medium">{error}</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Reload Page
+              </button>
             </div>
           </div>
         ) : !fileUrl ? (
           <div className="text-center py-12">
             <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
-            <p className="text-gray-600 text-sm">Loading file...</p>
+            <p className="text-gray-600 text-sm">Loading...</p>
           </div>
         ) : (
-          <div className="relative">
+          <div 
+            className="relative"
+            style={{
+              transform: `translate(${position.x}px, ${position.y}px)`,
+              transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+            }}
+          >
             {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+              <div className="absolute inset-0 flex items-center justify-center bg-white/90 z-10 rounded-lg">
                 <div className="text-center">
                   <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
-                  <p className="text-gray-600 text-sm">Loading PDF...</p>
+                  <p className="text-gray-600 text-sm font-medium">Rendering PDF...</p>
                 </div>
               </div>
             )}
@@ -238,39 +287,26 @@ export default function PDFViewer({
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
               loading=""
-              className="shadow-lg"
             >
               <Page
-                pageNumber={pageNumber}
+                pageNumber={1}
                 scale={scale}
                 rotate={rotation}
-                renderTextLayer={true}
-                renderAnnotationLayer={true}
-                className="border border-gray-300 shadow-lg bg-white"
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+                className="border border-gray-300 shadow-lg bg-white rounded-lg"
               />
             </Document>
-
-            {/* Page Indicator Overlay */}
-            {!isLoading && numPages > 1 && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-gray-900/90 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-700">
-                <p className="text-xs text-white">
-                  Page {pageNumber} of {numPages}
-                </p>
-              </div>
-            )}
           </div>
         )}
       </div>
-
-      {/* Keyboard Shortcuts Help */}
-      {!compareMode && (
+      
+      {/* Status info */}
+      {!isLoading && !error && numPages > 0 && (
         <div className="bg-white border-t border-gray-200 px-4 py-2 flex-shrink-0">
-          <div className="flex items-center justify-center space-x-6 text-xs text-gray-500">
-            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">←</kbd> Previous</span>
-            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">→</kbd> Next</span>
-            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">+</kbd> Zoom In</span>
-            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">-</kbd> Zoom Out</span>
-            <span><kbd className="bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">R</kbd> Rotate</span>
+          <div className="text-center text-xs text-gray-500">
+            {scale > 1 && 'Click and drag to pan • '}
+            Press ESC to exit fullscreen
           </div>
         </div>
       )}
