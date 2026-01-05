@@ -62,32 +62,6 @@ export default function BuildingPage() {
     fetchDrawings();
   }, [hotelId]);
 
-  // Auto-expand folders when searching
-  useEffect(() => {
-    if (searchQuery && filteredFiles) {
-      // Collect all paths that need to be expanded
-      const pathsToExpand = new Set<string>(['']);
-      
-      const collectPaths = (node: FileNode, currentPath: string = '') => {
-        if (node.type === 'file') {
-          // Add all parent paths
-          const parts = node.path.split('/');
-          let path = '';
-          for (let i = 0; i < parts.length - 1; i++) {
-            path = path ? `${path}/${parts[i]}` : parts[i];
-            pathsToExpand.add(path);
-          }
-        } else if (node.children) {
-          pathsToExpand.add(node.path);
-          node.children.forEach(child => collectPaths(child, node.path));
-        }
-      };
-      
-      collectPaths(filteredFiles);
-      setExpandedFolders(pathsToExpand);
-    }
-  }, [searchQuery, filteredFiles]);
-
   // Filter files based on search
   const filteredFiles = useMemo(() => {
     if (!fileStructure) return null;
@@ -127,6 +101,32 @@ export default function BuildingPage() {
     
     return result;
   }, [fileStructure, searchQuery, filterCategory]);
+
+  // Auto-expand folders when searching
+  useEffect(() => {
+    if (searchQuery && filteredFiles) {
+      // Collect all paths that need to be expanded
+      const pathsToExpand = new Set<string>(['']);
+      
+      const collectPaths = (node: FileNode, currentPath: string = '') => {
+        if (node.type === 'file') {
+          // Add all parent paths
+          const parts = node.path.split('/');
+          let path = '';
+          for (let i = 0; i < parts.length - 1; i++) {
+            path = path ? `${path}/${parts[i]}` : parts[i];
+            pathsToExpand.add(path);
+          }
+        } else if (node.children) {
+          pathsToExpand.add(node.path);
+          node.children.forEach(child => collectPaths(child, node.path));
+        }
+      };
+      
+      collectPaths(filteredFiles);
+      setExpandedFolders(pathsToExpand);
+    }
+  }, [searchQuery, filteredFiles]);
 
   // Extract top-level categories for filtering
   const categories = useMemo(() => {
