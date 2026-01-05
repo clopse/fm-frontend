@@ -2,7 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global html rules */
+/* =============================================================================
+   Global HTML & Body Rules
+   ============================================================================= */
 html {
   font-size: 100%;
   width: 100%;
@@ -24,7 +26,6 @@ html {
   html { font-size: 80%; }
 }
 
-/* Body-specific styles */
 body {
   margin: 0;
   padding: 0;
@@ -44,4 +45,287 @@ a {
 a:hover {
   text-decoration: none;
   color: inherit;
+}
+
+/* =============================================================================
+   React-PDF Required Imports
+   ============================================================================= */
+@import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+@import 'react-pdf/dist/esm/Page/TextLayer.css';
+
+/* =============================================================================
+   React-PDF Custom Styles
+   ============================================================================= */
+.react-pdf__Document {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.react-pdf__Page {
+  max-width: 100%;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+}
+
+.react-pdf__Page__canvas {
+  max-width: 100%;
+  height: auto !important;
+  display: block;
+}
+
+.react-pdf__Page__textContent {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.react-pdf__Page__annotations {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* =============================================================================
+   Custom Scrollbars
+   ============================================================================= */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(71, 85, 105, 0.8);
+}
+
+/* PDF viewer specific scrollbar */
+.pdf-viewer-container::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.pdf-viewer-container::-webkit-scrollbar-track {
+  background: #0a1929;
+}
+
+.pdf-viewer-container::-webkit-scrollbar-thumb {
+  background: rgba(30, 64, 175, 0.5);
+  border-radius: 6px;
+  border: 2px solid #0a1929;
+}
+
+.pdf-viewer-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(37, 99, 235, 0.8);
+}
+
+/* =============================================================================
+   Transitions & Animations
+   ============================================================================= */
+.file-item-transition {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.file-item-transition:hover {
+  transform: translateX(2px);
+}
+
+@keyframes folder-expand {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 2000px;
+  }
+}
+
+.folder-content-enter {
+  animation: folder-expand 0.2s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fade-in {
+  animation: fade-in 0.3s ease-in;
+}
+
+/* =============================================================================
+   Selection & Highlight Effects
+   ============================================================================= */
+.selected-glow {
+  box-shadow: 
+    0 0 0 2px rgba(37, 99, 235, 0.3),
+    0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+::selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: white;
+}
+
+::-moz-selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: white;
+}
+
+/* =============================================================================
+   Keyboard Focus Indicators
+   ============================================================================= */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 2px;
+}
+
+/* Remove default focus for mouse users */
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* =============================================================================
+   Keyboard Shortcut Badges (kbd elements)
+   ============================================================================= */
+kbd {
+  background: linear-gradient(to bottom, #1e293b, #0f172a);
+  border: 1px solid #334155;
+  border-radius: 4px;
+  box-shadow: 
+    0 1px 0 rgba(0, 0, 0, 0.2),
+    0 0 0 2px #0f172a inset;
+  color: #cbd5e1;
+  display: inline-block;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Fira Mono', 'Consolas', monospace;
+  font-size: 0.85em;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+/* =============================================================================
+   Comparison Mode Divider
+   ============================================================================= */
+.comparison-divider::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(59, 130, 246, 0.5),
+    transparent
+  );
+}
+
+/* =============================================================================
+   Technical Styling
+   ============================================================================= */
+.technical-numbers {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+
+.monospace-text {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Fira Mono', 'Consolas', monospace;
+}
+
+/* =============================================================================
+   Print Styles
+   ============================================================================= */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .react-pdf__Page {
+    box-shadow: none;
+    page-break-inside: avoid;
+  }
+  
+  header,
+  aside,
+  button,
+  .pdf-controls {
+    display: none !important;
+  }
+  
+  .react-pdf__Document {
+    width: 100% !important;
+  }
+}
+
+/* =============================================================================
+   Accessibility - High Contrast Mode
+   ============================================================================= */
+@media (prefers-contrast: high) {
+  .bg-slate-800 {
+    background-color: #000;
+  }
+  
+  .text-slate-400 {
+    color: #fff;
+  }
+  
+  .border-slate-700 {
+    border-color: #fff;
+  }
+  
+  button {
+    border: 2px solid currentColor;
+  }
+}
+
+/* =============================================================================
+   Accessibility - Reduced Motion
+   ============================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =============================================================================
+   Utility Classes
+   ============================================================================= */
+.hover-lift {
+  transition: transform 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+.interactive-hover {
+  transition: all 0.15s ease;
+}
+
+.interactive-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
