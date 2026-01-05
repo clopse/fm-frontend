@@ -6,10 +6,8 @@ import {
   Search,
   Building2,
   ChevronRight,
-  Columns2,
   X,
   Filter,
-  Grid3x3,
   Loader2,
   AlertCircle,
   FileText
@@ -34,7 +32,7 @@ export default function BuildingPage() {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['']));
-  const [viewMode, setViewMode] = useState<'single' | 'compare'>('single');
+  const [viewMode, setViewMode] = useState<'single'>('single');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
 
@@ -146,31 +144,7 @@ export default function BuildingPage() {
   };
 
   const handleFileSelect = async (filePath: string) => {
-    if (viewMode === 'single') {
-      setSelectedFiles([filePath]);
-    } else {
-      if (selectedFiles.includes(filePath)) {
-        setSelectedFiles(selectedFiles.filter(f => f !== filePath));
-      } else if (selectedFiles.length < 2) {
-        setSelectedFiles([...selectedFiles, filePath]);
-      } else {
-        setSelectedFiles([selectedFiles[1], filePath]);
-      }
-    }
-  };
-
-  const handleCompareMode = () => {
-    if (viewMode === 'single') {
-      setViewMode('compare');
-      if (selectedFiles.length === 1) {
-        setSelectedFiles([selectedFiles[0]]);
-      }
-    } else {
-      setViewMode('single');
-      if (selectedFiles.length > 1) {
-        setSelectedFiles([selectedFiles[0]]);
-      }
-    }
+    setSelectedFiles([filePath]);
   };
 
   const totalFiles = useMemo(() => {
@@ -195,32 +169,11 @@ export default function BuildingPage() {
           </div>
           
           <div className="flex items-center space-x-3">
-            {/* View Mode Toggle */}
-            <button
-              onClick={handleCompareMode}
-              disabled={loading}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all border ${
-                viewMode === 'compare'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-              } disabled:opacity-50`}
-            >
-              <Columns2 className="w-4 h-4" />
-              <span className="text-sm font-medium">Compare</span>
-            </button>
-            
-            {/* Stats */}
-            <div className="bg-gray-100 px-4 py-2 rounded-lg border border-gray-200">
-              <div className="text-xs text-gray-600">
-                {loading ? (
-                  'Loading...'
-                ) : selectedFiles.length > 0 ? (
-                  <span className="text-blue-600 font-medium">{selectedFiles.length} selected</span>
-                ) : (
-                  `${totalFiles} files`
-                )}
+            {selectedFiles.length > 0 && (
+              <div className="text-sm text-gray-600">
+                <span className="font-medium text-blue-600">{selectedFiles[0].split('/').pop()}</span>
               </div>
-            </div>
+            )}
           </div>
         </div>
         
@@ -363,60 +316,22 @@ export default function BuildingPage() {
                 </h3>
                 <p className="text-gray-600 text-sm mb-6">
                   Select a drawing from the file explorer to view it here.
-                  {viewMode === 'compare' && ' In compare mode, you can select up to 2 drawings.'}
                 </p>
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <p className="text-xs text-blue-700">
-                    💡 Tip: Use search to quickly find drawings by name or floor
+                    💡 Tip: Use search to quickly find drawings by name or category
                   </p>
                 </div>
               </div>
             </div>
-          ) : viewMode === 'single' ? (
-            // Single Viewer
+          ) : (
+            // PDF Viewer
             <PDFViewer 
               filePath={selectedFiles[0]}
               hotelId={hotelId}
               getFileUrl={getFileUrl}
               onClose={() => setSelectedFiles([])}
             />
-          ) : (
-            // Comparison Mode
-            <div className="flex-1 flex overflow-hidden">
-              {selectedFiles[0] && (
-                <div className="flex-1 border-r border-gray-200 min-w-0">
-                  <PDFViewer 
-                    filePath={selectedFiles[0]}
-                    hotelId={hotelId}
-                    getFileUrl={getFileUrl}
-                    onClose={() => setSelectedFiles(selectedFiles.filter((_, i) => i !== 0))}
-                    compareMode={true}
-                    position="left"
-                  />
-                </div>
-              )}
-              {selectedFiles[1] ? (
-                <div className="flex-1 min-w-0">
-                  <PDFViewer 
-                    filePath={selectedFiles[1]}
-                    hotelId={hotelId}
-                    getFileUrl={getFileUrl}
-                    onClose={() => setSelectedFiles(selectedFiles.filter((_, i) => i !== 1))}
-                    compareMode={true}
-                    position="right"
-                  />
-                </div>
-              ) : (
-                <div className="flex-1 flex items-center justify-center bg-gray-50 min-w-0">
-                  <div className="text-center">
-                    <Grid3x3 className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                    <p className="text-gray-600 text-sm">
-                      Select a second drawing to compare
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
           )}
         </main>
       </div>
