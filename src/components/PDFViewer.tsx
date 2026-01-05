@@ -45,12 +45,21 @@ export default function PDFViewer({
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Pointer-based pan state (better than mouse)
+  // Pan/drag state - using pointer events for better tracking
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const dragStartRef = useRef({ x: 0, y: 0 });
   const pointerIdRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Ref for scale to avoid stale closures in wheel handler
+  const scaleRef = useRef(1);
+  useEffect(() => {
+    scaleRef.current = scale;
+  }, [scale]);
+  
+  // Wheel handler ref for non-passive listener
+  const wheelHandlerRef = useRef<(e: WheelEvent) => void>(() => {});
 
   const fileName = filePath.split('/').pop() || 'document.pdf';
 
@@ -119,37 +128,55 @@ export default function PDFViewer({
     setIsDragging(false);
   };
 
-  // ZOOM AROUND CURSOR - The magic!
-  const handleWheel = (e: React.WheelEvent) => {
-    if (!containerRef.current || !fileUrl) return;
-    
-    e.preventDefault();
-    
-    const delta = e.deltaY;
-    const direction = delta > 0 ? -1 : 1;
-    
-    const oldScale = scale;
-    const nextScale = clamp(Number((oldScale + direction * 0.15).toFixed(2)), 0.5, 4);
-    
-    if (nextScale === oldScale) return;
-    
-    const rect = containerRef.current.getBoundingClientRect();
-    const cx = e.clientX - rect.left;
-    const cy = e.clientY - rect.top;
-    
-    const ox = cx - rect.width / 2;
-    const oy = cy - rect.height / 2;
-    
-    const k = nextScale / oldScale;
-    setPosition((prev) => ({
-      x: prev.x - ox * (k - 1),
-      y: prev.y - oy * (k - 1)
-    }));
-    
-    setScale(nextScale);
-    
-    if (nextScale <= 1) setPosition({ x: 0, y: 0 });
-  };
+  // Wheel handler logic (stored in ref for non-passive listener)
+  useEffect(() => {
+    wheelHandlerRef.current = (e: WheelEvent) => {
+      if (!containerRef.current) return;
+      if (!fileUrl) return;
+
+      // Stop page scroll
+      e.preventDefault();
+
+      const delta = e.deltaY;
+      const direction = delta > 0 ? -1 : 1;
+
+      const oldScale = scaleRef.current;
+      const nextScale = clamp(Number((oldScale + direction * 0.15).toFixed(2)), 0.5, 4);
+
+      if (nextScale === oldScale) return;
+
+      const rect = containerRef.current.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const ox = cx - rect.width / 2;
+      const oy = cy - rect.height / 2;
+
+      const k = nextScale / oldScale;
+
+      setPosition((prev) => ({
+        x: prev.x - ox * (k - 1),
+        y: prev.y - oy * (k - 1)
+      }));
+
+      setScale(nextScale);
+
+      if (nextScale <= 1) setPosition({ x: 0, y: 0 });
+    };
+  }, [fileUrl]);
+
+  // Attach non-passive wheel listener
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => wheelHandlerRef.current(e);
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, []);
 
   const handleZoomIn = () => setScale(prev => Math.min(prev + 0.25, 3));
   const handleZoomOut = () => {
@@ -268,7 +295,6 @@ export default function PDFViewer({
         onPointerUp={stopDragging}
         onPointerCancel={stopDragging}
         onPointerLeave={stopDragging}
-        onWheel={handleWheel}
         style={{ 
           cursor: isDragging ? 'grabbing' : 'grab',
           userSelect: 'none',
