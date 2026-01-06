@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { GasEntry, ViewMode } from '../types';
+import { GasEntry, ViewMode, PeriodMode } from '../types';
 
 interface GasChartProps {
   data: GasEntry[];
@@ -7,6 +7,7 @@ interface GasChartProps {
   loading: boolean;
   comparisonMode?: boolean;
   comparisonYears?: number[];
+  periodMode?: PeriodMode;
   onMonthClick?: (month: string) => void;
 }
 
@@ -24,6 +25,7 @@ export default function GasChart({
   loading,
   comparisonMode,
   comparisonYears,
+  periodMode,
   onMonthClick
 }: GasChartProps) {
   
@@ -187,9 +189,8 @@ export default function GasChart({
     };
   });
   
-  // Check if data spans multiple years (last 12 months view)
-  const years = [...new Set(data.map(entry => entry.period.split('-')[0]))];
-  const isLast12Months = years.length > 1;
+  // Check if we're in rolling/last 12 months mode
+  const isRollingMode = periodMode === 'rolling';
   
   const getYAxisLabel = () => {
     if (viewMode === 'kwh') return 'kWh';
@@ -236,8 +237,8 @@ export default function GasChart({
             radius={[4, 4, 0, 0]}
             onClick={(data) => {
               if (onMonthClick && data.period) {
-                if (isLast12Months) {
-                  // Last 12 months: pass full date like "2025-11"
+                if (isRollingMode) {
+                  // Rolling/last 12 months: pass full date like "2025-11"
                   onMonthClick(data.period);
                 } else {
                   // Single year: pass just month number like "11"
