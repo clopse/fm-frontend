@@ -36,6 +36,20 @@ export default function BuildingPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
 
+  // ✅ Helper function to skip the "drawings" parent folder
+  const skipDrawingsFolder = (node: FileNode): FileNode | null => {
+    // If the root node is named "drawings" and has children, return a synthetic root with its children
+    if (node.name.toLowerCase() === 'drawings' && node.type === 'folder' && node.children) {
+      return {
+        name: '',
+        path: '',
+        type: 'folder',
+        children: node.children
+      };
+    }
+    return node;
+  };
+
   // Fetch drawing structure from API
   useEffect(() => {
     const fetchDrawings = async () => {
@@ -50,7 +64,10 @@ export default function BuildingPage() {
           throw new Error('Failed to fetch drawings');
         }
         const data = await response.json();
-        setFileStructure(data);
+        
+        // ✅ Skip the "drawings" parent folder if it exists
+        const processed = skipDrawingsFolder(data);
+        setFileStructure(processed);
       } catch (err) {
         console.error('Error fetching drawings:', err);
         setError(err instanceof Error ? err.message : 'Failed to load drawings');
@@ -175,7 +192,7 @@ export default function BuildingPage() {
             </div>
             <div>
               <h1 className="text-2xl font-semibold text-gray-900">
-                Technical Drawings
+                Drawings
               </h1>
               <p className="text-gray-600 text-sm mt-0.5">{hotelName}</p>
             </div>
