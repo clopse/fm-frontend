@@ -120,14 +120,29 @@ export default function UtilitiesDashboard() {
 
   const handleShowBills = useCallback((monthFilter?: string, utilityType?: 'electricity' | 'gas') => {
     let monthName: string | undefined;
-    if (monthFilter && monthFilter !== 'all') {
-      const monthNum = parseInt(monthFilter);
-      if (monthNum >= 1 && monthNum <= 12) {
-        monthName = new Date(0, monthNum - 1).toLocaleString('default', { month: 'long' });
-      }
-    }
+    let yearToUse: number;
     
-    const yearToUse = selectedYears.length > 0 ? selectedYears[0] : new Date().getFullYear();
+    if (monthFilter && monthFilter !== 'all') {
+      // Check if monthFilter is a full date like "2025-11" or just a month number like "11"
+      if (monthFilter.includes('-')) {
+        // Full date format: "2025-11"
+        const [year, month] = monthFilter.split('-');
+        yearToUse = parseInt(year);
+        const monthNum = parseInt(month);
+        if (monthNum >= 1 && monthNum <= 12) {
+          monthName = new Date(0, monthNum - 1).toLocaleString('default', { month: 'long' });
+        }
+      } else {
+        // Just month number: "11"
+        const monthNum = parseInt(monthFilter);
+        if (monthNum >= 1 && monthNum <= 12) {
+          monthName = new Date(0, monthNum - 1).toLocaleString('default', { month: 'long' });
+        }
+        yearToUse = selectedYears.length > 0 ? selectedYears[0] : new Date().getFullYear();
+      }
+    } else {
+      yearToUse = selectedYears.length > 0 ? selectedYears[0] : new Date().getFullYear();
+    }
     
     setBillsListFilter({
       month: monthName,
