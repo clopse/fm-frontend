@@ -170,7 +170,8 @@ export function useUtilitiesData(hotelId: string | undefined): {
     if (periodMode === 'rolling') {
       const endDate = new Date();
       const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 11);
+      // Changed from -11 to -13 to get 14 months total
+      startDate.setMonth(startDate.getMonth() - 13);
       startDate.setDate(1);
       
       return {
