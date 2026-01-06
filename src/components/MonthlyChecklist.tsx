@@ -34,6 +34,51 @@ interface TaskItem {
   subtasks?: SubtaskItem[];
 }
 
+// ✅ Module-level cache for instant reads
+type MonthlyChecklistCache = {
+  fetchedAt: number;
+  tasks: TaskItem[];
+};
+
+const MONTHLY_CACHE = new Map<string, MonthlyChecklistCache>();
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes - cache expires after 5min
+
+// ✅ localStorage persistence helpers
+const getStorageKey = (hotelId: string) => `monthly_checklist_${hotelId}`;
+
+const hydrateFromStorage = (hotelId: string): boolean => {
+  try {
+    const stored = localStorage.getItem(getStorageKey(hotelId));
+    if (!stored) return false;
+    
+    const data = JSON.parse(stored);
+    const age = Date.now() - (data.fetchedAt || 0);
+    
+    // Only use cache if it's fresh AND has data
+    if (age < CACHE_TTL_MS && Array.isArray(data.tasks)) {
+      MONTHLY_CACHE.set(hotelId, {
+        fetchedAt: data.fetchedAt,
+        tasks: data.tasks
+      });
+      return true;
+    }
+  } catch (err) {
+    console.warn('Failed to load monthly checklist from storage:', err);
+  }
+  return false;
+};
+
+const persistToStorage = (hotelId: string) => {
+  try {
+    const cached = MONTHLY_CACHE.get(hotelId);
+    if (cached) {
+      localStorage.setItem(getStorageKey(hotelId), JSON.stringify(cached));
+    }
+  } catch (err) {
+    console.warn('Failed to persist monthly checklist:', err);
+  }
+};
+
 export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Props) {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [initialLoad, setInitialLoad] = useState(true);
@@ -66,16 +111,68 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
     }, 0)
   }), [tasks]);
 
+  // ✅ NEW: Smart cache-first loading
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly-checklist/${hotelId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        const unconfirmed = data.filter((task: TaskItem) => !task.is_confirmed_this_month);
-        setTasks(unconfirmed);
+    if (!hotelId) return;
+
+    // Step 1: Check module cache
+    let cached = MONTHLY_CACHE.get(hotelId);
+    
+    // Step 2: Try localStorage if not in memory
+    if (!cached) {
+      const hydratedFromStorage = hydrateFromStorage(hotelId);
+      if (hydratedFromStorage) {
+        cached = MONTHLY_CACHE.get(hotelId);
+      }
+    }
+    
+    // Step 3: Check if cache is valid and fresh
+    if (cached) {
+      const age = Date.now() - cached.fetchedAt;
+      if (age < CACHE_TTL_MS) {
+        // Use cached data instantly
+        console.log('✅ Loading monthly checklist from cache (instant)');
+        setTasks(cached.tasks);
         setInitialLoad(false);
-      })
-      .catch(() => setInitialLoad(false));
+        return;
+      }
+    }
+    
+    // Step 4: No cache or stale - fetch from API
+    console.log('⏳ Fetching fresh monthly checklist...');
+    fetchMonthlyChecklist();
+    
+    // Step 5: Persist on unmount
+    return () => {
+      persistToStorage(hotelId);
+    };
   }, [hotelId]);
+
+  const fetchMonthlyChecklist = async () => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly-checklist/${hotelId}`
+      );
+      const data = await res.json();
+      const unconfirmed = data.filter((task: TaskItem) => !task.is_confirmed_this_month);
+      
+      // Update state
+      setTasks(unconfirmed);
+      
+      // Update cache
+      const cacheData: MonthlyChecklistCache = {
+        fetchedAt: Date.now(),
+        tasks: unconfirmed
+      };
+      MONTHLY_CACHE.set(hotelId, cacheData);
+      persistToStorage(hotelId);
+      
+      setInitialLoad(false);
+    } catch (err) {
+      console.error('Failed to load monthly checklist:', err);
+      setInitialLoad(false);
+    }
+  };
 
   // ✅ Optimistic update - remove task INSTANTLY from UI
   const confirmTask = useCallback(async (taskId: string) => {
@@ -84,8 +181,17 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
     if (!taskToConfirm) return;
     
     // Optimistically remove from UI immediately
-    setTasks((prev) => prev.filter((task) => task.task_id !== taskId));
+    const updatedTasks = tasks.filter((task) => task.task_id !== taskId);
+    setTasks(updatedTasks);
     setConfirmingTasks(prev => new Set(prev).add(taskId));
+    
+    // Also update cache immediately
+    const cacheData: MonthlyChecklistCache = {
+      fetchedAt: Date.now(),
+      tasks: updatedTasks
+    };
+    MONTHLY_CACHE.set(hotelId, cacheData);
+    persistToStorage(hotelId);
     
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`, {
@@ -108,7 +214,17 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
         // Check if it's already in the list (shouldn't be, but be safe)
         if (prev.some(t => t.task_id === taskId)) return prev;
         // Add it back in original position (or at the end)
-        return [...prev, taskToConfirm].sort((a, b) => a.label.localeCompare(b.label));
+        const restoredTasks = [...prev, taskToConfirm].sort((a, b) => a.label.localeCompare(b.label));
+        
+        // Update cache with restored state
+        const cacheData: MonthlyChecklistCache = {
+          fetchedAt: Date.now(),
+          tasks: restoredTasks
+        };
+        MONTHLY_CACHE.set(hotelId, cacheData);
+        persistToStorage(hotelId);
+        
+        return restoredTasks;
       });
       
       // Still call onConfirm to let debounced refresh reconcile
