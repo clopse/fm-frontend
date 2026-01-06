@@ -1,12 +1,13 @@
 export const hotelNames: Record<string, string> = {
-    hiex: "Holiday Inn Express",
-    moxy: "Moxy Cork",
+    hiex: "Holiday Inn Express Dublin",
+    moxy: "Moxy REsidence Inn Cork",
     hida: "Holiday Inn Dublin Airport",
-    hbhdcc: "Hampton Dublin",
-    hbhe: "Hampton Ealing",
-    sera: "Seraphine Kensington",
-    marina: "Waterford Marina",
+    hbhdcc: "Hampton by Hilton Dublin",
+    hbhe: "Hampton by Hilton Ealing",
+    sera: "Seraphine Hammersmith",
+    kensh: "Kensington Hideaway",
+    marina: "Waterford Marina Hotel",
     hiltonth: "Home2 Suites Dublin",
-    belfast: "Aloft Residence Inn"
+    belfast: "Aloft Residence Inn Belfast"
   };
   
