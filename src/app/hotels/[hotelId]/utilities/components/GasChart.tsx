@@ -187,6 +187,10 @@ export default function GasChart({
     };
   });
   
+  // Check if data spans multiple years (last 12 months view)
+  const years = [...new Set(data.map(entry => entry.period.split('-')[0]))];
+  const isLast12Months = years.length > 1;
+  
   const getYAxisLabel = () => {
     if (viewMode === 'kwh') return 'kWh';
     if (viewMode === 'eur') return '€';
@@ -232,7 +236,14 @@ export default function GasChart({
             radius={[4, 4, 0, 0]}
             onClick={(data) => {
               if (onMonthClick && data.period) {
-                onMonthClick(data.period);
+                if (isLast12Months) {
+                  // Last 12 months: pass full date like "2025-11"
+                  onMonthClick(data.period);
+                } else {
+                  // Single year: pass just month number like "11"
+                  const monthNum = data.period.split('-')[1];
+                  onMonthClick(monthNum);
+                }
               }
             }}
             cursor="pointer"
