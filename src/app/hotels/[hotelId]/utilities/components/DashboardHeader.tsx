@@ -1,4 +1,7 @@
-import { Calendar, Clock, BarChart3, Upload, Filter, X } from 'lucide-react';
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { Calendar, Upload, BarChart3, X, ChevronDown } from 'lucide-react';
 import { PeriodMode } from '../types';
 
 interface DashboardHeaderProps {
@@ -28,212 +31,224 @@ export default function DashboardHeader({
   onMonthChange,
   onResetFilters
 }: DashboardHeaderProps) {
+  const [showFiltersDropdown, setShowFiltersDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const handleYearToggle = (year: number) => {
-    if (selectedYears.includes(year)) {
-      // Remove year if already selected
-      const newYears = selectedYears.filter(y => y !== year);
-      // Keep at least one year selected
-      if (newYears.length > 0) {
-        onYearChange(newYears);
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowFiltersDropdown(false);
       }
+    }
+
+    if (showFiltersDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showFiltersDropdown]);
+
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+  ];
+
+  const toggleYear = (year: number) => {
+    if (selectedYears.includes(year)) {
+      onYearChange(selectedYears.filter(y => y !== year));
     } else {
-      // Add year to selection
-      onYearChange([...selectedYears, year].sort((a, b) => b - a));
+      onYearChange([...selectedYears, year]);
     }
   };
 
-  const handleMonthToggle = (month: number) => {
-    if (selectedMonths.includes(month)) {
-      onMonthChange(selectedMonths.filter(m => m !== month));
+  const toggleMonth = (monthIndex: number) => {
+    if (selectedMonths.includes(monthIndex)) {
+      onMonthChange(selectedMonths.filter(m => m !== monthIndex));
     } else {
-      onMonthChange([...selectedMonths, month].sort((a, b) => a - b));
+      onMonthChange([...selectedMonths, monthIndex]);
     }
   };
 
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const getFilterButtonText = () => {
+    if (periodMode === 'rolling') {
+      return 'Last 12 Months';
+    }
+    
+    const parts = [];
+    if (selectedYears.length > 0) {
+      parts.push(selectedYears.length === 1 ? selectedYears[0].toString() : `${selectedYears.length} years`);
+    }
+    if (selectedMonths.length > 0 && selectedMonths.length < 12) {
+      parts.push(`${selectedMonths.length} month${selectedMonths.length > 1 ? 's' : ''}`);
+    }
+    
+    return parts.length > 0 ? parts.join(' • ') : 'Filter by time';
+  };
 
   return (
-    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col space-y-4">
-          {/* Top row - Title and Actions */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">{hotelName}</h1>
-              <p className="text-blue-100 text-sm mt-1">Utilities Dashboard</p>
+    <div className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-40">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Left: Hotel Name */}
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">
+                {hotelName.charAt(0)}
+              </span>
             </div>
-            
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={onShowMetrics}
-                className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-sm px-4 py-2 rounded-lg font-medium transition-all flex items-center space-x-2"
-              >
-                <BarChart3 className="w-4 h-4" />
-                <span>Analytics</span>
-              </button>
-              
-              <button
-                onClick={onUpload}
-                className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-sm px-4 py-2 rounded-lg font-medium transition-all flex items-center space-x-2"
-              >
-                <Upload className="w-4 h-4" />
-                <span>Upload</span>
-              </button>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">{hotelName}</h1>
+              <p className="text-xs text-slate-500">Utilities Dashboard</p>
             </div>
           </div>
 
-          {/* Bottom row - Period selector and filters */}
-          <div className="flex items-center justify-between">
-            {/* Period Mode Toggle */}
-            <div className="flex items-center space-x-2 bg-white bg-opacity-10 backdrop-blur-sm rounded-lg p-1">
+          {/* Right: Actions */}
+          <div className="flex items-center space-x-3">
+            {/* Combined Filters Dropdown */}
+            <div className="relative" ref={dropdownRef}>
               <button
-                onClick={() => onPeriodModeChange('rolling')}
-                className={`px-4 py-2 rounded-md font-medium transition-all flex items-center space-x-2 ${
-                  periodMode === 'rolling'
-                    ? 'bg-white text-blue-600 shadow-md'
-                    : 'text-white hover:bg-white hover:bg-opacity-10'
-                }`}
-              >
-                <Clock className="w-4 h-4" />
-                <span>Last 12 Months</span>
-              </button>
-              
-              <button
-                onClick={() => onPeriodModeChange('yearly')}
-                className={`px-4 py-2 rounded-md font-medium transition-all flex items-center space-x-2 ${
-                  periodMode === 'yearly'
-                    ? 'bg-white text-blue-600 shadow-md'
-                    : 'text-white hover:bg-white hover:bg-opacity-10'
+                onClick={() => setShowFiltersDropdown(!showFiltersDropdown)}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                  showFiltersDropdown
+                    ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'
                 }`}
               >
                 <Calendar className="w-4 h-4" />
-                <span>By Year</span>
+                <span className="text-sm font-medium">{getFilterButtonText()}</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showFiltersDropdown ? 'rotate-180' : ''}`} />
               </button>
-            </div>
 
-            {/* Year and Month Filters - Only show in yearly mode */}
-            {periodMode === 'yearly' && (
-              <div className="flex items-center space-x-4">
-                {/* Year Multi-Select */}
-                <div className="relative">
-                  <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg px-4 py-2">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="w-4 h-4" />
-                      <span className="text-sm font-medium">
-                        {selectedYears.length > 1 
-                          ? `${selectedYears.length} years selected`
-                          : selectedYears[0] || 'Select Year'
-                        }
-                      </span>
+              {showFiltersDropdown && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50">
+                  {/* Period Mode Selection */}
+                  <div className="p-4 border-b border-slate-200 bg-slate-50">
+                    <label className="block text-xs font-semibold text-slate-700 mb-2">Period Mode</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => onPeriodModeChange('rolling')}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          periodMode === 'rolling'
+                            ? 'bg-emerald-500 text-white shadow-md'
+                            : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        Last 12 Months
+                      </button>
+                      <button
+                        onClick={() => onPeriodModeChange('yearly')}
+                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          periodMode === 'yearly'
+                            ? 'bg-blue-500 text-white shadow-md'
+                            : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        By Year
+                      </button>
                     </div>
                   </div>
-                  
-                  {/* Year dropdown */}
-                  <div className="absolute top-full mt-2 right-0 bg-white rounded-lg shadow-xl border border-slate-200 p-2 z-50 min-w-[200px]">
-                    <div className="text-xs font-medium text-slate-600 px-2 py-1 mb-1">
-                      Click to compare years
+
+                  {/* Year Selection (only shown in yearly mode) */}
+                  {periodMode === 'yearly' && (
+                    <div className="p-4 border-b border-slate-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="block text-xs font-semibold text-slate-700">Select Years</label>
+                        {selectedYears.length > 0 && (
+                          <button
+                            onClick={() => onYearChange([])}
+                            className="text-xs text-blue-600 hover:text-blue-800"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {availableYears.map((year) => (
+                          <button
+                            key={year}
+                            onClick={() => toggleYear(year)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              selectedYears.includes(year)
+                                ? 'bg-blue-500 text-white shadow-md'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                          >
+                            {year}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      {availableYears.map(year => (
+                  )}
+
+                  {/* Month Selection */}
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-xs font-semibold text-slate-700">Filter by Months</label>
+                      {selectedMonths.length > 0 && (
                         <button
-                          key={year}
-                          onClick={() => handleYearToggle(year)}
-                          className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                            selectedYears.includes(year)
-                              ? 'bg-blue-100 text-blue-900'
-                              : 'text-slate-700 hover:bg-slate-100'
+                          onClick={() => onMonthChange([])}
+                          className="text-xs text-blue-600 hover:text-blue-800"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {months.map((month, index) => (
+                        <button
+                          key={month}
+                          onClick={() => toggleMonth(index + 1)}
+                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            selectedMonths.includes(index + 1)
+                              ? 'bg-purple-500 text-white shadow-md'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <span>{year}</span>
-                            {selectedYears.includes(year) && (
-                              <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                            )}
-                          </div>
+                          {month}
                         </button>
                       ))}
                     </div>
-                    {selectedYears.length > 1 && (
-                      <div className="mt-2 pt-2 border-t border-slate-200">
-                        <div className="text-xs text-slate-500 px-2">
-                          {selectedYears.length} years will be compared side-by-side
-                        </div>
-                      </div>
-                    )}
                   </div>
-                </div>
 
-                {/* Month Multi-Select */}
-                <div className="relative">
-                  <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg px-4 py-2">
-                    <div className="flex items-center space-x-2">
-                      <Filter className="w-4 h-4" />
-                      <span className="text-sm font-medium">
-                        {selectedMonths.length > 0 
-                          ? `${selectedMonths.length} months`
-                          : 'All months'
-                        }
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Month dropdown */}
-                  <div className="absolute top-full mt-2 right-0 bg-white rounded-lg shadow-xl border border-slate-200 p-2 z-50 min-w-[280px]">
-                    <div className="text-xs font-medium text-slate-600 px-2 py-1 mb-1">
-                      Filter by months
-                    </div>
-                    <div className="grid grid-cols-3 gap-1">
-                      {monthNames.map((monthName, index) => {
-                        const monthNum = index + 1;
-                        return (
-                          <button
-                            key={monthNum}
-                            onClick={() => handleMonthToggle(monthNum)}
-                            className={`px-3 py-2 rounded-md text-xs font-medium transition-all ${
-                              selectedMonths.includes(monthNum)
-                                ? 'bg-purple-100 text-purple-900'
-                                : 'text-slate-700 hover:bg-slate-100'
-                            }`}
-                          >
-                            {monthName}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {selectedMonths.length > 0 && (
+                  {/* Reset Button */}
+                  {(selectedYears.length > 0 || selectedMonths.length > 0 || periodMode === 'yearly') && (
+                    <div className="p-3 border-t border-slate-200 bg-slate-50">
                       <button
-                        onClick={() => onMonthChange([])}
-                        className="mt-2 w-full text-xs text-slate-600 hover:text-slate-900 py-1"
+                        onClick={() => {
+                          onResetFilters();
+                          setShowFiltersDropdown(false);
+                        }}
+                        className="w-full px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm font-medium transition-colors"
                       >
-                        Clear selection
+                        Reset All Filters
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
-
-                {/* Reset button */}
-                {(selectedYears.length > 1 || selectedMonths.length > 0) && (
-                  <button
-                    onClick={onResetFilters}
-                    className="bg-white bg-opacity-10 hover:bg-opacity-20 backdrop-blur-sm px-3 py-2 rounded-lg transition-all flex items-center space-x-1"
-                  >
-                    <X className="w-4 h-4" />
-                    <span className="text-sm font-medium">Reset</span>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Data availability info */}
-          {availableYears.length > 0 && (
-            <div className="text-xs text-blue-100">
-              Data available: {Math.min(...availableYears)} - {Math.max(...availableYears)}
+              )}
             </div>
-          )}
+
+            {/* Metrics Button */}
+            <button
+              onClick={onShowMetrics}
+              className="flex items-center space-x-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 border border-slate-300 transition-colors"
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span className="text-sm font-medium hidden sm:inline">Metrics</span>
+            </button>
+
+            {/* Upload Button */}
+            <button
+              onClick={onUpload}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              <span className="text-sm font-medium hidden sm:inline">Upload</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
