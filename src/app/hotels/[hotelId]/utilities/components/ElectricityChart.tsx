@@ -189,6 +189,10 @@ export default function ElectricityChart({
     };
   });
   
+  // Check if data spans multiple years (last 12 months view)
+  const years = [...new Set(data.map(entry => entry.month.split('-')[0]))];
+  const isLast12Months = years.length > 1;
+  
   const getYAxisLabel = () => {
     if (viewMode === 'kwh') return 'kWh';
     if (viewMode === 'eur') return '€';
@@ -234,7 +238,14 @@ export default function ElectricityChart({
             radius={[4, 4, 0, 0]}
             onClick={(data) => {
               if (onMonthClick && data.monthKey) {
-                onMonthClick(data.monthKey);
+                if (isLast12Months) {
+                  // Last 12 months: pass full date like "2025-11"
+                  onMonthClick(data.monthKey);
+                } else {
+                  // Single year: pass just month number like "11"
+                  const monthNum = data.monthKey.split('-')[1];
+                  onMonthClick(monthNum);
+                }
               }
             }}
             cursor="pointer"
