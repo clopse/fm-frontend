@@ -126,18 +126,14 @@ export default function UtilitiesDashboard() {
       // Check if monthFilter is a full date like "2025-11" or just a month number like "11"
       if (monthFilter.includes('-')) {
         // Full date format: "2025-11"
-        const [year, month] = monthFilter.split('-');
-        yearToUse = parseInt(year);
-        const monthNum = parseInt(month);
-        if (monthNum >= 1 && monthNum <= 12) {
-          monthName = new Date(0, monthNum - 1).toLocaleString('default', { month: 'long' });
-        }
+        const parts = monthFilter.split('-');
+        yearToUse = parseInt(parts[0]);
+        const monthNum = parseInt(parts[1]);
+        monthName = new Date(2000, monthNum - 1).toLocaleString('default', { month: 'long' });
       } else {
         // Just month number: "11"
         const monthNum = parseInt(monthFilter);
-        if (monthNum >= 1 && monthNum <= 12) {
-          monthName = new Date(0, monthNum - 1).toLocaleString('default', { month: 'long' });
-        }
+        monthName = new Date(2000, monthNum - 1).toLocaleString('default', { month: 'long' });
         yearToUse = selectedYears.length > 0 ? selectedYears[0] : new Date().getFullYear();
       }
     } else {
@@ -280,6 +276,7 @@ export default function UtilitiesDashboard() {
             loading={loading}
             comparisonMode={isComparisonMode}
             comparisonYears={data.comparison_years}
+            periodMode={periodMode}
             onMonthClick={(month) => handleShowBills(month, 'electricity')}
           />
           <GasChart
@@ -288,6 +285,7 @@ export default function UtilitiesDashboard() {
             loading={loading}
             comparisonMode={isComparisonMode}
             comparisonYears={data.comparison_years}
+            periodMode={periodMode}
             onMonthClick={(month) => handleShowBills(month, 'gas')}
           />
         </div>
