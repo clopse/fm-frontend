@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ElectricityEntry, ViewMode } from '../types';
+import { ElectricityEntry, ViewMode, PeriodMode } from '../types';
 
 interface ElectricityChartProps {
   data: ElectricityEntry[];
@@ -7,7 +7,7 @@ interface ElectricityChartProps {
   loading: boolean;
   comparisonMode?: boolean;
   comparisonYears?: number[];
-  periodMode?: 'yearly' | 'rolling';
+  periodMode?: PeriodMode;
   onMonthClick?: (month: string) => void;
 }
 
