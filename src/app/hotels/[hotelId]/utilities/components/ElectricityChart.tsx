@@ -7,6 +7,7 @@ interface ElectricityChartProps {
   loading: boolean;
   comparisonMode?: boolean;
   comparisonYears?: number[];
+  periodMode?: 'yearly' | 'rolling';
   onMonthClick?: (month: string) => void;
 }
 
@@ -24,6 +25,7 @@ export default function ElectricityChart({
   loading,
   comparisonMode,
   comparisonYears,
+  periodMode,
   onMonthClick
 }: ElectricityChartProps) {
   
@@ -189,9 +191,8 @@ export default function ElectricityChart({
     };
   });
   
-  // Check if data spans multiple years (last 12 months view)
-  const years = [...new Set(data.map(entry => entry.month.split('-')[0]))];
-  const isLast12Months = years.length > 1;
+  // Check if we're in rolling/last 12 months mode
+  const isRollingMode = periodMode === 'rolling';
   
   const getYAxisLabel = () => {
     if (viewMode === 'kwh') return 'kWh';
@@ -238,8 +239,8 @@ export default function ElectricityChart({
             radius={[4, 4, 0, 0]}
             onClick={(data) => {
               if (onMonthClick && data.monthKey) {
-                if (isLast12Months) {
-                  // Last 12 months: pass full date like "2025-11"
+                if (isRollingMode) {
+                  // Rolling/last 12 months: pass full date like "2025-11"
                   onMonthClick(data.monthKey);
                 } else {
                   // Single year: pass just month number like "11"
