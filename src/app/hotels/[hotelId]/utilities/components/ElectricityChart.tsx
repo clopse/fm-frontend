@@ -235,8 +235,7 @@ export default function ElectricityChart({
             radius={[4, 4, 0, 0]}
             onClick={(data) => {
               if (onMonthClick && data.monthKey) {
-                const monthNum = data.monthKey.split('-')[1];
-                onMonthClick(monthNum);
+                onMonthClick(data.monthKey);
               }
             }}
             cursor="pointer"
