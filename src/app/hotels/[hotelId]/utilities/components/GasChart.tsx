@@ -151,7 +151,8 @@ export default function GasChart({
                 radius={[4, 4, 0, 0]}
                 onClick={(data) => {
                   if (onMonthClick && data.monthNum) {
-                    onMonthClick(data.monthNum.toString());
+                    const monthFormatted = data.monthNum.toString().padStart(2, '0');
+                    onMonthClick(`${year}-${monthFormatted}`);
                   }
                 }}
                 cursor="pointer"
@@ -232,8 +233,7 @@ export default function GasChart({
             radius={[4, 4, 0, 0]}
             onClick={(data) => {
               if (onMonthClick && data.period) {
-                const monthNum = data.period.split('-')[1];
-                onMonthClick(monthNum);
+                onMonthClick(data.period);
               }
             }}
             cursor="pointer"
