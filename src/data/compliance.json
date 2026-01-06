@@ -27,6 +27,59 @@
         "info_popup": "Fire alarm systems must be serviced quarterly by a qualified technician to verify full system operation.\n\n⚖️ IS 3218:2013+A1:2019 (Ireland), Clause 11.2; BS 5839-1:2017 (UK)"
       },
       {
+  "section": "Mechanical & Electrical Systems",
+  "tasks": [
+    {
+      "task_id": "generator_service",
+      "label": "Annual Emergency Generator Service",
+      "frequency": "Annually",
+      "category": "Mechanical",
+      "type": "upload",
+      "needs_report": "yes",
+      "mandatory": true,
+      "points": 20,
+      "audit": "mechanical",
+      "info_popup": "Emergency backup generators must be serviced annually by a qualified technician. Service includes load testing, fuel system inspection, battery testing, and oil/filter changes.\n\n⚖️ Manufacturer specifications; Insurance requirements; Business continuity compliance"
+    },
+    {
+      "task_id": "generator_monthly_test",
+      "label": "Monthly Generator Load Test",
+      "frequency": "Monthly",
+      "category": "Mechanical",
+      "type": "confirmation",
+      "needs_report": "no",
+      "mandatory": true,
+      "points": 10,
+      "audit": "mechanical",
+      "info_popup": "Generators must be started and run under load monthly to ensure readiness. Record runtime, load percentage, and any abnormalities.\n\n⚖️ Manufacturer recommendations; BS 7671 (UK); Business continuity best practice"
+    },
+    {
+      "task_id": "solar_pv_inspection",
+      "label": "Annual Solar PV System Inspection",
+      "frequency": "Annually",
+      "category": "Electrical",
+      "type": "upload",
+      "needs_report": "yes",
+      "mandatory": false,
+      "points": 15,
+      "audit": "electrical",
+      "info_popup": "Solar photovoltaic systems require annual inspection including panel condition, inverter function, electrical connections, mounting integrity, and performance monitoring. Includes thermal imaging for fault detection.\n\n⚖️ BS 7671:2018 (UK); NSAI guidance (Ireland); Manufacturer warranty requirements"
+    },
+    {
+      "task_id": "solar_pv_cleaning",
+      "label": "Bi-Annual Solar Panel Cleaning",
+      "frequency": "TwiceAnnually",
+      "category": "Electrical",
+      "type": "confirmation",
+      "needs_report": "no",
+      "mandatory": false,
+      "points": 10,
+      "audit": "electrical",
+      "info_popup": "Solar panels should be cleaned twice yearly to maintain optimal efficiency. Remove dirt, bird droppings, and debris that reduce power generation.\n\n⚖️ Manufacturer recommendations; Performance optimization"
+    }
+  ]
+}
+      {
         "task_id": "fire_extinguisher_certificate",
         "label": "Annual Fire Extinguisher Service Certificate",
         "frequency": "Annually",
