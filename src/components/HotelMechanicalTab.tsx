@@ -40,6 +40,10 @@ export default function HotelMechanicalTab({ mechanical, isEditing, onUpdate }: 
       label: 'Generators', 
       description: 'Emergency backup power generators' 
     },
+    pvSolarPanels: { 
+      label: 'Solar PV Panels', 
+      description: 'Photovoltaic solar panel installations' 
+    },
     waterHeaters: { 
       label: 'Water Heaters', 
       description: 'Hot water cylinders and immersion heaters' 
@@ -90,7 +94,7 @@ export default function HotelMechanicalTab({ mechanical, isEditing, onUpdate }: 
     },
     {
       title: 'Power & Backup',
-      fields: ['generators'],
+      fields: ['generators', 'pvSolarPanels'],
       icon: Zap,
       color: isEditing ? 'bg-yellow-50' : 'bg-gray-50'
     }
