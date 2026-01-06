@@ -306,21 +306,45 @@ export default function BuildingPage() {
                     <p className="text-sm text-red-600">{error}</p>
                   </div>
                 ) : filteredFiles ? (
-                  <FileTree
-                    node={filteredFiles}
-                    selectedFiles={selectedFiles}
-                    expandedFolders={expandedFolders}
-                    onSelectFile={handleFileSelect}
-                    onToggleFolder={(path) => {
-                      const newExpanded = new Set(expandedFolders);
-                      if (newExpanded.has(path)) {
-                        newExpanded.delete(path);
-                      } else {
-                        newExpanded.add(path);
-                      }
-                      setExpandedFolders(newExpanded);
-                    }}
-                  />
+                  <>
+                    {/* If root has empty name, render children directly */}
+                    {filteredFiles.name === '' && filteredFiles.children ? (
+                      filteredFiles.children.map((child) => (
+                        <FileTree
+                          key={child.path}
+                          node={child}
+                          selectedFiles={selectedFiles}
+                          expandedFolders={expandedFolders}
+                          onSelectFile={handleFileSelect}
+                          onToggleFolder={(path) => {
+                            const newExpanded = new Set(expandedFolders);
+                            if (newExpanded.has(path)) {
+                              newExpanded.delete(path);
+                            } else {
+                              newExpanded.add(path);
+                            }
+                            setExpandedFolders(newExpanded);
+                          }}
+                        />
+                      ))
+                    ) : (
+                      <FileTree
+                        node={filteredFiles}
+                        selectedFiles={selectedFiles}
+                        expandedFolders={expandedFolders}
+                        onSelectFile={handleFileSelect}
+                        onToggleFolder={(path) => {
+                          const newExpanded = new Set(expandedFolders);
+                          if (newExpanded.has(path)) {
+                            newExpanded.delete(path);
+                          } else {
+                            newExpanded.add(path);
+                          }
+                          setExpandedFolders(newExpanded);
+                        }}
+                      />
+                    )}
+                  </>
                 ) : (
                   <div className="text-center py-8">
                     <FileText className="w-6 h-6 text-gray-400 mx-auto mb-2" />
