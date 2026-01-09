@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Calendar, Upload, BarChart3, X, ChevronDown } from 'lucide-react';
+import { Calendar, Upload, BarChart3, X, ChevronDown, Zap } from 'lucide-react';
 import { PeriodMode } from '../types';
 
 interface DashboardHeaderProps {
@@ -12,6 +12,7 @@ interface DashboardHeaderProps {
   availableYears: number[];
   onShowMetrics: () => void;
   onUpload: () => void;
+  onCHPUpload?: () => void;
   onPeriodModeChange: (mode: PeriodMode) => void;
   onYearChange: (years: number[]) => void;
   onMonthChange: (months: number[]) => void;
@@ -26,6 +27,7 @@ export default function DashboardHeader({
   availableYears,
   onShowMetrics,
   onUpload,
+  onCHPUpload,
   onPeriodModeChange,
   onYearChange,
   onMonthChange,
@@ -34,7 +36,6 @@ export default function DashboardHeader({
   const [showFiltersDropdown, setShowFiltersDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -76,15 +77,15 @@ export default function DashboardHeader({
     if (periodMode === 'rolling') {
       return 'Last 12 Months';
     }
-    
-    const parts = [];
+
+    const parts: string[] = [];
     if (selectedYears.length > 0) {
       parts.push(selectedYears.length === 1 ? selectedYears[0].toString() : `${selectedYears.length} years`);
     }
     if (selectedMonths.length > 0 && selectedMonths.length < 12) {
       parts.push(`${selectedMonths.length} month${selectedMonths.length > 1 ? 's' : ''}`);
     }
-    
+
     return parts.length > 0 ? parts.join(' • ') : 'Filter by time';
   };
 
@@ -248,6 +249,17 @@ export default function DashboardHeader({
               <Upload className="w-4 h-4" />
               <span className="text-sm font-medium hidden sm:inline">Upload</span>
             </button>
+
+            {/* CHP Upload Button (optional) */}
+            {onCHPUpload && (
+              <button
+                onClick={onCHPUpload}
+                className="flex items-center space-x-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
+              >
+                <Zap className="w-4 h-4" />
+                <span className="text-sm font-medium hidden sm:inline">CHP Upload</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
