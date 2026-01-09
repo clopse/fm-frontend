@@ -332,7 +332,7 @@ export default function UtilitiesDashboard() {
             {/* CHP Performance Dashboard */}
             <CHPChart
               data={chpData}
-              breakEvenData={breakEvenData}
+              breakEvenData={breakEvenData ?? undefined}
               loading={chpLoading}
               onMonthClick={(month) => {
                 console.log('CHP month clicked:', month);
