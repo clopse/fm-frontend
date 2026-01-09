@@ -1,6 +1,13 @@
+// Utilities Dashboard - Complete Type Definitions
+// Includes: Electricity, Gas, CHP, and all related types
+
+// ============================================================================
+// ELECTRICITY TYPES
+// ============================================================================
+
 export interface ElectricityEntry {
   month: string;
-  year?: number; // Added for multi-year comparison
+  year?: number;
   day_kwh: number;
   night_kwh: number;
   total_kwh: number;
@@ -16,9 +23,13 @@ export interface ElectricityEntry {
   };
 }
 
+// ============================================================================
+// GAS TYPES
+// ============================================================================
+
 export interface GasEntry {
   period: string;
-  year?: number; // Added for multi-year comparison
+  year?: number;
   total_kwh: number;
   total_eur: number;
   per_room_kwh: number;
@@ -32,10 +43,170 @@ export interface GasEntry {
   };
 }
 
+// ============================================================================
+// CHP (COMBINED HEAT & POWER) TYPES
+// ============================================================================
+
+export interface CHPReportMetadata {
+  reportDate: string;
+  unitNumber: string;
+  siteName: string;
+  engineType: string;
+  fuelType: string;
+  calorificValue: number;
+  contractType: string;
+  contractEndDate: string;
+}
+
+export interface CHPMonthlyPerformance {
+  hoursRun: number;
+  electricityGenerated: number; // kWh
+  gasConsumed: number; // M³
+  heatGenerated: number; // kWh
+  maxHours: number;
+}
+
+export interface CHPCumulativePerformance {
+  hoursRun: number;
+  electricityGenerated: number;
+  gasConsumed: number;
+  heatGenerated: number;
+}
+
+export interface CHPPerformanceMetrics {
+  electricalEfficiency?: number;
+  thermalEfficiency?: number;
+  overallEfficiency?: number;
+  availability: number; // %
+}
+
+export interface CHPFinancialMetrics {
+  electricityValue: number; // €
+  heatValue: number; // €
+  gasCost: number; // €
+  maintenanceCost: number; // €
+  totalRevenue: number; // €
+  totalCosts: number; // €
+  netProfit: number; // €
+  co2Saved: number; // tonnes
+}
+
+export interface CHPRates {
+  electricityRate: number; // €/kWh
+  heatRate: number; // €/kWh
+  gasRate: number; // €/kWh
+  maintenanceCost: number; // €/month
+  electricitySource?: string; // Where the rate came from
+  gasSource?: string; // Where the rate came from
+  ratesSource?: 'default' | 'actual' | 'mixed'; // Overall source status
+  note?: string;
+}
+
+export interface CHPRawData {
+  reportMetadata: CHPReportMetadata;
+  monthlyPerformance: CHPMonthlyPerformance;
+  cumulativePerformance: CHPCumulativePerformance;
+  performanceMetrics: CHPPerformanceMetrics;
+  financialMetrics: CHPFinancialMetrics;
+  rates: CHPRates;
+}
+
+export interface CHPSummary {
+  report_date: string;
+  unit_number: string;
+  site_name: string;
+  hours_run: number;
+  electricity_kwh: number;
+  gas_m3: number;
+  heat_kwh: number;
+  net_profit: number;
+  co2_saved: number;
+}
+
+export interface CHPReport {
+  hotel_id: string;
+  utility_type: 'chp';
+  filename: string;
+  uploaded_at: string;
+  report_date: string;
+  report_month: string; // YYYY-MM
+  raw_data: CHPRawData;
+  summary: CHPSummary;
+  s3_key?: string;
+  pdf_s3_key?: string;
+  extraction_method: string;
+  validation: {
+    confidence: number;
+    extraction_quality: string;
+  };
+  rate_info?: {
+    source: 'default' | 'actual' | 'mixed';
+    electricity_from: string;
+    gas_from: string;
+  };
+  recalculation_history?: Array<{
+    timestamp: string;
+    old_net_profit: number;
+    new_net_profit: number;
+    rate_source: string;
+    reason: string;
+  }>;
+  last_updated?: string;
+}
+
+export interface CHPDataResponse {
+  hotel_id: string;
+  year: number;
+  reports: CHPReport[];
+  totals: {
+    electricity_kwh: number;
+    heat_kwh: number;
+    gas_m3: number;
+    net_profit: number;
+    co2_saved: number;
+    hours_run: number;
+  };
+  report_count: number;
+}
+
+export interface CHPChartDataPoint {
+  month: string; // "Nov", "Dec", etc.
+  monthKey: string; // "2025-11"
+  electricityValue: number; // €
+  heatValue: number; // €
+  gasCost: number; // €
+  maintenanceCost: number; // €
+  netProfit: number; // €
+  co2Saved: number; // tonnes
+  hoursRun: number;
+  availability: number; // %
+}
+
+export interface CHPBreakEvenData {
+  hotel_id: string;
+  installation_cost: number;
+  cumulative_profit: number;
+  remaining_to_break_even: number;
+  average_monthly_profit: number;
+  months_operated: number;
+  projected_months_to_break_even: number | null;
+  total_months_estimated: number | null;
+  break_even_percentage: number;
+  monthly_breakdown: Array<{
+    month: string;
+    monthly_profit: number;
+    cumulative_profit: number;
+  }>;
+}
+
+// ============================================================================
+// BILL TYPES (SHARED)
+// ============================================================================
+
 export interface BillEntry {
   id: string;
   hotel_id: string;
-  utility_type: 'electricity' | 'gas';
+  utility_type: 'electricity' | 'gas' | 'chp';
   filename: string;
   upload_date: string;
   bill_period: string;
@@ -83,9 +254,13 @@ export interface BillEntry {
   };
 }
 
+// ============================================================================
+// AGGREGATE DATA TYPES
+// ============================================================================
+
 export interface MonthData {
   month: string;
-  year?: number; // Added for multi-year comparison
+  year?: number;
   electricity_kwh: number;
   electricity_day_kwh: number;
   electricity_night_kwh: number;
@@ -104,6 +279,7 @@ export interface MonthData {
 export interface UtilitiesData {
   electricity: ElectricityEntry[];
   gas: GasEntry[];
+  chp?: CHPChartDataPoint[];
   bills: BillEntry[];
   totals: {
     electricity: number;
@@ -111,6 +287,8 @@ export interface UtilitiesData {
     electricity_cost: number;
     gas_cost: number;
     cost: number;
+    chp_profit?: number;
+    chp_co2_saved?: number;
   };
   incomplete_months?: string[];
   daily_data?: Record<string, unknown>;
@@ -120,8 +298,9 @@ export interface UtilitiesData {
     end: string;
     mode: 'rolling' | 'yearly';
   };
-  comparison_mode?: boolean; // Added for multi-year comparison
-  comparison_years?: number[]; // Added for multi-year comparison
+  comparison_mode?: boolean;
+  comparison_years?: number[];
+  chp_break_even?: CHPBreakEvenData;
   trends?: {
     electricity: number;
     gas: number;
@@ -139,14 +318,9 @@ export interface UtilitiesData {
   };
 }
 
-export interface DashboardFilters {
-  metric: string;
-  month: string;
-  billType: string;
-}
-
-export type ViewMode = 'kwh' | 'eur' | 'room';
-export type PeriodMode = 'rolling' | 'yearly';
+// ============================================================================
+// ANALYTICS TYPES
+// ============================================================================
 
 export interface AnalyticsData {
   mic_charges?: {
@@ -197,6 +371,19 @@ export interface AnalyticsData {
   };
 }
 
+// ============================================================================
+// FILTER & UI TYPES
+// ============================================================================
+
+export interface DashboardFilters {
+  metric: string;
+  month: string;
+  billType: string;
+}
+
+export type ViewMode = 'kwh' | 'eur' | 'room';
+export type PeriodMode = 'rolling' | 'yearly';
+
 export interface FilterModalProps {
   isOpen: boolean;
   year: number;
@@ -213,4 +400,49 @@ export interface FilterModalProps {
 
 export interface ChartClickHandler {
   onMonthClick?: (month: string) => void;
+}
+
+// ============================================================================
+// CHP REPROCESSING TYPES
+// ============================================================================
+
+export interface CHPReprocessResult {
+  success: boolean;
+  message: string;
+  details: {
+    hotel_id: string;
+    timestamp: string;
+    reports_found: number;
+    reports_updated: number;
+    reports_failed: number;
+    improvements: number;
+    updated_reports: Array<{
+      month: string;
+      old_rate_source: string;
+      new_rate_source: string;
+      old_net_profit: number;
+      new_net_profit: number;
+      difference: number;
+      improvement: boolean;
+    }>;
+    failed_reports: Array<{
+      month: string;
+      error: string;
+    }>;
+    improved_months: string[];
+  };
+}
+
+// ============================================================================
+// RATE STATUS TYPES
+// ============================================================================
+
+export type RateStatus = 'default' | 'mixed' | 'actual';
+
+export interface RateStatusInfo {
+  status: RateStatus;
+  electricitySource: string;
+  gasSource: string;
+  canUpdate: boolean;
+  affectedReports: string[];
 }
