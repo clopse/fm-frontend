@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
-import { Euro, Upload } from 'lucide-react';
+import { Euro, Upload, Zap } from 'lucide-react';
 import { hotelNames } from "@/data/hotelMetadata";
 
 // Components
@@ -14,6 +14,11 @@ import GasChart from "./components/GasChart";
 import EnergyMixChart from "./components/EnergyMixChart";
 import BillsListModal from "./components/BillsListModal";
 import MetricsModal from "./components/MetricsModal";
+
+// CHP Components (NEW)
+import CHPChart from "./components/CHPChart";
+import CHPUploadBox from "./components/CHPUploadBox";
+import { RateStatusBanner } from "./components/RateStatusBanner";
 
 // Types
 import {
@@ -28,12 +33,14 @@ import {
 // Hooks
 import { useUtilitiesData } from "./hooks/useUtilitiesData";
 import { useUtilitiesFilters } from "./hooks/useUtilitiesFilters";
+import { useCHPData } from "./hooks/useCHPData"; // NEW
 
 export default function UtilitiesDashboard() {
   const rawParams = useParams();
   const hotelId = rawParams?.hotelId as string | undefined;
 
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showCHPUpload, setShowCHPUpload] = useState(false); // NEW
   const [showBillsList, setShowBillsList] = useState(false);
   const [showMetricsModal, setShowMetricsModal] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
@@ -64,6 +71,21 @@ export default function UtilitiesDashboard() {
     filteredData,
     availableMonths
   } = useUtilitiesFilters(data);
+
+  // CHP data hook - NEW
+  const hasCHP = hotelId === 'clonshaugh'; // Only Clonshaugh has CHP for now
+  
+  const {
+    chpData,
+    breakEvenData,
+    loading: chpLoading,
+    error: chpError,
+    refetch: refetchCHP
+  } = useCHPData(
+    hasCHP ? hotelId : undefined,
+    selectedYears.length > 0 ? selectedYears[0] : new Date().getFullYear(),
+    periodMode === 'rolling' ? 12 : undefined
+  );
 
   // Auto-select first year when available years load and in yearly mode
   useEffect(() => {
@@ -192,6 +214,7 @@ export default function UtilitiesDashboard() {
         availableYears={availableYears}
         onShowMetrics={() => setShowMetricsModal(true)}
         onUpload={() => setShowUploadModal(true)}
+        onCHPUpload={hasCHP ? () => setShowCHPUpload(true) : undefined} // NEW
         onPeriodModeChange={handlePeriodModeChange}
         onYearChange={handleYearChange}
         onMonthChange={handleMonthChange}
@@ -269,6 +292,7 @@ export default function UtilitiesDashboard() {
           loading={loading}
         />
 
+        {/* Electricity & Gas Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <ElectricityChart
             data={filteredData.electricity}
@@ -290,6 +314,35 @@ export default function UtilitiesDashboard() {
           />
         </div>
 
+        {/* CHP Section - NEW - Only show for hotels with CHP */}
+        {hasCHP && (
+          <div className="mb-8">
+            {/* Rate Status Banner */}
+            {chpData.length > 0 && (
+              <RateStatusBanner
+                chpData={chpData}
+                hotelId={hotelId}
+                onReprocess={() => {
+                  refetchCHP();
+                  refetch();
+                }}
+              />
+            )}
+
+            {/* CHP Performance Dashboard */}
+            <CHPChart
+              data={chpData}
+              breakEvenData={breakEvenData}
+              loading={chpLoading}
+              onMonthClick={(month) => {
+                console.log('CHP month clicked:', month);
+                // Optional: Show CHP report details
+              }}
+            />
+          </div>
+        )}
+
+        {/* Energy Mix Chart */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <EnergyMixChart
             electricityTotal={filteredData.totals?.electricity || 0}
@@ -299,6 +352,7 @@ export default function UtilitiesDashboard() {
           />
         </div>
 
+        {/* Summary Card */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
           <h3 className="text-lg font-semibold text-slate-900 mb-4">
             {getPeriodLabel()} Summary
@@ -340,8 +394,45 @@ export default function UtilitiesDashboard() {
               <p className="text-sm text-slate-600">Bills Processed</p>
             </div>
           </div>
+
+          {/* CHP Summary - NEW - Only show if CHP data exists */}
+          {hasCHP && chpData.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-slate-200">
+              <h4 className="text-md font-semibold text-slate-900 mb-3 flex items-center">
+                <Zap className="w-5 h-5 text-purple-600 mr-2" />
+                CHP System Performance
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div>
+                  <p className="text-xl font-bold text-purple-600">
+                    €{chpData.reduce((sum, d) => sum + d.netProfit, 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-slate-600">Net Profit</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-green-600">
+                    {chpData.reduce((sum, d) => sum + d.co2Saved, 0).toFixed(1)}t
+                  </p>
+                  <p className="text-xs text-slate-600">CO₂ Saved</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-blue-600">
+                    {chpData.reduce((sum, d) => sum + d.hoursRun, 0).toFixed(0)}h
+                  </p>
+                  <p className="text-xs text-slate-600">Hours Run</p>
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-emerald-600">
+                    {(chpData.reduce((sum, d) => sum + d.availability, 0) / chpData.length).toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-slate-600">Avg Availability</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* Date Range Info */}
         {data.date_range && (
           <div className="bg-slate-50 rounded-lg p-4 mb-8 text-sm text-slate-600">
             <div className="flex items-center justify-between">
@@ -356,6 +447,7 @@ export default function UtilitiesDashboard() {
         )}
       </div>
 
+      {/* Modals */}
       {showBillsList && (
         <BillsListModal
           bills={data.bills || []}
@@ -381,6 +473,18 @@ export default function UtilitiesDashboard() {
           hotelId={hotelId}
           onClose={() => setShowUploadModal(false)}
           onSave={refetch}
+        />
+      )}
+
+      {/* CHP Upload Modal - NEW */}
+      {showCHPUpload && (
+        <CHPUploadBox
+          hotelId={hotelId}
+          onClose={() => setShowCHPUpload(false)}
+          onSuccess={() => {
+            refetchCHP();
+            refetch();
+          }}
         />
       )}
     </div>
