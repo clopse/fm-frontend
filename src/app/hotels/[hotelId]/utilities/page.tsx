@@ -73,7 +73,7 @@ export default function UtilitiesDashboard() {
   } = useUtilitiesFilters(data);
 
   // CHP data hook - NEW
-  const hasCHP = hotelId === 'clonshaugh'; // Only Clonshaugh has CHP for now
+  const hasCHP = hotelId === 'hida'; // Only Clonshaugh has CHP for now
   
   const {
     chpData,
