@@ -28,8 +28,10 @@ interface CHPReport {
       heatValue: number;
       gasCost: number;
       maintenanceCost: number;
+      carbonReclaim: number;
       totalRevenue: number;
       totalCosts: number;
+      energyNet: number;
       netProfit: number;
       co2Saved: number;
     };
@@ -203,6 +205,8 @@ export function useCHPData(
         heatValue: financial?.heatValue || 0,
         gasCost: financial?.gasCost || 0,
         maintenanceCost: financial?.maintenanceCost || 0,
+        carbonReclaim: financial?.carbonReclaim || 0,
+        energyNet: financial?.energyNet || 0,
         netProfit: financial?.netProfit || 0,
         co2Saved: financial?.co2Saved || 0,
         hoursRun: hoursRun,
