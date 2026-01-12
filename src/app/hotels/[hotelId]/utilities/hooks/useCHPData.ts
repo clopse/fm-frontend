@@ -25,7 +25,6 @@ interface CHPReport {
     };
     financialMetrics: {
       electricityValue: number;
-      heatValue: number;
       gasCost: number;
       maintenanceCost: number;
       totalRevenue: number;
@@ -199,7 +198,6 @@ export function useCHPData(
         month: `${monthName} ${yearShort}`,
         monthKey: report.report_month,
         electricityValue: financial?.electricityValue || 0,
-        heatValue: financial?.heatValue || 0,
         gasCost: financial?.gasCost || 0,
         maintenanceCost: financial?.maintenanceCost || 0,
         netProfit: financial?.netProfit || 0,
