@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { RefreshCw, AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 interface RateStatusBannerProps {
   hasDefaultRates: boolean;
@@ -15,11 +15,10 @@ function RateStatusBanner({
   onUpdate 
 }: RateStatusBannerProps) {
   const [updating, setUpdating] = useState(false);
-  const [updateResult, setUpdateResult] = useState<string | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const handleUpdate = async () => {
     setUpdating(true);
-    setUpdateResult(null);
     
     try {
       const response = await fetch(
@@ -27,120 +26,67 @@ function RateStatusBanner({
         { method: 'POST' }
       );
       
-      if (!response.ok) {
-        throw new Error('Update failed');
+      if (response.ok) {
+        setTimeout(() => {
+          onUpdate();
+        }, 500);
       }
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        const updated = result.details?.reports_updated || 0;
-        if (updated > 0) {
-          setUpdateResult(`✓ Updated ${updated} CHP report${updated > 1 ? 's' : ''} with actual rates!`);
-        } else {
-          setUpdateResult('No updates needed - actual utility bills not yet available for these months.');
-        }
-      }
-      
-      // Refresh data
-      setTimeout(() => {
-        onUpdate();
-      }, 1000);
-      
     } catch (error) {
       console.error('Failed to update rates:', error);
-      setUpdateResult('❌ Failed to update rates. Please try again.');
     } finally {
       setUpdating(false);
     }
   };
 
-  // All using actual rates - success state
-  if (!hasDefaultRates && !hasMixedRates) {
-    return (
-      <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
-        <div className="flex items-center gap-3">
-          <CheckCircle className="w-5 h-5 text-green-600" />
-          <div>
-            <p className="text-sm font-medium text-green-800">
-              Using Actual Rates
-            </p>
-            <p className="text-xs text-green-700 mt-1">
-              All CHP reports are calculated using actual electricity and gas rates from your utility bills.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Determine status
+  let status: 'actual' | 'default' | 'mixed' = 'actual';
+  let statusText = 'Using actual rates';
+  let statusColor = 'text-green-600';
+  let bgColor = 'bg-green-50 hover:bg-green-100';
+  let borderColor = 'border-green-200';
+  let Icon = CheckCircle;
 
-  // Using default rates - warning state
   if (hasDefaultRates) {
-    return (
-      <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1">
-            <AlertCircle className="w-5 h-5 text-amber-600" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-amber-800">
-                Using Placeholder Rates
-              </p>
-              <p className="text-xs text-amber-700 mt-1">
-                Some CHP reports are using default rates. Upload utility bills for those months, then click "Update Rates" to recalculate with actual rates.
-              </p>
-              {updateResult && (
-                <p className="text-xs text-amber-800 mt-2 font-medium">
-                  {updateResult}
-                </p>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={handleUpdate}
-            disabled={updating}
-            className="ml-4 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap"
-          >
-            {updating ? 'Updating...' : 'Update Rates'}
-          </button>
-        </div>
-      </div>
-    );
+    status = 'default';
+    statusText = 'Using placeholder rates - click to update with actual bills';
+    statusColor = 'text-amber-600';
+    bgColor = 'bg-amber-50 hover:bg-amber-100';
+    borderColor = 'border-amber-200';
+    Icon = AlertCircle;
+  } else if (hasMixedRates) {
+    status = 'mixed';
+    statusText = 'Partial actual rates - click to update';
+    statusColor = 'text-blue-600';
+    bgColor = 'bg-blue-50 hover:bg-blue-100';
+    borderColor = 'border-blue-200';
+    Icon = Info;
   }
 
-  // Mixed rates - info state
-  if (hasMixedRates) {
-    return (
-      <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-1">
-            <Info className="w-5 h-5 text-blue-600" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-blue-800">
-                Partial Actual Rates
-              </p>
-              <p className="text-xs text-blue-700 mt-1">
-                Some CHP reports use actual rates, others use defaults. Upload missing utility bills to improve accuracy.
-              </p>
-              {updateResult && (
-                <p className="text-xs text-blue-800 mt-2 font-medium">
-                  {updateResult}
-                </p>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={handleUpdate}
-            disabled={updating}
-            className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium whitespace-nowrap"
-          >
-            {updating ? 'Updating...' : 'Update Rates'}
-          </button>
-        </div>
-      </div>
-    );
-  }
+  return (
+    <div className="relative inline-block">
+      <button
+        onClick={handleUpdate}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        disabled={updating}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${bgColor} ${borderColor} transition-all disabled:opacity-50`}
+      >
+        <Icon className={`w-4 h-4 ${statusColor}`} />
+        <RefreshCw className={`w-3.5 h-3.5 ${statusColor} ${updating ? 'animate-spin' : ''}`} />
+        <span className={`text-xs font-medium ${statusColor}`}>
+          {updating ? 'Updating...' : 'Refresh CHP Rates'}
+        </span>
+      </button>
 
-  return null;
+      {/* Tooltip */}
+      {showTooltip && !updating && (
+        <div className="absolute z-50 bottom-full left-0 mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+          {statusText}
+          <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-800" />
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default RateStatusBanner;
