@@ -81,26 +81,37 @@ export interface CHPPerformanceMetrics {
 }
 
 export interface CHPFinancialMetrics {
-  electricityValue: number; // € (revenue from electricity)
-  heatValue: number; // € (avoided cost of boiler gas, accounting for 90% efficiency)
-  gasCost: number; // €
-  maintenanceCost: number; // € (calculated from hours * €2.15/hour)
-  totalRevenue: number; // € (electricityValue + heatValue)
-  totalCosts: number; // € (gasCost + maintenanceCost)
-  netProfit: number; // €
-  co2Saved: number; // tonnes
-  hoursRun: number; // hours operated
-  maintenanceCostPerHour: number; // €/hour (2.15)
+  electricityValue: number;
+  heatValue: number;
+  gasCost: number;
+  maintenanceCost: number;
+  carbonReclaim: number;
+  totalRevenue: number;
+  totalCosts: number;
+  energyNet: number;
+  netProfit: number;
+  co2Saved: number;
+  hoursRun: number;
+  maintenanceCostPerHour: number;
 }
 
 export interface CHPRates {
-  electricityRate: number; // €/kWh
-  gasRate: number; // €/kWh
-  heatRate: number; // €/kWh (gasRate / 0.90)
-  boilerEfficiency: number; // 0.90 (90%)
-  electricitySource?: string; // Where the rate came from (e.g. "bill_2025-11", "default")
-  gasSource?: string; // Where the rate came from
-  ratesSource?: 'default' | 'actual' | 'mixed'; // Overall source status
+  gas_rate_used: number;
+  elec_rate_used: number;
+  heat_rate_used: number;
+  carbon_tax_rate_used: number;
+  gas_rate_source: string;
+  elec_rate_source: string;
+  carbon_tax_source: string;
+  rates_source: 'default' | 'actual' | 'mixed';
+  boiler_eff_used: number;
+  include_carbon_tax_reclaim: boolean;
+  electricity_rate: number;
+  gas_rate: number;
+  heat_rate: number;
+  boiler_efficiency: number;
+  electricity_source: string;
+  gas_source: string;
   note?: string;
 }
 
@@ -172,20 +183,22 @@ export interface CHPDataResponse {
 }
 
 export interface CHPChartDataPoint {
-  month: string; // "Nov 25", "Dec 25", etc.
-  monthKey: string; // "2025-11"
-  electricityValue: number; // € (revenue from electricity)
-  heatValue: number; // € (avoided boiler gas cost, 90% efficiency)
-  gasCost: number; // € (cost of gas consumed)
-  maintenanceCost: number; // € (hours_run * 2.15)
-  netProfit: number; // € (electricityValue + heatValue - gasCost - maintenanceCost)
-  co2Saved: number; // tonnes
-  hoursRun: number; // hours operated
-  availability: number; // % (hoursRun / maxHours * 100)
-  rateSource: 'default' | 'actual' | 'mixed'; // Where rates came from
-  electricityRate: number; // €/kWh
-  gasRate: number; // €/kWh
-  heatRate: number; // €/kWh (gasRate / 0.90)
+  month: string;
+  monthKey: string;
+  electricityValue: number;
+  heatValue: number;
+  gasCost: number;
+  maintenanceCost: number;
+  carbonReclaim: number;
+  energyNet: number;
+  netProfit: number;
+  co2Saved: number;
+  hoursRun: number;
+  availability: number;
+  rateSource: 'default' | 'actual' | 'mixed';
+  electricityRate: number;
+  gasRate: number;
+  heatRate: number;
 }
 
 export interface CHPBreakEvenData {
