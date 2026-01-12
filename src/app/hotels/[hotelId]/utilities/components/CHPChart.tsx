@@ -56,7 +56,7 @@ export default function CHPChart({
     netProfit: acc.netProfit + item.netProfit,
     hoursRun: acc.hoursRun + item.hoursRun,
     co2Saved: acc.co2Saved + item.co2Saved,
-    revenue: acc.revenue + item.electricityValue + item.heatValue,
+    revenue: acc.revenue + item.electricityValue,
     costs: acc.costs + item.gasCost + item.maintenanceCost
   }), {
     netProfit: 0,
