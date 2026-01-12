@@ -50,7 +50,8 @@ export default function BillsArchivePage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'Unknown Date';
     try {
       return new Date(dateString).toLocaleDateString('en-IE', {
         day: 'numeric',
@@ -62,7 +63,10 @@ export default function BillsArchivePage() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined) => {
+    if (amount === undefined || amount === null) {
+      return '€0.00';
+    }
     return new Intl.NumberFormat('en-IE', {
       style: 'currency',
       currency: 'EUR'
