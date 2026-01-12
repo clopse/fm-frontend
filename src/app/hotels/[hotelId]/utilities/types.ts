@@ -81,10 +81,11 @@ export interface CHPPerformanceMetrics {
 }
 
 export interface CHPFinancialMetrics {
-  electricityValue: number; // € (only revenue from electricity)
+  electricityValue: number; // € (revenue from electricity)
+  heatValue: number; // € (avoided cost of boiler gas, accounting for 90% efficiency)
   gasCost: number; // €
   maintenanceCost: number; // € (calculated from hours * €2.15/hour)
-  totalRevenue: number; // € (same as electricityValue)
+  totalRevenue: number; // € (electricityValue + heatValue)
   totalCosts: number; // € (gasCost + maintenanceCost)
   netProfit: number; // €
   co2Saved: number; // tonnes
@@ -95,6 +96,8 @@ export interface CHPFinancialMetrics {
 export interface CHPRates {
   electricityRate: number; // €/kWh
   gasRate: number; // €/kWh
+  heatRate: number; // €/kWh (gasRate / 0.90)
+  boilerEfficiency: number; // 0.90 (90%)
   electricitySource?: string; // Where the rate came from (e.g. "bill_2025-11", "default")
   gasSource?: string; // Where the rate came from
   ratesSource?: 'default' | 'actual' | 'mixed'; // Overall source status
@@ -172,15 +175,17 @@ export interface CHPChartDataPoint {
   month: string; // "Nov 25", "Dec 25", etc.
   monthKey: string; // "2025-11"
   electricityValue: number; // € (revenue from electricity)
+  heatValue: number; // € (avoided boiler gas cost, 90% efficiency)
   gasCost: number; // € (cost of gas consumed)
   maintenanceCost: number; // € (hours_run * 2.15)
-  netProfit: number; // € (electricityValue - gasCost - maintenanceCost)
+  netProfit: number; // € (electricityValue + heatValue - gasCost - maintenanceCost)
   co2Saved: number; // tonnes
   hoursRun: number; // hours operated
   availability: number; // % (hoursRun / maxHours * 100)
   rateSource: 'default' | 'actual' | 'mixed'; // Where rates came from
   electricityRate: number; // €/kWh
   gasRate: number; // €/kWh
+  heatRate: number; // €/kWh (gasRate / 0.90)
 }
 
 export interface CHPBreakEvenData {
