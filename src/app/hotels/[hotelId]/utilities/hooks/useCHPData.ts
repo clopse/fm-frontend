@@ -25,6 +25,7 @@ interface CHPReport {
     };
     financialMetrics: {
       electricityValue: number;
+      heatValue: number;
       gasCost: number;
       maintenanceCost: number;
       totalRevenue: number;
@@ -35,6 +36,7 @@ interface CHPReport {
     rates: {
       electricity_rate: number;
       gas_rate: number;
+      heat_rate: number;
       rates_source: 'default' | 'actual' | 'mixed';
     };
   };
@@ -198,6 +200,7 @@ export function useCHPData(
         month: `${monthName} ${yearShort}`,
         monthKey: report.report_month,
         electricityValue: financial?.electricityValue || 0,
+        heatValue: financial?.heatValue || 0,
         gasCost: financial?.gasCost || 0,
         maintenanceCost: financial?.maintenanceCost || 0,
         netProfit: financial?.netProfit || 0,
@@ -206,7 +209,8 @@ export function useCHPData(
         availability: availability,
         rateSource: rates?.rates_source || report.rate_info?.source || 'default',
         electricityRate: rates?.electricity_rate || 0,
-        gasRate: rates?.gas_rate || 0
+        gasRate: rates?.gas_rate || 0,
+        heatRate: rates?.heat_rate || 0
       };
     });
   }, [rawData, periodMode]);
