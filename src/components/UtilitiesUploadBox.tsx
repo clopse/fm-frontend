@@ -29,7 +29,9 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
   const [manualType, setManualType] = useState<string>('');
   const [status, setStatus] = useState<string>('');
   const [uploading, setUploading] = useState<boolean>(false);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [dragActive, setDragActive] = useState<boolean>(false);
+  const [extractedData, setExtractedData] = useState<any>(null);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -123,17 +125,18 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
 
     if (!billDate) return alert('Please select a bill date.');
 
-    setUploading(true);
-    setStatus('Uploading and processing...');
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('hotel_id', hotelId);
-    formData.append('supplier', 'docupanda');
-    formData.append('bill_date', billDate);
-    formData.append('bill_type', utilityType);
-
     try {
+      setUploading(true);
+      setUploadStatus('idle');
+      setStatus('Uploading and processing...');
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('hotel_id', hotelId);
+      formData.append('supplier', 'docupanda');
+      formData.append('bill_date', billDate);
+      formData.append('bill_type', utilityType);
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/parse-and-save`, {
         method: 'POST',
         body: formData,
@@ -151,16 +154,22 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
       }
 
       const result = await res.json();
-      setStatus('Upload successful! Processing in background...');
-      setUploading(false);
+      
+      setExtractedData(result);
+      setUploadStatus('success');
+      setStatus('Upload successful!');
 
+      // Close after showing success
       setTimeout(() => {
         onSave?.();
         onClose();
       }, 2000);
+      
     } catch (err: any) {
       console.error('Upload error:', err);
+      setUploadStatus('error');
       setStatus(`Upload failed: ${err.message}`);
+    } finally {
       setUploading(false);
     }
   };
@@ -283,7 +292,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
           </div>
 
           {/* Status Message */}
-          {status && (
+          {status && uploadStatus === 'idle' && (
             <div className={`
               flex items-center space-x-3 p-4 rounded-lg border
               ${status.includes('fail') || status.includes('error') 
@@ -295,6 +304,34 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
             `}>
               {getStatusIcon()}
               <p className="font-medium">{status}</p>
+            </div>
+          )}
+
+          {/* Success Message */}
+          {uploadStatus === 'success' && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start space-x-3">
+              <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold text-emerald-900">Upload successful!</p>
+                {extractedData && (
+                  <div className="mt-2 text-sm text-emerald-800">
+                    <p>Bill Type: {extractedData.utility_type || 'Unknown'}</p>
+                    <p>Date: {extractedData.bill_date || billDate}</p>
+                    <p className="text-xs text-emerald-600 mt-1">Processing complete • Dashboard will refresh</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {uploadStatus === 'error' && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
+              <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold text-red-900">Upload failed</p>
+                <p className="text-sm text-red-700 mt-1">{status.replace('Upload failed: ', '')}</p>
+              </div>
             </div>
           )}
 
@@ -350,7 +387,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
           
           <button
             onClick={handleSubmit}
-            disabled={!file || uploading || !billDate || (detectedType === 'unknown' && !manualType)}
+            disabled={!file || uploading || !billDate || (detectedType === 'unknown' && !manualType) || uploadStatus === 'success'}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-medium"
           >
             {uploading ? (
