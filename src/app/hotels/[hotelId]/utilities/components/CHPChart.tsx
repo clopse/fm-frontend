@@ -56,7 +56,7 @@ export default function CHPChart({
     netProfit: acc.netProfit + item.netProfit,
     hoursRun: acc.hoursRun + item.hoursRun,
     co2Saved: acc.co2Saved + item.co2Saved,
-    revenue: acc.revenue + item.electricityValue,
+    revenue: acc.revenue + item.electricityValue + item.heatValue,
     costs: acc.costs + item.gasCost + item.maintenanceCost
   }), {
     netProfit: 0,
@@ -179,6 +179,12 @@ export default function CHPChart({
         
         <div className="mt-4 text-xs text-slate-500 text-center">
           Click on any bar to see the full CHP report
+        </div>
+        
+        <div className="mt-2 px-4 py-2 bg-blue-50 rounded-lg">
+          <p className="text-xs text-slate-600 text-center">
+            <span className="font-semibold">Note:</span> Heat valued at avoided boiler gas cost, assuming 90% boiler efficiency
+          </p>
         </div>
       </div>
 
