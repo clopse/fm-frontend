@@ -32,6 +32,14 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [dragActive, setDragActive] = useState<boolean>(false);
   const [extractedData, setExtractedData] = useState<any>(null);
+  const [showManualEntry, setShowManualEntry] = useState<boolean>(false);
+  const [manualData, setManualData] = useState({
+    consumption: '',
+    cost: '',
+    meterNumber: '',
+    billingStart: '',
+    billingEnd: ''
+  });
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -125,17 +133,36 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
 
     if (!billDate) return alert('Please select a bill date.');
 
+    // Validate manual entry if enabled
+    if (showManualEntry) {
+      if (!manualData.consumption || !manualData.cost) {
+        return alert('Please enter consumption and cost for manual entry.');
+      }
+    }
+
     try {
       setUploading(true);
       setUploadStatus('idle');
-      setStatus('Uploading and processing...');
+      setStatus(showManualEntry ? 'Saving manual entry...' : 'Uploading and processing...');
 
       const formData = new FormData();
       formData.append('file', file);
       formData.append('hotel_id', hotelId);
-      formData.append('supplier', 'docupanda');
+      formData.append('supplier', 'manual');
       formData.append('bill_date', billDate);
       formData.append('bill_type', utilityType);
+
+      // Add manual entry flag and data if applicable
+      if (showManualEntry) {
+        formData.append('manual_entry', 'true');
+        formData.append('manual_data', JSON.stringify({
+          consumption_value: parseFloat(manualData.consumption),
+          total_cost: parseFloat(manualData.cost),
+          meter_number: manualData.meterNumber || 'Manual Entry',
+          billing_start: manualData.billingStart || billDate,
+          billing_end: manualData.billingEnd || billDate
+        }));
+      }
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/parse-and-save`, {
         method: 'POST',
@@ -157,7 +184,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
       
       setExtractedData(result);
       setUploadStatus('success');
-      setStatus('Upload successful!');
+      setStatus(showManualEntry ? 'Manual entry saved successfully!' : 'Upload successful!');
 
       // Close after showing success
       setTimeout(() => {
@@ -326,11 +353,24 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
 
           {/* Error Message */}
           {uploadStatus === 'error' && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
-              <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-semibold text-red-900">Upload failed</p>
-                <p className="text-sm text-red-700 mt-1">{status.replace('Upload failed: ', '')}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-semibold text-red-900">Upload failed</p>
+                  <p className="text-sm text-red-700 mt-1">{status.replace('Upload failed: ', '')}</p>
+                  <button
+                    onClick={() => {
+                      setShowManualEntry(true);
+                      setUploadStatus('idle');
+                      setStatus('');
+                    }}
+                    className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Enter data manually instead
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -373,6 +413,103 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
               </select>
             </div>
           )}
+
+          {/* Manual Entry Form */}
+          {showManualEntry && (
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 space-y-4">
+              <div className="flex items-center gap-2 text-amber-800 font-semibold mb-2">
+                <FileText className="w-5 h-5" />
+                Manual Entry Mode
+                <button
+                  onClick={() => {
+                    setShowManualEntry(false);
+                    setManualData({
+                      consumption: '',
+                      cost: '',
+                      meterNumber: '',
+                      billingStart: '',
+                      billingEnd: ''
+                    });
+                  }}
+                  className="ml-auto text-xs text-amber-600 hover:text-amber-700"
+                >
+                  Cancel
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Consumption ({manualType === 'electricity' ? 'kWh' : 'kWh or M³'})
+                  </label>
+                  <input
+                    type="number"
+                    value={manualData.consumption}
+                    onChange={(e) => setManualData({...manualData, consumption: e.target.value})}
+                    placeholder="e.g. 15000"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Total Cost (€)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={manualData.cost}
+                    onChange={(e) => setManualData({...manualData, cost: e.target.value})}
+                    placeholder="e.g. 3500.50"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Meter Number (optional)
+                </label>
+                <input
+                  type="text"
+                  value={manualData.meterNumber}
+                  onChange={(e) => setManualData({...manualData, meterNumber: e.target.value})}
+                  placeholder="e.g. 12345678"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Billing Start
+                  </label>
+                  <input
+                    type="date"
+                    value={manualData.billingStart}
+                    onChange={(e) => setManualData({...manualData, billingStart: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Billing End
+                  </label>
+                  <input
+                    type="date"
+                    value={manualData.billingEnd}
+                    onChange={(e) => setManualData({...manualData, billingEnd: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-amber-700">
+                💡 Enter the key values from your bill. The PDF will be saved with this manual data.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -387,13 +524,18 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
           
           <button
             onClick={handleSubmit}
-            disabled={!file || uploading || !billDate || (detectedType === 'unknown' && !manualType) || uploadStatus === 'success'}
+            disabled={!file || uploading || !billDate || (detectedType === 'unknown' && !manualType) || uploadStatus === 'success' || (showManualEntry && (!manualData.consumption || !manualData.cost))}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-medium"
           >
             {uploading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Processing...</span>
+              </>
+            ) : showManualEntry ? (
+              <>
+                <FileCheck className="w-4 h-4" />
+                <span>Save Manual Entry</span>
               </>
             ) : (
               <>
