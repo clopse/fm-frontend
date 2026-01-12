@@ -76,7 +76,7 @@ export default function UtilitiesDashboard() {
   const hasCHP = hotelId === 'hida'; // Only Clonshaugh has CHP for now
   
   const {
-    chpData,
+    data: chpData,
     breakEvenData,
     loading: chpLoading,
     error: chpError,
