@@ -202,8 +202,8 @@ export default function CHPChart({
         
         <div className="mt-2 px-4 py-2 bg-blue-50 rounded-lg">
           <p className="text-xs text-slate-600 text-center">
-            <span className="font-semibold">Note:</span> Heat valued at avoided boiler gas cost, assuming 80% boiler efficiency.
-            {totals.carbonReclaim > 0 && <span> Carbon tax reclaim included (€{totals.carbonReclaim.toLocaleString()}).</span>}
+            <span className="font-semibold">Note:</span> Heat valued at avoided boiler gas cost (80% efficiency).
+            {totals.carbonReclaim > 0 && <span> Net Profit = Energy Value + Tax Reclaim (€{totals.carbonReclaim.toLocaleString()}) - Costs.</span>}
           </p>
         </div>
       </div>
@@ -225,17 +225,17 @@ export default function CHPChart({
           </p>
         </div>
 
-        {/* Total Revenue */}
+        {/* Energy Value */}
         <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-4 border border-emerald-200">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-medium text-emerald-700">Revenue</span>
+            <span className="text-xs font-medium text-emerald-700">Energy Value</span>
             <TrendingUp className="w-4 h-4 text-emerald-600" />
           </div>
           <p className="text-2xl font-bold text-emerald-900">
             €{totals.revenue.toLocaleString()}
           </p>
           <p className="text-xs text-emerald-600 mt-1">
-            Total generated
+            Electricity + heat
           </p>
         </div>
 
