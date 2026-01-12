@@ -74,7 +74,9 @@ export default function CHPChart({
     month: item.month,
     monthKey: item.monthKey,
     'Hours Run': item.hoursRun,
-    'Net Profit': item.netProfit
+    'Net Profit': item.netProfit,
+    carbonReclaim: item.carbonReclaim,
+    co2Saved: item.co2Saved
   }));
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -97,6 +99,20 @@ export default function CHPChart({
               <DollarSign className="w-3 h-3" /> Net Profit:
             </span>
             <span className="font-bold text-purple-600">€{data['Net Profit'].toLocaleString()}</span>
+          </div>
+          {data.carbonReclaim > 0 && (
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-amber-600 flex items-center gap-1">
+                <Leaf className="w-3 h-3" /> Tax Reclaim:
+              </span>
+              <span className="font-medium text-amber-700">€{data.carbonReclaim.toLocaleString()}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-green-600 flex items-center gap-1">
+              <Leaf className="w-3 h-3" /> CO₂ Saved:
+            </span>
+            <span className="font-medium">{data.co2Saved.toFixed(1)}t</span>
           </div>
         </div>
       </div>
@@ -186,13 +202,14 @@ export default function CHPChart({
         
         <div className="mt-2 px-4 py-2 bg-blue-50 rounded-lg">
           <p className="text-xs text-slate-600 text-center">
-            <span className="font-semibold">Note:</span> Heat valued at avoided boiler gas cost, assuming 80% boiler efficiency
+            <span className="font-semibold">Note:</span> Heat valued at avoided boiler gas cost, assuming 80% boiler efficiency.
+            {totals.carbonReclaim > 0 && <span> Carbon tax reclaim included (€{totals.carbonReclaim.toLocaleString()}).</span>}
           </p>
         </div>
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         
         {/* Net Profit */}
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
@@ -219,6 +236,20 @@ export default function CHPChart({
           </p>
           <p className="text-xs text-emerald-600 mt-1">
             Total generated
+          </p>
+        </div>
+
+        {/* Carbon Tax Reclaim */}
+        <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-amber-700">Tax Reclaim</span>
+            <Leaf className="w-4 h-4 text-amber-600" />
+          </div>
+          <p className="text-2xl font-bold text-amber-900">
+            €{totals.carbonReclaim.toLocaleString()}
+          </p>
+          <p className="text-xs text-amber-600 mt-1">
+            Carbon tax rebate
           </p>
         </div>
 
