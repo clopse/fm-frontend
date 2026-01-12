@@ -15,7 +15,7 @@ import EnergyMixChart from "./components/EnergyMixChart";
 import BillsListModal from "./components/BillsListModal";
 import MetricsModal from "./components/MetricsModal";
 
-// CHP Components (NEW)
+// CHP Components
 import CHPChart from "./components/CHPChart";
 import CHPUploadBox from "./components/CHPUploadBox";
 import { RateStatusBanner } from "./components/RateStatusBanner";
@@ -33,14 +33,14 @@ import {
 // Hooks
 import { useUtilitiesData } from "./hooks/useUtilitiesData";
 import { useUtilitiesFilters } from "./hooks/useUtilitiesFilters";
-import { useCHPData } from "./hooks/useCHPData"; // NEW
+import { useCHPData } from "./hooks/useCHPData";
 
 export default function UtilitiesDashboard() {
   const rawParams = useParams();
   const hotelId = rawParams?.hotelId as string | undefined;
 
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [showCHPUpload, setShowCHPUpload] = useState(false); // NEW
+  const [showCHPUpload, setShowCHPUpload] = useState(false);
   const [showBillsList, setShowBillsList] = useState(false);
   const [showMetricsModal, setShowMetricsModal] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
@@ -72,22 +72,24 @@ export default function UtilitiesDashboard() {
     availableMonths
   } = useUtilitiesFilters(data);
 
-  // CHP data hook - NEW
-  const hasCHP = hotelId === 'hida'; // Only Clonshaugh has CHP for now
+  // CHP data hook
+  const hasCHP = hotelId === 'hida';
   
   const {
     data: chpData,
     breakEvenData,
     loading: chpLoading,
     error: chpError,
+    hasDefaultRates,
+    hasMixedRates,
+    reportCount,
     refetch: refetchCHP
   } = useCHPData(
     hotelId,
     {
       periodMode,
       selectedYears
-  }
-);
+    }
   );
 
   // Auto-select first year when available years load and in yearly mode
@@ -148,15 +150,12 @@ export default function UtilitiesDashboard() {
     let yearToUse: number;
     
     if (monthFilter && monthFilter !== 'all') {
-      // Check if monthFilter is a full date like "2025-11" or just a month number like "11"
       if (monthFilter.includes('-')) {
-        // Full date format: "2025-11"
         const parts = monthFilter.split('-');
         yearToUse = parseInt(parts[0]);
         const monthNum = parseInt(parts[1]);
         monthName = new Date(2000, monthNum - 1).toLocaleString('default', { month: 'long' });
       } else {
-        // Just month number: "11"
         const monthNum = parseInt(monthFilter);
         monthName = new Date(2000, monthNum - 1).toLocaleString('default', { month: 'long' });
         yearToUse = selectedYears.length > 0 ? selectedYears[0] : new Date().getFullYear();
@@ -217,7 +216,7 @@ export default function UtilitiesDashboard() {
         availableYears={availableYears}
         onShowMetrics={() => setShowMetricsModal(true)}
         onUpload={() => setShowUploadModal(true)}
-        onCHPUpload={hasCHP ? () => setShowCHPUpload(true) : undefined} // NEW
+        onCHPUpload={hasCHP ? () => setShowCHPUpload(true) : undefined}
         onPeriodModeChange={handlePeriodModeChange}
         onYearChange={handleYearChange}
         onMonthChange={handleMonthChange}
@@ -317,29 +316,31 @@ export default function UtilitiesDashboard() {
           />
         </div>
 
-        {/* CHP Section - NEW - Only show for hotels with CHP */}
+        {/* CHP Section - Only show for hotels with CHP */}
         {hasCHP && (
           <div className="mb-8">
             {/* Rate Status Banner */}
-            {chpData.length > 0 && (
-              <RateStatusBanner
-                chpData={chpData}
-                hotelId={hotelId}
-                onReprocess={() => {
-                  refetchCHP();
-                  refetch();
-                }}
-              />
+            {reportCount > 0 && (hasDefaultRates || hasMixedRates) && (
+              <div className="mb-6">
+                <RateStatusBanner
+                  hasDefaultRates={hasDefaultRates}
+                  hasMixedRates={hasMixedRates}
+                  hotelId={hotelId}
+                  onUpdate={() => {
+                    refetchCHP();
+                    refetch();
+                  }}
+                />
+              </div>
             )}
 
             {/* CHP Performance Dashboard */}
             <CHPChart
               data={chpData}
-              breakEvenData={breakEvenData ?? undefined}
+              breakEvenData={breakEvenData}
               loading={chpLoading}
               onMonthClick={(month) => {
                 console.log('CHP month clicked:', month);
-                // Optional: Show CHP report details
               }}
             />
           </div>
@@ -398,7 +399,7 @@ export default function UtilitiesDashboard() {
             </div>
           </div>
 
-          {/* CHP Summary - NEW - Only show if CHP data exists */}
+          {/* CHP Summary */}
           {hasCHP && chpData.length > 0 && (
             <div className="mt-6 pt-6 border-t border-slate-200">
               <h4 className="text-md font-semibold text-slate-900 mb-3 flex items-center">
@@ -479,7 +480,6 @@ export default function UtilitiesDashboard() {
         />
       )}
 
-      {/* CHP Upload Modal - NEW */}
       {showCHPUpload && (
         <CHPUploadBox
           hotelId={hotelId}
