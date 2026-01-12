@@ -81,22 +81,21 @@ export interface CHPPerformanceMetrics {
 }
 
 export interface CHPFinancialMetrics {
-  electricityValue: number; // €
-  heatValue: number; // €
+  electricityValue: number; // € (only revenue from electricity)
   gasCost: number; // €
-  maintenanceCost: number; // €
-  totalRevenue: number; // €
-  totalCosts: number; // €
+  maintenanceCost: number; // € (calculated from hours * €2.15/hour)
+  totalRevenue: number; // € (same as electricityValue)
+  totalCosts: number; // € (gasCost + maintenanceCost)
   netProfit: number; // €
   co2Saved: number; // tonnes
+  hoursRun: number; // hours operated
+  maintenanceCostPerHour: number; // €/hour (2.15)
 }
 
 export interface CHPRates {
   electricityRate: number; // €/kWh
-  heatRate: number; // €/kWh
   gasRate: number; // €/kWh
-  maintenanceCost: number; // €/month
-  electricitySource?: string; // Where the rate came from
+  electricitySource?: string; // Where the rate came from (e.g. "bill_2025-11", "default")
   gasSource?: string; // Where the rate came from
   ratesSource?: 'default' | 'actual' | 'mixed'; // Overall source status
   note?: string;
@@ -129,7 +128,7 @@ export interface CHPReport {
   filename: string;
   uploaded_at: string;
   report_date: string;
-  report_month: string; // YYYY-MM
+  report_month: string; // YYYY-MM format
   raw_data: CHPRawData;
   summary: CHPSummary;
   s3_key?: string;
@@ -170,29 +169,34 @@ export interface CHPDataResponse {
 }
 
 export interface CHPChartDataPoint {
-  month: string; // "Nov", "Dec", etc.
+  month: string; // "Nov 25", "Dec 25", etc.
   monthKey: string; // "2025-11"
-  electricityValue: number; // €
-  heatValue: number; // €
-  gasCost: number; // €
-  maintenanceCost: number; // €
-  netProfit: number; // €
+  electricityValue: number; // € (revenue from electricity)
+  gasCost: number; // € (cost of gas consumed)
+  maintenanceCost: number; // € (hours_run * 2.15)
+  netProfit: number; // € (electricityValue - gasCost - maintenanceCost)
   co2Saved: number; // tonnes
-  hoursRun: number;
-  availability: number; // %
+  hoursRun: number; // hours operated
+  availability: number; // % (hoursRun / maxHours * 100)
+  rateSource: 'default' | 'actual' | 'mixed'; // Where rates came from
+  electricityRate: number; // €/kWh
+  gasRate: number; // €/kWh
 }
 
 export interface CHPBreakEvenData {
-  hotel_id: string;
-  installation_cost: number;
-  cumulative_profit: number;
-  remaining_to_break_even: number;
-  average_monthly_profit: number;
-  months_operated: number;
-  projected_months_to_break_even: number | null;
-  total_months_estimated: number | null;
-  break_even_percentage: number;
-  monthly_breakdown: Array<{
+  hotel_id?: string;
+  installation_cost: number; // € (254,542.50)
+  cumulative_profit: number; // € (total profit to date)
+  progress_percent: number; // % (cumulative_profit / installation_cost * 100)
+  remaining_to_break_even: number; // € (installation_cost - cumulative_profit)
+  months_operated: number; // Number of months with CHP data
+  projected_months_to_break_even: number | null; // Estimated months to break even
+  total_months_estimated?: number | null; // Total estimated months (deprecated, use projected_months_to_break_even)
+  break_even_percentage?: number; // Deprecated, use progress_percent
+  is_profitable: boolean; // Whether cumulative_profit > 0
+  avg_monthly_profit: number; // Average profit per month (cumulative_profit / months_operated)
+  average_monthly_profit?: number; // Alias for avg_monthly_profit
+  monthly_breakdown?: Array<{
     month: string;
     monthly_profit: number;
     cumulative_profit: number;
@@ -204,16 +208,17 @@ export interface CHPBreakEvenData {
 // ============================================================================
 
 export interface BillEntry {
-  id: string;
+  id?: string;
   hotel_id: string;
   utility_type: 'electricity' | 'gas' | 'chp';
   filename: string;
-  upload_date: string;
-  bill_period: string;
-  supplier: string;
-  total_amount: number;
-  consumption: number;
-  consumption_unit: string;
+  upload_date?: string;
+  uploaded_at?: string;
+  bill_period?: string;
+  supplier?: string;
+  total_amount?: number;
+  consumption?: number;
+  consumption_unit?: string;
   parsed_status?: string;
   summary?: {
     supplier?: string;
@@ -240,6 +245,16 @@ export interface BillEntry {
     carbon_tax?: number;
     standing_charge?: number;
     commodity_cost?: number;
+    // CHP-specific summary fields
+    report_date?: string;
+    unit_number?: string;
+    site_name?: string;
+    hours_run?: number;
+    electricity_kwh?: number;
+    gas_m3?: number;
+    heat_kwh?: number;
+    net_profit?: number;
+    co2_saved?: number;
   };
   raw_data?: {
     billingPeriod?: {
@@ -252,6 +267,7 @@ export interface BillEntry {
     };
     [key: string]: any;
   };
+  s3_key?: string;
 }
 
 // ============================================================================
