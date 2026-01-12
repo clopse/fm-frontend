@@ -8,7 +8,7 @@ interface RateStatusBannerProps {
   onUpdate: () => void;
 }
 
-export default function RateStatusBanner({ 
+function RateStatusBanner({ 
   hasDefaultRates, 
   hasMixedRates, 
   hotelId,
@@ -142,3 +142,6 @@ export default function RateStatusBanner({
 
   return null;
 }
+
+export default RateStatusBanner;
+export { RateStatusBanner };
