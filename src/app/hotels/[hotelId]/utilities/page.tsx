@@ -454,7 +454,7 @@ export default function UtilitiesDashboard() {
       {/* Modals */}
       {showBillsList && (
         <BillsListModal
-          bills={(data.bills || []) as any}
+          bills={data.bills || []}
           onClose={() => setShowBillsList(false)}
           utilityType={billsListFilter.utilityType}
           month={billsListFilter.month}
