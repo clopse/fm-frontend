@@ -319,9 +319,12 @@ export default function UtilitiesDashboard() {
         {/* CHP Section - Only show for hotels with CHP */}
         {hasCHP && (
           <div className="mb-8">
-            {/* Rate Status Banner */}
-            {reportCount > 0 && (hasDefaultRates || hasMixedRates) && (
-              <div className="mb-6">
+            {/* CHP Performance Dashboard */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-slate-900">CHP Performance</h2>
+              
+              {/* Rate Status Button */}
+              {reportCount > 0 && (
                 <RateStatusBanner
                   hasDefaultRates={hasDefaultRates}
                   hasMixedRates={hasMixedRates}
@@ -331,10 +334,9 @@ export default function UtilitiesDashboard() {
                     refetch();
                   }}
                 />
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* CHP Performance Dashboard */}
             <CHPChart
               data={chpData}
               breakEvenData={breakEvenData}
