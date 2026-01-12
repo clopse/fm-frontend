@@ -82,9 +82,12 @@ export default function UtilitiesDashboard() {
     error: chpError,
     refetch: refetchCHP
   } = useCHPData(
-    hasCHP ? hotelId : undefined,
-    selectedYears.length > 0 ? selectedYears[0] : new Date().getFullYear(),
-    periodMode === 'rolling' ? 12 : undefined
+    hotelId,
+    {
+      periodMode,
+      selectedYears
+  }
+);
   );
 
   // Auto-select first year when available years load and in yearly mode
