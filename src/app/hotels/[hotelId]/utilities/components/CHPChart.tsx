@@ -10,7 +10,7 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import { CHPChartDataPoint, CHPBreakEvenData } from '../types';
-import { Zap, TrendingUp, DollarSign, Leaf, Clock, Activity } from 'lucide-react';
+import { Zap, TrendingUp, Euro, Leaf, Clock, Activity } from 'lucide-react';
 
 interface CHPChartProps {
   data: CHPChartDataPoint[];
@@ -96,7 +96,7 @@ export default function CHPChart({
           </div>
           <div className="flex items-center justify-between gap-4 pt-1 border-t">
             <span className="text-purple-600 font-semibold flex items-center gap-1">
-              <DollarSign className="w-3 h-3" /> Net Profit:
+              <Euro className="w-3 h-3" /> Net Profit:
             </span>
             <span className="font-bold text-purple-600">€{data['Net Profit'].toLocaleString()}</span>
           </div>
@@ -215,7 +215,7 @@ export default function CHPChart({
         <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-purple-700">Net Profit</span>
-            <DollarSign className="w-4 h-4 text-purple-600" />
+            <Euro className="w-4 h-4 text-purple-600" />
           </div>
           <p className="text-2xl font-bold text-purple-900">
             €{totals.netProfit.toLocaleString()}
@@ -257,7 +257,7 @@ export default function CHPChart({
         <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-4 border border-red-200">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-red-700">Costs</span>
-            <DollarSign className="w-4 h-4 text-red-600" />
+            <Euro className="w-4 h-4 text-red-600" />
           </div>
           <p className="text-2xl font-bold text-red-900">
             €{totals.costs.toLocaleString()}
