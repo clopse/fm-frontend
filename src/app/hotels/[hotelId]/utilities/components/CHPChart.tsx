@@ -51,19 +51,22 @@ export default function CHPChart({
     );
   }
 
-  // Calculate totals
   const totals = data.reduce((acc, item) => ({
     netProfit: acc.netProfit + item.netProfit,
     hoursRun: acc.hoursRun + item.hoursRun,
     co2Saved: acc.co2Saved + item.co2Saved,
     revenue: acc.revenue + item.electricityValue + item.heatValue,
-    costs: acc.costs + item.gasCost + item.maintenanceCost
+    costs: acc.costs + item.gasCost + item.maintenanceCost,
+    carbonReclaim: acc.carbonReclaim + item.carbonReclaim,
+    energyNet: acc.energyNet + item.energyNet
   }), {
     netProfit: 0,
     hoursRun: 0,
     co2Saved: 0,
     revenue: 0,
-    costs: 0
+    costs: 0,
+    carbonReclaim: 0,
+    energyNet: 0
   });
 
   // Transform data for simplified chart
@@ -183,7 +186,7 @@ export default function CHPChart({
         
         <div className="mt-2 px-4 py-2 bg-blue-50 rounded-lg">
           <p className="text-xs text-slate-600 text-center">
-            <span className="font-semibold">Note:</span> Heat valued at avoided boiler gas cost, assuming 90% boiler efficiency
+            <span className="font-semibold">Note:</span> Heat valued at avoided boiler gas cost, assuming 80% boiler efficiency
           </p>
         </div>
       </div>
