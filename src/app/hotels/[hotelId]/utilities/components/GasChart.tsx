@@ -1,4 +1,4 @@
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { GasEntry, ViewMode, PeriodMode } from '../types';
 
 interface GasChartProps {
@@ -18,6 +18,40 @@ const YEAR_COLORS = [
   '#F59E0B', // Orange
   '#EF4444', // Red
 ];
+
+// Colors for attention indicators
+const COLORS = {
+  normal: '#10B981',      // Green - complete data
+  needsAttention: '#F59E0B', // Amber - needs attention
+  missing: '#EF4444',     // Red - missing/zero data
+};
+
+// Helper to determine if an entry needs attention
+const checkNeedsAttention = (entry: GasEntry, viewMode: ViewMode): 'normal' | 'needsAttention' | 'missing' => {
+  // Check for completely missing data
+  if (viewMode === 'kwh' && (!entry.total_kwh || entry.total_kwh === 0)) {
+    return 'missing';
+  }
+  if (viewMode === 'eur' && (!entry.total_eur || entry.total_eur === 0)) {
+    return 'missing';
+  }
+  if (viewMode === 'per_room' && (!entry.per_room_kwh || entry.per_room_kwh === 0)) {
+    return 'missing';
+  }
+  
+  // Check for entries flagged as needing attention (if API provides this)
+  if ((entry as any).needs_attention || (entry as any).incomplete) {
+    return 'needsAttention';
+  }
+  
+  // Check for suspicious data patterns (e.g., unusually low values)
+  // You can customize these thresholds based on your typical consumption
+  if (viewMode === 'kwh' && entry.total_kwh < 100) {
+    return 'needsAttention';
+  }
+  
+  return 'normal';
+};
 
 export default function GasChart({
   data,
@@ -182,12 +216,18 @@ export default function GasChart({
       value = entry.per_room_kwh;
     }
     
+    const status = checkNeedsAttention(entry, viewMode);
+    
     return {
       month: monthName,
       period: entry.period,
-      value: Math.round(value)
+      value: Math.round(value),
+      status, // 'normal' | 'needsAttention' | 'missing'
     };
   });
+  
+  // Count items needing attention
+  const attentionCount = chartData.filter(d => d.status !== 'normal').length;
   
   // Check if we're in rolling/last 12 months mode
   const isRollingMode = periodMode === 'rolling';
@@ -200,9 +240,23 @@ export default function GasChart({
   
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-      <h3 className="text-lg font-semibold text-slate-900 mb-4">
-        Gas Consumption
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-slate-900">
+          Gas Consumption
+        </h3>
+        
+        {/* Attention indicator badge */}
+        {attentionCount > 0 && (
+          <div className="flex items-center space-x-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+            <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <span className="text-xs font-medium text-amber-700">
+              {attentionCount} month{attentionCount !== 1 ? 's' : ''} need attention
+            </span>
+          </div>
+        )}
+      </div>
       
       <ResponsiveContainer width="100%" height={400}>
         <BarChart data={chartData}>
@@ -229,30 +283,72 @@ export default function GasChart({
               borderRadius: '8px',
               fontSize: '12px'
             }}
-            formatter={(value: number) => [`${value.toLocaleString()} ${getYAxisLabel()}`]}
+            content={({ active, payload, label }) => {
+              if (!active || !payload || !payload.length) return null;
+              const data = payload[0].payload;
+              return (
+                <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-lg">
+                  <p className="font-medium text-slate-900 mb-1">{label}</p>
+                  <p className="text-sm text-slate-600">
+                    {data.value.toLocaleString()} {getYAxisLabel()}
+                  </p>
+                  {data.status !== 'normal' && (
+                    <div className={`mt-2 text-xs font-medium ${
+                      data.status === 'missing' ? 'text-red-600' : 'text-amber-600'
+                    }`}>
+                      {data.status === 'missing' ? '⚠️ Missing data' : '⚠️ Needs review'}
+                      <br />
+                      <span className="font-normal">Click to edit bills</span>
+                    </div>
+                  )}
+                </div>
+              );
+            }}
           />
           <Bar
             dataKey="value"
-            fill="#10B981"
             radius={[4, 4, 0, 0]}
             onClick={(data) => {
               if (onMonthClick && data.period) {
                 if (isRollingMode) {
-                  // Rolling/last 12 months: pass full date like "2025-11"
                   onMonthClick(data.period);
                 } else {
-                  // Single year: pass just month number like "11"
                   const monthNum = data.period.split('-')[1];
                   onMonthClick(monthNum);
                 }
               }
             }}
             cursor="pointer"
-          />
+          >
+            {chartData.map((entry, index) => (
+              <Cell 
+                key={`cell-${index}`} 
+                fill={COLORS[entry.status]}
+                stroke={entry.status !== 'normal' ? (entry.status === 'missing' ? '#DC2626' : '#D97706') : undefined}
+                strokeWidth={entry.status !== 'normal' ? 2 : 0}
+              />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
       
-      <div className="mt-4 text-xs text-slate-500 text-center">
+      {/* Legend for status colors */}
+      <div className="mt-4 flex items-center justify-center space-x-6 text-xs">
+        <div className="flex items-center space-x-1.5">
+          <div className="w-3 h-3 rounded-sm bg-emerald-500"></div>
+          <span className="text-slate-600">Complete</span>
+        </div>
+        <div className="flex items-center space-x-1.5">
+          <div className="w-3 h-3 rounded-sm bg-amber-500 border border-amber-600"></div>
+          <span className="text-slate-600">Needs review</span>
+        </div>
+        <div className="flex items-center space-x-1.5">
+          <div className="w-3 h-3 rounded-sm bg-red-500 border border-red-600"></div>
+          <span className="text-slate-600">Missing data</span>
+        </div>
+      </div>
+      
+      <div className="mt-2 text-xs text-slate-500 text-center">
         Click on any bar to see bills for that month
       </div>
     </div>
