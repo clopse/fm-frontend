@@ -202,16 +202,45 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
 
       const result = await res.json();
       
-      // NEW: Check if needs verification
-      if (result.status === 'success' && result.raw_data?._needs_verification) {
+      // Extract values for checking (handles different response structures)
+      const extractedConsumption = result.summary?.consumption_kwh || 
+                                    result.summary?.units_consumed || 
+                                    result.raw_data?.billSummary?.unitsConsumed ||
+                                    result.raw_data?.consumption_kwh ||
+                                    0;
+      const extractedCost = result.summary?.total_cost || 
+                            result.raw_data?.billSummary?.currentBillAmount ||
+                            result.raw_data?.total_cost ||
+                            0;
+      
+      // Check for missing critical fields - CLIENT-SIDE CHECK
+      const hasMissingCriticalData = !extractedConsumption || 
+                                      extractedConsumption === 0 || 
+                                      !extractedCost || 
+                                      extractedCost === 0;
+      
+      // Check if needs verification (backend flag OR missing critical data)
+      const needsVerification = result.raw_data?._needs_verification || hasMissingCriticalData;
+      
+      if (result.status === 'success' && needsVerification && !showManualEntry) {
         // Enter verification mode
         setUploadStatus('needs_verification');
         setVerificationMode(true);
+        
+        // Build list of missing fields
+        const missingFields: string[] = result.raw_data?._missing_fields || [];
+        if (!extractedConsumption || extractedConsumption === 0) {
+          missingFields.push('consumption');
+        }
+        if (!extractedCost || extractedCost === 0) {
+          missingFields.push('total_cost');
+        }
+        
         setVerificationData({
           s3_key: result.s3_key,
           raw_data: result.raw_data,
           summary: result.summary,
-          missing_fields: result.raw_data._missing_fields || [],
+          missing_fields: [...new Set(missingFields)], // Remove duplicates
           partial_data: result.partial_data
         });
         
@@ -219,15 +248,18 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
         setVerificationFormData({
           supplier: result.summary?.supplier || result.raw_data?.supplierInfo?.name || '',
           invoice_number: result.summary?.invoice_number || result.raw_data?.billSummary?.invoiceNumber || '',
-          total_cost: result.summary?.total_cost || result.raw_data?.billSummary?.currentBillAmount || '',
-          consumption: result.summary?.consumption_kwh || result.summary?.units_consumed || '',
+          total_cost: extractedCost || '',
+          consumption: extractedConsumption || '',
           meter_number: result.summary?.meter_number || result.raw_data?.accountInfo?.meterNumber || '',
           gprn: result.summary?.gprn || result.raw_data?.accountInfo?.gprn || '',
           billing_start: result.summary?.billing_period_start || result.raw_data?.billSummary?.billingPeriodStartDate || '',
           billing_end: result.summary?.billing_period_end || result.raw_data?.billSummary?.billingPeriodEndDate || ''
         });
         
-        setStatus('⚠️ Bill uploaded but needs verification. Please check and complete the data below.');
+        const missingFieldsList = missingFields.length > 0 
+          ? ` Missing: ${missingFields.join(', ')}.` 
+          : '';
+        setStatus(`⚠️ Bill uploaded but needs verification.${missingFieldsList} Please check and complete the data below.`);
         return; // Keep modal open
       }
       
