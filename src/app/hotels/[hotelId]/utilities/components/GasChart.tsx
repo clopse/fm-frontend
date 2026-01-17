@@ -28,15 +28,14 @@ const COLORS = {
 
 // Helper to determine if an entry needs attention
 const checkNeedsAttention = (entry: GasEntry, viewMode: ViewMode): 'normal' | 'needsAttention' | 'missing' => {
-  // Check for completely missing data
-  if (viewMode === 'kwh' && (!entry.total_kwh || entry.total_kwh === 0)) {
-    return 'missing';
-  }
-  if (viewMode === 'eur' && (!entry.total_eur || entry.total_eur === 0)) {
-    return 'missing';
-  }
-  if (viewMode === 'per_room' && (!entry.per_room_kwh || entry.per_room_kwh === 0)) {
-    return 'missing';
+  // Check for completely missing data based on view mode
+  if (viewMode === 'kwh') {
+    if (!entry.total_kwh || entry.total_kwh === 0) return 'missing';
+  } else if (viewMode === 'eur') {
+    if (!entry.total_eur || entry.total_eur === 0) return 'missing';
+  } else {
+    // per_room mode
+    if (!entry.per_room_kwh || entry.per_room_kwh === 0) return 'missing';
   }
   
   // Check for entries flagged as needing attention (if API provides this)
