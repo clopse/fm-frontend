@@ -215,12 +215,15 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
       
       // Check for missing critical fields - CLIENT-SIDE CHECK
       const hasMissingCriticalData = !extractedConsumption || 
-                                      extractedConsumption === 0 || 
+                                      Number(extractedConsumption) === 0 || 
                                       !extractedCost || 
-                                      extractedCost === 0;
+                                      Number(extractedCost) === 0;
       
-      // Check if needs verification (backend flag OR missing critical data)
-      const needsVerification = result.raw_data?._needs_verification || hasMissingCriticalData;
+      // Check if needs verification (backend flag at root OR nested OR missing critical data)
+      const needsVerification = result.needs_verification || 
+                                result.raw_data?._needs_verification || 
+                                result.raw_data?.needs_verification ||
+                                hasMissingCriticalData;
       
       if (result.status === 'success' && needsVerification && !showManualEntry) {
         // Enter verification mode
@@ -237,7 +240,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
         }
         
         setVerificationData({
-          s3_key: result.s3_key,
+          s3_key: result.s3_path || result.s3_key, // Backend returns s3_path
           raw_data: result.raw_data,
           summary: result.summary,
           missing_fields: [...new Set(missingFields)], // Remove duplicates
@@ -259,7 +262,10 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
         const missingFieldsList = missingFields.length > 0 
           ? ` Missing: ${missingFields.join(', ')}.` 
           : '';
-        setStatus(`⚠️ Bill uploaded but needs verification.${missingFieldsList} Please check and complete the data below.`);
+        const verificationReason = result.verification_reason 
+          ? ` (${result.verification_reason})` 
+          : '';
+        setStatus(`⚠️ Bill uploaded but needs verification${verificationReason}.${missingFieldsList} Please check and complete the data below.`);
         return; // Keep modal open
       }
       
