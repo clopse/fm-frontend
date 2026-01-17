@@ -202,6 +202,9 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
 
       const result = await res.json();
       
+      // DEBUG: Log the full response to see what we're getting
+      console.log('📦 Parse-and-save response:', JSON.stringify(result, null, 2));
+      
       // Extract values for checking (handles different response structures)
       const extractedConsumption = result.summary?.consumption_kwh || 
                                     result.summary?.units_consumed || 
@@ -212,6 +215,8 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                             result.raw_data?.billSummary?.currentBillAmount ||
                             result.raw_data?.total_cost ||
                             0;
+      
+      console.log('📊 Extracted values:', { extractedConsumption, extractedCost });
       
       // Check for missing critical fields - CLIENT-SIDE CHECK
       const hasMissingCriticalData = !extractedConsumption || 
@@ -225,29 +230,41 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                                 result.raw_data?.needs_verification ||
                                 hasMissingCriticalData;
       
+      console.log('🔍 Verification check:', {
+        'result.needs_verification': result.needs_verification,
+        'result.raw_data?._needs_verification': result.raw_data?._needs_verification,
+        hasMissingCriticalData,
+        needsVerification,
+        showManualEntry
+      });
+      
       if (result.status === 'success' && needsVerification && !showManualEntry) {
+        console.log('✅ Entering verification mode');
         // Enter verification mode
         setUploadStatus('needs_verification');
         setVerificationMode(true);
         
         // Build list of missing fields
         const missingFields: string[] = result.raw_data?._missing_fields || [];
-        if (!extractedConsumption || extractedConsumption === 0) {
+        if (!extractedConsumption || Number(extractedConsumption) === 0) {
           missingFields.push('consumption');
         }
-        if (!extractedCost || extractedCost === 0) {
+        if (!extractedCost || Number(extractedCost) === 0) {
           missingFields.push('total_cost');
         }
         
+        // Use s3_path from response (backend returns this, not s3_key)
+        const s3Key = result.s3_path || result.s3_key || '';
+        
         setVerificationData({
-          s3_key: result.s3_path || result.s3_key, // Backend returns s3_path
-          raw_data: result.raw_data,
-          summary: result.summary,
+          s3_key: s3Key,
+          raw_data: result.raw_data || {},
+          summary: result.summary || {},
           missing_fields: [...new Set(missingFields)], // Remove duplicates
           partial_data: result.partial_data
         });
         
-        // Pre-fill verification form with extracted data
+        // Pre-fill verification form with whatever data we have (may be empty)
         setVerificationFormData({
           supplier: result.summary?.supplier || result.raw_data?.supplierInfo?.name || '',
           invoice_number: result.summary?.invoice_number || result.raw_data?.billSummary?.invoiceNumber || '',
@@ -270,6 +287,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
       }
       
       // Regular success flow
+      console.log('⏭️ Skipping verification, going to success');
       setExtractedData(result);
       setUploadStatus('success');
       setStatus(showManualEntry ? 'Manual entry saved successfully!' : 'Upload successful!');
@@ -306,12 +324,15 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
           s3_key: verificationData.s3_key,
           hotel_id: hotelId,
           updates: {
+            // Summary fields
             'summary.consumption_kwh': parseFloat(verificationFormData.consumption) || 0,
             'summary.total_cost': parseFloat(verificationFormData.total_cost) || 0,
             'summary.meter_number': verificationFormData.meter_number || '',
             'summary.gprn': verificationFormData.gprn || '',
             'summary.billing_period_start': verificationFormData.billing_start || '',
             'summary.billing_period_end': verificationFormData.billing_end || '',
+            // Clear verification flags (both root and nested for compatibility)
+            'needs_verification': false,
             'raw_data._needs_verification': false,
             'raw_data._missing_fields': []
           }
