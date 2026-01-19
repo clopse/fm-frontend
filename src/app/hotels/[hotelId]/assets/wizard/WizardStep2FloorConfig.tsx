@@ -9,6 +9,7 @@ export interface FloorConfig {
   roomType: "standard" | "suite" | "accessible" | "studio" | "apartment";
   notes?: string;
   noRooms?: boolean; // Flag for floors without guest rooms (BOH/public areas only)
+  skipRoomNumbers?: number[]; // Array of room numbers to skip (e.g., [310, 311, 312])
 }
 
 interface WizardStep2Props {
@@ -67,8 +68,15 @@ export default function WizardStep2FloorConfig({
   const getRoomNumbers = (floor: FloorConfig): string => {
     if (floor.noRooms) return "No guest rooms";
     if (floor.roomCount === 0) return "Not configured";
+    
     const first = floor.firstRoomNumber;
     const last = first + floor.roomCount - 1;
+    const skipCount = floor.skipRoomNumbers?.length || 0;
+    
+    if (skipCount > 0) {
+      return `${first}-${last} (${floor.roomCount - skipCount} rooms, ${skipCount} skipped)`;
+    }
+    
     return `${first}-${last}`;
   };
 
@@ -289,6 +297,79 @@ export default function WizardStep2FloorConfig({
                         Rooms will be: {getRoomNumbers(floor)}
                       </p>
                     )}
+                  </div>
+
+                  <div className="col-span-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Skip Room Numbers (Optional)
+                      </label>
+                      {!floor.noRooms && floor.roomCount > 0 && (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Generate odd numbers only (skip even)
+                              const first = floor.firstRoomNumber;
+                              const evens = [];
+                              for (let i = 0; i < floor.roomCount; i++) {
+                                const num = first + i;
+                                if (num % 2 === 0) evens.push(num);
+                              }
+                              updateFloor(idx, "skipRoomNumbers", evens);
+                            }}
+                            className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 border border-blue-200"
+                          >
+                            Odd Only
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Generate even numbers only (skip odd)
+                              const first = floor.firstRoomNumber;
+                              const odds = [];
+                              for (let i = 0; i < floor.roomCount; i++) {
+                                const num = first + i;
+                                if (num % 2 === 1) odds.push(num);
+                              }
+                              updateFloor(idx, "skipRoomNumbers", odds);
+                            }}
+                            className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 border border-blue-200"
+                          >
+                            Even Only
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateFloor(idx, "skipRoomNumbers", [])}
+                            className="text-xs px-2 py-1 bg-gray-50 text-gray-700 rounded hover:bg-gray-100 border border-gray-200"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={(floor.skipRoomNumbers || []).join(', ')}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          updateFloor(idx, "skipRoomNumbers", []);
+                        } else {
+                          const numbers = value
+                            .split(',')
+                            .map(n => parseInt(n.trim()))
+                            .filter(n => !isNaN(n));
+                          updateFloor(idx, "skipRoomNumbers", numbers);
+                        }
+                      }}
+                      disabled={floor.noRooms}
+                      placeholder="e.g., 310, 311, 313 (comma-separated)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Skip specific room numbers (e.g., odd/even layout, unlucky numbers, or layout gaps)
+                    </p>
                   </div>
 
                   <div className="col-span-2">
