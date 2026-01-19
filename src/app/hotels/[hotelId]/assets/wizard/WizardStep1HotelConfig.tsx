@@ -24,6 +24,10 @@ export default function WizardStep1HotelConfig({ config, onUpdate, onNext }: Wiz
 
   const canProceed = config.hotelName && config.hotelCode && config.totalFloors > 0;
 
+  const totalGuestFloors = config.totalFloors + 
+    (config.hasBasement ? 1 : 0) + 
+    (config.hasGroundFloor ? 1 : 0);
+
   return (
     <div className="space-y-6">
       <div className="border-l-4 border-blue-500 bg-blue-50 p-4 rounded">
@@ -118,7 +122,7 @@ export default function WizardStep1HotelConfig({ config, onUpdate, onNext }: Wiz
               onChange={(e) => handleChange("totalFloors", parseInt(e.target.value) || 1)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <p className="text-xs text-gray-500 mt-1">Number of floors with guest rooms</p>
+            <p className="text-xs text-gray-500 mt-1">Number of numbered floors (1, 2, 3...)</p>
           </div>
 
           <div className="flex items-center pt-6">
@@ -129,7 +133,7 @@ export default function WizardStep1HotelConfig({ config, onUpdate, onNext }: Wiz
                 onChange={(e) => handleChange("hasGroundFloor", e.target.checked)}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-              <span className="ml-2 text-sm text-gray-700">Has Ground Floor (0)</span>
+              <span className="ml-2 text-sm text-gray-700">Ground Floor (0)</span>
             </label>
           </div>
 
@@ -141,19 +145,31 @@ export default function WizardStep1HotelConfig({ config, onUpdate, onNext }: Wiz
                 onChange={(e) => handleChange("hasBasement", e.target.checked)}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
-              <span className="ml-2 text-sm text-gray-700">Has Basement (B or -1)</span>
+              <span className="ml-2 text-sm text-gray-700">Basement (B)</span>
             </label>
           </div>
         </div>
 
         <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-700">
-            <span className="font-medium">Floor numbering preview:</span>
+          <p className="text-sm text-gray-700 mb-2">
+            <span className="font-medium">Floor structure:</span>
             {config.hasBasement && <span className="ml-2 text-gray-600">B (Basement)</span>}
-            {config.hasGroundFloor && <span className="ml-2 text-gray-600">→ 0 (Ground)</span>}
+            {config.hasGroundFloor && (
+              <span className="ml-2 text-gray-600">
+                {config.hasBasement ? '→' : ''} 0 (Ground)
+              </span>
+            )}
             <span className="ml-2 text-gray-600">
-              → 1 through {config.totalFloors} (Guest Floors)
+              {(config.hasBasement || config.hasGroundFloor) ? '→' : ''} 1 to {config.totalFloors}
             </span>
+          </p>
+          <p className="text-xs text-gray-500">
+            Total floors: <span className="font-medium text-gray-700">{totalGuestFloors}</span>
+            {(config.hasBasement || config.hasGroundFloor) && (
+              <span className="ml-2 text-amber-600">
+                (You can mark floors as "no guest rooms" in the next step)
+              </span>
+            )}
           </p>
         </div>
       </div>
