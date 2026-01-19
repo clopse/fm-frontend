@@ -40,6 +40,52 @@ interface AssetCreate {
   created_by?: string | null;
 }
 
+// Helper function to auto-generate floors array from hotel configuration
+function generateFloorsArray(config: HotelConfig): FloorConfig[] {
+  const floors: FloorConfig[] = [];
+  
+  // Add basement if it exists
+  if (config.hasBasement) {
+    floors.push({
+      floorNumber: 'B',
+      floorName: 'Basement',
+      roomCount: 0,
+      firstRoomNumber: -101, // or 1 for B01, B02 numbering
+      roomType: 'standard',
+      notes: '',
+      noRooms: true // Default to no rooms, user can change in Step 2
+    });
+  }
+  
+  // Add ground floor if it exists
+  if (config.hasGroundFloor) {
+    floors.push({
+      floorNumber: 0,
+      floorName: 'Ground Floor',
+      roomCount: 0,
+      firstRoomNumber: 1, // or 001 depending on numbering scheme
+      roomType: 'standard',
+      notes: '',
+      noRooms: true // Default to no rooms (usually lobby/restaurant)
+    });
+  }
+  
+  // Add numbered floors (1 through totalFloors)
+  for (let i = 1; i <= config.totalFloors; i++) {
+    floors.push({
+      floorNumber: i,
+      floorName: `Floor ${i}`,
+      roomCount: 30, // Default 30 rooms per floor
+      firstRoomNumber: i * 100 + 1, // 101, 201, 301, etc.
+      roomType: 'standard',
+      notes: '',
+      noRooms: false // Guest floors have rooms by default
+    });
+  }
+  
+  return floors;
+}
+
 export default function AssetWizardPage() {
   const params = useParams<{ hotelId: string }>();
   const router = useRouter();
@@ -64,21 +110,10 @@ export default function AssetWizardPage() {
   // Initialize floors when hotel config changes
   useEffect(() => {
     if (hotelConfig.totalFloors > 0) {
-      const newFloors: FloorConfig[] = [];
-      
-      for (let i = 1; i <= hotelConfig.totalFloors; i++) {
-        newFloors.push({
-          floorNumber: i,
-          floorName: `Floor ${i}`,
-          roomCount: 30,
-          firstRoomNumber: i * 100 + 1,
-          roomType: "standard",
-        });
-      }
-      
-      setFloors(newFloors);
+      const generatedFloors = generateFloorsArray(hotelConfig);
+      setFloors(generatedFloors);
     }
-  }, [hotelConfig.totalFloors]);
+  }, [hotelConfig.totalFloors, hotelConfig.hasBasement, hotelConfig.hasGroundFloor]);
 
   // Step 3 - Item selection
   const [selectedItems, setSelectedItems] = useState<string[]>([
@@ -96,8 +131,8 @@ export default function AssetWizardPage() {
   const [itemCosts, setItemCosts] = useState<Record<string, number>>({});
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({}); // NEW
 
-  // Calculate totals
-  const totalRooms = floors.reduce((sum, f) => sum + f.roomCount, 0);
+  // Calculate totals - exclude floors with noRooms flag
+  const totalRooms = floors.reduce((sum, f) => f.noRooms ? sum : sum + f.roomCount, 0);
   
   const selectedItemsData = STANDARD_ITEMS.filter(item => 
     selectedItems.includes(item.key)
@@ -109,11 +144,14 @@ export default function AssetWizardPage() {
     return sum + (cost * quantity);
   }, 0);
 
-  // Generate room numbers for all floors
+  // Generate room numbers for all floors (excluding floors with noRooms)
   const generateAllRoomNumbers = (): Array<{ room: number; floor: FloorConfig }> => {
     const rooms: Array<{ room: number; floor: FloorConfig }> = [];
     
     for (const floor of floors) {
+      // Skip floors marked as having no guest rooms
+      if (floor.noRooms) continue;
+      
       const first = floor.firstRoomNumber;
       for (let i = 0; i < floor.roomCount; i++) {
         rooms.push({
@@ -286,7 +324,7 @@ export default function AssetWizardPage() {
               onUpdate={setFloors}
               onNext={() => setStep(3)}
               onBack={() => setStep(1)}
-              totalFloors={hotelConfig.totalFloors}
+              totalFloors={floors.length}
             />
           )}
 
