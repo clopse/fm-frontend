@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { X, FileText, Download, Search, Calendar, Settings, ChevronDown, 
-         ChevronsUpDown, ArrowLeft, ArrowRight, ChevronUp } from 'lucide-react';
+         ChevronsUpDown, ArrowLeft, ArrowRight, ChevronUp, Pencil, Eye, 
+         Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { DashboardFilters } from '../types';
 
 interface MetricsModalProps {
@@ -65,6 +66,12 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     key: 'date',
     direction: 'desc'
   });
+  
+  // Edit modal state
+  const [editingBill, setEditingBill] = useState<BillRow | null>(null);
+  const [editFormData, setEditFormData] = useState<any>({});
+  const [editSaving, setEditSaving] = useState(false);
+  const [editStatus, setEditStatus] = useState<string>('');
   
   // UI Control state
   const [showColumnMenu, setShowColumnMenu] = useState(false);
@@ -580,6 +587,136 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     
     // Construct the URL for the PDF
     return `${process.env.NEXT_PUBLIC_API_URL}/utilities/bill-pdf/${hotelId}/${row.type}/${year}/${encodeURIComponent(row.filename)}`;
+  };
+
+  // Open edit modal for a bill
+  const openEditModal = (row: BillRow) => {
+    setEditingBill(row);
+    setEditStatus('');
+    
+    // Pre-fill form with current data
+    if (row.type === 'electricity') {
+      setEditFormData({
+        consumption_kwh: row.total_kwh || 0,
+        total_cost: row.total_cost || 0,
+        day_kwh: row.day_kwh || 0,
+        night_kwh: row.night_kwh || 0,
+        meter_number: row.meter_number || '',
+        mprn: row.mprn || '',
+        standing_charge: row.standing_charge || 0,
+        vat_amount: row.vat_amount || 0,
+        mic_value: row.mic_value || 0,
+        max_demand: row.max_demand || 0,
+        billing_start: row.raw?.summary?.billing_period_start || '',
+        billing_end: row.raw?.summary?.billing_period_end || ''
+      });
+    } else {
+      setEditFormData({
+        consumption_kwh: row.consumption_kwh || 0,
+        total_cost: row.total_cost || 0,
+        units_consumed: row.units_consumed || 0,
+        conversion_factor: row.conversion_factor || 0,
+        meter_number: row.meter_number || '',
+        gprn: row.gprn || '',
+        standing_charge: row.standing_charge || 0,
+        carbon_tax: row.carbon_tax || 0,
+        commodity_cost: row.commodity_cost || 0,
+        vat_amount: row.vat_amount || 0,
+        billing_start: row.raw?.summary?.billing_period_start || '',
+        billing_end: row.raw?.summary?.billing_period_end || ''
+      });
+    }
+  };
+
+  // Save edited bill data
+  const saveEditedBill = async () => {
+    if (!editingBill) return;
+    
+    setEditSaving(true);
+    setEditStatus('Saving changes...');
+    
+    try {
+      // Try to get the S3 key from the raw bill data first, otherwise construct it
+      let s3Key = editingBill.raw?.s3_key || editingBill.raw?.s3_path || editingBill.raw?.path;
+      
+      if (!s3Key) {
+        // Construct the S3 key from the bill info
+        const year = editingBill.date ? editingBill.date.substring(0, 4) : "2024";
+        const month = editingBill.date ? editingBill.date.substring(5, 7) : "01";
+        // Remove .json if already present in filename
+        const cleanFilename = editingBill.filename.replace(/\.json$/, '');
+        s3Key = `utilities/${hotelId}/${year}/${month}/${cleanFilename}.json`;
+      }
+      
+      console.log('📝 Updating bill with s3_key:', s3Key);
+      
+      // Build updates based on bill type
+      const updates: any = {
+        'needs_verification': false,
+        'raw_data._needs_verification': false
+      };
+      
+      if (editingBill.type === 'electricity') {
+        updates['summary.total_kwh'] = parseFloat(editFormData.consumption_kwh) || 0;
+        updates['summary.day_kwh'] = parseFloat(editFormData.day_kwh) || 0;
+        updates['summary.night_kwh'] = parseFloat(editFormData.night_kwh) || 0;
+        updates['summary.total_cost'] = parseFloat(editFormData.total_cost) || 0;
+        updates['summary.meter_number'] = editFormData.meter_number || '';
+        updates['summary.mprn'] = editFormData.mprn || '';
+        updates['summary.standing_charge'] = parseFloat(editFormData.standing_charge) || 0;
+        updates['summary.vat_amount'] = parseFloat(editFormData.vat_amount) || 0;
+        updates['summary.mic_value'] = parseFloat(editFormData.mic_value) || 0;
+        updates['summary.max_demand'] = parseFloat(editFormData.max_demand) || 0;
+      } else {
+        updates['summary.consumption_kwh'] = parseFloat(editFormData.consumption_kwh) || 0;
+        updates['summary.units_consumed'] = parseFloat(editFormData.units_consumed) || 0;
+        updates['summary.conversion_factor'] = parseFloat(editFormData.conversion_factor) || 0;
+        updates['summary.total_cost'] = parseFloat(editFormData.total_cost) || 0;
+        updates['summary.meter_number'] = editFormData.meter_number || '';
+        updates['summary.gprn'] = editFormData.gprn || '';
+        updates['summary.standing_charge'] = parseFloat(editFormData.standing_charge) || 0;
+        updates['summary.carbon_tax'] = parseFloat(editFormData.carbon_tax) || 0;
+        updates['summary.commodity_cost'] = parseFloat(editFormData.commodity_cost) || 0;
+        updates['summary.vat_amount'] = parseFloat(editFormData.vat_amount) || 0;
+      }
+      
+      if (editFormData.billing_start) {
+        updates['summary.billing_period_start'] = editFormData.billing_start;
+      }
+      if (editFormData.billing_end) {
+        updates['summary.billing_period_end'] = editFormData.billing_end;
+      }
+      
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/update-bill`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          s3_key: s3Key,
+          hotel_id: hotelId,
+          updates
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to update bill');
+      }
+
+      setEditStatus('✅ Bill updated successfully!');
+      
+      // Refresh bills after short delay
+      setTimeout(() => {
+        setEditingBill(null);
+        fetchAllBills();
+      }, 1500);
+
+    } catch (err: any) {
+      console.error('Edit error:', err);
+      setEditStatus(`❌ Failed to save: ${err.message}`);
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   // Row selection functions
@@ -1221,12 +1358,24 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                               if (key === 'actions') {
                                 return (
                                   <td key={key} className="text-center border-r p-2">
-                                    <div className="flex justify-center space-x-2">
+                                    <div className="flex justify-center space-x-1">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openEditModal(row);
+                                        }}
+                                        className="p-1 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded"
+                                        title="Edit bill"
+                                      >
+                                        <Pencil className="w-4 h-4" />
+                                      </button>
                                       <a
                                         href={getS3PdfUrl(row)}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="p-1 text-blue-500 hover:text-blue-700"
+                                        className="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded"
+                                        title="Download PDF"
+                                        onClick={(e) => e.stopPropagation()}
                                       >
                                         <Download className="w-4 h-4" />
                                       </a>
@@ -1366,12 +1515,24 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
                               if (key === 'actions') {
                                 return (
                                   <td key={key} className="text-center border-r p-2">
-                                    <div className="flex justify-center space-x-2">
+                                    <div className="flex justify-center space-x-1">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openEditModal(row);
+                                        }}
+                                        className="p-1 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded"
+                                        title="Edit bill"
+                                      >
+                                        <Pencil className="w-4 h-4" />
+                                      </button>
                                       <a
                                         href={getS3PdfUrl(row)}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="p-1 text-blue-500 hover:text-blue-700"
+                                        className="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded"
+                                        title="Download PDF"
+                                        onClick={(e) => e.stopPropagation()}
                                       >
                                         <Download className="w-4 h-4" />
                                       </a>
@@ -1448,6 +1609,380 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
           )}
         </div>
       </div>
+      
+      {/* Edit Bill Modal */}
+      {editingBill && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                  <Pencil className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Edit Bill</h2>
+                  <p className="text-sm text-amber-100">
+                    {editingBill.type === 'electricity' ? '⚡ Electricity' : '🔥 Gas'} • {editingBill.date ? new Date(editingBill.date).toLocaleDateString() : 'Unknown date'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingBill(null)}
+                disabled={editSaving}
+                className="text-white/80 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-lg disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content - Split view */}
+            <div className="flex-1 flex overflow-hidden">
+              {/* PDF Viewer - Left Side */}
+              <div className="w-1/2 border-r border-slate-200 bg-slate-50 flex flex-col">
+                <div className="px-4 py-3 bg-slate-100 border-b border-slate-200 flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-slate-600" />
+                  <span className="font-medium text-slate-700 text-sm">Bill Preview</span>
+                  <a
+                    href={getS3PdfUrl(editingBill)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  >
+                    <Download className="w-3 h-3" />
+                    Download
+                  </a>
+                </div>
+                <div className="flex-1 overflow-auto">
+                  <iframe
+                    src={getS3PdfUrl(editingBill)}
+                    className="w-full h-full"
+                    title="PDF Preview"
+                  />
+                </div>
+              </div>
+
+              {/* Edit Form - Right Side */}
+              <div className="w-1/2 flex flex-col">
+                <div className="flex-1 overflow-auto p-6 space-y-5">
+                  {/* Status Message */}
+                  {editStatus && (
+                    <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${
+                      editStatus.includes('✅') ? 'bg-green-50 text-green-800 border border-green-200' :
+                      editStatus.includes('❌') ? 'bg-red-50 text-red-800 border border-red-200' :
+                      'bg-blue-50 text-blue-800 border border-blue-200'
+                    }`}>
+                      {editStatus.includes('Saving') && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {editStatus.includes('✅') && <CheckCircle className="w-4 h-4" />}
+                      {editStatus.includes('❌') && <AlertTriangle className="w-4 h-4" />}
+                      {editStatus}
+                    </div>
+                  )}
+
+                  {/* Form Fields - Electricity */}
+                  {editingBill.type === 'electricity' && (
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-slate-900 border-b pb-2">Consumption</h3>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Day kWh</label>
+                          <input
+                            type="number"
+                            value={editFormData.day_kwh || ''}
+                            onChange={(e) => setEditFormData({...editFormData, day_kwh: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Night kWh</label>
+                          <input
+                            type="number"
+                            value={editFormData.night_kwh || ''}
+                            onChange={(e) => setEditFormData({...editFormData, night_kwh: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Total kWh</label>
+                          <input
+                            type="number"
+                            value={editFormData.consumption_kwh || ''}
+                            onChange={(e) => setEditFormData({...editFormData, consumption_kwh: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+
+                      <h3 className="font-semibold text-slate-900 border-b pb-2 mt-4">Costs</h3>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Total Cost (€)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editFormData.total_cost || ''}
+                            onChange={(e) => setEditFormData({...editFormData, total_cost: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Standing Charge (€)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editFormData.standing_charge || ''}
+                            onChange={(e) => setEditFormData({...editFormData, standing_charge: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">VAT (€)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editFormData.vat_amount || ''}
+                            onChange={(e) => setEditFormData({...editFormData, vat_amount: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+
+                      <h3 className="font-semibold text-slate-900 border-b pb-2 mt-4">MIC / Capacity</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">MIC Value (kVA)</label>
+                          <input
+                            type="number"
+                            value={editFormData.mic_value || ''}
+                            onChange={(e) => setEditFormData({...editFormData, mic_value: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Max Demand (kVA)</label>
+                          <input
+                            type="number"
+                            value={editFormData.max_demand || ''}
+                            onChange={(e) => setEditFormData({...editFormData, max_demand: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+
+                      <h3 className="font-semibold text-slate-900 border-b pb-2 mt-4">Meter Details</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Meter Number</label>
+                          <input
+                            type="text"
+                            value={editFormData.meter_number || ''}
+                            onChange={(e) => setEditFormData({...editFormData, meter_number: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">MPRN</label>
+                          <input
+                            type="text"
+                            value={editFormData.mprn || ''}
+                            onChange={(e) => setEditFormData({...editFormData, mprn: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Billing Start</label>
+                          <input
+                            type="date"
+                            value={editFormData.billing_start || ''}
+                            onChange={(e) => setEditFormData({...editFormData, billing_start: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Billing End</label>
+                          <input
+                            type="date"
+                            value={editFormData.billing_end || ''}
+                            onChange={(e) => setEditFormData({...editFormData, billing_end: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Form Fields - Gas */}
+                  {editingBill.type === 'gas' && (
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-slate-900 border-b pb-2">Consumption</h3>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Consumption (kWh)</label>
+                          <input
+                            type="number"
+                            value={editFormData.consumption_kwh || ''}
+                            onChange={(e) => setEditFormData({...editFormData, consumption_kwh: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Units Consumed</label>
+                          <input
+                            type="number"
+                            value={editFormData.units_consumed || ''}
+                            onChange={(e) => setEditFormData({...editFormData, units_consumed: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Conv. Factor</label>
+                          <input
+                            type="number"
+                            step="0.0001"
+                            value={editFormData.conversion_factor || ''}
+                            onChange={(e) => setEditFormData({...editFormData, conversion_factor: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+
+                      <h3 className="font-semibold text-slate-900 border-b pb-2 mt-4">Costs</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Total Cost (€)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editFormData.total_cost || ''}
+                            onChange={(e) => setEditFormData({...editFormData, total_cost: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Commodity Cost (€)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editFormData.commodity_cost || ''}
+                            onChange={(e) => setEditFormData({...editFormData, commodity_cost: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Standing Charge (€)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editFormData.standing_charge || ''}
+                            onChange={(e) => setEditFormData({...editFormData, standing_charge: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Carbon Tax (€)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editFormData.carbon_tax || ''}
+                            onChange={(e) => setEditFormData({...editFormData, carbon_tax: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">VAT (€)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editFormData.vat_amount || ''}
+                            onChange={(e) => setEditFormData({...editFormData, vat_amount: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+
+                      <h3 className="font-semibold text-slate-900 border-b pb-2 mt-4">Meter Details</h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Meter Number</label>
+                          <input
+                            type="text"
+                            value={editFormData.meter_number || ''}
+                            onChange={(e) => setEditFormData({...editFormData, meter_number: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">GPRN</label>
+                          <input
+                            type="text"
+                            value={editFormData.gprn || ''}
+                            onChange={(e) => setEditFormData({...editFormData, gprn: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Billing Start</label>
+                          <input
+                            type="date"
+                            value={editFormData.billing_start || ''}
+                            onChange={(e) => setEditFormData({...editFormData, billing_start: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Billing End</label>
+                          <input
+                            type="date"
+                            value={editFormData.billing_end || ''}
+                            onChange={(e) => setEditFormData({...editFormData, billing_end: e.target.value})}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="bg-slate-50 px-6 py-4 flex items-center justify-end space-x-3 border-t border-slate-200">
+                  <button
+                    onClick={() => setEditingBill(null)}
+                    disabled={editSaving}
+                    className="px-5 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveEditedBill}
+                    disabled={editSaving}
+                    className="px-5 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 flex items-center space-x-2 font-medium"
+                  >
+                    {editSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Save Changes</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
