@@ -202,6 +202,9 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
 
       const result = await res.json();
       
+      // DEBUG: Log the full response to see what we're getting
+      console.log('📦 Parse-and-save response:', JSON.stringify(result, null, 2));
+      
       // Extract values for checking (handles different response structures)
       const extractedConsumption = result.summary?.consumption_kwh || 
                                     result.summary?.units_consumed || 
@@ -212,6 +215,8 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                             result.raw_data?.billSummary?.currentBillAmount ||
                             result.raw_data?.total_cost ||
                             0;
+      
+      console.log('📊 Extracted values:', { extractedConsumption, extractedCost });
       
       // Check for missing critical fields - CLIENT-SIDE CHECK
       const hasMissingCriticalData = !extractedConsumption || 
@@ -225,38 +230,79 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                                 result.raw_data?.needs_verification ||
                                 hasMissingCriticalData;
       
+      console.log('🔍 Verification check:', {
+        'result.needs_verification': result.needs_verification,
+        'result.raw_data?._needs_verification': result.raw_data?._needs_verification,
+        hasMissingCriticalData,
+        needsVerification,
+        showManualEntry
+      });
+      
       if (result.status === 'success' && needsVerification && !showManualEntry) {
+        console.log('✅ Entering verification mode');
         // Enter verification mode
         setUploadStatus('needs_verification');
         setVerificationMode(true);
         
         // Build list of missing fields
         const missingFields: string[] = result.raw_data?._missing_fields || [];
-        if (!extractedConsumption || extractedConsumption === 0) {
+        if (!extractedConsumption || Number(extractedConsumption) === 0) {
           missingFields.push('consumption');
         }
-        if (!extractedCost || extractedCost === 0) {
+        if (!extractedCost || Number(extractedCost) === 0) {
           missingFields.push('total_cost');
         }
         
+        // Use s3_path from response (backend returns this, not s3_key)
+        const s3Key = result.s3_path || result.s3_key || '';
+        
+        // Try to fetch the actual bill data from S3 if not in response
+        let billData = result.raw_data || {};
+        let summaryData = result.summary || {};
+        
+        if (s3Key && (!result.raw_data || Object.keys(result.raw_data).length === 0)) {
+          try {
+            console.log('📥 Fetching bill data from S3:', s3Key);
+            const billRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/bill/${encodeURIComponent(s3Key)}`);
+            if (billRes.ok) {
+              const fetchedBill = await billRes.json();
+              console.log('📄 Fetched bill data:', fetchedBill);
+              billData = fetchedBill.raw_data || fetchedBill;
+              summaryData = fetchedBill.summary || {};
+            }
+          } catch (fetchErr) {
+            console.warn('Could not fetch bill data:', fetchErr);
+          }
+        }
+        
         setVerificationData({
-          s3_key: result.s3_path || result.s3_key, // Backend returns s3_path
-          raw_data: result.raw_data,
-          summary: result.summary,
+          s3_key: s3Key,
+          raw_data: billData,
+          summary: summaryData,
           missing_fields: [...new Set(missingFields)], // Remove duplicates
           partial_data: result.partial_data
         });
         
-        // Pre-fill verification form with extracted data
+        // Pre-fill verification form with whatever data we have
+        const prefilledConsumption = summaryData?.consumption_kwh || 
+                                      summaryData?.units_consumed ||
+                                      billData?.billSummary?.unitsConsumed ||
+                                      billData?.consumption_kwh ||
+                                      extractedConsumption || '';
+        const prefilledCost = summaryData?.total_cost || 
+                              billData?.billSummary?.currentBillAmount ||
+                              billData?.total_cost ||
+                              extractedCost || '';
+        
         setVerificationFormData({
-          supplier: result.summary?.supplier || result.raw_data?.supplierInfo?.name || '',
-          invoice_number: result.summary?.invoice_number || result.raw_data?.billSummary?.invoiceNumber || '',
-          total_cost: extractedCost || '',
-          consumption: extractedConsumption || '',
-          meter_number: result.summary?.meter_number || result.raw_data?.accountInfo?.meterNumber || '',
-          gprn: result.summary?.gprn || result.raw_data?.accountInfo?.gprn || '',
-          billing_start: result.summary?.billing_period_start || result.raw_data?.billSummary?.billingPeriodStartDate || '',
-          billing_end: result.summary?.billing_period_end || result.raw_data?.billSummary?.billingPeriodEndDate || ''
+          supplier: summaryData?.supplier || billData?.supplierInfo?.name || billData?.supplier || '',
+          invoice_number: summaryData?.invoice_number || billData?.billSummary?.invoiceNumber || billData?.invoice_number || '',
+          total_cost: prefilledCost,
+          consumption: prefilledConsumption,
+          meter_number: summaryData?.meter_number || billData?.accountInfo?.meterNumber || billData?.meter_number || '',
+          gprn: summaryData?.gprn || billData?.accountInfo?.gprn || billData?.gprn || '',
+          billing_start: summaryData?.billing_period_start || billData?.billSummary?.billingPeriodStartDate || billData?.billing_period_start || '',
+          billing_end: summaryData?.billing_period_end || billData?.billSummary?.billingPeriodEndDate || billData?.billing_period_end || ''
         });
         
         const missingFieldsList = missingFields.length > 0 
@@ -270,6 +316,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
       }
       
       // Regular success flow
+      console.log('⏭️ Skipping verification, going to success');
       setExtractedData(result);
       setUploadStatus('success');
       setStatus(showManualEntry ? 'Manual entry saved successfully!' : 'Upload successful!');
@@ -306,12 +353,15 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
           s3_key: verificationData.s3_key,
           hotel_id: hotelId,
           updates: {
+            // Summary fields
             'summary.consumption_kwh': parseFloat(verificationFormData.consumption) || 0,
             'summary.total_cost': parseFloat(verificationFormData.total_cost) || 0,
             'summary.meter_number': verificationFormData.meter_number || '',
             'summary.gprn': verificationFormData.gprn || '',
             'summary.billing_period_start': verificationFormData.billing_start || '',
             'summary.billing_period_end': verificationFormData.billing_end || '',
+            // Clear verification flags (both root and nested for compatibility)
+            'needs_verification': false,
             'raw_data._needs_verification': false,
             'raw_data._missing_fields': []
           }
@@ -461,8 +511,8 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         type="text"
                         value={verificationFormData.supplier || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, supplier: e.target.value})}
+                        placeholder="Enter supplier name"
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                        readOnly
                       />
                     </div>
 
@@ -474,14 +524,14 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         type="text"
                         value={verificationFormData.invoice_number || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, invoice_number: e.target.value})}
+                        placeholder="Enter invoice number"
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-                        readOnly
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className={verificationData.missing_fields.includes('consumption') ? 'relative' : ''}>
+                    <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
                         Consumption (kWh) {verificationData.missing_fields.includes('consumption') && <span className="text-red-600">*</span>}
                       </label>
@@ -493,22 +543,26 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
                           verificationData.missing_fields.includes('consumption') 
                             ? 'border-red-300 bg-red-50' 
-                            : 'border-slate-300 bg-slate-50'
+                            : 'border-slate-300 bg-white'
                         }`}
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Total Cost (€)
+                        Total Cost (€) {verificationData.missing_fields.includes('total_cost') && <span className="text-red-600">*</span>}
                       </label>
                       <input
                         type="number"
                         step="0.01"
                         value={verificationFormData.total_cost || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, total_cost: e.target.value})}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-slate-50"
-                        readOnly
+                        placeholder="Enter total cost"
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          verificationData.missing_fields.includes('total_cost') 
+                            ? 'border-red-300 bg-red-50' 
+                            : 'border-slate-300 bg-white'
+                        }`}
                       />
                     </div>
                   </div>
@@ -522,8 +576,8 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         type="text"
                         value={verificationFormData.meter_number || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, meter_number: e.target.value})}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-slate-50"
-                        readOnly
+                        placeholder="Enter meter number"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                       />
                     </div>
 
@@ -535,8 +589,8 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         type="text"
                         value={verificationFormData.gprn || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, gprn: e.target.value})}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-slate-50"
-                        readOnly
+                        placeholder="Enter GPRN/MPRN"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                       />
                     </div>
                   </div>
@@ -550,7 +604,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         type="date"
                         value={verificationFormData.billing_start || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, billing_start: e.target.value})}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                       />
                     </div>
 
@@ -562,7 +616,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         type="date"
                         value={verificationFormData.billing_end || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, billing_end: e.target.value})}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-slate-50"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
                       />
                     </div>
                   </div>
@@ -581,7 +635,11 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                 
                 <button
                   onClick={handleVerificationSubmit}
-                  disabled={uploading || (verificationData.missing_fields.includes('consumption') && !verificationFormData.consumption)}
+                  disabled={
+                    uploading || 
+                    (verificationData.missing_fields.includes('consumption') && !verificationFormData.consumption) ||
+                    (verificationData.missing_fields.includes('total_cost') && !verificationFormData.total_cost)
+                  }
                   className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-medium"
                 >
                   {uploading ? (
