@@ -53,7 +53,8 @@ function generateFloorsArray(config: HotelConfig): FloorConfig[] {
       firstRoomNumber: -101, // or 1 for B01, B02 numbering
       roomType: 'standard',
       notes: '',
-      noRooms: true // Default to no rooms, user can change in Step 2
+      noRooms: true, // Default to no rooms, user can change in Step 2
+      skipRoomNumbers: []
     });
   }
   
@@ -66,7 +67,8 @@ function generateFloorsArray(config: HotelConfig): FloorConfig[] {
       firstRoomNumber: 1, // or 001 depending on numbering scheme
       roomType: 'standard',
       notes: '',
-      noRooms: true // Default to no rooms (usually lobby/restaurant)
+      noRooms: true, // Default to no rooms (usually lobby/restaurant)
+      skipRoomNumbers: []
     });
   }
   
@@ -79,7 +81,8 @@ function generateFloorsArray(config: HotelConfig): FloorConfig[] {
       firstRoomNumber: i * 100 + 1, // 101, 201, 301, etc.
       roomType: 'standard',
       notes: '',
-      noRooms: false // Guest floors have rooms by default
+      noRooms: false, // Guest floors have rooms by default
+      skipRoomNumbers: []
     });
   }
   
@@ -131,8 +134,12 @@ export default function AssetWizardPage() {
   const [itemCosts, setItemCosts] = useState<Record<string, number>>({});
   const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({}); // NEW
 
-  // Calculate totals - exclude floors with noRooms flag
-  const totalRooms = floors.reduce((sum, f) => f.noRooms ? sum : sum + f.roomCount, 0);
+  // Calculate totals - exclude floors with noRooms flag and subtract skipped rooms
+  const totalRooms = floors.reduce((sum, f) => {
+    if (f.noRooms) return sum;
+    const skipCount = f.skipRoomNumbers?.length || 0;
+    return sum + f.roomCount - skipCount;
+  }, 0);
   
   const selectedItemsData = STANDARD_ITEMS.filter(item => 
     selectedItems.includes(item.key)
@@ -144,7 +151,7 @@ export default function AssetWizardPage() {
     return sum + (cost * quantity);
   }, 0);
 
-  // Generate room numbers for all floors (excluding floors with noRooms)
+  // Generate room numbers for all floors (excluding floors with noRooms and skipped room numbers)
   const generateAllRoomNumbers = (): Array<{ room: number; floor: FloorConfig }> => {
     const rooms: Array<{ room: number; floor: FloorConfig }> = [];
     
@@ -153,9 +160,16 @@ export default function AssetWizardPage() {
       if (floor.noRooms) continue;
       
       const first = floor.firstRoomNumber;
+      const skipList = floor.skipRoomNumbers || [];
+      
       for (let i = 0; i < floor.roomCount; i++) {
+        const roomNumber = first + i;
+        
+        // Skip if this room number is in the skip list
+        if (skipList.includes(roomNumber)) continue;
+        
         rooms.push({
-          room: first + i,
+          room: roomNumber,
           floor,
         });
       }
