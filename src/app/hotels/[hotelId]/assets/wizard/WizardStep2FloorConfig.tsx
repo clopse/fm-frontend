@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building, Copy, Info, ChevronDown, ChevronUp } from "lucide-react";
+import { Building, Copy, Info, ChevronDown, ChevronUp, Ban } from "lucide-react";
 
 export interface FloorConfig {
   floorNumber: number | string;
@@ -8,6 +8,7 @@ export interface FloorConfig {
   firstRoomNumber: number;
   roomType: "standard" | "suite" | "accessible" | "studio" | "apartment";
   notes?: string;
+  noRooms?: boolean; // Flag for floors without guest rooms (BOH/public areas only)
 }
 
 interface WizardStep2Props {
@@ -36,11 +37,18 @@ export default function WizardStep2FloorConfig({
   };
 
   const applyQuickFill = () => {
-    const updated = floors.map((floor, idx) => ({
-      ...floor,
-      roomCount: quickFillRooms,
-      firstRoomNumber: (idx + 1) * 100 + 1,
-    }));
+    const updated = floors.map((floor, idx) => {
+      // Skip floors marked as no rooms
+      if (floor.noRooms) return floor;
+      
+      return {
+        ...floor,
+        roomCount: quickFillRooms,
+        firstRoomNumber: typeof floor.floorNumber === 'number' && floor.floorNumber > 0 
+          ? floor.floorNumber * 100 + 1 
+          : (idx + 1) * 100 + 1,
+      };
+    });
     onUpdate(updated);
     setShowQuickFill(false);
   };
@@ -51,20 +59,25 @@ export default function WizardStep2FloorConfig({
       ...updated[targetIndex],
       roomCount: floors[sourceIndex].roomCount,
       roomType: floors[sourceIndex].roomType,
+      noRooms: floors[sourceIndex].noRooms,
     };
     onUpdate(updated);
   };
 
   const getRoomNumbers = (floor: FloorConfig): string => {
-    if (floor.roomCount === 0) return "No rooms";
+    if (floor.noRooms) return "No guest rooms";
+    if (floor.roomCount === 0) return "Not configured";
     const first = floor.firstRoomNumber;
     const last = first + floor.roomCount - 1;
     return `${first}-${last}`;
   };
 
-  const totalRooms = floors.reduce((sum, f) => sum + f.roomCount, 0);
+  const totalRooms = floors.reduce((sum, f) => f.noRooms ? sum : sum + f.roomCount, 0);
+  const floorsWithRooms = floors.filter(f => !f.noRooms).length;
+  const floorsWithoutRooms = floors.filter(f => f.noRooms).length;
 
-  const canProceed = floors.every(f => f.roomCount > 0);
+  // At least one floor must have rooms configured
+  const canProceed = totalRooms > 0;
 
   return (
     <div className="space-y-6">
@@ -73,7 +86,7 @@ export default function WizardStep2FloorConfig({
           <Info className="w-5 h-5 text-blue-600 mt-0.5 mr-3" />
           <div className="text-sm text-blue-800">
             <p className="font-medium mb-1">Floor Configuration</p>
-            <p>Configure each floor's room layout. Each floor can have different numbers and types of rooms. Room numbers are automatically generated based on your inputs.</p>
+            <p>Configure each floor's room layout. Mark floors as "no guest rooms" if they only contain back of house areas, restaurants, or public spaces. Each floor with guest rooms can have different numbers and types of rooms.</p>
           </div>
         </div>
       </div>
@@ -81,8 +94,11 @@ export default function WizardStep2FloorConfig({
       {/* Summary Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-sm text-gray-600 mb-1">Total Floors</p>
-          <p className="text-2xl font-bold text-gray-900">{totalFloors}</p>
+          <p className="text-sm text-gray-600 mb-1">Guest Room Floors</p>
+          <p className="text-2xl font-bold text-gray-900">{floorsWithRooms}</p>
+          {floorsWithoutRooms > 0 && (
+            <p className="text-xs text-gray-500 mt-1">{floorsWithoutRooms} floor(s) without rooms</p>
+          )}
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-sm text-gray-600 mb-1">Total Rooms</p>
@@ -91,21 +107,23 @@ export default function WizardStep2FloorConfig({
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-sm text-gray-600 mb-1">Avg per Floor</p>
           <p className="text-2xl font-bold text-gray-900">
-            {totalFloors > 0 ? Math.round(totalRooms / totalFloors) : 0}
+            {floorsWithRooms > 0 ? Math.round(totalRooms / floorsWithRooms) : 0}
           </p>
         </div>
       </div>
 
       {/* Quick Fill Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => setShowQuickFill(!showQuickFill)}
-          className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center"
-        >
-          <Copy className="w-4 h-4 mr-2" />
-          Quick Fill All Floors
-        </button>
-      </div>
+      {floorsWithRooms > 0 && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowQuickFill(!showQuickFill)}
+            className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center"
+          >
+            <Copy className="w-4 h-4 mr-2" />
+            Quick Fill All Floors
+          </button>
+        </div>
+      )}
 
       {/* Quick Fill Panel */}
       {showQuickFill && (
@@ -121,13 +139,16 @@ export default function WizardStep2FloorConfig({
                 onChange={(e) => setQuickFillRooms(parseInt(e.target.value) || 1)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Applies only to floors with guest rooms
+              </p>
             </div>
             <div className="flex items-end">
               <button
                 onClick={applyQuickFill}
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-                Apply to All Floors
+                Apply to All Guest Floors
               </button>
             </div>
           </div>
@@ -139,7 +160,9 @@ export default function WizardStep2FloorConfig({
         {floors.map((floor, idx) => (
           <div 
             key={idx}
-            className="bg-white border border-gray-200 rounded-lg overflow-hidden"
+            className={`bg-white border rounded-lg overflow-hidden ${
+              floor.noRooms ? 'border-gray-300' : 'border-gray-200'
+            }`}
           >
             {/* Floor Header */}
             <button
@@ -147,13 +170,26 @@ export default function WizardStep2FloorConfig({
               className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50"
             >
               <div className="flex items-center space-x-4">
-                <Building className="w-5 h-5 text-gray-400" />
+                {floor.noRooms ? (
+                  <Ban className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <Building className="w-5 h-5 text-gray-400" />
+                )}
                 <div className="text-left">
-                  <p className="font-medium text-gray-900">
+                  <p className="font-medium text-gray-900 flex items-center">
                     Floor {floor.floorNumber}: {floor.floorName}
+                    {floor.noRooms && (
+                      <span className="ml-2 text-xs font-normal text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                        No Rooms
+                      </span>
+                    )}
                   </p>
-                  <p className="text-sm text-gray-500">
-                    {floor.roomCount} rooms ({getRoomNumbers(floor)})
+                  <p className={`text-sm ${floor.noRooms ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {floor.noRooms ? 'Back of house / Public areas only' : (
+                      floor.roomCount > 0 
+                        ? `${floor.roomCount} rooms (${getRoomNumbers(floor)})` 
+                        : 'Not configured'
+                    )}
                   </p>
                 </div>
               </div>
@@ -167,7 +203,31 @@ export default function WizardStep2FloorConfig({
             {/* Floor Details */}
             {expandedFloor === idx && (
               <div className="px-4 pb-4 border-t border-gray-200 bg-gray-50">
-                <div className="grid grid-cols-2 gap-4 pt-4">
+                {/* No Rooms Checkbox */}
+                <div className="pt-4 pb-3">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={floor.noRooms || false}
+                      onChange={(e) => {
+                        updateFloor(idx, "noRooms", e.target.checked);
+                        if (e.target.checked) {
+                          updateFloor(idx, "roomCount", 0);
+                        }
+                      }}
+                      className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700 font-medium">
+                      No guest rooms on this floor
+                    </span>
+                  </label>
+                  <p className="ml-6 text-xs text-gray-500 mt-1">
+                    Check this for floors with only back of house areas, restaurants, spa, or public spaces
+                  </p>
+                </div>
+
+                {/* Room Configuration Fields */}
+                <div className={`grid grid-cols-2 gap-4 ${floor.noRooms ? 'opacity-40' : ''}`}>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Floor Name
@@ -188,7 +248,8 @@ export default function WizardStep2FloorConfig({
                     <select
                       value={floor.roomType}
                       onChange={(e) => updateFloor(idx, "roomType", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      disabled={floor.noRooms}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     >
                       <option value="standard">Standard Room</option>
                       <option value="suite">Suite</option>
@@ -200,30 +261,34 @@ export default function WizardStep2FloorConfig({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Number of Rooms *
+                      Number of Rooms {!floor.noRooms && '*'}
                     </label>
                     <input
                       type="number"
                       min="0"
                       value={floor.roomCount}
                       onChange={(e) => updateFloor(idx, "roomCount", parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      disabled={floor.noRooms}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      First Room Number *
+                      First Room Number {!floor.noRooms && '*'}
                     </label>
                     <input
                       type="number"
                       value={floor.firstRoomNumber}
                       onChange={(e) => updateFloor(idx, "firstRoomNumber", parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      disabled={floor.noRooms}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Rooms will be: {getRoomNumbers(floor)}
-                    </p>
+                    {!floor.noRooms && floor.roomCount > 0 && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Rooms will be: {getRoomNumbers(floor)}
+                      </p>
+                    )}
                   </div>
 
                   <div className="col-span-2">
@@ -234,7 +299,7 @@ export default function WizardStep2FloorConfig({
                       type="text"
                       value={floor.notes || ""}
                       onChange={(e) => updateFloor(idx, "notes", e.target.value)}
-                      placeholder="e.g., Executive floor, Family rooms, Connecting doors"
+                      placeholder={floor.noRooms ? "e.g., Lobby, Restaurant, Spa, Back of house" : "e.g., Executive floor, Family rooms, Connecting doors"}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -257,6 +322,19 @@ export default function WizardStep2FloorConfig({
           </div>
         ))}
       </div>
+
+      {/* Validation Warning */}
+      {totalRooms === 0 && (
+        <div className="border-l-4 border-amber-500 bg-amber-50 p-4 rounded">
+          <div className="flex items-start">
+            <Info className="w-5 h-5 text-amber-600 mt-0.5 mr-3" />
+            <div className="text-sm text-amber-800">
+              <p className="font-medium">At least one floor must have guest rooms</p>
+              <p className="mt-1">Configure room counts for floors with guest accommodations to continue.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="flex justify-between pt-6 border-t">
