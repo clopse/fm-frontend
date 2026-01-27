@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { User2, Building, Menu } from 'lucide-react';
-import NotificationsDropdown from './NotificationsDropdown';
-import MessagesDropdown from './MessagesDropdown';
 import { userService } from '@/services/userService';
 
 interface HeaderBarProps {
@@ -21,8 +19,6 @@ export default function HeaderBar({
   onMenuToggle,
   showHamburger = false
 }: HeaderBarProps) {
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showMessages, setShowMessages] = useState(false);
   const [canSwitchHotels, setCanSwitchHotels] = useState(true);
 
   // Check user's hotel access permissions
@@ -45,24 +41,6 @@ export default function HeaderBar({
       setCanSwitchHotels(true);
     }
   }, []);
-
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      
-      if (showNotifications && !target.closest('[data-dropdown="notifications"]')) {
-        setShowNotifications(false);
-      }
-      
-      if (showMessages && !target.closest('[data-dropdown="messages"]')) {
-        setShowMessages(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showNotifications, showMessages]);
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 h-16 z-40">
@@ -103,21 +81,9 @@ export default function HeaderBar({
             )}
           </div>
 
-          {/* Right - Notifications, Messages, User */}
+          {/* Right - User Account */}
           <div className="flex items-center space-x-2">
             
-            {/* Notifications */}
-            <NotificationsDropdown 
-              isOpen={showNotifications}
-              onToggle={() => setShowNotifications(!showNotifications)}
-            />
-
-            {/* Messages */}
-            <MessagesDropdown 
-              isOpen={showMessages}
-              onToggle={() => setShowMessages(!showMessages)}
-            />
-
             {/* User Account */}
             <button
               onClick={onUserIconClick}
