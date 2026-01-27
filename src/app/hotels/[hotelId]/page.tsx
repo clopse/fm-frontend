@@ -412,7 +412,7 @@ const ItemsNeededSection = memo(function ItemsNeededSection({
           {incompleteTasks.length} tasks requiring attention ({potentialPoints} points)
         </p>
       </div>
-      <div className="p-6 max-h-96 overflow-y-auto">
+      <div className="p-6">
         {incompleteTasks && incompleteTasks.length > 0 ? (
           <div className="space-y-3">
             {incompleteTasks.map(task => (
