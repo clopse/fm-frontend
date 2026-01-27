@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { User2, Building, Menu } from 'lucide-react';
 import NotificationsDropdown from './NotificationsDropdown';
 import MessagesDropdown from './MessagesDropdown';
+import { userService } from '@/services/userService';
 
 interface HeaderBarProps {
   onHotelSelectClick?: () => void;
@@ -22,6 +23,28 @@ export default function HeaderBar({
 }: HeaderBarProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
+  const [canSwitchHotels, setCanSwitchHotels] = useState(true);
+
+  // Check user's hotel access permissions
+  useEffect(() => {
+    try {
+      const user = userService.getCurrentUser();
+      
+      if (user && user.hotel) {
+        // User can switch hotels if:
+        // 1. They have "All Hotels" access, OR
+        // 2. They have multiple hotels (comma-separated or array)
+        const hasAllHotelsAccess = user.hotel === 'All Hotels';
+        const hasMultipleHotels = user.hotel.includes(','); // If comma-separated list
+        
+        setCanSwitchHotels(hasAllHotelsAccess || hasMultipleHotels);
+      }
+    } catch (error) {
+      console.error('Error checking hotel permissions:', error);
+      // Default to allowing hotel switch if we can't determine
+      setCanSwitchHotels(true);
+    }
+  }, []);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -59,16 +82,25 @@ export default function HeaderBar({
             )}
           </div>
 
-          {/* Center - Hotel Selector */}
+          {/* Center - Hotel Selector / Display */}
           <div className="flex-1 flex justify-center">
-            <button 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 font-medium shadow-sm"
-              onClick={onHotelSelectClick}
-            >
-              <Building className="w-4 h-4" />
-              <span className="text-sm sm:text-base">{currentHotelName}</span>
-              <span className="text-blue-200">⌄</span>
-            </button>
+            {canSwitchHotels ? (
+              // Clickable hotel selector for users with multi-hotel access
+              <button 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 font-medium shadow-sm"
+                onClick={onHotelSelectClick}
+              >
+                <Building className="w-4 h-4" />
+                <span className="text-sm sm:text-base">{currentHotelName}</span>
+                <span className="text-blue-200">⌄</span>
+              </button>
+            ) : (
+              // Non-clickable hotel display for single-hotel users
+              <div className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 font-medium shadow-sm cursor-default">
+                <Building className="w-4 h-4" />
+                <span className="text-sm sm:text-base">{currentHotelName}</span>
+              </div>
+            )}
           </div>
 
           {/* Right - Notifications, Messages, User */}
