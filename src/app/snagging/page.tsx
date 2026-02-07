@@ -198,7 +198,7 @@ export default function SnaggingPage() {
               onClick={loadData}
               className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              🔄
+              
             </button>
           </div>
           
@@ -274,7 +274,7 @@ export default function SnaggingPage() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                🔒 Not Ready
+                Not Ready
               </button>
               <button
                 onClick={() => setQuickFilter('ready_to_snag')}
@@ -284,7 +284,7 @@ export default function SnaggingPage() {
                     : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                 }`}
               >
-                ✅ Ready to Snag
+                Ready to Snag
               </button>
               <button
                 onClick={() => setQuickFilter('snagged')}
@@ -294,7 +294,7 @@ export default function SnaggingPage() {
                     : 'bg-green-100 text-green-700 hover:bg-green-200'
                 }`}
               >
-                ✓ Snagged
+                Snagged
               </button>
               <button
                 onClick={() => setQuickFilter('closed_off')}
