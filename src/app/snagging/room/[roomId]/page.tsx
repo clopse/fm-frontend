@@ -1,13 +1,12 @@
 'use client';
 
 // src/app/hotels/hiltonth/snagging/room/[roomId]/page.tsx
-// Individual room snagging checklist page - SIMPLIFIED
+// SMART AUTO-STATUS VERSION
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { snaggingService } from '@/services/snaggingService';
 import { userService } from '@/services/userService';
-import checklistData from "@/data/snagging.json";
 import type {
   RoomDetailedStatus,
   ChecklistItem,
@@ -38,28 +37,29 @@ export default function RoomSnaggingPage() {
   }, [roomId]);
 
   const loadRoomData = async () => {
-  try {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const roomDetails = await snaggingService.getRoomDetails(roomId);
-    setRoomData(roomDetails);
+      const roomDetails = await snaggingService.getRoomDetails(roomId);
+      setRoomData(roomDetails);
 
-    // Load checklist from local JSON (editable in src/data/snagging.json)
-    setChecklist(checklistData as ChecklistItem[]);
+      // Load checklist from DATABASE API (not JSON) - filtered by room type
+      const checklistItems = await snaggingService.getChecklistItems(roomDetails.room.room_type);
+      setChecklist(checklistItems);
 
-    // Load existing responses into state
-    const responseMap = new Map<number, ChecklistResponse>();
-    roomDetails.checklist_responses.forEach((resp) => {
-      responseMap.set(resp.item_id, resp);
-    });
-    setResponses(responseMap);
-  } catch (err) {
-    console.error("Error loading room data:", err);
-    alert("Failed to load room data. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-};
+      // Load existing responses into state
+      const responseMap = new Map<number, ChecklistResponse>();
+      roomDetails.checklist_responses.forEach((resp) => {
+        responseMap.set(resp.item_id, resp);
+      });
+      setResponses(responseMap);
+    } catch (err) {
+      console.error("Error loading room data:", err);
+      alert("Failed to load room data. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Group checklist by category
   const groupedChecklist: ChecklistCategory[] = checklist.reduce((acc, item) => {
@@ -90,6 +90,33 @@ export default function RoomSnaggingPage() {
     setResponses(newResponses);
   };
 
+  // SMART AUTO-STATUS LOGIC
+  const determineAutoStatus = (): RoomStatus | null => {
+    const totalItems = checklist.length;
+    const answeredItems = responses.size;
+    const responseArray = Array.from(responses.values());
+    
+    const snagsFound = responseArray.filter(r => r.status === 'snag_found').length;
+    const checkLaterCount = responseArray.filter(r => r.status === 'check_later').length;
+    const okCount = responseArray.filter(r => r.status === 'ok').length;
+    
+    // Not complete yet - don't auto-change
+    if (answeredItems < totalItems) {
+      return null; // Keep current status
+    }
+    
+    // All items checked - determine status
+    if (snagsFound > 0) {
+      return 'repairs_needed'; // Has snags → needs repairs
+    } else if (checkLaterCount > 0) {
+      return 'snagged'; // Complete but some items pending
+    } else if (okCount === totalItems) {
+      return 'snagged'; // All OK → snagged complete
+    }
+    
+    return 'snagged'; // Default to snagged when complete
+  };
+
   const handleSaveProgress = async () => {
     if (!currentUser) {
       alert('Please log in to save progress');
@@ -99,9 +126,22 @@ export default function RoomSnaggingPage() {
     try {
       setSaving(true);
       const responsesToSave = Array.from(responses.values());
+      
+      // Save checklist responses
       await snaggingService.saveChecklistResponses(roomId, responsesToSave);
       
-      // Reload room data to get updated status
+      // SMART AUTO-STATUS UPDATE
+      const newStatus = determineAutoStatus();
+      if (newStatus && newStatus !== roomData?.room.current_status) {
+        await snaggingService.updateRoomStatus(roomId, {
+          status: newStatus,
+          user_name: currentUser.name,
+          user_id: currentUser.id,
+          notes: 'Auto-updated based on checklist completion'
+        });
+      }
+      
+      // Reload room data
       await loadRoomData();
       
       alert('Progress saved successfully!');
@@ -139,10 +179,25 @@ export default function RoomSnaggingPage() {
   // Calculate checklist progress
   const totalItems = checklist.length;
   const answeredItems = responses.size;
-  const snagsFound = Array.from(responses.values()).filter(r => r.status === 'snag_found').length;
-  const checkLaterCount = Array.from(responses.values()).filter(r => r.status === 'check_later').length;
+  const responseArray = Array.from(responses.values());
+  const snagsFound = responseArray.filter(r => r.status === 'snag_found').length;
+  const checkLaterCount = responseArray.filter(r => r.status === 'check_later').length;
   const progress = totalItems > 0 ? Math.round((answeredItems / totalItems) * 100) : 0;
   const isComplete = answeredItems === totalItems;
+
+  // Smart status message
+  const getStatusMessage = () => {
+    if (!isComplete) {
+      return `${totalItems - answeredItems} items remaining`;
+    }
+    if (snagsFound > 0) {
+      return `Snagged - ${snagsFound} defects found`;
+    }
+    if (checkLaterCount > 0) {
+      return `Snagged - ${checkLaterCount} items pending`;
+    }
+    return 'Snagged - All OK';
+  };
 
   if (loading) {
     return (
@@ -217,12 +272,16 @@ export default function RoomSnaggingPage() {
           {/* Progress Bar */}
           <div className="mb-2">
             <div className="flex justify-between text-xs text-gray-600 mb-1">
-              <span>Progress: {answeredItems}/{totalItems}</span>
+              <span>{getStatusMessage()}</span>
               <span>{progress}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div
-                className="bg-blue-600 h-2 rounded-full transition-all"
+                className={`h-2 rounded-full transition-all ${
+                  isComplete 
+                    ? (snagsFound > 0 ? 'bg-red-600' : 'bg-green-600')
+                    : 'bg-blue-600'
+                }`}
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -270,20 +329,20 @@ export default function RoomSnaggingPage() {
           </div>
         ))}
 
-        {/* Dalux Reminder - Shows when complete or snags found */}
-        {(isComplete || snagsFound > 0) && (
+        {/* Dalux Reminder - Shows when complete and snags found */}
+        {isComplete && snagsFound > 0 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
             <p className="text-sm text-yellow-800 font-medium mb-1">
-              📋 Remember to add {snagsFound > 0 ? `all ${snagsFound} snags` : 'any issues'} to Dalux!
+              📋 Remember to add all {snagsFound} snags to Dalux!
             </p>
             <p className="text-xs text-yellow-700">
-              Make sure defects are logged in the Dalux system for tracking.
+              Status will automatically update to "Repairs Needed" when saved.
             </p>
           </div>
         )}
       </div>
 
-      {/* Bottom Action Bar - Save Button Only */}
+      {/* Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
         <button
           onClick={handleSaveProgress}
@@ -294,7 +353,7 @@ export default function RoomSnaggingPage() {
         </button>
       </div>
 
-      {/* Status Update Modal */}
+      {/* Status Update Modal - LIMITED OPTIONS */}
       {showStatusModal && (
         <StatusModal
           currentStatus={roomData.room.current_status}
@@ -306,7 +365,7 @@ export default function RoomSnaggingPage() {
   );
 }
 
-// Checklist Item Card Component - 3 BUTTONS ONLY
+// Checklist Item Card Component
 function ChecklistItemCard({
   item,
   response,
@@ -339,7 +398,7 @@ function ChecklistItemCard({
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
       <p className="text-sm text-gray-900 mb-3 font-medium">{item.item_text}</p>
       
-      {/* Response Buttons - ONLY 3 BUTTONS */}
+      {/* Response Buttons - 3 BUTTONS */}
       <div className="grid grid-cols-3 gap-2 mb-2">
         {(['ok', 'snag_found', 'check_later'] as ChecklistResponseStatus[]).map(status => {
           const config = RESPONSE_STATUS_CONFIG[status];
@@ -387,7 +446,7 @@ function ChecklistItemCard({
   );
 }
 
-// Status Update Modal
+// Status Update Modal - SIMPLIFIED
 function StatusModal({
   currentStatus,
   onClose,
@@ -400,15 +459,33 @@ function StatusModal({
   const [selectedStatus, setSelectedStatus] = useState<RoomStatus | ''>('');
   const [notes, setNotes] = useState('');
 
-  const statusOptions: RoomStatus[] = [
-    'not_ready',
-    'ready_to_snag',
-    'snagged',
-    'repairs_needed',
-    'repairs_in_progress',
-    'repairs_finished',
-    'repairs_approved',
-    'closed_off'
+  // LIMITED MANUAL STATUS OPTIONS - most are auto-updated
+  const statusOptions: { value: RoomStatus; label: string; description: string }[] = [
+    { 
+      value: 'ready_to_snag', 
+      label: 'Ready to Snag', 
+      description: 'Room is ready for inspection' 
+    },
+    { 
+      value: 'repairs_in_progress', 
+      label: 'Repairs In Progress', 
+      description: 'Contractor is fixing defects' 
+    },
+    { 
+      value: 'repairs_finished', 
+      label: 'Repairs Finished', 
+      description: 'Ready for re-inspection' 
+    },
+    { 
+      value: 'repairs_approved', 
+      label: 'Repairs Approved', 
+      description: 'Defects fixed and verified' 
+    },
+    { 
+      value: 'closed_off', 
+      label: 'Closed Off', 
+      description: 'Room complete and handed over' 
+    },
   ];
 
   const handleSubmit = () => {
@@ -422,7 +499,10 @@ function StatusModal({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg max-w-md w-full p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Update Room Status</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Update Room Status</h2>
+        <p className="text-xs text-gray-500 mb-4">
+          Note: "Snagged" and "Repairs Needed" are set automatically based on checklist
+        </p>
         
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -434,15 +514,17 @@ function StatusModal({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select status...</option>
-            {statusOptions.map(status => {
-              const config = STATUS_CONFIG[status];
-              return (
-                <option key={status} value={status}>
-                  {config.label}
-                </option>
-              );
-            })}
+            {statusOptions.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
+          {selectedStatus && (
+            <p className="text-xs text-gray-500 mt-1">
+              {statusOptions.find(o => o.value === selectedStatus)?.description}
+            </p>
+          )}
         </div>
 
         <div className="mb-4">
