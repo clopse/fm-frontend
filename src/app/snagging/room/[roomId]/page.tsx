@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { snaggingService } from '@/services/snaggingService';
 import { userService } from '@/services/userService';
+import checklistData from "@/data/snagging.json";
 import type {
   RoomDetailedStatus,
   ChecklistItem,
@@ -38,30 +39,28 @@ export default function RoomSnaggingPage() {
   }, [roomId]);
 
   const loadRoomData = async () => {
-    try {
-      setLoading(true);
-      const [roomDetails, checklistItems] = await Promise.all([
-        snaggingService.getRoomDetails(roomId),
-        snaggingService.getChecklistItems(roomData?.room.room_type || undefined)
-      ]);
-      
-      setRoomData(roomDetails);
-      setChecklist(checklistItems);
-      
-      // Load existing responses into state
-      const responseMap = new Map<number, ChecklistResponse>();
-      roomDetails.checklist_responses.forEach(resp => {
-        responseMap.set(resp.item_id, resp);
-      });
-      setResponses(responseMap);
-      
-    } catch (err) {
-      console.error('Error loading room data:', err);
-      alert('Failed to load room data. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+
+    const roomDetails = await snaggingService.getRoomDetails(roomId);
+    setRoomData(roomDetails);
+
+    // Load checklist from local JSON (editable in src/data/snagging.json)
+    setChecklist(checklistData as ChecklistItem[]);
+
+    // Load existing responses into state
+    const responseMap = new Map<number, ChecklistResponse>();
+    roomDetails.checklist_responses.forEach((resp) => {
+      responseMap.set(resp.item_id, resp);
+    });
+    setResponses(responseMap);
+  } catch (err) {
+    console.error("Error loading room data:", err);
+    alert("Failed to load room data. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Group checklist by category
   const groupedChecklist: ChecklistCategory[] = checklist.reduce((acc, item) => {
