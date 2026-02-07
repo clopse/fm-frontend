@@ -1,0 +1,57 @@
+[
+  { "item_id": 1, "category": "Initial setup", "item_text": "Turn on dishwasher and start a cycle" },
+  { "item_id": 2, "category": "Initial setup", "item_text": "Set AC to maximum heat" },
+
+  { "item_id": 10, "category": "Entrance door", "item_text": "Key reader working correctly" },
+  { "item_id": 11, "category": "Entrance door", "item_text": "Door opens and closes smoothly" },
+  { "item_id": 12, "category": "Entrance door", "item_text": "Door fixtures secure and aligned" },
+  { "item_id": 13, "category": "Entrance door", "item_text": "Door frame in good condition" },
+  { "item_id": 14, "category": "Entrance door", "item_text": "Escape routes card correct for room and floor" },
+  { "item_id": 15, "category": "Entrance door", "item_text": "Intumescent strips present, continuous, free from paint" },
+  { "item_id": 16, "category": "Entrance door", "item_text": "Deadbolt opens and closes easily" },
+  { "item_id": 17, "category": "Entrance door", "item_text": "Plinth fitted neatly and secure" },
+
+  { "item_id": 20, "category": "Room", "item_text": "Bed secure, level, and in good condition" },
+  { "item_id": 21, "category": "Room", "item_text": "Lights all working" },
+  { "item_id": 22, "category": "Room", "item_text": "Flooring secure and free from damage" },
+  { "item_id": 23, "category": "Room", "item_text": "Paint finish acceptable" },
+
+  { "item_id": 30, "category": "TV bench", "item_text": "TV working and secure" },
+  { "item_id": 31, "category": "TV bench", "item_text": "All channels available" },
+  { "item_id": 32, "category": "TV bench", "item_text": "Phone working" },
+  { "item_id": 33, "category": "TV bench", "item_text": "Internet working" },
+
+  { "item_id": 40, "category": "Kitchen", "item_text": "Hob working" },
+  { "item_id": 41, "category": "Kitchen", "item_text": "Kitchen lights working" },
+  { "item_id": 42, "category": "Kitchen", "item_text": "Fridge operating correctly, baseboard sealed" },
+  { "item_id": 43, "category": "Kitchen", "item_text": "Oven working" },
+  { "item_id": 44, "category": "Kitchen", "item_text": "Dishwasher still running, no leaks visible" },
+  { "item_id": 45, "category": "Kitchen", "item_text": "Sink working and secure" },
+  { "item_id": 46, "category": "Kitchen", "item_text": "No obvious defects in this area" },
+
+  { "item_id": 50, "category": "Bathroom", "item_text": "Tiles free from cracks and damage" },
+  { "item_id": 51, "category": "Bathroom", "item_text": "Grouting complete and tidy" },
+  { "item_id": 52, "category": "Bathroom", "item_text": "Shower tray sealed, trapped, and draining properly" },
+  { "item_id": 53, "category": "Bathroom", "item_text": "Shower fixtures secure, sealed, and undamaged" },
+  { "item_id": 54, "category": "Bathroom", "item_text": "Silicone finishes neat and complete" },
+  { "item_id": 55, "category": "Bathroom", "item_text": "Plinth finish acceptable between floor plinth and tiles" },
+  { "item_id": 56, "category": "Bathroom", "item_text": "Extraction working (controller in roof)" },
+  { "item_id": 57, "category": "Bathroom", "item_text": "Shaver socket working" },
+  { "item_id": 58, "category": "Bathroom", "item_text": "TMV function test completed" },
+  { "item_id": 59, "category": "Bathroom", "item_text": "Hot and cold water working correctly" },
+  { "item_id": 60, "category": "Bathroom", "item_text": "Toilet flushes and refills correctly" },
+  { "item_id": 61, "category": "Bathroom", "item_text": "Shower hose not leaking" },
+
+  { "item_id": 70, "category": "Window area", "item_text": "Curtains and voiles connected properly" },
+  { "item_id": 71, "category": "Window area", "item_text": "Rails securely fixed to ceiling" },
+
+  { "item_id": 80, "category": "Electrical checks", "item_text": "All sockets tested and working (socket tester)" },
+  { "item_id": 81, "category": "Electrical checks", "item_text": "All lights working" },
+  { "item_id": 82, "category": "Electrical checks", "item_text": "AC confirmed to heat and cool" },
+  { "item_id": 83, "category": "Electrical checks", "item_text": "Set AC to 22°C and confirm temperature changes" },
+
+  { "item_id": 90, "category": "Final overall", "item_text": "Overall standard of finishes acceptable (paint, silicone, joints)" },
+  { "item_id": 91, "category": "Final overall", "item_text": "Access to AC unit is clear" },
+  { "item_id": 92, "category": "Final overall", "item_text": "Water isolation valves accessible" },
+  { "item_id": 93, "category": "Final overall", "item_text": "No obvious issues found in room" }
+]
