@@ -19,6 +19,7 @@ export default function SnaggingPage() {
   // Filters
   const [filters, setFilters] = useState<RoomFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [customFilter, setCustomFilter] = useState<'snags' | 'pending' | null>(null);
   
   // Stats
   const [stats, setStats] = useState<any>(null);
@@ -56,10 +57,22 @@ export default function SnaggingPage() {
     }
   };
 
-  // Filter rooms by search term
+  // Filter rooms by search term AND custom filters
   const filteredRooms = rooms.filter(room => {
-    if (!searchTerm) return true;
-    return room.room_number.toLowerCase().includes(searchTerm.toLowerCase());
+    // Search filter
+    if (searchTerm && !room.room_number.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
+    
+    // Custom filters (snags or pending)
+    if (customFilter === 'snags' && room.snags_count === 0) {
+      return false;
+    }
+    if (customFilter === 'pending' && room.check_later_count === 0) {
+      return false;
+    }
+    
+    return true;
   });
 
   // Get unique floors for filter dropdown
@@ -76,14 +89,16 @@ export default function SnaggingPage() {
   const clearFilters = () => {
     setFilters({});
     setSearchTerm('');
+    setCustomFilter(null);
   };
 
   // Quick filter buttons
   const setQuickFilter = (status: RoomStatus) => {
     setFilters({ status });
+    setCustomFilter(null); // Clear custom filter when using status filter
   };
 
-  const hasActiveFilters = filters.status || filters.room_type || filters.floor || searchTerm;
+  const hasActiveFilters = filters.status || filters.room_type || filters.floor || searchTerm || customFilter;
 
   // Multi-select handlers
   const toggleRoomSelection = (roomId: number) => {
@@ -159,7 +174,15 @@ export default function SnaggingPage() {
     r.current_status === 'closed_off'
   ).length;
 
-  const pendingItems = rooms.reduce((sum, r) => sum + r.check_later_count, 0);
+  const roomsWithSnags = rooms.filter(r => r.snags_count > 0).length;
+  const roomsWithPendingItems = rooms.filter(r => r.check_later_count > 0).length;
+
+  // Handle stat card clicks - filter by custom logic
+  const handleStatFilter = (filterType: 'snags' | 'pending') => {
+    setFilters({}); // Clear status filters
+    setSearchTerm('');
+    setCustomFilter(filterType);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -169,7 +192,7 @@ export default function SnaggingPage() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Room Snagging Tracker</h1>
-              <p className="text-sm text-gray-500">Home2 Suites Dublin</p>
+              <p className="text-sm text-gray-500">Home2 Suites Dublin Aloft</p>
             </div>
             <button
               onClick={loadData}
@@ -190,14 +213,28 @@ export default function SnaggingPage() {
                 <div className="text-xs text-gray-600">Released by Contractor</div>
                 <div className="text-lg font-bold text-green-600">{releasedRooms}</div>
               </div>
-              <div className="bg-purple-50 p-3 rounded-lg">
-                <div className="text-xs text-gray-600">Snagged (Complete)</div>
-                <div className="text-lg font-bold text-purple-600">{snaggedRooms}</div>
-              </div>
-              <div className="bg-yellow-50 p-3 rounded-lg">
-                <div className="text-xs text-gray-600">Pending Items</div>
-                <div className="text-lg font-bold text-yellow-600">{pendingItems}</div>
-              </div>
+              <button
+                onClick={() => handleStatFilter('snags')}
+                className={`bg-red-50 p-3 rounded-lg transition-colors cursor-pointer text-left ${
+                  customFilter === 'snags' 
+                    ? 'ring-2 ring-red-500 bg-red-100' 
+                    : 'hover:bg-red-100'
+                }`}
+              >
+                <div className="text-xs text-gray-600">Rooms with Snags 👆</div>
+                <div className="text-lg font-bold text-red-600">{roomsWithSnags}</div>
+              </button>
+              <button
+                onClick={() => handleStatFilter('pending')}
+                className={`bg-yellow-50 p-3 rounded-lg transition-colors cursor-pointer text-left ${
+                  customFilter === 'pending' 
+                    ? 'ring-2 ring-yellow-500 bg-yellow-100' 
+                    : 'hover:bg-yellow-100'
+                }`}
+              >
+                <div className="text-xs text-gray-600">Rooms with Pending Items 👆</div>
+                <div className="text-lg font-bold text-yellow-600">{roomsWithPendingItems}</div>
+              </button>
             </div>
           )}
 
@@ -258,16 +295,6 @@ export default function SnaggingPage() {
                 }`}
               >
                 ✓ Snagged
-              </button>
-              <button
-                onClick={() => setQuickFilter('repairs_needed')}
-                className={`px-3 py-2 text-sm rounded-lg whitespace-nowrap transition-colors ${
-                  filters.status === 'repairs_needed'
-                    ? 'bg-red-600 text-white'
-                    : 'bg-red-100 text-red-700 hover:bg-red-200'
-                }`}
-              >
-                🔧 Repairs Needed
               </button>
               <button
                 onClick={() => setQuickFilter('closed_off')}
@@ -355,6 +382,16 @@ export default function SnaggingPage() {
           <div className="text-sm text-gray-600">
             Showing {filteredRooms.length} of {rooms.length} rooms
             {selectedRooms.size > 0 && ` • ${selectedRooms.size} selected`}
+            {customFilter === 'snags' && (
+              <span className="ml-2 px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
+                🔴 Filtering: Rooms with Snags
+              </span>
+            )}
+            {customFilter === 'pending' && (
+              <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-medium">
+                ⏳ Filtering: Rooms with Pending Items
+              </span>
+            )}
           </div>
         </div>
       </div>
