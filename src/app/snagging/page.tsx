@@ -81,8 +81,7 @@ export default function SnaggingPage() {
   const hasActiveFilters = filters.status || filters.room_type || filters.floor || searchTerm;
 
   // Multi-select handlers
-  const toggleRoomSelection = (roomId: number, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent navigation
+  const toggleRoomSelection = (roomId: number) => {
     const newSelection = new Set(selectedRooms);
     if (newSelection.has(roomId)) {
       newSelection.delete(roomId);
@@ -325,7 +324,7 @@ export default function SnaggingPage() {
                 key={room.room_id}
                 room={room}
                 isSelected={selectedRooms.has(room.room_id)}
-                onToggleSelect={(e) => toggleRoomSelection(room.room_id, e)}
+                onToggleSelect={() => toggleRoomSelection(room.room_id)}
                 onClick={() => handleRoomClick(room.room_id)}
               />
             ))}
@@ -345,7 +344,7 @@ function RoomCard({
 }: { 
   room: RoomSummary; 
   isSelected: boolean;
-  onToggleSelect: (e: React.MouseEvent) => void;
+  onToggleSelect: () => void;
   onClick: () => void;
 }) {
   const statusConfig = room.current_status 
@@ -359,12 +358,11 @@ function RoomCard({
       }`}
     >
       {/* Checkbox - Top Right */}
-      <div className="absolute top-3 right-3">
+      <div className="absolute top-3 right-3" onClick={(e) => e.stopPropagation()}>
         <input
           type="checkbox"
           checked={isSelected}
           onChange={onToggleSelect}
-          onClick={onToggleSelect}
           className="w-5 h-5 text-blue-600 rounded cursor-pointer"
         />
       </div>
