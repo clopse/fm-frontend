@@ -230,8 +230,32 @@ export default function RoomSnaggingPage() {
     ? STATUS_CONFIG[roomData.room.current_status]
     : { label: 'Not Set', color: 'text-gray-600', bgColor: 'bg-gray-100' };
 
+  // CHECK IF ROOM IS LOCKED (not released by contractor)
+  const isRoomLocked = roomData.room.current_status === 'not_ready';
+
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
+      {/* ROOM LOCKED WARNING */}
+      {isRoomLocked && (
+        <div className="bg-red-50 border-b-2 border-red-200 px-4 py-4">
+          <div className="flex items-start gap-3">
+            <div className="text-red-600 text-2xl">🔒</div>
+            <div className="flex-1">
+              <h3 className="font-bold text-red-900 mb-1">Room Not Ready for Snagging</h3>
+              <p className="text-sm text-red-800 mb-2">
+                This room has not been released by the contractor yet. Checklist is locked until room status is changed to "Ready to Snag".
+              </p>
+              <button
+                onClick={() => setShowStatusModal(true)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
+              >
+                Change Status to Ready to Snag
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Fixed Header */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
         <div className="px-4 py-3">
@@ -322,6 +346,7 @@ export default function RoomSnaggingPage() {
                     item={item}
                     response={responses.get(item.item_id)}
                     onResponseChange={handleResponseChange}
+                    disabled={isRoomLocked}
                   />
                 ))}
               </div>
@@ -346,10 +371,10 @@ export default function RoomSnaggingPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
         <button
           onClick={handleSaveProgress}
-          disabled={saving}
+          disabled={saving || isRoomLocked}
           className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          {saving ? 'Saving...' : 'Save Progress'}
+          {saving ? 'Saving...' : isRoomLocked ? '🔒 Room Locked' : 'Save Progress'}
         </button>
       </div>
 
@@ -369,16 +394,19 @@ export default function RoomSnaggingPage() {
 function ChecklistItemCard({
   item,
   response,
-  onResponseChange
+  onResponseChange,
+  disabled = false
 }: {
   item: ChecklistItem;
   response?: ChecklistResponse;
   onResponseChange: (itemId: number, status: ChecklistResponseStatus, notes?: string) => void;
+  disabled?: boolean;
 }) {
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState(response?.notes || '');
 
   const handleStatusClick = (status: ChecklistResponseStatus) => {
+    if (disabled) return; // Don't allow changes when locked
     onResponseChange(item.item_id, status, notes);
     if (status === 'snag_found') {
       setShowNotes(true);
@@ -386,6 +414,7 @@ function ChecklistItemCard({
   };
 
   const handleNotesChange = (value: string) => {
+    if (disabled) return; // Don't allow changes when locked
     setNotes(value);
     if (response) {
       onResponseChange(item.item_id, response.status, value);
@@ -395,7 +424,9 @@ function ChecklistItemCard({
   const currentStatus = response?.status;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+    <div className={`bg-white rounded-lg shadow-sm border-2 p-4 ${
+      disabled ? 'border-gray-200 opacity-60' : 'border-gray-200'
+    }`}>
       <p className="text-sm text-gray-900 mb-3 font-medium">{item.item_text}</p>
       
       {/* Response Buttons - 3 BUTTONS */}
@@ -408,11 +439,12 @@ function ChecklistItemCard({
             <button
               key={status}
               onClick={() => handleStatusClick(status)}
+              disabled={disabled}
               className={`py-2 px-3 rounded-lg text-xs font-medium transition-all ${
                 isSelected
                   ? `${config.color} bg-opacity-20 border-2 border-current`
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
+              } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
             >
               <div>{config.icon}</div>
               <div className="mt-1">{config.label}</div>
@@ -427,14 +459,15 @@ function ChecklistItemCard({
           <textarea
             value={notes}
             onChange={(e) => handleNotesChange(e.target.value)}
-            placeholder="Add notes (especially for snags)..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={disabled}
+            placeholder={disabled ? "Room locked - cannot edit notes" : "Add notes (especially for snags)..."}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
             rows={2}
           />
         </div>
       )}
 
-      {!showNotes && !response?.notes && (
+      {!showNotes && !response?.notes && !disabled && (
         <button
           onClick={() => setShowNotes(true)}
           className="text-xs text-blue-600 hover:text-blue-700"
