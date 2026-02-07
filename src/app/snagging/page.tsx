@@ -164,7 +164,7 @@ export default function SnaggingPage() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Room Snagging Tracker</h1>
-              <p className="text-sm text-gray-500">Home2 Suites Dublin Aloft</p>
+              <p className="text-sm text-gray-500">Home2 Suites Dublin</p>
             </div>
             <button
               onClick={loadData}
