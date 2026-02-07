@@ -65,7 +65,7 @@ export default function SnaggingPage() {
   });
 
   const handleRoomClick = (roomId: number) => {
-    router.push(`/hotels/hiltonth/snagging/room/${roomId}`);
+    router.push(`/snagging/room/${roomId}`);
   };
 
   const clearFilters = () => {
