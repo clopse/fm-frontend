@@ -198,7 +198,7 @@ export default function SnaggingPage() {
               onClick={loadData}
               className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              🔄 Refresh
+              🔄
             </button>
           </div>
           
@@ -221,7 +221,7 @@ export default function SnaggingPage() {
                     : 'hover:bg-red-100'
                 }`}
               >
-                <div className="text-xs text-gray-600">Rooms with Snags 👆</div>
+                <div className="text-xs text-gray-600">Rooms with Snags</div>
                 <div className="text-lg font-bold text-red-600">{roomsWithSnags}</div>
               </button>
               <button
@@ -232,7 +232,7 @@ export default function SnaggingPage() {
                     : 'hover:bg-yellow-100'
                 }`}
               >
-                <div className="text-xs text-gray-600">Rooms with Pending Items 👆</div>
+                <div className="text-xs text-gray-600">Rooms with Pending Items</div>
                 <div className="text-lg font-bold text-yellow-600">{roomsWithPendingItems}</div>
               </button>
             </div>
@@ -304,7 +304,7 @@ export default function SnaggingPage() {
                     : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
                 }`}
               >
-                🎉 Closed Off
+                Closed Off
               </button>
             </div>
           </div>
