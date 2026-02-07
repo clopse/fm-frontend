@@ -1,7 +1,7 @@
 'use client';
 
 // src/app/snagging/page.tsx
-// Contractor Release Tracker - Main snagging page
+// Contractor Release Tracker - IMPROVED FILTERS
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -76,6 +76,11 @@ export default function SnaggingPage() {
   const clearFilters = () => {
     setFilters({});
     setSearchTerm('');
+  };
+
+  // Quick filter buttons
+  const setQuickFilter = (status: RoomStatus) => {
+    setFilters({ status });
   };
 
   const hasActiveFilters = filters.status || filters.room_type || filters.floor || searchTerm;
@@ -159,24 +164,24 @@ export default function SnaggingPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="px-4 py-4">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Room Snagging Tracker</h1>
-              <p className="text-sm text-gray-500">Home2 Suites Dublin</p>
+              <p className="text-sm text-gray-500">Home2 Suites Dublin Aloft</p>
             </div>
             <button
               onClick={loadData}
               className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Refresh
+              🔄 Refresh
             </button>
           </div>
           
-          {/* Stats Summary - CONTRACTOR FOCUSED */}
+          {/* Stats Summary */}
           {stats && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
               <div className="bg-blue-50 p-3 rounded-lg">
                 <div className="text-xs text-gray-600">Total Rooms</div>
                 <div className="text-lg font-bold text-blue-600">{stats.total_rooms}</div>
@@ -198,7 +203,7 @@ export default function SnaggingPage() {
 
           {/* Bulk Actions Bar */}
           {selectedRooms.size > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3 flex items-center justify-between">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center justify-between">
               <span className="text-sm font-medium text-blue-900">
                 {selectedRooms.size} room(s) selected
               </span>
@@ -220,6 +225,63 @@ export default function SnaggingPage() {
             </div>
           )}
 
+          {/* QUICK FILTER BUTTONS */}
+          <div className="mb-3">
+            <div className="text-xs font-medium text-gray-600 mb-2">Quick Filters:</div>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              <button
+                onClick={() => setQuickFilter('not_ready')}
+                className={`px-3 py-2 text-sm rounded-lg whitespace-nowrap transition-colors ${
+                  filters.status === 'not_ready'
+                    ? 'bg-gray-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                🔒 Not Ready
+              </button>
+              <button
+                onClick={() => setQuickFilter('ready_to_snag')}
+                className={`px-3 py-2 text-sm rounded-lg whitespace-nowrap transition-colors ${
+                  filters.status === 'ready_to_snag'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                }`}
+              >
+                ✅ Ready to Snag
+              </button>
+              <button
+                onClick={() => setQuickFilter('snagged')}
+                className={`px-3 py-2 text-sm rounded-lg whitespace-nowrap transition-colors ${
+                  filters.status === 'snagged'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-green-100 text-green-700 hover:bg-green-200'
+                }`}
+              >
+                ✓ Snagged
+              </button>
+              <button
+                onClick={() => setQuickFilter('repairs_needed')}
+                className={`px-3 py-2 text-sm rounded-lg whitespace-nowrap transition-colors ${
+                  filters.status === 'repairs_needed'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-red-100 text-red-700 hover:bg-red-200'
+                }`}
+              >
+                🔧 Repairs Needed
+              </button>
+              <button
+                onClick={() => setQuickFilter('closed_off')}
+                className={`px-3 py-2 text-sm rounded-lg whitespace-nowrap transition-colors ${
+                  filters.status === 'closed_off'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                }`}
+              >
+                🎉 Closed Off
+              </button>
+            </div>
+          </div>
+
           {/* Search Bar */}
           <div className="mb-3">
             <input
@@ -231,71 +293,66 @@ export default function SnaggingPage() {
             />
           </div>
 
-          {/* Filters Row */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {/* Status Filter */}
-            <select
-              value={filters.status || ''}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value as RoomStatus || undefined })}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[140px]"
-            >
-              <option value="">All Statuses</option>
-              <option value="not_ready">Not Ready</option>
-              <option value="ready_to_snag">Ready to Snag</option>
-              <option value="snagged">Snagged</option>
-              <option value="repairs_needed">Repairs Needed</option>
-              <option value="repairs_in_progress">In Progress</option>
-              <option value="repairs_finished">Repairs Done</option>
-              <option value="repairs_approved">Approved</option>
-              <option value="closed_off">Closed Off</option>
-            </select>
-
+          {/* ADVANCED FILTERS ROW */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-3 border-t pt-3">
             {/* Room Type Filter */}
-            <select
-              value={filters.room_type || ''}
-              onChange={(e) => setFilters({ ...filters, room_type: e.target.value as RoomType || undefined })}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-            >
-              <option value="">All Types</option>
-              <option value="studio">Studio</option>
-              <option value="one_bed">One Bed Suite</option>
-            </select>
+            <div className="flex-shrink-0">
+              <label className="block text-xs text-gray-600 mb-1">Room Type</label>
+              <select
+                value={filters.room_type || ''}
+                onChange={(e) => setFilters({ ...filters, room_type: e.target.value as RoomType || undefined })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[140px]"
+              >
+                <option value="">All Types</option>
+                <option value="studio">Studio</option>
+                <option value="one_bed">One Bed Suite</option>
+              </select>
+            </div>
 
             {/* Floor Filter */}
-            <select
-              value={filters.floor || ''}
-              onChange={(e) => setFilters({ ...filters, floor: e.target.value || undefined })}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-            >
-              <option value="">All Floors</option>
-              {floors.map(floor => (
-                <option key={floor} value={floor}>{floor}</option>
-              ))}
-            </select>
+            <div className="flex-shrink-0">
+              <label className="block text-xs text-gray-600 mb-1">Floor</label>
+              <select
+                value={filters.floor || ''}
+                onChange={(e) => setFilters({ ...filters, floor: e.target.value || undefined })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white min-w-[120px]"
+              >
+                <option value="">All Floors</option>
+                {floors.map(floor => (
+                  <option key={floor} value={floor}>{floor}</option>
+                ))}
+              </select>
+            </div>
 
             {/* Select All Button */}
             {filteredRooms.length > 0 && (
-              <button
-                onClick={selectAllFiltered}
-                className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg whitespace-nowrap"
-              >
-                ☑️ Select All ({filteredRooms.length})
-              </button>
+              <div className="flex-shrink-0">
+                <label className="block text-xs text-transparent mb-1">.</label>
+                <button
+                  onClick={selectAllFiltered}
+                  className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg whitespace-nowrap h-[38px]"
+                >
+                  ☑️ Select All ({filteredRooms.length})
+                </button>
+              </div>
             )}
 
-            {/* Clear Filters */}
+            {/* Clear All Filters */}
             {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg whitespace-nowrap"
-              >
-                Clear Filters
-              </button>
+              <div className="flex-shrink-0">
+                <label className="block text-xs text-transparent mb-1">.</label>
+                <button
+                  onClick={clearFilters}
+                  className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg whitespace-nowrap h-[38px]"
+                >
+                  ✕ Clear All Filters
+                </button>
+              </div>
             )}
           </div>
 
           {/* Results Count */}
-          <div className="text-sm text-gray-600 mt-2">
+          <div className="text-sm text-gray-600">
             Showing {filteredRooms.length} of {rooms.length} rooms
             {selectedRooms.size > 0 && ` • ${selectedRooms.size} selected`}
           </div>
@@ -392,7 +449,7 @@ function RoomCard({
           </p>
         )}
 
-        {/* Quick Stats - NO DALUX */}
+        {/* Quick Stats */}
         <div className="flex gap-3 text-xs flex-wrap">
           {room.snags_count > 0 && (
             <span className="flex items-center gap-1 text-red-600">
