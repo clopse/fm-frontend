@@ -1,7 +1,7 @@
 'use client';
 
 // src/app/hotels/hiltonth/snagging/room/[roomId]/page.tsx
-// Individual room snagging checklist page
+// Individual room snagging checklist page - SIMPLIFIED
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -29,7 +29,6 @@ export default function RoomSnaggingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
-  const [showDaluxModal, setShowDaluxModal] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   
   const currentUser = userService.getCurrentUser();
@@ -141,7 +140,9 @@ export default function RoomSnaggingPage() {
   const totalItems = checklist.length;
   const answeredItems = responses.size;
   const snagsFound = Array.from(responses.values()).filter(r => r.status === 'snag_found').length;
+  const checkLaterCount = Array.from(responses.values()).filter(r => r.status === 'check_later').length;
   const progress = totalItems > 0 ? Math.round((answeredItems / totalItems) * 100) : 0;
+  const isComplete = answeredItems === totalItems;
 
   if (loading) {
     return (
@@ -227,15 +228,15 @@ export default function RoomSnaggingPage() {
             </div>
           </div>
 
-          {/* Quick Stats */}
-          <div className="flex gap-3 text-xs">
-            <span className="text-red-600 font-medium">{snagsFound} snags found</span>
-            <span className="text-yellow-600 font-medium">
-              {roomData.dalux_entries.filter(e => !e.added_to_dalux).length} Dalux pending
-            </span>
-            <span className="text-purple-600 font-medium">
-              {roomData.check_later_items.filter(i => !i.resolved).length} check later
-            </span>
+          {/* Simplified Stats */}
+          <div className="text-sm text-gray-700">
+            <span className="font-medium">{answeredItems} tasks checked</span>
+            {snagsFound > 0 && (
+              <span className="text-red-600 font-medium"> • {snagsFound} snags reported</span>
+            )}
+            {checkLaterCount > 0 && (
+              <span className="text-purple-600 font-medium"> • {checkLaterCount} to check later</span>
+            )}
           </div>
         </div>
       </div>
@@ -249,13 +250,13 @@ export default function RoomSnaggingPage() {
               className="w-full flex items-center justify-between bg-white p-4 rounded-lg shadow-sm mb-2 hover:bg-gray-50"
             >
               <h2 className="text-lg font-bold text-gray-900">{category.category}</h2>
-              <span className="text-2xl">
-                {activeCategory === category.category ? '−' : '+'}
+              <span className="text-gray-500">
+                {activeCategory === category.category ? '▼' : '▶'}
               </span>
             </button>
-
+            
             {(activeCategory === category.category || activeCategory === null) && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {category.items.map(item => (
                   <ChecklistItemCard
                     key={item.item_id}
@@ -268,25 +269,29 @@ export default function RoomSnaggingPage() {
             )}
           </div>
         ))}
+
+        {/* Dalux Reminder - Shows when complete or snags found */}
+        {(isComplete || snagsFound > 0) && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-yellow-800 font-medium mb-1">
+              📋 Remember to add {snagsFound > 0 ? `all ${snagsFound} snags` : 'any issues'} to Dalux!
+            </p>
+            <p className="text-xs text-yellow-700">
+              Make sure defects are logged in the Dalux system for tracking.
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Floating Action Buttons */}
+      {/* Bottom Action Bar - Save Button Only */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg">
-        <div className="flex gap-2">
-          <button
-            onClick={handleSaveProgress}
-            disabled={saving || responses.size === 0}
-            className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-          >
-            {saving ? 'Saving...' : 'Save Progress'}
-          </button>
-          <button
-            onClick={() => setShowDaluxModal(true)}
-            className="px-4 py-3 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700"
-          >
-            Dalux
-          </button>
-        </div>
+        <button
+          onClick={handleSaveProgress}
+          disabled={saving}
+          className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+        >
+          {saving ? 'Saving...' : 'Save Progress'}
+        </button>
       </div>
 
       {/* Status Update Modal */}
@@ -297,23 +302,11 @@ export default function RoomSnaggingPage() {
           onUpdate={handleUpdateStatus}
         />
       )}
-
-      {/* Dalux Modal */}
-      {showDaluxModal && (
-        <DaluxModal
-          roomId={roomId}
-          daluxEntries={roomData.dalux_entries}
-          onClose={() => {
-            setShowDaluxModal(false);
-            loadRoomData();
-          }}
-        />
-      )}
     </div>
   );
 }
 
-// Checklist Item Card Component
+// Checklist Item Card Component - 3 BUTTONS ONLY
 function ChecklistItemCard({
   item,
   response,
@@ -346,9 +339,9 @@ function ChecklistItemCard({
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
       <p className="text-sm text-gray-900 mb-3 font-medium">{item.item_text}</p>
       
-      {/* Response Buttons */}
-      <div className="grid grid-cols-4 gap-2 mb-2">
-        {(['ok', 'snag_found', 'not_applicable', 'check_later'] as ChecklistResponseStatus[]).map(status => {
+      {/* Response Buttons - ONLY 3 BUTTONS */}
+      <div className="grid grid-cols-3 gap-2 mb-2">
+        {(['ok', 'snag_found', 'check_later'] as ChecklistResponseStatus[]).map(status => {
           const config = RESPONSE_STATUS_CONFIG[status];
           const isSelected = currentStatus === status;
           
@@ -479,49 +472,6 @@ function StatusModal({
             Update Status
           </button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// Dalux Modal (simplified - you can expand this)
-function DaluxModal({
-  roomId,
-  daluxEntries,
-  onClose
-}: {
-  roomId: number;
-  daluxEntries: any[];
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Dalux Tracking</h2>
-        
-        <div className="mb-4">
-          <p className="text-sm text-gray-600">
-            {daluxEntries.filter(e => !e.added_to_dalux).length} entries pending Dalux
-          </p>
-        </div>
-
-        <div className="space-y-2 max-h-96 overflow-y-auto mb-4">
-          {daluxEntries.map(entry => (
-            <div key={entry.dalux_id} className="p-3 border border-gray-200 rounded-lg">
-              <p className="text-sm">{entry.snag_description}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {entry.added_to_dalux ? '✓ Added to Dalux' : '⏱ Pending'}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <button
-          onClick={onClose}
-          className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          Close
-        </button>
       </div>
     </div>
   );
