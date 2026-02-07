@@ -459,12 +459,27 @@ function StatusModal({
   const [selectedStatus, setSelectedStatus] = useState<RoomStatus | ''>('');
   const [notes, setNotes] = useState('');
 
-  // LIMITED MANUAL STATUS OPTIONS - most are auto-updated
+  // MANUAL STATUS OPTIONS - All statuses available
   const statusOptions: { value: RoomStatus; label: string; description: string }[] = [
+    { 
+      value: 'not_ready', 
+      label: 'Not Ready', 
+      description: 'Awaiting contractor release' 
+    },
     { 
       value: 'ready_to_snag', 
       label: 'Ready to Snag', 
       description: 'Room is ready for inspection' 
+    },
+    { 
+      value: 'snagged', 
+      label: 'Snagged', 
+      description: 'Inspection complete (auto-set when checklist done)' 
+    },
+    { 
+      value: 'repairs_needed', 
+      label: 'Repairs Needed', 
+      description: 'Defects found, awaiting fixes (auto-set when snags found)' 
     },
     { 
       value: 'repairs_in_progress', 
@@ -501,7 +516,7 @@ function StatusModal({
       <div className="bg-white rounded-lg max-w-md w-full p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-2">Update Room Status</h2>
         <p className="text-xs text-gray-500 mb-4">
-          Note: "Snagged" and "Repairs Needed" are set automatically based on checklist
+          💡 Tip: "Snagged" and "Repairs Needed" are usually set automatically when you save the checklist
         </p>
         
         <div className="mb-4">
