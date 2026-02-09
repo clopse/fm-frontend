@@ -130,6 +130,25 @@ export default function RoomSnaggingPage() {
       // Save checklist responses
       await snaggingService.saveChecklistResponses(roomId, responsesToSave);
       
+      // CREATE CHECK-LATER ITEMS for any "check_later" responses
+      const existingCheckLaterItemIds = new Set(
+        (roomData?.check_later_items || [])
+          .filter((i) => !i.resolved)
+          .map((i) => i.item_id)
+      );
+
+      const checkLaterResponses = responsesToSave.filter((r) => r.status === 'check_later');
+
+      for (const r of checkLaterResponses) {
+        if (existingCheckLaterItemIds.has(r.item_id)) continue;
+
+        await snaggingService.createCheckLaterItem(roomId, {
+          item_id: r.item_id,
+          reason: (r.notes && r.notes.trim()) ? r.notes.trim() : 'Check later',
+          created_by: currentUser.name
+        });
+      }
+      
       // SMART AUTO-STATUS UPDATE
       const newStatus = determineAutoStatus();
       if (newStatus && newStatus !== roomData?.room.current_status) {
@@ -408,7 +427,7 @@ function ChecklistItemCard({
   const handleStatusClick = (status: ChecklistResponseStatus) => {
     if (disabled) return; // Don't allow changes when locked
     onResponseChange(item.item_id, status, notes);
-    if (status === 'snag_found') {
+    if (status === 'snag_found' || status === 'check_later') {
       setShowNotes(true);
     }
   };
