@@ -192,13 +192,13 @@ export default function SnaggingPage() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Room Snagging Tracker</h1>
-              <p className="text-sm text-gray-500">Home2 Suites Dublin</p>
+              <p className="text-sm text-gray-500">Home2 Suites Dublin Aloft</p>
             </div>
             <button
               onClick={loadData}
               className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              
+              🔄 Refresh
             </button>
           </div>
           
@@ -221,7 +221,7 @@ export default function SnaggingPage() {
                     : 'hover:bg-red-100'
                 }`}
               >
-                <div className="text-xs text-gray-600">Rooms with Snags</div>
+                <div className="text-xs text-gray-600">Rooms with Snags 👆</div>
                 <div className="text-lg font-bold text-red-600">{roomsWithSnags}</div>
               </button>
               <button
@@ -232,7 +232,7 @@ export default function SnaggingPage() {
                     : 'hover:bg-yellow-100'
                 }`}
               >
-                <div className="text-xs text-gray-600">Rooms with Pending Items</div>
+                <div className="text-xs text-gray-600">Rooms with Check Later 👆</div>
                 <div className="text-lg font-bold text-yellow-600">{roomsWithPendingItems}</div>
               </button>
             </div>
@@ -274,7 +274,7 @@ export default function SnaggingPage() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                Not Ready
+                🔒 Not Ready
               </button>
               <button
                 onClick={() => setQuickFilter('ready_to_snag')}
@@ -284,7 +284,7 @@ export default function SnaggingPage() {
                     : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                 }`}
               >
-                Ready to Snag
+                ✅ Ready to Snag
               </button>
               <button
                 onClick={() => setQuickFilter('snagged')}
@@ -294,7 +294,7 @@ export default function SnaggingPage() {
                     : 'bg-green-100 text-green-700 hover:bg-green-200'
                 }`}
               >
-                Snagged
+                ✓ Snagged
               </button>
               <button
                 onClick={() => setQuickFilter('closed_off')}
@@ -304,7 +304,7 @@ export default function SnaggingPage() {
                     : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
                 }`}
               >
-                Closed Off
+                🎉 Closed Off
               </button>
             </div>
           </div>
@@ -389,7 +389,7 @@ export default function SnaggingPage() {
             )}
             {customFilter === 'pending' && (
               <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-medium">
-                ⏳ Filtering: Rooms with Pending Items
+                ⏳ Filtering: Rooms with Check Later
               </span>
             )}
           </div>
@@ -495,7 +495,7 @@ function RoomCard({
           )}
           {room.check_later_count > 0 && (
             <span className="flex items-center gap-1 text-purple-600">
-              <span className="font-bold">{room.check_later_count}</span> pending
+              <span className="font-bold">{room.check_later_count}</span> check later
             </span>
           )}
           {room.snags_count === 0 && room.check_later_count === 0 && room.current_status !== 'not_ready' && (
