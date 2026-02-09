@@ -200,132 +200,17 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
         throw new Error(message);
       }
 
-      const result = await res.json();
+      // Success! Backend handled the upload - trust the process
+      console.log('✅ Bill uploaded successfully');
       
-      // DEBUG: Log the full response to see what we're getting
-      console.log('📦 Parse-and-save response:', JSON.stringify(result, null, 2));
-      
-      // Extract values for checking (handles different response structures)
-      const extractedConsumption = result.summary?.consumption_kwh || 
-                                    result.summary?.units_consumed || 
-                                    result.raw_data?.billSummary?.unitsConsumed ||
-                                    result.raw_data?.consumption_kwh ||
-                                    0;
-      const extractedCost = result.summary?.total_cost || 
-                            result.raw_data?.billSummary?.currentBillAmount ||
-                            result.raw_data?.total_cost ||
-                            0;
-      
-      console.log('📊 Extracted values:', { extractedConsumption, extractedCost });
-      
-      // Check for missing critical fields - CLIENT-SIDE CHECK
-      const hasMissingCriticalData = !extractedConsumption || 
-                                      Number(extractedConsumption) === 0 || 
-                                      !extractedCost || 
-                                      Number(extractedCost) === 0;
-      
-      // Check if needs verification (backend flag at root OR nested OR missing critical data)
-      const needsVerification = result.needs_verification || 
-                                result.raw_data?._needs_verification || 
-                                result.raw_data?.needs_verification ||
-                                hasMissingCriticalData;
-      
-      console.log('🔍 Verification check:', {
-        'result.needs_verification': result.needs_verification,
-        'result.raw_data?._needs_verification': result.raw_data?._needs_verification,
-        hasMissingCriticalData,
-        needsVerification,
-        showManualEntry
-      });
-      
-      if (result.status === 'success' && needsVerification && !showManualEntry) {
-        console.log('✅ Entering verification mode');
-        // Enter verification mode
-        setUploadStatus('needs_verification');
-        setVerificationMode(true);
-        
-        // Build list of missing fields
-        const missingFields: string[] = result.raw_data?._missing_fields || [];
-        if (!extractedConsumption || Number(extractedConsumption) === 0) {
-          missingFields.push('consumption');
-        }
-        if (!extractedCost || Number(extractedCost) === 0) {
-          missingFields.push('total_cost');
-        }
-        
-        // Use s3_path from response (backend returns this, not s3_key)
-        const s3Key = result.s3_path || result.s3_key || '';
-        
-        // Try to fetch the actual bill data from S3 if not in response
-        let billData = result.raw_data || {};
-        let summaryData = result.summary || {};
-        
-        if (s3Key && (!result.raw_data || Object.keys(result.raw_data).length === 0)) {
-          try {
-            console.log('📥 Fetching bill data from S3:', s3Key);
-            const billRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/bill/${encodeURIComponent(s3Key)}`);
-            if (billRes.ok) {
-              const fetchedBill = await billRes.json();
-              console.log('📄 Fetched bill data:', fetchedBill);
-              billData = fetchedBill.raw_data || fetchedBill;
-              summaryData = fetchedBill.summary || {};
-            }
-          } catch (fetchErr) {
-            console.warn('Could not fetch bill data:', fetchErr);
-          }
-        }
-        
-        setVerificationData({
-          s3_key: s3Key,
-          raw_data: billData,
-          summary: summaryData,
-          missing_fields: [...new Set(missingFields)], // Remove duplicates
-          partial_data: result.partial_data
-        });
-        
-        // Pre-fill verification form with whatever data we have
-        const prefilledConsumption = summaryData?.consumption_kwh || 
-                                      summaryData?.units_consumed ||
-                                      billData?.billSummary?.unitsConsumed ||
-                                      billData?.consumption_kwh ||
-                                      extractedConsumption || '';
-        const prefilledCost = summaryData?.total_cost || 
-                              billData?.billSummary?.currentBillAmount ||
-                              billData?.total_cost ||
-                              extractedCost || '';
-        
-        setVerificationFormData({
-          supplier: summaryData?.supplier || billData?.supplierInfo?.name || billData?.supplier || '',
-          invoice_number: summaryData?.invoice_number || billData?.billSummary?.invoiceNumber || billData?.invoice_number || '',
-          total_cost: prefilledCost,
-          consumption: prefilledConsumption,
-          meter_number: summaryData?.meter_number || billData?.accountInfo?.meterNumber || billData?.meter_number || '',
-          gprn: summaryData?.gprn || billData?.accountInfo?.gprn || billData?.gprn || '',
-          billing_start: summaryData?.billing_period_start || billData?.billSummary?.billingPeriodStartDate || billData?.billing_period_start || '',
-          billing_end: summaryData?.billing_period_end || billData?.billSummary?.billingPeriodEndDate || billData?.billing_period_end || ''
-        });
-        
-        const missingFieldsList = missingFields.length > 0 
-          ? ` Missing: ${missingFields.join(', ')}.` 
-          : '';
-        const verificationReason = result.verification_reason 
-          ? ` (${result.verification_reason})` 
-          : '';
-        setStatus(`⚠️ Bill uploaded but needs verification${verificationReason}.${missingFieldsList} Please check and complete the data below.`);
-        return; // Keep modal open
-      }
-      
-      // Regular success flow
-      console.log('⏭️ Skipping verification, going to success');
-      setExtractedData(result);
       setUploadStatus('success');
-      setStatus(showManualEntry ? 'Manual entry saved successfully!' : 'Upload successful!');
+      setStatus(showManualEntry ? 'Manual entry saved successfully!' : 'Bill uploaded successfully!');
 
-      // Close after showing success
+      // Refresh parent and close modal
       setTimeout(() => {
         onSave?.();
-        onClose();
-      }, 2000);
+        setTimeout(onClose, 500);
+      }, 300);
       
     } catch (err: any) {
       console.error('Upload error:', err);
@@ -747,13 +632,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                   <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="font-semibold text-emerald-900">Upload successful!</p>
-                    {extractedData && (
-                      <div className="mt-2 text-sm text-emerald-800">
-                        <p>Bill Type: {extractedData.utility_type || 'Unknown'}</p>
-                        <p>Date: {extractedData.bill_date || billDate}</p>
-                        <p className="text-xs text-emerald-600 mt-1">Processing complete • Dashboard will refresh</p>
-                      </div>
-                    )}
+                    <p className="text-xs text-emerald-600 mt-1">Bill uploaded • Dashboard will refresh</p>
                   </div>
                 </div>
               )}
