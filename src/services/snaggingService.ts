@@ -122,6 +122,26 @@ class SnaggingService {
     if (!res.ok) throw new Error('Failed to resolve check-later item');
     return res.json();
   }
+
+  // Export to Excel
+  async exportToExcel(): Promise<void> {
+    const res = await fetch(`${this.API_URL}/api/snagging/reports/excel`, {
+      credentials: 'include'
+    });
+
+    if (!res.ok) throw new Error('Failed to export Excel report');
+
+    // Download the file
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Snagging_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }
 }
 
 export const snaggingService = new SnaggingService();
