@@ -258,7 +258,7 @@ export default function SnaggingPage() {
                     : 'hover:bg-yellow-100'
                 }`}
               >
-                <div className="text-xs text-gray-600">Check Later Items</div>
+                <div className="text-xs text-gray-600">Rooms to Check Later</div>
                 <div className="text-lg font-bold text-yellow-600">{roomsWithPendingItems}</div>
               </button>
             </div>
