@@ -472,7 +472,6 @@ function ChecklistItemCard({
                   ? `${config.color} bg-opacity-20 border-2 border-current`
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-              }`}
             >
               <div>{config.icon}</div>
               <div className="mt-1">{config.label}</div>
