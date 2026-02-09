@@ -28,6 +28,9 @@ export default function SnaggingPage() {
   const [selectedRooms, setSelectedRooms] = useState<Set<number>>(new Set());
   const [bulkActionLoading, setBulkActionLoading] = useState(false);
   
+  // Export loading
+  const [exportLoading, setExportLoading] = useState(false);
+  
   // Get current user
   const currentUser = userService.getCurrentUser();
 
@@ -160,6 +163,19 @@ export default function SnaggingPage() {
     }
   };
 
+  // Export to Excel
+  const handleExportExcel = async () => {
+    try {
+      setExportLoading(true);
+      await snaggingService.exportToExcel();
+    } catch (err) {
+      console.error('Error exporting to Excel:', err);
+      alert('Failed to export data. Please try again.');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   // Calculate smart stats
   const releasedRooms = rooms.filter(r => 
     r.current_status && r.current_status !== 'not_ready'
@@ -194,12 +210,22 @@ export default function SnaggingPage() {
               <h1 className="text-2xl font-bold text-gray-900">Room Snagging Tracker</h1>
               <p className="text-sm text-gray-500">Home2 Suites Dublin Aloft</p>
             </div>
-            <button
-              onClick={loadData}
-              className="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              🔄 Refresh
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={loadData}
+                disabled={loading}
+                className="px-4 py-2 text-sm bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? 'Loading...' : 'Refresh'}
+              </button>
+              <button
+                onClick={handleExportExcel}
+                disabled={exportLoading}
+                className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {exportLoading ? 'Exporting...' : 'Export Excel'}
+              </button>
+            </div>
           </div>
           
           {/* Stats Summary */}
@@ -221,7 +247,7 @@ export default function SnaggingPage() {
                     : 'hover:bg-red-100'
                 }`}
               >
-                <div className="text-xs text-gray-600">Rooms with Snags 👆</div>
+                <div className="text-xs text-gray-600">Rooms with Snags</div>
                 <div className="text-lg font-bold text-red-600">{roomsWithSnags}</div>
               </button>
               <button
@@ -232,39 +258,15 @@ export default function SnaggingPage() {
                     : 'hover:bg-yellow-100'
                 }`}
               >
-                <div className="text-xs text-gray-600">Rooms with Check Later 👆</div>
+                <div className="text-xs text-gray-600">Check Later Items</div>
                 <div className="text-lg font-bold text-yellow-600">{roomsWithPendingItems}</div>
               </button>
             </div>
           )}
 
-          {/* Bulk Actions Bar */}
-          {selectedRooms.size > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center justify-between">
-              <span className="text-sm font-medium text-blue-900">
-                {selectedRooms.size} room(s) selected
-              </span>
-              <div className="flex gap-2">
-                <button
-                  onClick={bulkMarkReadyToSnag}
-                  disabled={bulkActionLoading}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-                >
-                  {bulkActionLoading ? 'Updating...' : '✓ Mark Ready to Snag'}
-                </button>
-                <button
-                  onClick={clearSelection}
-                  className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Clear Selection
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* QUICK FILTER BUTTONS */}
+          {/* Quick Status Filters */}
           <div className="mb-3">
-            <div className="text-xs font-medium text-gray-600 mb-2">Quick Filters:</div>
+            <div className="text-xs text-gray-600 mb-2">Quick Filters:</div>
             <div className="flex gap-2 overflow-x-auto pb-2">
               <button
                 onClick={() => setQuickFilter('not_ready')}
@@ -274,7 +276,7 @@ export default function SnaggingPage() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                🔒 Not Ready
+                Not Ready
               </button>
               <button
                 onClick={() => setQuickFilter('ready_to_snag')}
@@ -284,27 +286,47 @@ export default function SnaggingPage() {
                     : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                 }`}
               >
-                ✅ Ready to Snag
+                Ready to Snag
               </button>
               <button
                 onClick={() => setQuickFilter('snagged')}
                 className={`px-3 py-2 text-sm rounded-lg whitespace-nowrap transition-colors ${
                   filters.status === 'snagged'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-green-100 text-green-700 hover:bg-green-200'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
                 }`}
               >
-                ✓ Snagged
+                Snagged
+              </button>
+              <button
+                onClick={() => setQuickFilter('repairs_needed')}
+                className={`px-3 py-2 text-sm rounded-lg whitespace-nowrap transition-colors ${
+                  filters.status === 'repairs_needed'
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                }`}
+              >
+                Repairs Needed
+              </button>
+              <button
+                onClick={() => setQuickFilter('repairs_in_progress')}
+                className={`px-3 py-2 text-sm rounded-lg whitespace-nowrap transition-colors ${
+                  filters.status === 'repairs_in_progress'
+                    ? 'bg-yellow-600 text-white'
+                    : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                }`}
+              >
+                Repairs In Progress
               </button>
               <button
                 onClick={() => setQuickFilter('closed_off')}
                 className={`px-3 py-2 text-sm rounded-lg whitespace-nowrap transition-colors ${
                   filters.status === 'closed_off'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-green-100 text-green-700 hover:bg-green-200'
                 }`}
               >
-                🎉 Closed Off
+                Closed Off
               </button>
             </div>
           </div>
@@ -359,7 +381,7 @@ export default function SnaggingPage() {
                   onClick={selectAllFiltered}
                   className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg whitespace-nowrap h-[38px]"
                 >
-                  ☑️ Select All ({filteredRooms.length})
+                  Select All ({filteredRooms.length})
                 </button>
               </div>
             )}
@@ -372,7 +394,7 @@ export default function SnaggingPage() {
                   onClick={clearFilters}
                   className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg whitespace-nowrap h-[38px]"
                 >
-                  ✕ Clear All Filters
+                  Clear All Filters
                 </button>
               </div>
             )}
@@ -384,12 +406,12 @@ export default function SnaggingPage() {
             {selectedRooms.size > 0 && ` • ${selectedRooms.size} selected`}
             {customFilter === 'snags' && (
               <span className="ml-2 px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
-                🔴 Filtering: Rooms with Snags
+                Filtering: Rooms with Snags
               </span>
             )}
             {customFilter === 'pending' && (
               <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-medium">
-                ⏳ Filtering: Rooms with Check Later
+                Filtering: Rooms with Check Later
               </span>
             )}
           </div>
@@ -494,12 +516,12 @@ function RoomCard({
             </span>
           )}
           {room.check_later_count > 0 && (
-            <span className="flex items-center gap-1 text-purple-600">
+            <span className="flex items-center gap-1 text-yellow-600">
               <span className="font-bold">{room.check_later_count}</span> check later
             </span>
           )}
           {room.snags_count === 0 && room.check_later_count === 0 && room.current_status !== 'not_ready' && (
-            <span className="text-green-600 font-medium">✓ Clear</span>
+            <span className="text-green-600 font-medium">Clear</span>
           )}
           {room.current_status === 'not_ready' && (
             <span className="text-gray-400">Awaiting release</span>
