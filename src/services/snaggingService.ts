@@ -54,7 +54,7 @@ class SnaggingService {
 
   // Save checklist responses
   async saveChecklistResponses(roomId: number, responses: ChecklistResponse[]): Promise<any> {
-    const res = await fetch(`${this.API_URL}/api/snagging/rooms/${roomId}/checklist`, {
+    const res = await fetch(`${this.API_URL}/api/snagging/rooms/${roomId}/checklist-responses`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(responses),
@@ -76,7 +76,7 @@ class SnaggingService {
     }
   ): Promise<any> {
     const res = await fetch(`${this.API_URL}/api/snagging/rooms/${roomId}/status`, {
-      method: 'PUT',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
       credentials: 'include'
@@ -125,7 +125,7 @@ class SnaggingService {
 
   // Export to Excel
   async exportToExcel(): Promise<void> {
-    const res = await fetch(`${this.API_URL}/api/snagging/reports/excel`, {
+    const res = await fetch(`${this.API_URL}/api/snagging/export/excel`, {
       credentials: 'include'
     });
 
