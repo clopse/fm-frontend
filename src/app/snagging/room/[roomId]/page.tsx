@@ -140,7 +140,6 @@ export default function RoomSnaggingPage() {
       const checkLaterResponses = responsesToSave.filter((r) => r.status === 'check_later');
 
       // Create check-later items (with error handling per item)
-      let checkLaterCreated = 0;
       for (const r of checkLaterResponses) {
         if (existingCheckLaterItemIds.has(r.item_id)) continue;
 
@@ -150,7 +149,6 @@ export default function RoomSnaggingPage() {
             reason: (r.notes && r.notes.trim()) ? r.notes.trim() : 'Check later',
             created_by: currentUser.name
           });
-          checkLaterCreated++;
         } catch (itemErr) {
           console.error(`Failed to create check-later item for item_id ${r.item_id}:`, itemErr);
           // Continue with other items even if one fails
@@ -241,10 +239,10 @@ export default function RoomSnaggingPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600">Room not found</p>
+          <p className="text-gray-600">Room not found</p>
           <button
             onClick={() => router.back()}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Go Back
           </button>
@@ -253,119 +251,111 @@ export default function RoomSnaggingPage() {
     );
   }
 
-  const statusConfig = roomData.room.current_status 
-    ? STATUS_CONFIG[roomData.room.current_status]
-    : { label: 'Not Set', color: 'text-gray-600', bgColor: 'bg-gray-100' };
-
-  // CHECK IF ROOM IS LOCKED (not released by contractor)
-  const isRoomLocked = roomData.room.current_status === 'not_ready';
+  const currentStatus = roomData.room.current_status || 'not_ready';
+  const statusConfig = STATUS_CONFIG[currentStatus] || STATUS_CONFIG.not_ready;
+  
+  // Room is locked if closed_off
+  const isRoomLocked = currentStatus === 'closed_off';
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
-      {/* ROOM LOCKED WARNING */}
-      {isRoomLocked && (
-        <div className="bg-red-50 border-b-2 border-red-200 px-4 py-4">
-          <div className="flex items-start gap-3">
-            <div className="text-red-600 text-2xl">🔒</div>
-            <div className="flex-1">
-              <h3 className="font-bold text-red-900 mb-1">Room Not Ready for Snagging</h3>
-              <p className="text-sm text-red-800 mb-2">
-                This room has not been released by the contractor yet. Checklist is locked until room status is changed to "Ready to Snag".
-              </p>
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
+        <div className="px-4 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
               <button
-                onClick={() => setShowStatusModal(true)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700"
+                onClick={() => router.back()}
+                className="text-sm text-blue-600 hover:text-blue-700 mb-2"
               >
-                Change Status to Ready to Snag
+                ← Back to Rooms
               </button>
+              <h1 className="text-2xl font-bold text-gray-900">Room {roomData.room.room_number}</h1>
+              <p className="text-sm text-gray-500">
+                Floor {roomData.room.floor} • {roomData.room.room_type === 'studio' ? 'Studio' : 'One Bed Suite'}
+              </p>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Fixed Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
-            <button
-              onClick={() => router.back()}
-              className="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              ← Back to Rooms
-            </button>
-            <button
-              onClick={loadRoomData}
-              className="text-gray-600 hover:text-gray-700"
-            >
-              🔄 Refresh
-            </button>
-          </div>
-          
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
-            Room {roomData.room.room_number}
-          </h1>
-          <p className="text-sm text-gray-500 mb-2">
-            Floor {roomData.room.floor} • {roomData.room.room_type === 'studio' ? 'Studio' : 'One Bed Suite'}
-          </p>
-          
-          <div className="flex items-center gap-2 mb-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color}`}>
-              {statusConfig.label}
-            </span>
             <button
               onClick={() => setShowStatusModal(true)}
-              className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-full"
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               Change Status
             </button>
           </div>
 
-          {/* Progress Bar */}
-          <div className="mb-2">
-            <div className="flex justify-between text-xs text-gray-600 mb-1">
-              <span>{getStatusMessage()}</span>
-              <span>{progress}%</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all ${
-                  isComplete 
-                    ? (snagsFound > 0 ? 'bg-red-600' : 'bg-green-600')
-                    : 'bg-blue-600'
-                }`}
-                style={{ width: `${progress}%` }}
-              />
+          {/* Current Status */}
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <div className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color}`}>
+                {statusConfig.label}
+              </div>
+              {roomData.room.last_updated_by && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Updated by {roomData.room.last_updated_by}
+                  {roomData.room.last_status_update && ` • ${new Date(roomData.room.last_status_update).toLocaleDateString()}`}
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Simplified Stats */}
-          <div className="text-sm text-gray-700">
-            <span className="font-medium">{answeredItems} tasks checked</span>
-            {snagsFound > 0 && (
-              <span className="text-red-600 font-medium"> • {snagsFound} snags reported</span>
-            )}
-            {checkLaterCount > 0 && (
-              <span className="text-purple-600 font-medium"> • {checkLaterCount} to check later</span>
-            )}
+          {/* Progress Bar */}
+          <div className="mb-3">
+            <div className="flex items-center justify-between text-sm mb-1">
+              <span className="text-gray-600">Checklist Progress</span>
+              <span className="font-medium text-gray-900">{progress}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">{getStatusMessage()}</p>
           </div>
+
+          {/* Summary Stats */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-gray-50 p-2 rounded-lg text-center">
+              <div className="text-xs text-gray-600">Checked</div>
+              <div className="text-lg font-bold text-gray-900">{answeredItems}/{totalItems}</div>
+            </div>
+            <div className="bg-red-50 p-2 rounded-lg text-center">
+              <div className="text-xs text-gray-600">Snags</div>
+              <div className="text-lg font-bold text-red-600">{snagsFound}</div>
+            </div>
+            <div className="bg-yellow-50 p-2 rounded-lg text-center">
+              <div className="text-xs text-gray-600">Check Later</div>
+              <div className="text-lg font-bold text-yellow-600">{checkLaterCount}</div>
+            </div>
+          </div>
+
+          {isRoomLocked && (
+            <div className="mt-3 bg-purple-50 border border-purple-200 rounded-lg p-3">
+              <p className="text-sm text-purple-800 font-medium">
+                This room is locked (Closed Off). No changes can be made.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Checklist */}
       <div className="p-4">
         {groupedChecklist.map((category, idx) => (
-          <div key={category.category} className="mb-6">
-            <button
+          <div key={idx} className="mb-6">
+            <div 
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg mb-3 cursor-pointer hover:bg-blue-700 transition-colors"
               onClick={() => setActiveCategory(activeCategory === category.category ? null : category.category)}
-              className="w-full flex items-center justify-between bg-white p-4 rounded-lg shadow-sm mb-2 hover:bg-gray-50"
             >
-              <h2 className="text-lg font-bold text-gray-900">{category.category}</h2>
-              <span className="text-gray-500">
-                {activeCategory === category.category ? '▼' : '▶'}
-              </span>
-            </button>
-            
-            {(activeCategory === category.category || activeCategory === null) && (
+              <div className="flex items-center justify-between">
+                <h2 className="font-bold text-lg">{category.category}</h2>
+                <span className="text-sm">
+                  {category.items.filter(item => responses.has(item.item_id)).length}/{category.items.length}
+                </span>
+              </div>
+            </div>
+
+            {(activeCategory === null || activeCategory === category.category) && (
               <div className="space-y-3">
                 {category.items.map(item => (
                   <ChecklistItemCard
@@ -380,18 +370,6 @@ export default function RoomSnaggingPage() {
             )}
           </div>
         ))}
-
-        {/* Dalux Reminder - Shows when complete and snags found */}
-        {isComplete && snagsFound > 0 && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-yellow-800 font-medium mb-1">
-              📋 Remember to add all {snagsFound} snags to Dalux!
-            </p>
-            <p className="text-xs text-yellow-700">
-              Status will automatically update to "Repairs Needed" when saved.
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Bottom Action Bar */}
@@ -401,7 +379,7 @@ export default function RoomSnaggingPage() {
           disabled={saving || isRoomLocked}
           className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          {saving ? 'Saving...' : isRoomLocked ? '🔒 Room Locked' : 'Save Progress'}
+          {saving ? 'Saving...' : isRoomLocked ? 'Room Locked' : 'Save Progress'}
         </button>
       </div>
 
@@ -433,7 +411,7 @@ function ChecklistItemCard({
   const [notes, setNotes] = useState(response?.notes || '');
 
   const handleStatusClick = (status: ChecklistResponseStatus) => {
-    if (disabled) return; // Don't allow changes when locked
+    if (disabled) return;
     onResponseChange(item.item_id, status, notes);
     if (status === 'snag_found' || status === 'check_later') {
       setShowNotes(true);
@@ -441,7 +419,7 @@ function ChecklistItemCard({
   };
 
   const handleNotesChange = (value: string) => {
-    if (disabled) return; // Don't allow changes when locked
+    if (disabled) return;
     setNotes(value);
     if (response) {
       onResponseChange(item.item_id, response.status, value);
@@ -473,7 +451,6 @@ function ChecklistItemCard({
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
             >
-              <div>{config.icon}</div>
               <div className="mt-1">{config.label}</div>
             </button>
           );
@@ -576,7 +553,7 @@ function StatusModal({
       <div className="bg-white rounded-lg max-w-md w-full p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-2">Update Room Status</h2>
         <p className="text-xs text-gray-500 mb-4">
-          💡 Tip: "Snagged" and "Repairs Needed" are usually set automatically when you save the checklist
+          Tip: "Snagged" and "Repairs Needed" are usually set automatically when you save the checklist
         </p>
         
         <div className="mb-4">
