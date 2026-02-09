@@ -139,14 +139,22 @@ export default function RoomSnaggingPage() {
 
       const checkLaterResponses = responsesToSave.filter((r) => r.status === 'check_later');
 
+      // Create check-later items (with error handling per item)
+      let checkLaterCreated = 0;
       for (const r of checkLaterResponses) {
         if (existingCheckLaterItemIds.has(r.item_id)) continue;
 
-        await snaggingService.createCheckLaterItem(roomId, {
-          item_id: r.item_id,
-          reason: (r.notes && r.notes.trim()) ? r.notes.trim() : 'Check later',
-          created_by: currentUser.name
-        });
+        try {
+          await snaggingService.createCheckLaterItem(roomId, {
+            item_id: r.item_id,
+            reason: (r.notes && r.notes.trim()) ? r.notes.trim() : 'Check later',
+            created_by: currentUser.name
+          });
+          checkLaterCreated++;
+        } catch (itemErr) {
+          console.error(`Failed to create check-later item for item_id ${r.item_id}:`, itemErr);
+          // Continue with other items even if one fails
+        }
       }
       
       // SMART AUTO-STATUS UPDATE
@@ -464,6 +472,7 @@ function ChecklistItemCard({
                   ? `${config.color} bg-opacity-20 border-2 border-current`
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               } ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+              }`}
             >
               <div>{config.icon}</div>
               <div className="mt-1">{config.label}</div>
