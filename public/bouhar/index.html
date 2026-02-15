@@ -407,10 +407,9 @@
   }
   .trusted-logo {
     display: flex; flex-direction: column; align-items: center; gap: 10px;
-    opacity: 0.55; transition: opacity 0.3s, filter 0.3s;
-    filter: grayscale(100%) brightness(1.8);
+    opacity: 0.85; transition: opacity 0.3s;
   }
-  .trusted-logo:hover { opacity: 1; filter: grayscale(0%) brightness(1); }
+  .trusted-logo:hover { opacity: 1; }
   .trusted-logo .logo-wrap {
     width: 150px; height: 60px;
     display: flex; align-items: center; justify-content: center;
@@ -1029,7 +1028,7 @@
     <h2>Ready for a Cleaner Space?</h2>
     <p>Get in touch with Liliana and the team today for a free, no-obligation quote. Experience the Bouhar Ltd difference — over 15 years of trusted, professional cleaning across Dublin.</p>
     <div class="cta-buttons">
-      <a href="mailto:liliana@bouhar.ie" class="btn-quote" aria-label="Email Liliana at Bouhar Ltd for a free quote">Email Liliana</a>
+      <a href="/cdn-cgi/l/email-protection#bbd7d2d7d2dad5dafbd9d4ced3dac995d2de" class="btn-quote" aria-label="Email Liliana at Bouhar Ltd for a free quote">Email Liliana</a>
       <a href="tel:+353894180534" class="btn-outline" aria-label="Call Bouhar Ltd">Call +353 89 418 0534</a>
     </div>
   </div>
@@ -1074,7 +1073,7 @@
       <h4>Contact</h4>
       <ul>
         <li style="color:var(--gold); font-weight:500; margin-bottom:14px;">Liliana Bouhar, CEO</li>
-        <li><a href="mailto:liliana@bouhar.ie">liliana@bouhar.ie</a></li>
+        <li><a href="/cdn-cgi/l/email-protection#86eaefeaefe7e8e7c6e4e9f3eee7f4a8efe3"><span class="__cf_email__" data-cfemail="f69a9f9a9f979897b69499839e9784d89f93">[email&#160;protected]</span></a></li>
         <li><a href="tel:+353894180534">+353 89 418 0534</a></li>
         <li><a href="tel:+353894180080">+353 89 418 0080</a></li>
         <li>58 Ardrath Crescent, Celbridge, Co. Kildare</li>
@@ -1092,7 +1091,7 @@
   </div>
 </footer>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
   // Header scroll effect
   window.addEventListener('scroll', () => {
     document.getElementById('header').classList.toggle('scrolled', window.scrollY > 50);
@@ -1105,12 +1104,4 @@
     });
   }, { threshold: 0.1 });
 
-  document.querySelectorAll('.service-card, .showcase-card, .testimonial-card, .pillar, .area-tag, .trusted-logo').forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(20px)';
-    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-    observer.observe(el);
-  });
-
-  // FAQ accordion
-  document.querySelectorAll('.faq-question').
+  document.querySelectorAll('.service-card, .showcase-card, .testimonial-card, .pillar, .a
