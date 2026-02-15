@@ -48,19 +48,21 @@
   "url": "https://jmkfacilities.ie/bouhar/",
   "logo": "https://jmkfacilities.ie/bouhar/logo.png",
   "image": "https://jmkfacilities.ie/bouhar/hero.jpg",
-  "telephone": "+353-00-000-0000",
-  "email": "info@bouharltd.ie",
+  "telephone": "+353894180534",
+  "email": "liliana@bouhar.ie",
   "foundingDate": "2010",
   "priceRange": "€€",
   "address": {
     "@type": "PostalAddress",
-    "addressLocality": "Dublin",
+    "streetAddress": "58 Ardrath Crescent",
+    "addressLocality": "Celbridge",
+    "addressRegion": "County Kildare",
     "addressCountry": "IE"
   },
   "geo": {
     "@type": "GeoCoordinates",
-    "latitude": "53.3498",
-    "longitude": "-6.2603"
+    "latitude": "53.3389",
+    "longitude": "-6.5444"
   },
   "areaServed": [
     { "@type": "City", "name": "Dublin" },
@@ -380,6 +382,43 @@
     color: #aaa; font-size: 13px; letter-spacing: 1px; text-transform: uppercase;
   }
   .showcase-card .card-img img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* ── TRUSTED BY ── */
+  .trusted {
+    position: relative; z-index: 1; background: var(--green-dark);
+    border-top: 1px solid rgba(201,168,76,0.1);
+    border-bottom: 1px solid rgba(201,168,76,0.1);
+    padding: 60px 40px;
+    text-align: center;
+  }
+  .trusted .label {
+    font-size: 11px; font-weight: 600; letter-spacing: 3px;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 36px;
+  }
+  .trusted-logos {
+    max-width: 900px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    gap: 50px; flex-wrap: wrap;
+  }
+  .trusted-logo {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    opacity: 0.5; transition: opacity 0.3s;
+    filter: grayscale(100%) brightness(1.8);
+  }
+  .trusted-logo:hover { opacity: 1; filter: grayscale(0%) brightness(1); }
+  .trusted-logo img {
+    height: 50px; width: auto; max-width: 160px; object-fit: contain;
+  }
+  .trusted-logo .logo-placeholder {
+    height: 50px; width: 140px;
+    border: 1px dashed rgba(201,168,76,0.3); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--gold); letter-spacing: 1px;
+  }
+  .trusted-logo span {
+    font-size: 11px; font-weight: 500; color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
 
   /* ── SERVICES ── */
   .services {
@@ -755,6 +794,37 @@
   </div>
 </section>
 
+<!-- ═══════ TRUSTED BY ═══════ -->
+<section class="trusted" aria-label="Trusted by leading organisations">
+  <p class="label">Trusted By Industry Leaders</p>
+  <div class="trusted-logos">
+    <div class="trusted-logo">
+      <!-- ✏️ REPLACE: logos/bam.png (300×120 transparent PNG) -->
+      <!-- <img src="logos/bam.png" alt="BAM Contractors Ltd logo – client of Bouhar Ltd cleaning services Dublin" width="160" height="50" loading="lazy"> -->
+      <div class="logo-placeholder">BAM Logo</div>
+      <span>BAM Contractors Ltd</span>
+    </div>
+    <div class="trusted-logo">
+      <!-- ✏️ REPLACE: logos/mercury.png (300×120 transparent PNG) -->
+      <!-- <img src="logos/mercury.png" alt="Mercury Engineering logo – client of Bouhar Ltd cleaning services" width="160" height="50" loading="lazy"> -->
+      <div class="logo-placeholder">Mercury Logo</div>
+      <span>Mercury Engineering</span>
+    </div>
+    <div class="trusted-logo">
+      <!-- ✏️ REPLACE: logos/nch.png (300×120 transparent PNG) -->
+      <!-- <img src="logos/nch.png" alt="National Children's Hospital Dublin logo – cleaned by Bouhar Ltd" width="160" height="50" loading="lazy"> -->
+      <div class="logo-placeholder">NCH Logo</div>
+      <span>National Children's Hospital</span>
+    </div>
+    <div class="trusted-logo">
+      <!-- ✏️ REPLACE: logos/embassy-romania.png (300×120 transparent PNG) -->
+      <!-- <img src="logos/embassy-romania.png" alt="Embassy of Romania Ireland logo – client of Bouhar Ltd cleaning services" width="160" height="50" loading="lazy"> -->
+      <div class="logo-placeholder">Embassy Logo</div>
+      <span>Embassy of Romania</span>
+    </div>
+  </div>
+</section>
+
 <!-- ═══════ SERVICES ═══════ -->
 <section class="services" id="services-section" aria-label="Our cleaning services">
   <div class="section-header">
@@ -941,9 +1011,8 @@
     <h2>Ready for a Cleaner Space?</h2>
     <p>Get in touch today for a free, no-obligation quote. Experience the Bouhar Ltd difference — over 15 years of trusted, professional cleaning across Dublin.</p>
     <div class="cta-buttons">
-      <!-- ✏️ REPLACE with real email and phone -->
-      <a href="mailto:info@bouharltd.ie" class="btn-quote" aria-label="Email Bouhar Ltd for a free quote">Get a Free Quote</a>
-      <a href="tel:+353000000000" class="btn-outline" aria-label="Call Bouhar Ltd">Call Us Now</a>
+      <a href="mailto:liliana@bouhar.ie" class="btn-quote" aria-label="Email Bouhar Ltd for a free quote">Get a Free Quote</a>
+      <a href="tel:+353894180534" class="btn-outline" aria-label="Call Bouhar Ltd">Call Us Now</a>
     </div>
   </div>
 </section>
@@ -964,7 +1033,7 @@
           <span class="brand-tagline">Professional Cleaning. Powerful Results.</span>
         </div>
       </div>
-      <p>Trusted professional cleaning services across Dublin, Wicklow, Kildare, Meath, and Louth. Over 15 years of industry experience delivering residential, commercial, and industrial cleaning excellence.</p>
+      <p>Trusted professional cleaning services based in Celbridge, Co. Kildare, serving Dublin and surrounding counties. Over 15 years of industry experience delivering residential, commercial, and industrial cleaning excellence.</p>
     </div>
     <div class="footer-col">
       <h4>Services</h4>
@@ -986,15 +1055,15 @@
     <div class="footer-col">
       <h4>Contact</h4>
       <ul>
-        <!-- ✏️ REPLACE with real contact details -->
-        <li><a href="mailto:info@bouharltd.ie">info@bouharltd.ie</a></li>
-        <li><a href="tel:+353000000000">+353 00 000 0000</a></li>
-        <li>Dublin, Ireland</li>
+        <li><a href="mailto:liliana@bouhar.ie">liliana@bouhar.ie</a></li>
+        <li><a href="tel:+353894180534">+353 89 418 0534</a></li>
+        <li><a href="tel:+353894180080">+353 89 418 0080</a></li>
+        <li>58 Ardrath Crescent, Celbridge, Co. Kildare</li>
       </ul>
     </div>
   </div>
   <div class="footer-bottom">
-    <p>&copy; 2026 Bouhar Ltd. All rights reserved. Professional cleaning services Dublin, Ireland.</p>
+    <p>&copy; 2026 Bouhar Ltd. All rights reserved. Company Reg: 4547560FH | Professional cleaning services Dublin &amp; Leinster, Ireland.</p>
     <div class="footer-socials">
       <!-- ✏️ REPLACE with real social links -->
       <a href="#" aria-label="Bouhar Ltd on Facebook">f</a>
@@ -1004,7 +1073,7 @@
   </div>
 </footer>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
   // Header scroll effect
   window.addEventListener('scroll', () => {
     document.getElementById('header').classList.toggle('scrolled', window.scrollY > 50);
@@ -1017,7 +1086,7 @@
     });
   }, { threshold: 0.1 });
 
-  document.querySelectorAll('.service-card, .showcase-card, .testimonial-card, .pillar, .area-tag').forEach(el => {
+  document.querySelectorAll('.service-card, .showcase-card, .testimonial-card, .pillar, .area-tag, .trusted-logo').forEach(el => {
     el.style.opacity = '0';
     el.style.transform = 'translateY(20px)';
     el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
@@ -1031,15 +1100,4 @@
       const isOpen = item.classList.contains('open');
       // Close all
       document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
-      document.querySelectorAll('.faq-question').forEach(q => q.setAttribute('aria-expanded', 'false'));
-      // Open clicked (if wasn't open)
-      if (!isOpen) {
-        item.classList.add('open');
-        btn.setAttribute('aria-expanded', 'true');
-      }
-    });
-  });
-</script>
-
-</body>
-</html>
+      document.querySe
