@@ -558,7 +558,7 @@ export default function ComplianceReportsPage() {
     if (!fileToDelete) return;
     setDeleting(true);
     try {
-      const res = await fetch(`${API_URL}/compliance/history/delete`, {
+      const res = await fetch(`${API_URL}/compliance/compliance/history/delete`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
