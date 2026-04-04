@@ -7,8 +7,9 @@ import {
   Folder, FolderOpen, FileText, FileSpreadsheet,
   Image as ImageIcon, File, Trash2, Download,
   ExternalLink, Loader2, AlertCircle, ShieldCheck,
-  Clock, CheckCircle, Building2
+  Clock, CheckCircle, Building2, ClipboardList
 } from 'lucide-react';
+import ConfirmationReport from '@/components/ConfirmationReport';
 import { hotelNames } from '@/data/hotelMetadata';
 import PDFViewer from '@/components/PDFViewerA4';
 
@@ -497,6 +498,7 @@ export default function ComplianceReportsPage() {
 
   const [fileToDelete, setFileToDelete] = useState<ComplianceFile | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showConfirmationPanel, setShowConfirmationPanel] = useState(false);
 
   // Fetch compliance reports
   const fetchReports = useCallback(async () => {
@@ -594,6 +596,13 @@ export default function ComplianceReportsPage() {
               <p className="text-gray-500 text-sm mt-0.5">{hotelName} · {totalFiles} files</p>
             </div>
           </div>
+          <button
+            onClick={() => setShowConfirmationPanel(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+          >
+            <ClipboardList className="w-4 h-4" />
+            <span>Confirmation Log</span>
+          </button>
         </div>
 
         {/* Search */}
@@ -687,6 +696,42 @@ export default function ComplianceReportsPage() {
       </div>
 
       {/* Delete confirmation modal */}
+      {/* ── Confirmation Log slide-in panel ────────────────────────────── */}
+      {showConfirmationPanel && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40 z-40 transition-opacity"
+            onClick={() => setShowConfirmationPanel(false)}
+          />
+          {/* Panel */}
+          <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl z-50 flex flex-col transition-transform">
+            {/* Panel header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="bg-green-100 p-2 rounded-lg">
+                  <ClipboardList className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">Confirmation Log</h2>
+                  <p className="text-xs text-gray-500">{hotelName} · monthly task confirmations</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowConfirmationPanel(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {/* Panel body */}
+            <div className="flex-1 overflow-auto p-6">
+              <ConfirmationReport hotelId={hotelId} />
+            </div>
+          </div>
+        </>
+      )}
+
       {fileToDelete && (
         <DeleteModal
           file={fileToDelete}
