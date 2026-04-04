@@ -48,7 +48,7 @@ export default function PDFViewerA4({ filePath, hotelId, getFileUrl, onClose }: 
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const lastScrollTime = useRef<number>(0);
 
   const fileName = useMemo(() => filePath.split('/').pop() || 'document.pdf', [filePath]);
 
@@ -87,39 +87,31 @@ export default function PDFViewerA4({ filePath, hotelId, getFileUrl, onClose }: 
     setIsLoading(false);
   }, []);
 
-  // Track current page via scroll position
+  // Wheel scroll flips pages instead of scrolling the container
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container || numPages === 0) return;
+    const el = containerRef.current;
+    if (!el) return;
 
-    const onScroll = () => {
-      const containerTop = container.scrollTop;
-      let closest = 0;
-      let closestDist = Infinity;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const now = Date.now();
+      if (now - lastScrollTime.current < 400) return; // debounce
+      lastScrollTime.current = now;
 
-      pageRefs.current.forEach((ref, i) => {
-        if (!ref) return;
-        const dist = Math.abs(ref.offsetTop - containerTop);
-        if (dist < closestDist) {
-          closestDist = dist;
-          closest = i;
-        }
-      });
-
-      setCurrentPage(closest + 1);
+      if (e.deltaY > 0) {
+        setCurrentPage(p => Math.min(p + 1, numPages));
+      } else {
+        setCurrentPage(p => Math.max(p - 1, 1));
+      }
     };
 
-    container.addEventListener('scroll', onScroll, { passive: true });
-    return () => container.removeEventListener('scroll', onScroll);
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
   }, [numPages]);
 
-  // Scroll to page when nav buttons used
-  const scrollToPage = (pageNum: number) => {
-    const ref = pageRefs.current[pageNum - 1];
-    if (ref && containerRef.current) {
-      containerRef.current.scrollTo({ top: ref.offsetTop - 16, behavior: 'smooth' });
-    }
-    setCurrentPage(pageNum);
+  const goToPage = (page: number) => {
+    setCurrentPage(clamp(page, 1, numPages));
+    containerRef.current?.scrollTo({ top: 0 });
   };
 
   // Keyboard nav
@@ -127,18 +119,10 @@ export default function PDFViewerA4({ filePath, hotelId, getFileUrl, onClose }: 
     const onKeyDown = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') setIsFullscreen(false);
       if (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') {
-        setCurrentPage(p => {
-          const next = Math.min(p + 1, numPages);
-          scrollToPage(next);
-          return next;
-        });
+        setCurrentPage(p => Math.min(p + 1, numPages));
       }
       if (ev.key === 'ArrowUp' || ev.key === 'ArrowLeft') {
-        setCurrentPage(p => {
-          const prev = Math.max(p - 1, 1);
-          scrollToPage(prev);
-          return prev;
-        });
+        setCurrentPage(p => Math.max(p - 1, 1));
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -186,7 +170,7 @@ export default function PDFViewerA4({ filePath, hotelId, getFileUrl, onClose }: 
           {numPages > 1 && (
             <div className="flex items-center space-x-1 bg-gray-100 rounded-lg px-2 py-1.5 border border-gray-300">
               <button
-                onClick={() => scrollToPage(Math.max(currentPage - 1, 1))}
+                onClick={() => goToPage(currentPage - 1)}
                 disabled={currentPage <= 1}
                 className="p-1 text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Previous Page"
@@ -197,7 +181,7 @@ export default function PDFViewerA4({ filePath, hotelId, getFileUrl, onClose }: 
                 {currentPage} / {numPages}
               </span>
               <button
-                onClick={() => scrollToPage(Math.min(currentPage + 1, numPages))}
+                onClick={() => goToPage(currentPage + 1)}
                 disabled={currentPage >= numPages}
                 className="p-1 text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 title="Next Page"
@@ -314,23 +298,15 @@ export default function PDFViewerA4({ filePath, hotelId, getFileUrl, onClose }: 
               onLoadError={onDocumentLoadError}
               loading=""
             >
-              {Array.from({ length: numPages }, (_, i) => (
-                <div
-                  key={i + 1}
-                  ref={el => { pageRefs.current[i] = el; }}
-                  className="mb-4"
-                >
-                  <Page
-                    pageNumber={i + 1}
-                    scale={scale}
-                    rotate={rotation}
-                    renderTextLayer={true}
-                    renderAnnotationLayer={false}
-                    devicePixelRatio={typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 1.5) : 1}
-                    className="border border-gray-300 shadow-lg bg-white"
-                  />
-                </div>
-              ))}
+              <Page
+                pageNumber={currentPage}
+                scale={scale}
+                rotate={rotation}
+                renderTextLayer={true}
+                renderAnnotationLayer={false}
+                devicePixelRatio={typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 1.5) : 1}
+                className="border border-gray-300 shadow-lg bg-white"
+              />
             </Document>
           </div>
         )}
