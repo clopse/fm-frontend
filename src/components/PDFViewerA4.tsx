@@ -298,9 +298,9 @@ export default function PDFViewerA4({ filePath, hotelId, getFileUrl, onClose }: 
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center py-6 gap-4">
+          <div className="relative flex flex-col items-center py-6 gap-4">
             {isLoading && (
-              <div className="flex items-center justify-center py-12">
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">
                 <div className="text-center">
                   <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-2" />
                   <p className="text-gray-600 text-sm">Loading PDF...</p>
