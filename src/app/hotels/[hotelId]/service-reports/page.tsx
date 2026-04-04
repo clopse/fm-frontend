@@ -504,7 +504,7 @@ export default function ComplianceReportsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/compliance/reports/${hotelId}`);
+      const res = await fetch(`${API_URL}/compliance/compliance/reports/${hotelId}`);
       if (!res.ok) throw new Error('Failed to fetch reports');
       const data = await res.json();
       setSections(data.sections || []);
@@ -558,7 +558,7 @@ export default function ComplianceReportsPage() {
     if (!fileToDelete) return;
     setDeleting(true);
     try {
-      const res = await fetch(`${API_URL}/api/compliance/history/delete`, {
+      const res = await fetch(`${API_URL}/compliance/history/delete`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
