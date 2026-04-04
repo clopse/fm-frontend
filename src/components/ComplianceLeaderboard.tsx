@@ -6,7 +6,7 @@ import { ChevronDown } from 'lucide-react';
 import { hotels } from '@/lib/hotels';
 
 type LeaderboardEntry = {
-  hotel: string; // Hotel ID
+  hotel: string;
   score: number;
 };
 
@@ -15,27 +15,22 @@ interface Props {
 }
 
 export default function ComplianceLeaderboard({ data }: Props) {
-  const [sortedData, setSortedData] = useState<LeaderboardEntry[]>([]);
   const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Default hotels list
   const defaultHotels = ['hiex', 'hida', 'marina', 'moxy', 'hbhdcc'];
 
-  // Create hotel lookup map to avoid repeated .find() calls
-  const hotelMap = useMemo(() => 
+  const hotelMap = useMemo(() =>
     Object.fromEntries(hotels.map(h => [h.id, h])),
-    [] // hotels is static, so empty dependency array
+    []
   );
 
-  // Memoize score color calculation function (not the result)
   const getScoreColor = useCallback((score: number) => {
-    if (score >= 85) return '#10b981'; // green-500
-    if (score >= 70) return '#f59e0b'; // amber-500
-    return '#ef4444'; // red-500
+    if (score >= 85) return '#10b981';
+    if (score >= 70) return '#f59e0b';
+    return '#ef4444';
   }, []);
 
-  // On first load, pull hotel filters from localStorage or default to specific hotels
   useEffect(() => {
     const saved = localStorage?.getItem('selectedHotels');
     if (saved) {
@@ -48,16 +43,15 @@ export default function ComplianceLeaderboard({ data }: Props) {
     }
   }, []);
 
-  // Sort data by score (descending) and name (asc)
-  useEffect(() => {
-    const sorted = [...data].sort((a, b) => {
-      if (b.score === a.score) return a.hotel.localeCompare(b.hotel);
-      return b.score - a.score;
-    });
-    setSortedData(sorted);
-  }, [data]);
+  // PERF FIX: Replace sortedData state + useEffect with a single useMemo
+  // Eliminates one extra render cycle on every data change
+  const sortedData = useMemo(() =>
+    [...data].sort((a, b) =>
+      b.score === a.score ? a.hotel.localeCompare(b.hotel) : b.score - a.score
+    ),
+    [data]
+  );
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
@@ -65,15 +59,13 @@ export default function ComplianceLeaderboard({ data }: Props) {
         setDropdownOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownOpen]);
 
-  // Memoize the toggle function to prevent unnecessary re-renders
   const toggleHotel = useCallback((id: string) => {
     const updated = selectedHotels.includes(id)
-      ? selectedHotels.filter((h) => h !== id)
+      ? selectedHotels.filter(h => h !== id)
       : [...selectedHotels, id];
     setSelectedHotels(updated);
     if (typeof localStorage !== 'undefined') {
@@ -81,9 +73,8 @@ export default function ComplianceLeaderboard({ data }: Props) {
     }
   }, [selectedHotels]);
 
-  // Memoize filtered data - this is the most important optimization
-  const filteredData = useMemo(() => 
-    sortedData.filter((entry) => selectedHotels.includes(entry.hotel)),
+  const filteredData = useMemo(() =>
+    sortedData.filter(entry => selectedHotels.includes(entry.hotel)),
     [sortedData, selectedHotels]
   );
 
@@ -99,11 +90,11 @@ export default function ComplianceLeaderboard({ data }: Props) {
           >
             <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
           </button>
-          
+
           {dropdownOpen && (
             <div className="absolute top-10 right-0 bg-white border border-gray-200 rounded-lg z-10 shadow-lg min-w-48 max-h-60 overflow-y-auto">
               <div className="p-2">
-                {hotels.map((hotel) => (
+                {hotels.map(hotel => (
                   <label key={hotel.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer text-sm">
                     <input
                       type="checkbox"
@@ -127,8 +118,8 @@ export default function ComplianceLeaderboard({ data }: Props) {
         </div>
       ) : (
         <div className="space-y-5">
-          {filteredData.map((entry) => {
-            const hotel = hotelMap[entry.hotel]; // Use memoized lookup
+          {filteredData.map(entry => {
+            const hotel = hotelMap[entry.hotel];
             const hotelName = hotel?.name || entry.hotel;
             const scoreColor = getScoreColor(entry.score);
 
@@ -144,17 +135,13 @@ export default function ComplianceLeaderboard({ data }: Props) {
                     />
                   </Link>
                 </div>
-
                 <div className="flex-1 relative h-7 bg-gray-200 rounded overflow-hidden">
                   <div
                     className="h-full transition-all duration-500 ease-out"
-                    style={{
-                      width: `${entry.score}%`,
-                      backgroundColor: scoreColor,
-                    }}
+                    style={{ width: `${entry.score}%`, backgroundColor: scoreColor }}
                   />
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <span 
+                    <span
                       className="text-sm font-semibold px-2 py-1 rounded-md"
                       style={{
                         color: entry.score >= 50 ? '#ffffff' : '#1f2937',

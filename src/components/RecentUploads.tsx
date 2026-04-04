@@ -12,104 +12,107 @@ interface UploadEntry {
   fileUrl: string;
   uploaded_by: string;
   filename: string;
-  hotel_id?: string; // Add this field
+  hotel_id?: string;
 }
 
-export function RecentUploads({ uploads }: { uploads: UploadEntry[] }) {
+interface Props {
+  uploads: UploadEntry[];
+  // PERF FIX: onRefresh replaces window.location.reload() — parent re-fetches just the uploads list
+  onRefresh?: () => void;
+}
+
+export function RecentUploads({ uploads, onRefresh }: Props) {
   const [selected, setSelected] = useState<UploadEntry | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
     });
   };
 
   const handleApprove = async () => {
     if (!selected) return;
-    
+    setActionLoading(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          hotel_id: selected.hotel_id || selected.hotel, // Use hotel_id if available, fallback to hotel name
+          hotel_id: selected.hotel_id || selected.hotel,
           task_id: selected.task_id,
           timestamp: selected.date,
         }),
       });
-      
       if (res.ok) {
-        // Refresh the page or update the uploads list
-        window.location.reload(); // Simple solution
+        setSelected(null);
+        onRefresh?.(); // PERF FIX: targeted refresh, not full page reload
       } else {
         alert('Failed to approve file');
       }
     } catch (error) {
       console.error('Error approving file:', error);
       alert('Failed to approve file');
+    } finally {
+      setActionLoading(false);
     }
-    
-    setSelected(null);
   };
 
   const handleReject = async (reason: string) => {
     if (!selected) return;
-    
+    setActionLoading(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          hotel_id: selected.hotel_id || selected.hotel, // Use hotel_id if available
+          hotel_id: selected.hotel_id || selected.hotel,
           task_id: selected.task_id,
           timestamp: selected.date,
           reason,
         }),
       });
-      
       if (res.ok) {
-        window.location.reload(); // Simple solution
+        setSelected(null);
+        onRefresh?.();
       } else {
         alert('Failed to reject file');
       }
     } catch (error) {
       console.error('Error rejecting file:', error);
       alert('Failed to reject file');
+    } finally {
+      setActionLoading(false);
     }
-    
-    setSelected(null);
   };
 
   const handleDelete = async () => {
     if (!selected) return;
-    
+    setActionLoading(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/delete`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          hotel_id: selected.hotel_id || selected.hotel, // Use hotel_id if available
+          hotel_id: selected.hotel_id || selected.hotel,
           task_id: selected.task_id,
           timestamp: selected.date,
         }),
       });
-      
       if (res.ok) {
-        window.location.reload(); // Simple solution
+        setSelected(null);
+        onRefresh?.();
       } else {
         alert('Failed to delete file');
       }
     } catch (error) {
       console.error('Error deleting file:', error);
       alert('Failed to delete file');
+    } finally {
+      setActionLoading(false);
     }
-    
-    setSelected(null);
   };
 
   return (
@@ -154,6 +157,7 @@ export function RecentUploads({ uploads }: { uploads: UploadEntry[] }) {
             fileUrl: selected.fileUrl,
             filename: selected.filename,
           }}
+          loading={actionLoading}
           onClose={() => setSelected(null)}
           onApprove={handleApprove}
           onReject={handleReject}
