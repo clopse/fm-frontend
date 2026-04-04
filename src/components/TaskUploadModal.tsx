@@ -73,6 +73,8 @@ const TaskUploadModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  // Stable reference — empty deps means never recreated, so PDFViewerA4 won't reload on re-renders
+  const getFileUrl = useCallback(async (url: string) => url, []);
   const [hoveredBadge, setHoveredBadge] = useState<string | null>(null);
   const [hoveredApproval, setHoveredApproval] = useState<{ id: string; approved: boolean } | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -659,7 +661,7 @@ const TaskUploadModal = ({
                 <PDFViewerA4
                   filePath={selectedFile}
                   hotelId={hotelId}
-                  getFileUrl={async (url) => url}
+                  getFileUrl={getFileUrl}
                 />
               ) : (
                 <img
