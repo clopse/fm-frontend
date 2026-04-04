@@ -16,6 +16,7 @@ import {
   Info,
   XCircle
 } from 'lucide-react';
+import PDFViewerA4 from '@/components/PDFViewerA4';
 
 interface HistoryEntry {
   type: 'upload' | 'confirmation';
@@ -476,17 +477,7 @@ const TaskUploadModal = ({
                 </div>
               )}
 
-              {/* Submit Button */}
-              {file && (
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting || !reportDate}
-                  className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-3 rounded-lg font-medium transition-colors"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span>{submitting ? 'Submitting...' : 'Submit File'}</span>
-                </button>
-              )}
+              {/* Submit button moved to sticky footer below */}
             </div>
 
             {/* Right Side - History with Tabs */}
@@ -613,6 +604,38 @@ const TaskUploadModal = ({
           </div>
         )}
 
+        {/* Sticky Submit Footer — always visible when file is selected */}
+        {file && (
+          <div className="border-t border-slate-200 px-6 py-4 bg-white flex items-center space-x-4 flex-shrink-0">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-slate-900 truncate">{file.name}</p>
+              {reportDate && (
+                <p className="text-xs text-slate-500">Report date: {reportDate}</p>
+              )}
+            </div>
+            {!reportDate && (
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-4 h-4 text-slate-400" />
+                <input
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  max={today}
+                  className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+              </div>
+            )}
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || !reportDate}
+              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2.5 rounded-lg font-medium transition-colors whitespace-nowrap"
+            >
+              <Upload className="w-4 h-4" />
+              <span>{submitting ? 'Uploading...' : 'Submit File'}</span>
+            </button>
+          </div>
+        )}
+
         {/* File Preview */}
         {selectedFile && (
           <div className="border-t border-slate-200 p-4 bg-slate-50">
@@ -631,12 +654,12 @@ const TaskUploadModal = ({
                 <span>Download</span>
               </a>
             </div>
-            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden h-[600px]">
               {selectedFile.toLowerCase().endsWith('.pdf') ? (
-                <iframe
-                  src={selectedFile}
-                  className="w-full h-[600px]"
-                  title="PDF Preview"
+                <PDFViewerA4
+                  filePath={selectedFile}
+                  hotelId={hotelId}
+                  getFileUrl={async (url) => url}
                 />
               ) : (
                 <img
