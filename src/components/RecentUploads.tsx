@@ -157,7 +157,6 @@ export function RecentUploads({ uploads, onRefresh }: Props) {
             fileUrl: selected.fileUrl,
             filename: selected.filename,
           }}
-          loading={actionLoading}
           onClose={() => setSelected(null)}
           onApprove={handleApprove}
           onReject={handleReject}
