@@ -504,7 +504,7 @@ export default function ComplianceReportsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/compliance/reports/${hotelId}`);
+      const res = await fetch(`${API_URL}/compliance/reports/${hotelId}`);
       if (!res.ok) throw new Error('Failed to fetch reports');
       const data = await res.json();
       setSections(data.sections || []);
