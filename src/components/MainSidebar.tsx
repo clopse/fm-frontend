@@ -63,7 +63,7 @@ export default function MainSidebar({
       subItems: [
         {
           label: 'Compliance Reports',
-          href: `/hotels/${hotelId}/compliance-reports`,
+          href: `/hotels/${hotelId}/service-reports`,
           icon: FolderOpen,
           description: 'Uploaded certificates & documents',
         },
