@@ -365,9 +365,20 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   useEffect(() => {
     if (!hotelId) return;
     
-    // Step 1: Check module cache
+    // Step 1: Check module cache — but only trust it if localStorage also has it.
+    // If localStorage was cleared (e.g. after a delete from ComplianceReportsPage)
+    // but the in-memory Map still has stale data, we must fetch fresh.
     let cached = COMPLIANCE_CACHE.get(hotelId);
-    
+    if (cached) {
+      const lsKey = getStorageKey(hotelId);
+      const lsExists = !!localStorage.getItem(lsKey);
+      if (!lsExists) {
+        // localStorage was cleared externally — bust the in-memory cache too
+        COMPLIANCE_CACHE.delete(hotelId);
+        cached = undefined;
+      }
+    }
+
     // Step 2: If not in module cache, try localStorage
     if (!cached) {
       const hydratedFromStorage = hydrateFromStorage(hotelId);
