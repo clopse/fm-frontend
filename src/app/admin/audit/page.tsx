@@ -22,7 +22,6 @@ import HotelSelectorModal from '@/components/HotelSelectorModal';
 import AuditModal from '@/components/AuditModal';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-const COMPLIANCE_URL = API_URL.endsWith('/api') ? API_URL.slice(0, -4) : API_URL;
 
 interface AuditEntry {
   hotel_id: string;
@@ -96,7 +95,7 @@ export default function AuditPage() {
   const fetchAuditData = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${COMPLIANCE_URL}/compliance/history/approval-log`);
+      const res = await fetch(`${API_URL}/api/compliance/history/approval-log`);
       const data = await res.json();
       const list = (data.entries || []).map(normalizeEntry);
       setEntries(list);
@@ -110,7 +109,7 @@ export default function AuditPage() {
 
   const fetchTaskLabels = async () => {
     try {
-      const res = await fetch(`${COMPLIANCE_URL}/compliance/compliance/task-labels`);
+      const res = await fetch(`${API_URL}/compliance/compliance/task-labels`);
       const data = await res.json();
       setTaskLabelMap(data);
     } catch (err) {
@@ -162,7 +161,7 @@ export default function AuditPage() {
   const handleApprove = async (entry: AuditEntry) => {
     const timestamp = entry.uploadedAt || entry.loggedAt;
     try {
-      const res = await fetch(`${COMPLIANCE_URL}/compliance/history/approve`, {
+      const res = await fetch(`${API_URL}/api/compliance/history/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hotel_id: entry.hotel_id, task_id: entry.task_id, timestamp })
@@ -187,7 +186,7 @@ export default function AuditPage() {
   const handleReject = async (entry: AuditEntry, reason: string) => {
     const timestamp = entry.uploadedAt || entry.loggedAt;
     try {
-      const res = await fetch(`${COMPLIANCE_URL}/compliance/history/reject`, {
+      const res = await fetch(`${API_URL}/api/compliance/history/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hotel_id: entry.hotel_id, task_id: entry.task_id, timestamp, reason })
@@ -213,7 +212,7 @@ export default function AuditPage() {
     if (!confirm('Are you sure you want to delete this entry? This action cannot be undone.')) return;
     const timestamp = entry.uploadedAt || entry.loggedAt;
     try {
-      const res = await fetch(`${COMPLIANCE_URL}/compliance/history/delete`, {
+      const res = await fetch(`${API_URL}/api/compliance/history/delete`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hotel_id: entry.hotel_id, task_id: entry.task_id, timestamp })
