@@ -10,7 +10,7 @@ import {
   Clock, CheckCircle, Building2
 } from 'lucide-react';
 import { hotelNames } from '@/data/hotelMetadata';
-import PDFViewer from '@/components/PDFViewer';
+import PDFViewer from '@/components/PDFViewerA4';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
