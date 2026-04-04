@@ -159,30 +159,24 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-slate-600">Upload Status</span>
               <span className={`text-xs font-semibold ${
-                uploadReq.actual >= uploadReq.expected ? 'text-green-600' : 'text-orange-600'
+                score >= task.points ? 'text-green-600' : 'text-orange-600'
               }`}>
-                {uploadReq.actual}/{uploadReq.expected} files
+                {score}/{task.points} pts
               </span>
             </div>
             
-            {uploadReq.actual < uploadReq.expected && (
+            {score < task.points && (
               <div className="text-xs text-slate-600 space-y-1">
                 <div className="flex items-center space-x-1">
                   <AlertTriangle className="w-3 h-3 text-orange-500" />
-                  <span>
-                    Need {uploadReq.expected - uploadReq.actual} more {uploadReq.expected - uploadReq.actual === 1 ? 'file' : 'files'}
-                  </span>
-                </div>
-                <div className="text-slate-500">
-                  ({Math.round(pointsPerUpload)} pts per file)
+                  <span>{task.points - score} pts remaining</span>
                 </div>
               </div>
             )}
-            
-            {uploadReq.actual >= uploadReq.expected && (
+            {score >= task.points && (
               <div className="text-xs text-green-600 flex items-center space-x-1">
                 <CheckCircle className="w-3 h-3" />
-                <span>All required files uploaded</span>
+                <span>All required uploads complete</span>
               </div>
             )}
             
