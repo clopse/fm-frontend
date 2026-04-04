@@ -20,10 +20,10 @@ export default function FileTree({
 }: FileTreeProps) {
   const isExpanded = expandedFolders.has(node.path);
   const isSelected = selectedFiles.includes(node.path);
-  
+
   if (node.type === 'file') {
     const metadata = extractMetadata(node.name);
-    
+
     return (
       <button
         onClick={() => onSelectFile(node.path)}
@@ -45,8 +45,8 @@ export default function FileTree({
         </span>
         {metadata.revision && (
           <span className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 ${
-            isSelected 
-              ? 'bg-white/20 text-white' 
+            isSelected
+              ? 'bg-white/20 text-white'
               : 'bg-gray-200 text-gray-600'
           }`}>
             Rev.{metadata.revision}
@@ -83,7 +83,7 @@ export default function FileTree({
           </span>
         )}
       </button>
-      
+
       {isExpanded && node.children && (
         <div className="mt-0.5">
           {node.children.map((child) => (
