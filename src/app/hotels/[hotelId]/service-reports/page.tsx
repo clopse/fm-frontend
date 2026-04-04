@@ -572,6 +572,9 @@ export default function ComplianceReportsPage() {
       if (!res.ok) throw new Error('Delete failed');
       if (selectedFile?.fileUrl === fileToDelete.fileUrl) setSelectedFile(null);
       setFileToDelete(null);
+      // Bust ComplianceClient localStorage cache so deleted file
+      // doesn't reappear in the task upload modal history list
+      try { localStorage.removeItem(`compliance_cache_${hotelId}`); } catch {}
       await fetchReports();
     } catch (err) {
       alert('Failed to delete record. Please try again.');
