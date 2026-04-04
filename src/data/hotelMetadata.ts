@@ -4,7 +4,6 @@ export const hotelNames: Record<string, string> = {
     hida: "Holiday Inn Dublin Airport",
     hbhdcc: "Hampton by Hilton Dublin",
     hbhe: "Hampton by Hilton Ealing",
-    sera: "Seraphine Hammersmith",
     kensh: "Kensington Hideaway",
     marina: "Waterford Marina Hotel",
     hiltonth: "Home2 Suites Dublin",
