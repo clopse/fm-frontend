@@ -69,6 +69,40 @@ const normaliseEntry = (entry: HistoryEntry) => ({
   fileUrl: entry.fileUrl || '',
 });
 
+// ─── PDF metadata date parser ─────────────────────────────────────────────────
+
+const parsePdfCreationDate = (file: File): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        // Read first 4KB as binary string — CreationDate is always near the top
+        const bytes = new Uint8Array(e.target?.result as ArrayBuffer);
+        const head = Array.from(bytes.slice(0, 4096))
+          .map(b => String.fromCharCode(b))
+          .join("");
+
+        // PDF date format: (D:YYYYMMDDHHmmSS) or (D:YYYYMMDD)
+        const match = head.match(/\/CreationDate\s*\(D:(\d{4})(\d{2})(\d{2})/);
+        if (match) {
+          const [, year, month, day] = match;
+          // Validate it looks like a real date
+          const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+          const now = new Date();
+          if (parsed <= now && parsed.getFullYear() >= 2000) {
+            resolve(`${year}-${month}-${day}`);
+            return;
+          }
+        }
+      } catch {}
+      resolve(""); // No metadata found
+    };
+    reader.onerror = () => resolve("");
+    // Only read first 4KB — enough for metadata
+    reader.readAsArrayBuffer(file.slice(0, 4096));
+  });
+};
+
 // ─── Validity Badge ───────────────────────────────────────────────────────────
 
 function ValidityBadge({ reportDate, frequency }: { reportDate: string; frequency: string }) {
@@ -215,21 +249,37 @@ const TaskUploadModal = ({
     setDragActive(e.type === 'dragenter' || e.type === 'dragover');
   };
 
+  const applyFile = async (f: File) => {
+    setFile(f);
+    setError(null);
+    setReportDate('');
+    // Try PDF metadata first — most reliable source of report date
+    if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
+      const pdfDate = await parsePdfCreationDate(f);
+      if (pdfDate) {
+        setReportDate(pdfDate);
+        return;
+      }
+    }
+    // Fall back to file lastModified date
+    const modified = new Date(f.lastModified);
+    const now = new Date();
+    if (modified <= now && modified.getFullYear() >= 2000) {
+      setReportDate(modified.toISOString().split('T')[0]);
+    }
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     const dropped = e.dataTransfer.files[0];
-    if (dropped) { setFile(dropped); setError(null); }
+    if (dropped) applyFile(dropped);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
-    if (selected) {
-      setFile(selected);
-      setReportDate(''); // User must set date deliberately
-      setError(null);
-    }
+    if (selected) applyFile(selected);
   };
 
   const handleSubmit = async () => {
