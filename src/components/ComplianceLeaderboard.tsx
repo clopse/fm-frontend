@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
-import { hotels } from '@/lib/hotels';
+import { hotelNames } from '@/data/hotelMetadata';
 
 type LeaderboardEntry = {
   hotel: string;
@@ -20,8 +20,11 @@ export default function ComplianceLeaderboard({ data }: Props) {
 
   const defaultHotels = ['hiex', 'hida', 'marina', 'moxy', 'hbhdcc'];
 
-  const hotelMap = useMemo(() =>
-    Object.fromEntries(hotels.map(h => [h.id, h])),
+  // Match HotelSelectorModal: derive sorted list from hotelNames object
+  const hotelList = useMemo(() =>
+    Object.entries(hotelNames)
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
     []
   );
 
@@ -94,7 +97,7 @@ export default function ComplianceLeaderboard({ data }: Props) {
           {dropdownOpen && (
             <div className="absolute top-10 right-0 bg-white border border-gray-200 rounded-lg z-10 shadow-lg min-w-48 max-h-60 overflow-y-auto">
               <div className="p-2">
-                {hotels.map(hotel => (
+                {hotelList.map(hotel => (
                   <label key={hotel.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer text-sm">
                     <input
                       type="checkbox"
@@ -119,8 +122,7 @@ export default function ComplianceLeaderboard({ data }: Props) {
       ) : (
         <div className="space-y-5">
           {filteredData.map(entry => {
-            const hotel = hotelMap[entry.hotel];
-            const hotelName = hotel?.name || entry.hotel;
+            const hotelName = hotelNames[entry.hotel] || entry.hotel;
             const scoreColor = getScoreColor(entry.score);
 
             return (
