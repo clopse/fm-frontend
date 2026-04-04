@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { 
+import {
   Search,
   Building2,
   ChevronRight,
@@ -18,54 +18,44 @@ import PDFViewer from '@/components/PDFViewer';
 import { FileNode, searchInTree, countFiles } from '@/lib/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-const S3_BASE_URL = "https://jmk-project-uploads.s3.amazonaws.com";
-
+const S3_BASE_URL = 'https://jmk-project-uploads.s3.amazonaws.com';
 
 export default function BuildingPage() {
   const { hotelId } = useParams<{ hotelId: string }>();
   const hotelName = hotelNames[hotelId] || 'Unknown Hotel';
-  
-  // State management
+
   const [fileStructure, setFileStructure] = useState<FileNode | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['']));
-  const [viewMode, setViewMode] = useState<'single'>('single');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
 
-  // ✅ Helper function to skip the "drawings" parent folder
   const skipDrawingsFolder = (node: FileNode): FileNode | null => {
-    // If the root node is named "drawings" and has children, return a synthetic root with its children
     if (node.name.toLowerCase() === 'drawings' && node.type === 'folder' && node.children) {
       return {
         name: '',
         path: '',
         type: 'folder',
-        children: node.children
+        children: node.children,
       };
     }
     return node;
   };
 
-  // Fetch drawing structure from API
   useEffect(() => {
     const fetchDrawings = async () => {
       if (!hotelId) return;
-      
+
       setLoading(true);
       setError(null);
-      
+
       try {
         const response = await fetch(`${API_URL}/drawings/${hotelId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch drawings');
-        }
+        if (!response.ok) throw new Error('Failed to fetch drawings');
         const data = await response.json();
-        
-        // ✅ Skip the "drawings" parent folder if it exists
         const processed = skipDrawingsFolder(data);
         setFileStructure(processed);
       } catch (err) {
@@ -79,55 +69,52 @@ export default function BuildingPage() {
     fetchDrawings();
   }, [hotelId]);
 
-  // Filter files based on search
   const filteredFiles = useMemo(() => {
     if (!fileStructure) return null;
     if (!searchQuery && !filterCategory) return fileStructure;
-    
+
     let result: FileNode | null = fileStructure;
-    
-    // Apply search filter
+
     if (searchQuery) {
       const searched = searchInTree(fileStructure, searchQuery);
       if (!searched) return null;
       result = searched;
     }
-    
-    // Apply category filter
+
+    // FIX 5: Match against path segments, not a bare string includes() check
     if (filterCategory && result) {
       const filterNode = (node: FileNode): FileNode | null => {
         if (node.type === 'file') {
-          return node.path.includes(filterCategory) ? node : null;
+          const segments = node.path.split('/');
+          return segments.includes(filterCategory) ? node : null;
         }
-        
+
         const filteredChildren = node.children
-          ?.map(child => filterNode(child))
+          ?.map((child) => filterNode(child))
           .filter(Boolean) as FileNode[];
-        
+
         if (filteredChildren && filteredChildren.length > 0) {
           return { ...node, children: filteredChildren };
         }
-        
+
         return null;
       };
-      
+
       const filtered = filterNode(result);
       if (!filtered) return null;
       result = filtered;
     }
-    
+
     return result;
   }, [fileStructure, searchQuery, filterCategory]);
 
   // Auto-expand folders when searching
   useEffect(() => {
     if (searchQuery && filteredFiles) {
-      // Collect all paths that need to be expanded
       const pathsToExpand = new Set<string>(['']);
-      
-      const collectPaths = (node: FileNode, currentPath: string = '') => {
+
+      const collectPaths = (node: FileNode) => {
         if (node.type === 'file') {
-          // Add all parent paths
           const parts = node.path.split('/');
           let path = '';
           for (let i = 0; i < parts.length - 1; i++) {
@@ -136,27 +123,25 @@ export default function BuildingPage() {
           }
         } else if (node.children) {
           pathsToExpand.add(node.path);
-          node.children.forEach(child => collectPaths(child, node.path));
+          node.children.forEach((child) => collectPaths(child));
         }
       };
-      
+
       collectPaths(filteredFiles);
       setExpandedFolders(pathsToExpand);
     }
   }, [searchQuery, filteredFiles]);
 
-  // Extract top-level categories for filtering
   const categories = useMemo(() => {
     if (!fileStructure?.children) return [];
     return fileStructure.children
-      .filter(child => child.type === 'folder')
-      .map(child => child.name)
+      .filter((child) => child.type === 'folder')
+      .map((child) => child.name)
       .sort();
   }, [fileStructure]);
 
-  // Get file URL - use direct S3 URL instead of signed URL for simplicity
-  // Get file URL from API (signed URL for better CORS handling)
-  const getFileUrl = async (path: string): Promise<string> => {
+  // FIX 1: Memoize getFileUrl so PDFViewer doesn't re-fetch on every parent render
+  const getFileUrl = useCallback(async (path: string): Promise<string> => {
     try {
       const response = await fetch(
         `${API_URL}/drawings/${hotelId}/file?key=${encodeURIComponent(path)}`
@@ -168,14 +153,25 @@ export default function BuildingPage() {
       return data.url;
     } catch (err) {
       console.error('Error getting file URL:', err);
-      // Fallback to direct S3 URL if API fails
       return `${S3_BASE_URL}/${hotelId}/drawings/${path}`;
     }
-  };
+  }, [hotelId]);
 
-  const handleFileSelect = async (filePath: string) => {
+  const handleFileSelect = (filePath: string) => {
     setSelectedFiles([filePath]);
   };
+
+  const handleToggleFolder = useCallback((path: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  }, []);
 
   const totalFiles = useMemo(() => {
     return fileStructure ? countFiles(fileStructure) : 0;
@@ -191,23 +187,23 @@ export default function BuildingPage() {
               <Building2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                Drawings
-              </h1>
+              <h1 className="text-2xl font-semibold text-gray-900">Drawings</h1>
               <p className="text-gray-600 text-sm mt-0.5">{hotelName}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             {selectedFiles.length > 0 && (
               <div className="text-sm text-gray-600">
-                <span className="font-medium text-blue-600">{selectedFiles[0].split('/').pop()}</span>
+                <span className="font-medium text-blue-600">
+                  {selectedFiles[0].split('/').pop()}
+                </span>
               </div>
             )}
           </div>
         </div>
-        
-        {/* Search & Filter Bar */}
+
+        {/* Search & Filter */}
         <div className="mt-4 flex items-center space-x-3">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -228,8 +224,7 @@ export default function BuildingPage() {
               </button>
             )}
           </div>
-          
-          {/* Category Filter */}
+
           {filterCategory && (
             <button
               onClick={() => setFilterCategory(null)}
@@ -241,14 +236,12 @@ export default function BuildingPage() {
             </button>
           )}
         </div>
-        
+
         {/* Quick Category Filters */}
         {!loading && categories.length > 0 && (
           <div className="mt-3 flex items-center space-x-2 overflow-x-auto pb-2">
-            <span className="text-xs text-gray-500 whitespace-nowrap">
-              Quick Filter:
-            </span>
-            {categories.map(cat => (
+            <span className="text-xs text-gray-500 whitespace-nowrap">Quick Filter:</span>
+            {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setFilterCategory(filterCategory === cat ? null : cat)}
@@ -267,7 +260,7 @@ export default function BuildingPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar - File Tree */}
+        {/* Sidebar */}
         <aside className={`bg-white border-r border-gray-200 transition-all duration-300 ${
           sidebarCollapsed ? 'w-12' : 'w-80'
         } flex flex-col`}>
@@ -293,7 +286,7 @@ export default function BuildingPage() {
                   </button>
                 </div>
               </div>
-              
+
               <div className="flex-1 overflow-auto p-3">
                 {loading ? (
                   <div className="text-center py-8">
@@ -307,7 +300,6 @@ export default function BuildingPage() {
                   </div>
                 ) : filteredFiles ? (
                   <>
-                    {/* If root has empty name, render children directly */}
                     {filteredFiles.name === '' && filteredFiles.children ? (
                       filteredFiles.children.map((child) => (
                         <FileTree
@@ -316,15 +308,7 @@ export default function BuildingPage() {
                           selectedFiles={selectedFiles}
                           expandedFolders={expandedFolders}
                           onSelectFile={handleFileSelect}
-                          onToggleFolder={(path) => {
-                            const newExpanded = new Set(expandedFolders);
-                            if (newExpanded.has(path)) {
-                              newExpanded.delete(path);
-                            } else {
-                              newExpanded.add(path);
-                            }
-                            setExpandedFolders(newExpanded);
-                          }}
+                          onToggleFolder={handleToggleFolder}
                         />
                       ))
                     ) : (
@@ -333,15 +317,7 @@ export default function BuildingPage() {
                         selectedFiles={selectedFiles}
                         expandedFolders={expandedFolders}
                         onSelectFile={handleFileSelect}
-                        onToggleFolder={(path) => {
-                          const newExpanded = new Set(expandedFolders);
-                          if (newExpanded.has(path)) {
-                            newExpanded.delete(path);
-                          } else {
-                            newExpanded.add(path);
-                          }
-                          setExpandedFolders(newExpanded);
-                        }}
+                        onToggleFolder={handleToggleFolder}
                       />
                     )}
                   </>
@@ -356,18 +332,15 @@ export default function BuildingPage() {
           )}
         </aside>
 
-        {/* Main Viewer Area */}
+        {/* Viewer */}
         <main className="flex-1 flex flex-col bg-gray-50 overflow-hidden">
           {selectedFiles.length === 0 ? (
-            // Empty State
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center max-w-md">
                 <div className="bg-white p-8 rounded-2xl inline-block mb-6 border border-gray-200 shadow-sm">
                   <FileText className="w-16 h-16 text-gray-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  No Drawing Selected
-                </h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No Drawing Selected</h3>
                 <p className="text-gray-600 text-sm mb-6">
                   Select a drawing from the file explorer to view it here.
                 </p>
@@ -379,8 +352,7 @@ export default function BuildingPage() {
               </div>
             </div>
           ) : (
-            // PDF Viewer
-            <PDFViewer 
+            <PDFViewer
               filePath={selectedFiles[0]}
               hotelId={hotelId}
               getFileUrl={getFileUrl}
