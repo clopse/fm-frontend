@@ -183,8 +183,8 @@ export default function MainSidebar({
         {/* Footer */}
         <div className="p-4 border-t border-slate-700">
           <div className="text-center">
-            <div className="text-xs text-gray-400">JMK Facilities Management</div>
-            <div className="text-xs text-gray-500 mt-1">Hotel Portal v2.0</div>
+            <div className="text-xs text-gray-400">Facilities Management 2026</div>
+            <div className="text-xs text-gray-500 mt-1">Hotel Portal v2.41</div>
           </div>
         </div>
       </div>
