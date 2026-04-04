@@ -11,7 +11,7 @@ import {
   Eye, EyeOff, Settings, Loader2
 } from 'lucide-react';
 
-import { hotels } from '@/lib/hotels';
+import { hotelNames } from '@/data/hotelMetadata';
 import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   format, isValid, parseISO, subYears
@@ -92,6 +92,11 @@ const aggregateValues = (values: number[], metric: string): number => {
 };
 
 export default function UtilitiesGraphs() {
+  // Derived from hotelNames to match HotelSelectorModal
+  const hotels = Object.entries(hotelNames)
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   const [utilityData, setUtilityData] = useState<UtilityBill[]>([]);
   const [hotelFacilities, setHotelFacilities] = useState<Record<string, HotelFacilities>>({});
   const [processedData, setProcessedData] = useState<MonthlyUtilityData[]>([]);
