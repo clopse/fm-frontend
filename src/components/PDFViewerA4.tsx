@@ -138,19 +138,35 @@ export default function PDFViewerA4({ filePath, hotelId, getFileUrl, onClose }: 
     if (fileUrl) window.open(fileUrl, '_blank');
   };
 
-  // Print: open PDF in hidden iframe and trigger print dialog
-  const handlePrint = () => {
+
+  // Print: fetch as blob to avoid cross-origin iframe restrictions,
+  // create local object URL, load in hidden iframe, trigger print
+  const handlePrint = async () => {
     if (!fileUrl) return;
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = fileUrl;
-    document.body.appendChild(iframe);
-    iframe.onload = () => {
-      setTimeout(() => {
-        iframe.contentWindow?.print();
-        setTimeout(() => document.body.removeChild(iframe), 1000);
-      }, 500);
-    };
+    try {
+      const res = await fetch(fileUrl);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;border:0;';
+      iframe.src = objectUrl;
+      document.body.appendChild(iframe);
+
+      iframe.onload = () => {
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+            URL.revokeObjectURL(objectUrl);
+          }, 2000);
+        }, 300);
+      };
+    } catch {
+      // Fallback: open in new tab, user can print from there
+      window.open(fileUrl, '_blank');
+    }
   };
 
   const displayedPercent = Math.round(scale * 100);
