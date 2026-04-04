@@ -544,20 +544,13 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   const handleUploadSuccess = useCallback(async () => {
     setVisible(false);
     setSuccessMessage("✅ Upload successful! Updating score...");
-    // Immediately refresh history and score so file appears and points update
+    // refreshData fetches fresh history + scores AND correctly updates COMPLIANCE_CACHE
+    // before persisting to localStorage — so the new file survives a page refresh
     try {
-      await Promise.all([loadHistory(), loadScores()]);
-      // Bust the localStorage cache so next page load fetches fresh data
-      const cached = COMPLIANCE_CACHE.get(hotelId);
-      if (cached) {
-        const updated = { ...cached, fetchedAt: Date.now() };
-        COMPLIANCE_CACHE.set(hotelId, updated);
-        persistToStorage(hotelId);
-      }
+      await refreshData();
     } catch (err) {
       console.error("Post-upload refresh failed:", err);
     }
-    setIsDirty(false);
     setTimeout(() => setSuccessMessage(null), 3000);
   }, [hotelId]);
 
