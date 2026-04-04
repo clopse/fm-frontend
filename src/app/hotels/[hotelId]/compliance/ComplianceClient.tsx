@@ -417,6 +417,21 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
     };
   }, [hotelId]);
 
+  // Listen for localStorage changes from other pages (e.g. ComplianceReportsPage deleting a file)
+  // When compliance_cache_{hotelId} is removed, refresh data immediately even if already mounted
+  useEffect(() => {
+    if (!hotelId) return;
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === getStorageKey(hotelId) && e.newValue === null) {
+        // Cache was cleared externally — bust in-memory cache and reload
+        COMPLIANCE_CACHE.delete(hotelId);
+        refreshData();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [hotelId]);
+
   const loadInitialData = async () => {
     setLoading(true);
     try {
