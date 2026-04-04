@@ -1,8 +1,8 @@
 // FILE: src/app/hotels/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { 
+import { useEffect, useState, useCallback } from 'react';
+import {
   Settings,
   Award,
   Calendar,
@@ -60,34 +60,30 @@ export default function HotelsPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [currentHotel, setCurrentHotel] = useState(hotelNames['hiex']);
 
+  // PERF FIX: Fire leaderboard and monthly checklist immediately on mount —
+  // they don't depend on taskLabelMap. Only recentUploads needs to wait.
   useEffect(() => {
     fetchTaskLabels();
-    
-    // Handle mobile detection
+    fetchLeaderboard();
+    fetchMonthlyChecklist();
+
     const handleResize = () => {
       const mobile = window.innerWidth < 1024;
       setIsMobile(mobile);
-      if (!mobile) {
-        setShowAdminSidebar(true);
-      } else {
-        setShowAdminSidebar(false);
-      }
+      setShowAdminSidebar(!mobile);
     };
-    
+
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // PERF FIX: Only recentUploads waits for taskLabelMap
   useEffect(() => {
     if (Object.keys(taskLabelMap).length > 0) {
-      fetchLeaderboard();
       fetchRecentUploads();
-      fetchMonthlyChecklist();
     }
   }, [taskLabelMap]);
-
-
 
   const fetchTaskLabels = async () => {
     try {
@@ -103,15 +99,15 @@ export default function HotelsPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`);
       const data: LeaderboardEntry[] = await res.json();
-      const sorted = [...data].sort((a, b) => b.score - a.score);
-      setLeaderboardData(sorted);
+      setLeaderboardData([...data].sort((a, b) => b.score - a.score));
     } catch (err) {
       console.error('Error loading leaderboard:', err);
       setLeaderboardData([]);
     }
   };
 
-  const fetchRecentUploads = async () => {
+  // PERF FIX: useCallback so it can be passed as onRefresh to RecentUploads
+  const fetchRecentUploads = useCallback(async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/pending`);
       const data = await res.json();
@@ -124,7 +120,7 @@ export default function HotelsPage() {
         .map((e: any) => ({
           hotel: hotelNames[e.hotel_id] || e.hotel_id,
           hotel_id: e.hotel_id,
-          report: `${taskLabelMap[e.task_id] || e.task_id}`,
+          report: taskLabelMap[e.task_id] || e.task_id,
           date: e.uploaded_at || e.uploadedAt,
           reportDate: e.report_date || e.reportDate,
           task_id: e.task_id,
@@ -137,20 +133,15 @@ export default function HotelsPage() {
     } catch (err) {
       console.error('Error loading uploads:', err);
     }
-  };
+  }, [taskLabelMap]);
 
   const fetchMonthlyChecklist = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`);
       const data: MonthlyTask[] = await res.json();
-
-      const filtered = data.filter(t =>
-        t.frequency?.toLowerCase() === 'monthly' && !t.confirmed
-      ).map(t => ({
-        ...t,
-        label: taskLabelMap[t.task_id] || t.task_id
-      }));
-
+      const filtered = data
+        .filter(t => t.frequency?.toLowerCase() === 'monthly' && !t.confirmed)
+        .map(t => ({ ...t, label: taskLabelMap[t.task_id] || t.task_id }));
       setMonthlyTasks(filtered);
     } catch (err) {
       console.error('Error loading checklist:', err);
@@ -164,19 +155,16 @@ export default function HotelsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Admin Sidebar */}
-      <AdminSidebar 
+      <AdminSidebar
         isMobile={isMobile}
         isOpen={showAdminSidebar}
         onClose={() => setShowAdminSidebar(false)}
       />
 
-      {/* Main Content Area */}
       <div className={`flex-1 transition-all duration-300 ${showAdminSidebar && !isMobile ? 'ml-72' : 'ml-0'}`}>
         <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
 
-        {/* Admin Header */}
-        <AdminHeader 
+        <AdminHeader
           showSidebar={showAdminSidebar}
           onToggleSidebar={() => setShowAdminSidebar(!showAdminSidebar)}
           onOpenHotelSelector={() => setIsHotelModalOpen(true)}
@@ -191,7 +179,6 @@ export default function HotelsPage() {
           onSelectHotel={handleHotelSelect}
         />
 
-        {/* Account Settings Modal */}
         {showAccountSettings && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
@@ -206,10 +193,7 @@ export default function HotelsPage() {
               <div className="p-6">
                 <p>Account settings content goes here...</p>
                 <div className="flex justify-end space-x-3 mt-6">
-                  <button 
-                    onClick={() => setShowAccountSettings(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                  >
+                  <button onClick={() => setShowAccountSettings(false)} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
                     Cancel
                   </button>
                   <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
@@ -221,15 +205,8 @@ export default function HotelsPage() {
           </div>
         )}
 
-
-
-        {/* Main Dashboard Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-          {/* Dashboard Grid - Updated with Weather Warnings */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            
-            {/* Compliance Leaderboard */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
@@ -243,13 +220,11 @@ export default function HotelsPage() {
               <ComplianceLeaderboard data={leaderboardData} />
             </div>
 
-            {/* Weather Warnings - Replaces Monthly Tasks */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <WeatherWarningsBox />
             </div>
           </div>
 
-          {/* Utilities */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
@@ -262,7 +237,6 @@ export default function HotelsPage() {
             <UtilitiesGraphs />
           </div>
 
-          {/* Recent Activity */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-3">
@@ -272,9 +246,9 @@ export default function HotelsPage() {
                 <h2 className="text-lg font-semibold text-gray-900">Recent Upload Activity</h2>
               </div>
             </div>
-            <RecentUploads uploads={recentUploads} />
+            {/* PERF FIX: onRefresh replaces window.location.reload() in audit actions */}
+            <RecentUploads uploads={recentUploads} onRefresh={fetchRecentUploads} />
           </div>
-
         </div>
       </div>
     </div>
