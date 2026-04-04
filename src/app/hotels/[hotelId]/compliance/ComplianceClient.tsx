@@ -541,12 +541,25 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
     }
   };
 
-  const handleUploadSuccess = useCallback(() => {
-    setIsDirty(true);
-    setSuccessMessage("Upload successful!");
-    setTimeout(() => setSuccessMessage(null), 3000);
+  const handleUploadSuccess = useCallback(async () => {
     setVisible(false);
-  }, []);
+    setSuccessMessage("✅ Upload successful! Updating score...");
+    // Immediately refresh history and score so file appears and points update
+    try {
+      await Promise.all([loadHistory(), loadScores()]);
+      // Bust the localStorage cache so next page load fetches fresh data
+      const cached = COMPLIANCE_CACHE.get(hotelId);
+      if (cached) {
+        const updated = { ...cached, fetchedAt: Date.now() };
+        COMPLIANCE_CACHE.set(hotelId, updated);
+        persistToStorage(hotelId);
+      }
+    } catch (err) {
+      console.error("Post-upload refresh failed:", err);
+    }
+    setIsDirty(false);
+    setTimeout(() => setSuccessMessage(null), 3000);
+  }, [hotelId]);
 
   const selectedTaskObj = useMemo(
     () => tasks.find((t) => t.task_id === selectedTask),
