@@ -50,10 +50,10 @@ const WX_CITIES = [
 
 // pctX shifted +4.5 from calibrated values (≈25px on a ~550px displayed map)
 const CLUSTERS = [
-  { id: 'dublin',    label: 'Dublin',    pctX: 40.0, pctY: 55.5, hotels: ['hiex','hbhdcc','hiltonth','hida'] },
+  { id: 'dublin',    label: 'Dublin',    pctX: 40.0, pctY: 57.5, hotels: ['hiex','hbhdcc','hiltonth','hida'] },
   { id: 'belfast',   label: 'Belfast',   pctX: 43.5, pctY: 44.5, hotels: ['belfast']                        },
-  { id: 'waterford', label: 'Waterford', pctX: 33.0, pctY: 68.5, hotels: ['marina']                         },
-  { id: 'cork',      label: 'Cork',      pctX: 23.0, pctY: 72.5, hotels: ['moxy']                           },
+  { id: 'waterford', label: 'Waterford', pctX: 33.0, pctY: 70.5, hotels: ['marina']                         },
+  { id: 'cork',      label: 'Cork',      pctX: 23.0, pctY: 74.5, hotels: ['moxy']                           },
   { id: 'london',    label: 'London',    pctX: 78.0, pctY: 76.0, hotels: ['hbhe','kensh']                   },
 ] as const;
 
