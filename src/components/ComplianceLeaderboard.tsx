@@ -175,23 +175,44 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
       </div>
 
       {/* Leaderboard rows */}
-      <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
         {displayRows.map(({ hotel, score }) => {
-          const noData = score === null;
-          const city   = HOTEL_CITY[hotel];
+          const noData   = score === null;
+          const city     = HOTEL_CITY[hotel];
+          const color    = noData ? 'rgba(255,255,255,.15)' : scoreColor(score!);
+          const category = noData ? null : score! >= 85 ? 'green' : score! >= 70 ? 'amber' : 'red';
+
+          // Row accent colours
+          const rowBg     = category === 'green' ? 'rgba(16,185,129,.06)'
+                          : category === 'amber' ? 'rgba(245,158,11,.06)'
+                          : category === 'red'   ? 'rgba(239,68,68,.06)'
+                          : 'transparent';
+          const rowBorder = category === 'green' ? 'rgba(16,185,129,.35)'
+                          : category === 'amber' ? 'rgba(245,158,11,.35)'
+                          : category === 'red'   ? 'rgba(239,68,68,.35)'
+                          : 'rgba(255,255,255,.06)';
 
           return (
-            <div key={hotel} style={{ display:'flex', alignItems:'center', gap:11 }}>
+            <div key={hotel} style={{
+              display:'flex', alignItems:'center', gap:11,
+              background: rowBg,
+              borderRadius:10,
+              border: `1px solid ${rowBorder}`,
+              padding:'6px 8px 6px 4px',
+              transition:'background .3s, border-color .3s',
+            }}>
+              {/* Logo */}
               <Link href={`/hotels/${hotel}`} style={{ textDecoration:'none', flexShrink:0 }}>
-                <div style={{ width:106, display:'flex', flexDirection:'column', alignItems:'center', gap:3, transition:'opacity .15s' }}
+                <div style={{ width:120, display:'flex', flexDirection:'column', alignItems:'center', gap:3, transition:'opacity .15s' }}
                   onMouseEnter={e => (e.currentTarget.style.opacity = '.7')}
                   onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                 >
-                  <div style={{ width:100, height:40, display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+                  {/* Icon — 15% bigger: 100→115 wide, 40→46 tall */}
+                  <div style={{ width:115, height:46, display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
                     <img
                       src={`/icons/${hotel}-icon.png`}
                       alt={hotelNames[hotel] || hotel}
-                      style={{ maxWidth:100, maxHeight:40, objectFit:'contain', display:'block' }}
+                      style={{ maxWidth:115, maxHeight:46, objectFit:'contain', display:'block' }}
                       onError={e => {
                         (e.currentTarget as HTMLImageElement).style.display = 'none';
                         const fb = (e.currentTarget as HTMLImageElement).parentElement?.querySelector('.icon-fallback') as HTMLElement;
@@ -199,8 +220,8 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
                       }}
                     />
                     <div className="icon-fallback" style={{ display:'none', position:'absolute', inset:0, alignItems:'center', justifyContent:'center' }}>
-                      <div style={{ width:36, height:36, borderRadius:9, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <Building2 size={15} style={{ color:'rgba(255,255,255,.32)' }}/>
+                      <div style={{ width:38, height:38, borderRadius:9, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <Building2 size={16} style={{ color:'rgba(255,255,255,.32)' }}/>
                       </div>
                     </div>
                   </div>
@@ -212,6 +233,7 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
                 </div>
               </Link>
 
+              {/* Score bar */}
               <div style={{ flex:1, position:'relative', height:24, background:'rgba(255,255,255,.07)', borderRadius:6, overflow:'hidden' }}>
                 {noData ? (
                   <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', paddingLeft:10, gap:5 }}>
@@ -222,13 +244,13 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
                   <>
                     <div style={{
                       height:'100%', width:`${score}%`,
-                      background:`linear-gradient(90deg,${scoreColor(score!)}99,${scoreColor(score!)})`,
+                      background:`linear-gradient(90deg,${color}99,${color})`,
                       borderRadius:6, transition:'width .65s cubic-bezier(.16,1,.3,1)',
                     }}/>
                     <div style={{
                       position:'absolute', right:9, top:'50%', transform:'translateY(-50%)',
-                      fontSize:'.72rem', fontWeight:600, fontFamily:'DM Mono,monospace',
-                      color: score! >= 35 ? '#fff' : 'rgba(255,255,255,.45)',
+                      fontSize:'.72rem', fontWeight:700, fontFamily:'DM Mono,monospace',
+                      color: score! >= 35 ? '#fff' : color,
                       textShadow: score! >= 35 ? '0 1px 3px rgba(0,0,0,.6)' : 'none',
                     }}>
                       {score}%
