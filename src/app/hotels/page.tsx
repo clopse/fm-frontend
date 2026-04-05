@@ -15,13 +15,11 @@ import UserPanel             from '@/components/UserPanel';
 import HotelSelectorModal    from '@/components/HotelSelectorModal';
 import { hotelNames }        from '@/data/hotelMetadata';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 interface LeaderboardEntry { hotel: string; score: number; }
 interface MonthlyTask      { task_id: string; frequency: string; confirmed: boolean; }
 interface DayForecast      { date: string; code: number; high: number; low: number; }
 interface CityWeather      { temp: number; apparent: number; wind: number; code: number; forecast: DayForecast[]; loading: boolean; }
 
-// ─── Weather helpers ──────────────────────────────────────────────────────────
 function wxInfo(code: number) {
   if (code === 0)  return { emoji: '☀️', label: 'Clear sky' };
   if (code === 1)  return { emoji: '🌤', label: 'Mainly clear' };
@@ -42,7 +40,6 @@ const SHORT_DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const shortDay   = (iso: string) => SHORT_DAYS[new Date(iso).getDay()];
 const isAlert    = (code: number, wind: number) => code >= 65 || code >= 95 || wind >= 50;
 
-// ─── Cities ───────────────────────────────────────────────────────────────────
 const WX_CITIES = [
   { id: 'dublin',    name: 'Dublin',    lat: 53.35, lng: -6.26 },
   { id: 'belfast',   name: 'Belfast',   lat: 54.60, lng: -5.93 },
@@ -51,21 +48,20 @@ const WX_CITIES = [
   { id: 'london',    name: 'London',    lat: 51.51, lng: -0.13 },
 ];
 
-// ─── Map clusters ─────────────────────────────────────────────────────────────
+// pctX shifted +4.5 from calibrated values (≈25px on a ~550px displayed map)
 const CLUSTERS = [
-  { id: 'dublin',    label: 'Dublin',    pctX: 35.5, pctY: 55.5, hotels: ['hiex','hbhdcc','hiltonth','hida'] },
-  { id: 'belfast',   label: 'Belfast',   pctX: 39.0, pctY: 44.5, hotels: ['belfast']                        },
-  { id: 'waterford', label: 'Waterford', pctX: 28.5, pctY: 68.5, hotels: ['marina']                         },
-  { id: 'cork',      label: 'Cork',      pctX: 18.5, pctY: 72.5, hotels: ['moxy']                           },
-  { id: 'london',    label: 'London',    pctX: 74.0, pctY: 76.0, hotels: ['hbhe','kensh']                   },
+  { id: 'dublin',    label: 'Dublin',    pctX: 40.0, pctY: 55.5, hotels: ['hiex','hbhdcc','hiltonth','hida'] },
+  { id: 'belfast',   label: 'Belfast',   pctX: 43.5, pctY: 44.5, hotels: ['belfast']                        },
+  { id: 'waterford', label: 'Waterford', pctX: 33.0, pctY: 68.5, hotels: ['marina']                         },
+  { id: 'cork',      label: 'Cork',      pctX: 23.0, pctY: 72.5, hotels: ['moxy']                           },
+  { id: 'london',    label: 'London',    pctX: 78.0, pctY: 76.0, hotels: ['hbhe','kensh']                   },
 ] as const;
 
 type ClusterId = typeof CLUSTERS[number]['id'];
 
 const ALL_HOTEL_IDS = Object.keys(hotelNames);
-const MARKER = 54; // px diameter — change here to resize all markers
+const MARKER = 54;
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function HotelsPage() {
   const [leaderboardData,  setLeaderboardData]  = useState<LeaderboardEntry[]>([]);
   const [tasksPending,     setTasksPending]      = useState<number | null>(null);
@@ -78,30 +74,24 @@ export default function HotelsPage() {
   const [isMobile,         setIsMobile]         = useState(false);
   const [activeCluster,    setActiveCluster]    = useState<ClusterId | null>(null);
   const [hoveredCluster,   setHoveredCluster]   = useState<string | null>(null);
+  const [selectedHotels,   setSelectedHotels]   = useState<string[]>(ALL_HOTEL_IDS);
 
-  // ── Lifted state: drives both leaderboard filter AND map marker dimming ──
-  const [selectedHotels, setSelectedHotels] = useState<string[]>(ALL_HOTEL_IDS);
+  const totalHotels    = ALL_HOTEL_IDS.length;
+  const totalLocations = CLUSTERS.length;
 
-  // Persist to localStorage
   const handleSelectedHotelsChange = (next: string[]) => {
     setSelectedHotels(next);
     try { localStorage.setItem('selectedHotels', JSON.stringify(next)); } catch {}
   };
 
-  const totalHotels    = ALL_HOTEL_IDS.length;
-  const totalLocations = CLUSTERS.length;
-
   useEffect(() => {
-    // Hydrate selectedHotels from localStorage on mount
     try {
       const saved = localStorage.getItem('selectedHotels');
       if (saved) setSelectedHotels(JSON.parse(saved));
     } catch {}
-
     fetchLeaderboard();
     fetchMonthlyTasks();
     fetchWeather();
-
     const onResize = () => setIsMobile(window.innerWidth < 1024);
     onResize();
     window.addEventListener('resize', onResize);
@@ -110,10 +100,8 @@ export default function HotelsPage() {
 
   const fetchLeaderboard = async () => {
     const CACHE_KEY = 'jmk_leaderboard_cache';
-    const TTL_MS    = 24 * 60 * 60 * 1000; // 24 hours — matches daily S3 update cadence
-
+    const TTL_MS    = 24 * 60 * 60 * 1000;
     try {
-      // Use cached data if it's less than 24 hours old
       const raw = localStorage.getItem(CACHE_KEY);
       if (raw) {
         const { data, ts } = JSON.parse(raw);
@@ -122,12 +110,11 @@ export default function HotelsPage() {
           return;
         }
       }
-    } catch { /* localStorage unavailable — fall through to fetch */ }
-
+    } catch {}
     try {
       const data: LeaderboardEntry[] = await (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`)).json();
       setLeaderboardData([...data].sort((a, b) => b.score - a.score));
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })); } catch { /* quota exceeded */ }
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })); } catch {}
     } catch { setLeaderboardData([]); }
   };
 
@@ -168,7 +155,6 @@ export default function HotelsPage() {
     }));
   };
 
-  // A cluster is "active" if at least one of its hotels is selected in the leaderboard
   const isClusterActive = (c: typeof CLUSTERS[number]) =>
     c.hotels.some(id => selectedHotels.includes(id));
 
@@ -185,7 +171,7 @@ export default function HotelsPage() {
         * { box-sizing:border-box; }
         .content-wrap { max-width:1380px; margin:0 auto; padding:16px 16px 48px; display:flex; flex-direction:column; gap:14px; }
         .panel    { background:rgba(255,255,255,.033); border:1px solid rgba(255,255,255,.068); border-radius:16px; overflow:hidden; }
-        .panel-hd { padding:13px 18px; border-bottom:1px solid rgba(255,255,255,.055); display:flex; align-items:center; justify-content:space-between; }
+        .panel-hd { padding:13px 18px; border-bottom:1px solid rgba(255,255,255,.055); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
         .ptitle   { font-size:.83rem; font-weight:600; color:rgba(255,255,255,.9); letter-spacing:-.01em; }
         .psub     { font-size:.67rem; color:rgba(255,255,255,.26); margin-top:1px; }
         .stat-card { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.062); border-radius:13px; padding:15px; transition:background .2s,border-color .2s,transform .15s; }
@@ -206,6 +192,9 @@ export default function HotelsPage() {
         .wx-row { display:flex; align-items:center; gap:6px; padding:6px 9px; border-radius:8px; cursor:default; transition:background .15s; position:relative; }
         .wx-row:hover { background:rgba(255,255,255,.055); }
         .wx-tip { position:absolute; right:calc(100% + 10px); top:50%; transform:translateY(-50%); background:linear-gradient(145deg,#0d1e3a,#091228); border:1px solid rgba(99,165,250,.2); border-radius:13px; padding:15px; z-index:100; width:220px; box-shadow:0 12px 40px rgba(0,0,0,.8); pointer-events:none; }
+        /* Map panel — flex column so it can grow to match leaderboard */
+        .map-panel { display:flex; flex-direction:column; }
+        .map-body  { flex:1; display:flex; align-items:center; gap:10; padding:10px 14px 14px; }
         @media (max-width:1100px) { .grid-main{grid-template-columns:1fr !important;} }
         @media (max-width:640px)  { .grid-stat{grid-template-columns:repeat(2,1fr) !important;} }
       `}</style>
@@ -216,10 +205,8 @@ export default function HotelsPage() {
         <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)}/>
         <HotelSelectorModal isOpen={isHotelModalOpen} setIsOpen={setIsHotelModalOpen}/>
 
-        {/* Top bar */}
         <div className="top-bar">
           <button className="top-btn" onClick={() => setShowAdminSidebar(s => !s)}><Menu size={17}/></button>
-          {/* Logo — absolutely centred, 30% bigger than previous 30px */}
           <div style={{ position:'absolute', left:'50%', transform:'translateX(-50%)' }}>
             <img src="/jmk-logo.png" alt="JMK" style={{ height:39, width:'auto', opacity:.9 }}/>
           </div>
@@ -248,11 +235,11 @@ export default function HotelsPage() {
             ))}
           </div>
 
-          {/* Map + Leaderboard */}
-          <div className="grid-main fu" style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:'14px', alignItems:'start', animationDelay:'90ms' }}>
+          {/* Map + Leaderboard — default stretch so both panels are equal height */}
+          <div className="grid-main fu" style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:'14px', animationDelay:'90ms' }}>
 
-            {/* MAP */}
-            <div className="panel">
+            {/* MAP PANEL — flex column, grows to match leaderboard */}
+            <div className="panel map-panel">
               <div className="panel-hd">
                 <div>
                   <div className="ptitle">Portfolio Map</div>
@@ -264,10 +251,10 @@ export default function HotelsPage() {
                 </div>
               </div>
 
-              <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 14px 14px' }}>
+              {/* map-body fills remaining height, centres image vertically */}
+              <div className="map-body">
 
-                {/* Map image */}
-                <div style={{ flex:'1 1 0', minWidth:0, display:'flex', justifyContent:'center' }}>
+                <div style={{ flex:'1 1 0', minWidth:0, display:'flex', justifyContent:'center', alignItems:'center' }}>
                   <div style={{ position:'relative', width:'100%', maxWidth:560 }}>
                     <img src="/uk-logo.png" alt="UK & Ireland" style={{ width:'100%', display:'block', borderRadius:6 }} draggable={false}/>
 
@@ -275,20 +262,18 @@ export default function HotelsPage() {
                       const hov    = hoveredCluster === c.id;
                       const multi  = c.hotels.length > 1;
                       const active = isClusterActive(c);
+                      const selCount = c.hotels.filter(id => selectedHotels.includes(id)).length;
 
                       return (
                         <div key={c.id}
                           style={{
                             position:'absolute', left:`${c.pctX}%`, top:`${c.pctY}%`,
-                            transform:'translate(-50%,-50%)', cursor:'pointer', zIndex:10,
-                            // Dim markers for clusters with no selected hotels
-                            opacity: active ? 1 : 0.28,
-                            transition:'opacity .35s',
-                            // Don't let inactive markers intercept clicks if fully dimmed
+                            transform:'translate(-50%,-50%)', cursor: active ? 'pointer' : 'default',
+                            zIndex:10, opacity: active ? 1 : 0.25, transition:'opacity .35s',
                             pointerEvents: active ? 'auto' : 'none',
                           }}
-                          onClick={() => active && setActiveCluster(c.id as ClusterId)}
-                          onMouseEnter={() => active && setHoveredCluster(c.id)}
+                          onClick={() => setActiveCluster(c.id as ClusterId)}
+                          onMouseEnter={() => setHoveredCluster(c.id)}
                           onMouseLeave={() => setHoveredCluster(null)}
                         >
                           {active && <><div className="pr" style={{ width:MARKER, height:MARKER }}/><div className="pr pr2" style={{ width:MARKER, height:MARKER }}/></>}
@@ -296,15 +281,10 @@ export default function HotelsPage() {
                           <div style={{
                             position:'relative', width:MARKER, height:MARKER, borderRadius:'50%', overflow:'hidden',
                             border: hov ? '2.5px solid #93c5fd' : '2px solid #60a5fa',
-                            boxShadow: active
-                              ? hov
-                                ? `0 0 0 3px rgba(96,165,250,.2), 0 0 18px rgba(96,165,250,.85)`
-                                : `0 0 0 2px rgba(96,165,250,.1), 0 0 10px rgba(96,165,250,.5)`
-                              : 'none',
+                            boxShadow: active ? (hov ? `0 0 0 3px rgba(96,165,250,.2),0 0 18px rgba(96,165,250,.85)` : `0 0 0 2px rgba(96,165,250,.1),0 0 10px rgba(96,165,250,.5)`) : 'none',
                             background:'#0f172a', transition:'border .15s,box-shadow .15s', zIndex:2,
                           }}>
-                            <img src={`/icons/${c.hotels[0]}-icon.png`} alt={c.label}
-                              style={{ width:'100%', height:'100%', objectFit:'contain', padding:'6px' }}/>
+                            <img src={`/icons/${c.hotels[0]}-icon.png`} alt={c.label} style={{ width:'100%', height:'100%', objectFit:'contain', padding:'6px' }}/>
                           </div>
 
                           {multi && (
@@ -312,19 +292,17 @@ export default function HotelsPage() {
                               position:'absolute', top:-3, right:-3, width:17, height:17, borderRadius:'50%',
                               background:'#1e3a8a', border:'1.5px solid #93c5fd',
                               display:'flex', alignItems:'center', justifyContent:'center',
-                              fontSize:'8px', fontWeight:700, color:'#e0f2fe',
-                              fontFamily:'DM Mono,monospace', zIndex:3, boxShadow:'0 2px 6px rgba(0,0,0,.6)',
+                              fontSize:'8px', fontWeight:700, color:'#e0f2fe', fontFamily:'DM Mono,monospace',
+                              zIndex:3, boxShadow:'0 2px 6px rgba(0,0,0,.6)',
                             }}>
-                              {/* Count only the selected hotels in this cluster */}
-                              {c.hotels.filter(id => selectedHotels.includes(id)).length || c.hotels.length}
+                              {selCount || c.hotels.length}
                             </div>
                           )}
 
                           <div style={{
                             position:'absolute', top:`calc(100% + 6px)`, left:'50%', transform:'translateX(-50%)',
                             fontSize:'8.5px', fontWeight:600, color:'rgba(255,255,255,.82)',
-                            whiteSpace:'nowrap', textShadow:'0 1px 6px rgba(0,0,0,1)',
-                            letterSpacing:'.02em', pointerEvents:'none',
+                            whiteSpace:'nowrap', textShadow:'0 1px 6px rgba(0,0,0,1)', letterSpacing:'.02em', pointerEvents:'none',
                           }}>{c.label}</div>
 
                           {hov && active && (
@@ -334,7 +312,7 @@ export default function HotelsPage() {
                               padding:'5px 11px', fontSize:'8.5px', fontWeight:500, color:'white',
                               whiteSpace:'nowrap', boxShadow:'0 4px 16px rgba(0,0,0,.75)', zIndex:20,
                             }}>
-                              {c.hotels.filter(id => selectedHotels.includes(id)).length} {c.hotels.filter(id => selectedHotels.includes(id)).length === 1 ? 'hotel' : 'hotels'}
+                              {selCount} {selCount === 1 ? 'hotel' : 'hotels'}
                               <div style={{ fontSize:'7px', color:'rgba(147,197,253,.6)', marginTop:2, fontFamily:'DM Mono,monospace', letterSpacing:'.05em' }}>TAP TO SELECT</div>
                             </div>
                           )}
@@ -345,24 +323,17 @@ export default function HotelsPage() {
                 </div>
 
                 {/* Weather strip */}
-                <div style={{ width:128, flexShrink:0, display:'flex', flexDirection:'column', justifyContent:'center', paddingTop:4, gap:1 }}>
+                <div style={{ width:128, flexShrink:0, display:'flex', flexDirection:'column', justifyContent:'center', gap:1 }}>
                   <div style={{ fontSize:'.58rem', color:'rgba(255,255,255,.22)', fontFamily:'DM Mono,monospace', letterSpacing:'.07em', marginBottom:5, paddingLeft:9 }}>WEATHER</div>
                   {WX_CITIES.map(city => {
                     const wx   = cityWeather[city.id];
                     const info = wx && !wx.loading ? wxInfo(wx.code) : null;
                     const warn = wx && !wx.loading && isAlert(wx.code, wx.wind);
                     return (
-                      <div key={city.id} className="wx-row"
-                        onMouseEnter={() => setHoveredWeather(city.id)}
-                        onMouseLeave={() => setHoveredWeather(null)}
-                      >
+                      <div key={city.id} className="wx-row" onMouseEnter={() => setHoveredWeather(city.id)} onMouseLeave={() => setHoveredWeather(null)}>
                         <span style={{ flex:1, fontSize:'.7rem', fontWeight:500, color:'rgba(255,255,255,.65)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{city.name}</span>
                         {(!wx || wx.loading) && <div style={{ width:28, height:8, borderRadius:4, background:'rgba(255,255,255,.08)' }}/>}
-                        {info && (<>
-                          <span className="mono" style={{ fontSize:'.74rem', fontWeight:600, color:'#fff' }}>{wx.temp}°</span>
-                          <span style={{ fontSize:'.92rem', lineHeight:1 }}>{info.emoji}</span>
-                          {warn && <AlertTriangle size={10} style={{ color:'#f59e0b', flexShrink:0 }}/>}
-                        </>)}
+                        {info && (<><span className="mono" style={{ fontSize:'.74rem', fontWeight:600, color:'#fff' }}>{wx.temp}°</span><span style={{ fontSize:'.92rem', lineHeight:1 }}>{info.emoji}</span>{warn && <AlertTriangle size={10} style={{ color:'#f59e0b', flexShrink:0 }}/>}</>)}
                         {hoveredWeather === city.id && info && wx && (
                           <div className="wx-tip">
                             <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
@@ -408,17 +379,12 @@ export default function HotelsPage() {
               </div>
             </div>
 
-            {/* Leaderboard — receives and controls selectedHotels */}
+            {/* Leaderboard */}
             <div className="panel fu" style={{ animationDelay:'145ms' }}>
               <div className="panel-hd">
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <div className="ibadge" style={{ background:'rgba(16,185,129,.13)' }}>
-                    <Award size={12} style={{ color:'#34d399' }}/>
-                  </div>
-                  <div>
-                    <div className="ptitle">Compliance Score</div>
-                    <div className="psub">Updated daily</div>
-                  </div>
+                  <div className="ibadge" style={{ background:'rgba(16,185,129,.13)' }}><Award size={12} style={{ color:'#34d399' }}/></div>
+                  <div><div className="ptitle">Compliance Score</div><div className="psub">Updated daily</div></div>
                 </div>
               </div>
               <ComplianceLeaderboard
@@ -433,18 +399,12 @@ export default function HotelsPage() {
           <div className="panel fu" style={{ animationDelay:'185ms' }}>
             <div className="panel-hd">
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                <div className="ibadge" style={{ background:'rgba(139,92,246,.13)' }}>
-                  <Zap size={12} style={{ color:'#a78bfa' }}/>
-                </div>
-                <div>
-                  <div className="ptitle">Utilities Comparison</div>
-                  <div className="psub">Electricity &amp; gas · all properties</div>
-                </div>
+                <div className="ibadge" style={{ background:'rgba(139,92,246,.13)' }}><Zap size={12} style={{ color:'#a78bfa' }}/></div>
+                <div><div className="ptitle">Utilities Comparison</div><div className="psub">Electricity &amp; gas · all properties</div></div>
               </div>
             </div>
             <UtilitiesGraphs/>
           </div>
-
         </div>
       </div>
 
