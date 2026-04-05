@@ -1,7 +1,7 @@
 // FILE: src/app/hotels/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import {
   X, Award, Zap, MapPin, CheckCircle2, ClipboardList,
@@ -62,8 +62,8 @@ const CLUSTERS = [
 
 type ClusterId = typeof CLUSTERS[number]['id'];
 
-// Marker diameter — tweak this one value to resize all markers
-const MARKER = 54;
+const ALL_HOTEL_IDS = Object.keys(hotelNames);
+const MARKER = 54; // px diameter — change here to resize all markers
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function HotelsPage() {
@@ -79,13 +79,29 @@ export default function HotelsPage() {
   const [activeCluster,    setActiveCluster]    = useState<ClusterId | null>(null);
   const [hoveredCluster,   setHoveredCluster]   = useState<string | null>(null);
 
-  const totalHotels    = Object.keys(hotelNames).length;
+  // ── Lifted state: drives both leaderboard filter AND map marker dimming ──
+  const [selectedHotels, setSelectedHotels] = useState<string[]>(ALL_HOTEL_IDS);
+
+  // Persist to localStorage
+  const handleSelectedHotelsChange = (next: string[]) => {
+    setSelectedHotels(next);
+    try { localStorage.setItem('selectedHotels', JSON.stringify(next)); } catch {}
+  };
+
+  const totalHotels    = ALL_HOTEL_IDS.length;
   const totalLocations = CLUSTERS.length;
 
   useEffect(() => {
+    // Hydrate selectedHotels from localStorage on mount
+    try {
+      const saved = localStorage.getItem('selectedHotels');
+      if (saved) setSelectedHotels(JSON.parse(saved));
+    } catch {}
+
     fetchLeaderboard();
     fetchMonthlyTasks();
     fetchWeather();
+
     const onResize = () => setIsMobile(window.innerWidth < 1024);
     onResize();
     window.addEventListener('resize', onResize);
@@ -136,6 +152,10 @@ export default function HotelsPage() {
     }));
   };
 
+  // A cluster is "active" if at least one of its hotels is selected in the leaderboard
+  const isClusterActive = (c: typeof CLUSTERS[number]) =>
+    c.hotels.some(id => selectedHotels.includes(id));
+
   const openCluster = activeCluster ? CLUSTERS.find(c => c.id === activeCluster) ?? null : null;
   const circlePos   = (i: number, total: number, r = 88) => {
     const a = (2 * Math.PI / total) * i - Math.PI / 2;
@@ -147,51 +167,29 @@ export default function HotelsPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap');
         * { box-sizing:border-box; }
-
         .content-wrap { max-width:1380px; margin:0 auto; padding:16px 16px 48px; display:flex; flex-direction:column; gap:14px; }
-
         .panel    { background:rgba(255,255,255,.033); border:1px solid rgba(255,255,255,.068); border-radius:16px; overflow:hidden; }
         .panel-hd { padding:13px 18px; border-bottom:1px solid rgba(255,255,255,.055); display:flex; align-items:center; justify-content:space-between; }
         .ptitle   { font-size:.83rem; font-weight:600; color:rgba(255,255,255,.9); letter-spacing:-.01em; }
         .psub     { font-size:.67rem; color:rgba(255,255,255,.26); margin-top:1px; }
-
         .stat-card { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.062); border-radius:13px; padding:15px; transition:background .2s,border-color .2s,transform .15s; }
         .stat-card:hover { background:rgba(255,255,255,.052); border-color:rgba(255,255,255,.12); transform:translateY(-2px); }
-
-        /* Top bar — slim, no clutter */
         .top-bar { position:sticky; top:0; z-index:30; background:rgba(6,12,26,.94); backdrop-filter:blur(16px); border-bottom:1px solid rgba(255,255,255,.07); height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
         .top-btn { background:none; border:none; cursor:pointer; color:rgba(255,255,255,.45); width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; transition:background .15s,color .15s; }
         .top-btn:hover { background:rgba(255,255,255,.07); color:rgba(255,255,255,.9); }
-
         .mono  { font-family:'DM Mono','Courier New',monospace; }
         .ibadge{ width:25px; height:25px; border-radius:7px; display:flex; align-items:center; justify-content:center; }
         .live  { width:6px; height:6px; border-radius:50%; background:#34d399; box-shadow:0 0 7px #10b981; flex-shrink:0; }
-
-        /* Marker pulse */
-        @keyframes pulseRing {
-          0%   { transform:translate(-50%,-50%) scale(1);   opacity:.5; }
-          100% { transform:translate(-50%,-50%) scale(2.4); opacity:0;  }
-        }
+        @keyframes pulseRing { 0%{transform:translate(-50%,-50%) scale(1);opacity:.5;} 100%{transform:translate(-50%,-50%) scale(2.4);opacity:0;} }
         .pr  { position:absolute; top:50%; left:50%; border-radius:50%; border:1.5px solid rgba(96,165,250,.45); pointer-events:none; animation:pulseRing 2.8s ease-out infinite; }
         .pr2 { animation-delay:1s; }
-
         @keyframes fadeUp { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
         .fu { animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both; }
-
         @keyframes scaleIn { from{opacity:0;transform:scale(.88);} to{opacity:1;transform:scale(1);} }
         .picker { animation:scaleIn .2s cubic-bezier(.16,1,.3,1) both; }
-
-        /* Weather */
         .wx-row { display:flex; align-items:center; gap:6px; padding:6px 9px; border-radius:8px; cursor:default; transition:background .15s; position:relative; }
         .wx-row:hover { background:rgba(255,255,255,.055); }
-        .wx-tip {
-          position:absolute; right:calc(100% + 10px); top:50%; transform:translateY(-50%);
-          background:linear-gradient(145deg,#0d1e3a,#091228);
-          border:1px solid rgba(99,165,250,.2); border-radius:13px;
-          padding:15px; z-index:100; width:220px;
-          box-shadow:0 12px 40px rgba(0,0,0,.8); pointer-events:none;
-        }
-
+        .wx-tip { position:absolute; right:calc(100% + 10px); top:50%; transform:translateY(-50%); background:linear-gradient(145deg,#0d1e3a,#091228); border:1px solid rgba(99,165,250,.2); border-radius:13px; padding:15px; z-index:100; width:220px; box-shadow:0 12px 40px rgba(0,0,0,.8); pointer-events:none; }
         @media (max-width:1100px) { .grid-main{grid-template-columns:1fr !important;} }
         @media (max-width:640px)  { .grid-stat{grid-template-columns:repeat(2,1fr) !important;} }
       `}</style>
@@ -202,23 +200,16 @@ export default function HotelsPage() {
         <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)}/>
         <HotelSelectorModal isOpen={isHotelModalOpen} setIsOpen={setIsHotelModalOpen}/>
 
-        {/* ── Top bar: hamburger · logo · user only ─────────────── */}
+        {/* Top bar */}
         <div className="top-bar">
-          <button className="top-btn" onClick={() => setShowAdminSidebar(s => !s)} title="Menu">
-            <Menu size={17}/>
-          </button>
-
-          {/* Logo — centred absolutely so it's always dead-centre */}
-          <div style={{ position:'absolute', left:'50%', transform:'translateX(-50%)', display:'flex', alignItems:'center' }}>
-            <img src="/jmk-logo.png" alt="JMK" style={{ height:30, width:'auto', opacity:.9 }}/>
+          <button className="top-btn" onClick={() => setShowAdminSidebar(s => !s)}><Menu size={17}/></button>
+          {/* Logo — absolutely centred, 30% bigger than previous 30px */}
+          <div style={{ position:'absolute', left:'50%', transform:'translateX(-50%)' }}>
+            <img src="/jmk-logo.png" alt="JMK" style={{ height:39, width:'auto', opacity:.9 }}/>
           </div>
-
-          <button className="top-btn" onClick={() => setIsUserPanelOpen(true)} title="Account">
-            <User2 size={17}/>
-          </button>
+          <button className="top-btn" onClick={() => setIsUserPanelOpen(true)}><User2 size={17}/></button>
         </div>
 
-        {/* ── Content ───────────────────────────────────────────── */}
         <div className="content-wrap">
 
           {/* Stat strip */}
@@ -241,10 +232,10 @@ export default function HotelsPage() {
             ))}
           </div>
 
-          {/* Map + Leaderboard — align-items:start stops panels stretching */}
+          {/* Map + Leaderboard */}
           <div className="grid-main fu" style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:'14px', alignItems:'start', animationDelay:'90ms' }}>
 
-            {/* MAP PANEL */}
+            {/* MAP */}
             <div className="panel">
               <div className="panel-hd">
                 <div>
@@ -259,44 +250,45 @@ export default function HotelsPage() {
 
               <div style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 14px 14px' }}>
 
-                {/* Map image — centred, fills available space, max capped */}
+                {/* Map image */}
                 <div style={{ flex:'1 1 0', minWidth:0, display:'flex', justifyContent:'center' }}>
                   <div style={{ position:'relative', width:'100%', maxWidth:560 }}>
-                    <img
-                      src="/uk-logo.png"
-                      alt="UK & Ireland"
-                      style={{ width:'100%', display:'block', borderRadius:6 }}
-                      draggable={false}
-                    />
+                    <img src="/uk-logo.png" alt="UK & Ireland" style={{ width:'100%', display:'block', borderRadius:6 }} draggable={false}/>
 
                     {CLUSTERS.map(c => {
-                      const hov   = hoveredCluster === c.id;
-                      const multi = c.hotels.length > 1;
+                      const hov    = hoveredCluster === c.id;
+                      const multi  = c.hotels.length > 1;
+                      const active = isClusterActive(c);
 
                       return (
                         <div key={c.id}
-                          style={{ position:'absolute', left:`${c.pctX}%`, top:`${c.pctY}%`, transform:'translate(-50%,-50%)', cursor:'pointer', zIndex:10 }}
-                          onClick={() => setActiveCluster(c.id as ClusterId)}
-                          onMouseEnter={() => setHoveredCluster(c.id)}
+                          style={{
+                            position:'absolute', left:`${c.pctX}%`, top:`${c.pctY}%`,
+                            transform:'translate(-50%,-50%)', cursor:'pointer', zIndex:10,
+                            // Dim markers for clusters with no selected hotels
+                            opacity: active ? 1 : 0.28,
+                            transition:'opacity .35s',
+                            // Don't let inactive markers intercept clicks if fully dimmed
+                            pointerEvents: active ? 'auto' : 'none',
+                          }}
+                          onClick={() => active && setActiveCluster(c.id as ClusterId)}
+                          onMouseEnter={() => active && setHoveredCluster(c.id)}
                           onMouseLeave={() => setHoveredCluster(null)}
                         >
-                          <div className="pr"  style={{ width:MARKER, height:MARKER }}/>
-                          <div className="pr pr2" style={{ width:MARKER, height:MARKER }}/>
+                          {active && <><div className="pr" style={{ width:MARKER, height:MARKER }}/><div className="pr pr2" style={{ width:MARKER, height:MARKER }}/></>}
 
-                          {/* Icon circle */}
                           <div style={{
                             position:'relative', width:MARKER, height:MARKER, borderRadius:'50%', overflow:'hidden',
                             border: hov ? '2.5px solid #93c5fd' : '2px solid #60a5fa',
-                            boxShadow: hov
-                              ? `0 0 0 3px rgba(96,165,250,.2), 0 0 18px rgba(96,165,250,.85)`
-                              : `0 0 0 2px rgba(96,165,250,.1), 0 0 10px rgba(96,165,250,.5)`,
+                            boxShadow: active
+                              ? hov
+                                ? `0 0 0 3px rgba(96,165,250,.2), 0 0 18px rgba(96,165,250,.85)`
+                                : `0 0 0 2px rgba(96,165,250,.1), 0 0 10px rgba(96,165,250,.5)`
+                              : 'none',
                             background:'#0f172a', transition:'border .15s,box-shadow .15s', zIndex:2,
                           }}>
-                            <img
-                              src={`/icons/${c.hotels[0]}-icon.png`}
-                              alt={c.label}
-                              style={{ width:'100%', height:'100%', objectFit:'contain', padding:'6px' }}
-                            />
+                            <img src={`/icons/${c.hotels[0]}-icon.png`} alt={c.label}
+                              style={{ width:'100%', height:'100%', objectFit:'contain', padding:'6px' }}/>
                           </div>
 
                           {multi && (
@@ -307,30 +299,27 @@ export default function HotelsPage() {
                               fontSize:'8px', fontWeight:700, color:'#e0f2fe',
                               fontFamily:'DM Mono,monospace', zIndex:3, boxShadow:'0 2px 6px rgba(0,0,0,.6)',
                             }}>
-                              {c.hotels.length}
+                              {/* Count only the selected hotels in this cluster */}
+                              {c.hotels.filter(id => selectedHotels.includes(id)).length || c.hotels.length}
                             </div>
                           )}
 
                           <div style={{
                             position:'absolute', top:`calc(100% + 6px)`, left:'50%', transform:'translateX(-50%)',
-                            fontSize:'8.5px', fontWeight:600, color:'rgba(255,255,255,.85)',
+                            fontSize:'8.5px', fontWeight:600, color:'rgba(255,255,255,.82)',
                             whiteSpace:'nowrap', textShadow:'0 1px 6px rgba(0,0,0,1)',
                             letterSpacing:'.02em', pointerEvents:'none',
-                          }}>
-                            {c.label}
-                          </div>
+                          }}>{c.label}</div>
 
-                          {hov && (
+                          {hov && active && (
                             <div style={{
                               position:'absolute', bottom:`calc(100% + 9px)`, left:'50%', transform:'translateX(-50%)',
                               background:'#0c1730', border:'1px solid rgba(59,130,246,.5)', borderRadius:7,
                               padding:'5px 11px', fontSize:'8.5px', fontWeight:500, color:'white',
                               whiteSpace:'nowrap', boxShadow:'0 4px 16px rgba(0,0,0,.75)', zIndex:20,
                             }}>
-                              {c.hotels.length} {c.hotels.length === 1 ? 'hotel' : 'hotels'}
-                              <div style={{ fontSize:'7px', color:'rgba(147,197,253,.6)', marginTop:2, fontFamily:'DM Mono,monospace', letterSpacing:'.05em' }}>
-                                TAP TO SELECT
-                              </div>
+                              {c.hotels.filter(id => selectedHotels.includes(id)).length} {c.hotels.filter(id => selectedHotels.includes(id)).length === 1 ? 'hotel' : 'hotels'}
+                              <div style={{ fontSize:'7px', color:'rgba(147,197,253,.6)', marginTop:2, fontFamily:'DM Mono,monospace', letterSpacing:'.05em' }}>TAP TO SELECT</div>
                             </div>
                           )}
                         </div>
@@ -341,9 +330,7 @@ export default function HotelsPage() {
 
                 {/* Weather strip */}
                 <div style={{ width:128, flexShrink:0, display:'flex', flexDirection:'column', justifyContent:'center', paddingTop:4, gap:1 }}>
-                  <div style={{ fontSize:'.58rem', color:'rgba(255,255,255,.22)', fontFamily:'DM Mono,monospace', letterSpacing:'.07em', marginBottom:5, paddingLeft:9 }}>
-                    WEATHER
-                  </div>
+                  <div style={{ fontSize:'.58rem', color:'rgba(255,255,255,.22)', fontFamily:'DM Mono,monospace', letterSpacing:'.07em', marginBottom:5, paddingLeft:9 }}>WEATHER</div>
                   {WX_CITIES.map(city => {
                     const wx   = cityWeather[city.id];
                     const info = wx && !wx.loading ? wxInfo(wx.code) : null;
@@ -353,37 +340,26 @@ export default function HotelsPage() {
                         onMouseEnter={() => setHoveredWeather(city.id)}
                         onMouseLeave={() => setHoveredWeather(null)}
                       >
-                        <span style={{ flex:1, fontSize:'.7rem', fontWeight:500, color:'rgba(255,255,255,.65)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-                          {city.name}
-                        </span>
-                        {(!wx || wx.loading) && (
-                          <div style={{ width:28, height:8, borderRadius:4, background:'rgba(255,255,255,.08)' }}/>
-                        )}
-                        {info && (
-                          <>
-                            <span className="mono" style={{ fontSize:'.74rem', fontWeight:600, color:'#fff' }}>{wx.temp}°</span>
-                            <span style={{ fontSize:'.92rem', lineHeight:1 }}>{info.emoji}</span>
-                            {warn && <AlertTriangle size={10} style={{ color:'#f59e0b', flexShrink:0 }}/>}
-                          </>
-                        )}
-                        {/* Full forecast tooltip */}
+                        <span style={{ flex:1, fontSize:'.7rem', fontWeight:500, color:'rgba(255,255,255,.65)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{city.name}</span>
+                        {(!wx || wx.loading) && <div style={{ width:28, height:8, borderRadius:4, background:'rgba(255,255,255,.08)' }}/>}
+                        {info && (<>
+                          <span className="mono" style={{ fontSize:'.74rem', fontWeight:600, color:'#fff' }}>{wx.temp}°</span>
+                          <span style={{ fontSize:'.92rem', lineHeight:1 }}>{info.emoji}</span>
+                          {warn && <AlertTriangle size={10} style={{ color:'#f59e0b', flexShrink:0 }}/>}
+                        </>)}
                         {hoveredWeather === city.id && info && wx && (
                           <div className="wx-tip">
                             <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
                               <div>
                                 <div style={{ fontSize:'.68rem', fontWeight:600, color:'rgba(255,255,255,.4)', letterSpacing:'.04em', marginBottom:3 }}>{city.name.toUpperCase()}</div>
-                                <div style={{ fontSize:'1.8rem', fontWeight:500, color:'#fff', fontFamily:'DM Mono,monospace', lineHeight:1 }}>
-                                  {wx.temp}°<span style={{ fontSize:'.85rem', color:'rgba(255,255,255,.32)' }}>C</span>
-                                </div>
+                                <div style={{ fontSize:'1.8rem', fontWeight:500, color:'#fff', fontFamily:'DM Mono,monospace', lineHeight:1 }}>{wx.temp}°<span style={{ fontSize:'.85rem', color:'rgba(255,255,255,.32)' }}>C</span></div>
                                 <div style={{ fontSize:'.68rem', color:'rgba(255,255,255,.4)', marginTop:3 }}>{info.label}</div>
                               </div>
                               <span style={{ fontSize:'1.9rem', lineHeight:1, marginTop:2 }}>{info.emoji}</span>
                             </div>
                             <div style={{ display:'flex', gap:12, marginBottom:10, paddingBottom:9, borderBottom:'1px solid rgba(255,255,255,.07)' }}>
                               <span style={{ fontSize:'.64rem', color:'rgba(255,255,255,.35)' }}>Feels {wx.apparent}°C</span>
-                              <span style={{ display:'flex', alignItems:'center', gap:3, fontSize:'.64rem', color:'rgba(255,255,255,.35)' }}>
-                                <Wind size={9}/>{wx.wind} km/h
-                              </span>
+                              <span style={{ display:'flex', alignItems:'center', gap:3, fontSize:'.64rem', color:'rgba(255,255,255,.35)' }}><Wind size={9}/>{wx.wind} km/h</span>
                             </div>
                             {warn && (
                               <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10, padding:'5px 7px', background:'rgba(245,158,11,.1)', border:'1px solid rgba(245,158,11,.25)', borderRadius:6 }}>
@@ -416,7 +392,7 @@ export default function HotelsPage() {
               </div>
             </div>
 
-            {/* Leaderboard */}
+            {/* Leaderboard — receives and controls selectedHotels */}
             <div className="panel fu" style={{ animationDelay:'145ms' }}>
               <div className="panel-hd">
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>
@@ -429,11 +405,15 @@ export default function HotelsPage() {
                   </div>
                 </div>
               </div>
-              <ComplianceLeaderboard data={leaderboardData}/>
+              <ComplianceLeaderboard
+                data={leaderboardData}
+                selectedHotels={selectedHotels}
+                onSelectedHotelsChange={handleSelectedHotelsChange}
+              />
             </div>
           </div>
 
-          {/* Utilities — full width */}
+          {/* Utilities */}
           <div className="panel fu" style={{ animationDelay:'185ms' }}>
             <div className="panel-hd">
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
@@ -452,15 +432,14 @@ export default function HotelsPage() {
         </div>
       </div>
 
-      {/* ── Cluster picker ── */}
+      {/* Cluster picker */}
       {activeCluster && openCluster && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.65)', backdropFilter:'blur(6px)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center' }}
           onClick={() => setActiveCluster(null)}>
           <div className="picker"
             style={{ background:'linear-gradient(145deg,#0c1a36,#091228)', border:'1px solid rgba(99,165,250,.22)', borderRadius:20, padding:'26px 22px 22px', width:290, boxShadow:'0 24px 80px rgba(0,0,0,.7)', position:'relative' }}
             onClick={e => e.stopPropagation()}>
-            <button onClick={() => setActiveCluster(null)}
-              style={{ position:'absolute', top:12, right:12, background:'rgba(255,255,255,.06)', border:'none', color:'rgba(255,255,255,.5)', borderRadius:7, width:25, height:25, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <button onClick={() => setActiveCluster(null)} style={{ position:'absolute', top:12, right:12, background:'rgba(255,255,255,.06)', border:'none', color:'rgba(255,255,255,.5)', borderRadius:7, width:25, height:25, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
               <X size={13}/>
             </button>
             <div style={{ textAlign:'center', marginBottom:18 }}>
@@ -494,9 +473,7 @@ export default function HotelsPage() {
                         onMouseEnter={e=>{const t=e.currentTarget as HTMLDivElement;t.style.background='rgba(59,130,246,.18)';t.style.borderColor='rgba(99,165,250,.5)';t.style.transform='scale(1.1)';}}
                         onMouseLeave={e=>{const t=e.currentTarget as HTMLDivElement;t.style.background='rgba(255,255,255,.05)';t.style.borderColor='rgba(99,165,250,.2)';t.style.transform='scale(1)';}}>
                         <img src={`/icons/${id}-icon.png`} alt={hotelNames[id]} style={{ width:38, height:38, objectFit:'contain' }}/>
-                        <div style={{ fontSize:'.5rem', fontWeight:500, color:'rgba(255,255,255,.5)', textAlign:'center', lineHeight:1.2, maxWidth:58, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>
-                          {hotelNames[id]}
-                        </div>
+                        <div style={{ fontSize:'.5rem', fontWeight:500, color:'rgba(255,255,255,.5)', textAlign:'center', lineHeight:1.2, maxWidth:58, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{hotelNames[id]}</div>
                       </div>
                     </Link>
                   );
