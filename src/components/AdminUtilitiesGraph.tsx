@@ -11,13 +11,13 @@ import { hotelNames } from '@/data/hotelMetadata';
 
 // ── Hotel room counts for kWh/room normalisation ────────────────────────────
 const HOTEL_ROOMS: Record<string, number> = {
-  hiex:     290,
+  hiex:     198,
   hiltonth: 290,
-  hbhdcc:   200,
+  hbhdcc:   254,
   hida:     251,
-  belfast:   93,
-  moxy:      96,
-  marina:    80,
+  belfast:   223,
+  moxy:      222,
+  marina:    90,
   hbhe:     184,
   kensh:     50,
 };
@@ -42,7 +42,7 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 async function fetchHotelYear(hotelId: string, year: number): Promise<YearData | null> {
   try {
-    const r = await fetch(`${API}/api/utilities/${hotelId}/${year}`);
+    const r = await fetch(`${API}/utilities/${hotelId}/${year}`);
     if (!r.ok) return null;
     return await r.json();
   } catch { return null; }
@@ -81,7 +81,7 @@ function DarkTooltip({ active, payload, label, metric }: any) {
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
-export default function AdminUtilitiesGraph() {
+export default function AdminUtilitiesGraphs() {
   const [data,        setData]        = useState<Record<string, Record<number, YearData | null>>>({});
   const [loading,     setLoading]     = useState(true);
   const [year,        setYear]        = useState(CUR_YEAR);
