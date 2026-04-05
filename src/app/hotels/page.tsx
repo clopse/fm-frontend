@@ -195,6 +195,12 @@ export default function HotelsPage() {
         /* Map panel — flex column so it can grow to match leaderboard */
         .map-panel { display:flex; flex-direction:column; }
         .map-body  { flex:1; display:flex; align-items:center; gap:10; padding:10px 14px 14px; }
+        /* Below 640px — weather drops under the map as a horizontal row */
+        @media (max-width:640px) {
+          .map-body { flex-direction:column; align-items:stretch; }
+          .wx-strip { width:100% !important; flex-direction:row !important; flex-wrap:wrap; gap:4px !important; padding-top:8px; border-top:1px solid rgba(255,255,255,.06); }
+          .wx-row   { flex:1 1 40%; min-width:90px; }
+        }
         @media (max-width:1100px) { .grid-main{grid-template-columns:1fr !important;} }
         @media (max-width:640px)  { .grid-stat{grid-template-columns:repeat(2,1fr) !important;} }
       `}</style>
@@ -323,7 +329,7 @@ export default function HotelsPage() {
                 </div>
 
                 {/* Weather strip */}
-                <div style={{ width:128, flexShrink:0, display:'flex', flexDirection:'column', justifyContent:'center', gap:1 }}>
+                <div className="wx-strip" style={{ width:128, flexShrink:0, display:'flex', flexDirection:'column', justifyContent:'center', gap:1 }}>
                   <div style={{ fontSize:'.58rem', color:'rgba(255,255,255,.22)', fontFamily:'DM Mono,monospace', letterSpacing:'.07em', marginBottom:5, paddingLeft:9 }}>WEATHER</div>
                   {WX_CITIES.map(city => {
                     const wx   = cityWeather[city.id];
