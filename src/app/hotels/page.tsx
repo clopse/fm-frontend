@@ -109,9 +109,25 @@ export default function HotelsPage() {
   }, []);
 
   const fetchLeaderboard = async () => {
+    const CACHE_KEY = 'jmk_leaderboard_cache';
+    const TTL_MS    = 24 * 60 * 60 * 1000; // 24 hours — matches daily S3 update cadence
+
+    try {
+      // Use cached data if it's less than 24 hours old
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const { data, ts } = JSON.parse(raw);
+        if (Date.now() - ts < TTL_MS) {
+          setLeaderboardData([...data].sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.score - a.score));
+          return;
+        }
+      }
+    } catch { /* localStorage unavailable — fall through to fetch */ }
+
     try {
       const data: LeaderboardEntry[] = await (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`)).json();
       setLeaderboardData([...data].sort((a, b) => b.score - a.score));
+      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })); } catch { /* quota exceeded */ }
     } catch { setLeaderboardData([]); }
   };
 
