@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 import ComplianceLeaderboard from '@/components/ComplianceLeaderboard';
-import UtilitiesGraphs       from '@/components/AdminUtilitiesGraphs';
+import UtilitiesGraphs       from '@/components/AdminUtilitiesGraph';
 import AdminSidebar          from '@/components/AdminSidebar';
 import UserPanel             from '@/components/UserPanel';
 import HotelSelectorModal    from '@/components/HotelSelectorModal';
