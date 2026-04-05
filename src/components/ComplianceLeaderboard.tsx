@@ -1,7 +1,7 @@
 // FILE: src/components/ComplianceLeaderboard.tsx
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { ChevronDown, Building2, Minus } from 'lucide-react';
 import { hotelNames } from '@/data/hotelMetadata';
@@ -14,7 +14,6 @@ interface Props {
   onSelectedHotelsChange: (next: string[]) => void;
 }
 
-// City shown under each logo — critical for telling the two Hamptons apart
 const HOTEL_CITY: Record<string, string> = {
   hiex:     'Dublin City',
   hida:     'Dublin Airport',
@@ -30,8 +29,8 @@ const HOTEL_CITY: Record<string, string> = {
 const scoreColor = (s: number) =>
   s >= 85 ? '#10b981' : s >= 70 ? '#f59e0b' : '#ef4444';
 
-const ALL_IDS     = Object.keys(hotelNames);
-const MIN_HOTELS  = 7;
+const ALL_IDS    = Object.keys(hotelNames);
+const MIN_HOTELS = 7;
 
 export default function ComplianceLeaderboard({ data, selectedHotels, onSelectedHotelsChange }: Props) {
   const [dropOpen, setDropOpen] = useState(false);
@@ -45,27 +44,31 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
 
   // Close on outside click
   useEffect(() => {
+    if (!dropOpen) return;
     const handler = (e: MouseEvent) => {
-      if (dropOpen && !(e.target as Element).closest('[data-dropdown="hotel-filter"]'))
+      if (!(e.target as Element).closest('[data-dropdown="hotel-filter"]'))
         setDropOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [dropOpen]);
 
-  const toggle = useCallback((id: string) => {
+  // Simple toggle — no useCallback, no clickable gate, logic is in here
+  function handleToggle(id: string) {
     if (selectedHotels.includes(id)) {
-      if (selectedHotels.length <= MIN_HOTELS) return; // enforce minimum
-      onSelectedHotelsChange(selectedHotels.filter(h => h !== id));
+      // Already selected — only remove if we're above the minimum
+      if (selectedHotels.length > MIN_HOTELS) {
+        onSelectedHotelsChange(selectedHotels.filter(h => h !== id));
+      }
     } else {
+      // Not selected — always allow adding
       onSelectedHotelsChange([...selectedHotels, id]);
     }
-  }, [selectedHotels, onSelectedHotelsChange]);
+  }
 
-  // Show ALL selected hotels — null score = no compliance data yet (e.g. Kensington)
-  // This is why a hotel can appear in the filter but not the bars in the old version
   const apiScores = useMemo(() => new Map(data.map(e => [e.hotel, e.score])), [data]);
 
+  // All selected hotels shown — null score = no data yet
   const displayRows = useMemo(() =>
     [...selectedHotels]
       .map(id => ({ hotel: id, score: apiScores.has(id) ? (apiScores.get(id) as number) : null }))
@@ -81,7 +84,7 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
   return (
     <div style={{ padding:'12px 14px 16px' }}>
 
-      {/* ── Filter button ── */}
+      {/* Filter */}
       <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:10 }}>
         <div data-dropdown="hotel-filter" style={{ position:'relative' }}>
           <button
@@ -108,46 +111,58 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
             }}>
               {/* Quick actions */}
               <div style={{ display:'flex', gap:8, padding:'4px 6px 8px', borderBottom:'1px solid rgba(255,255,255,.07)', marginBottom:4 }}>
-                <button onClick={() => onSelectedHotelsChange(ALL_IDS)}
-                  style={{ flex:1, fontSize:'.64rem', color:'rgba(147,197,253,.8)', background:'none', border:'none', cursor:'pointer', textAlign:'left' }}>
+                <button
+                  onClick={e => { e.stopPropagation(); onSelectedHotelsChange(ALL_IDS); }}
+                  style={{ flex:1, fontSize:'.64rem', color:'rgba(147,197,253,.8)', background:'none', border:'none', cursor:'pointer', textAlign:'left', padding:'2px 0' }}>
                   All
                 </button>
-                <button onClick={() => onSelectedHotelsChange(ALL_IDS.slice(0, MIN_HOTELS))}
-                  style={{ flex:1, fontSize:'.64rem', color:'rgba(255,255,255,.3)', background:'none', border:'none', cursor:'pointer', textAlign:'right' }}>
+                <button
+                  onClick={e => { e.stopPropagation(); onSelectedHotelsChange(ALL_IDS.slice(0, MIN_HOTELS)); }}
+                  style={{ flex:1, fontSize:'.64rem', color:'rgba(255,255,255,.3)', background:'none', border:'none', cursor:'pointer', textAlign:'right', padding:'2px 0' }}>
                   Reset
                 </button>
               </div>
 
               {hotelList.map(hotel => {
-                const checked    = selectedHotels.includes(hotel.id);
-                const canRemove  = checked && selectedHotels.length > MIN_HOTELS;
-                const canAdd     = !checked;
-                const clickable  = canRemove || canAdd;
+                const checked   = selectedHotels.includes(hotel.id);
+                const atMin     = checked && selectedHotels.length <= MIN_HOTELS;
 
                 return (
-                  <div key={hotel.id}
-                    onClick={() => clickable && toggle(hotel.id)}
+                  <div
+                    key={hotel.id}
+                    onClick={e => { e.stopPropagation(); handleToggle(hotel.id); }}
                     style={{
-                      display:'flex', alignItems:'center', gap:8, padding:'6px 8px',
-                      borderRadius:7, cursor: clickable ? 'pointer' : 'not-allowed',
+                      display:'flex', alignItems:'center', gap:8, padding:'7px 8px',
+                      borderRadius:7,
+                      cursor: atMin ? 'not-allowed' : 'pointer',
                       background: checked ? 'rgba(59,130,246,.1)' : 'transparent',
-                      opacity: !checked && !canAdd ? .4 : checked && !canRemove ? .55 : 1,
+                      opacity: atMin ? 0.45 : 1,
                       transition:'background .12s',
+                      userSelect:'none',
                     }}
-                    title={checked && !canRemove ? `Minimum ${MIN_HOTELS} hotels must be selected` : ''}
+                    title={atMin ? `Minimum ${MIN_HOTELS} hotels required` : ''}
                   >
                     {/* Checkbox */}
                     <div style={{
                       width:14, height:14, borderRadius:4, flexShrink:0,
-                      border: checked ? '2px solid #3b82f6' : '1.5px solid rgba(255,255,255,.25)',
+                      border: checked ? '2px solid #3b82f6' : '1.5px solid rgba(255,255,255,.3)',
                       background: checked ? '#3b82f6' : 'transparent',
-                      display:'flex', alignItems:'center', justifyContent:'center', transition:'all .15s',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      transition:'all .15s', pointerEvents:'none',
                     }}>
-                      {checked && <svg width="8" height="8" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                      {checked && (
+                        <svg width="8" height="8" viewBox="0 0 10 10">
+                          <polyline points="1.5,5 4,7.5 8.5,2" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
                     </div>
-                    <span style={{ fontSize:'.72rem', color:'rgba(255,255,255,.72)', flex:1, lineHeight:1.3 }}>{hotel.name}</span>
+
+                    <span style={{ fontSize:'.72rem', color:'rgba(255,255,255,.72)', flex:1, lineHeight:1.3, pointerEvents:'none' }}>
+                      {hotel.name}
+                    </span>
+
                     {HOTEL_CITY[hotel.id] && (
-                      <span style={{ fontSize:'.6rem', color:'rgba(255,255,255,.24)', whiteSpace:'nowrap' }}>
+                      <span style={{ fontSize:'.6rem', color:'rgba(255,255,255,.24)', whiteSpace:'nowrap', pointerEvents:'none' }}>
                         {HOTEL_CITY[hotel.id]}
                       </span>
                     )}
@@ -159,7 +174,7 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
         </div>
       </div>
 
-      {/* ── Leaderboard rows ── */}
+      {/* Leaderboard rows */}
       <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
         {displayRows.map(({ hotel, score }) => {
           const noData = score === null;
@@ -167,10 +182,8 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
 
           return (
             <div key={hotel} style={{ display:'flex', alignItems:'center', gap:11 }}>
-
-              {/* Logo */}
               <Link href={`/hotels/${hotel}`} style={{ textDecoration:'none', flexShrink:0 }}>
-                <div style={{ width:106, display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}
+                <div style={{ width:106, display:'flex', flexDirection:'column', alignItems:'center', gap:3, transition:'opacity .15s' }}
                   onMouseEnter={e => (e.currentTarget.style.opacity = '.7')}
                   onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                 >
@@ -180,7 +193,6 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
                       alt={hotelNames[hotel] || hotel}
                       style={{ maxWidth:100, maxHeight:40, objectFit:'contain', display:'block' }}
                       onError={e => {
-                        // Hide broken img, show fallback sibling
                         (e.currentTarget as HTMLImageElement).style.display = 'none';
                         const fb = (e.currentTarget as HTMLImageElement).parentElement?.querySelector('.icon-fallback') as HTMLElement;
                         if (fb) fb.style.display = 'flex';
@@ -200,7 +212,6 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
                 </div>
               </Link>
 
-              {/* Score bar */}
               <div style={{ flex:1, position:'relative', height:24, background:'rgba(255,255,255,.07)', borderRadius:6, overflow:'hidden' }}>
                 {noData ? (
                   <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', paddingLeft:10, gap:5 }}>
