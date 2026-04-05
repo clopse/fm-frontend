@@ -3,40 +3,38 @@
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { ChevronDown, Building2 } from 'lucide-react';
+import { ChevronDown, Building2, Minus } from 'lucide-react';
 import { hotelNames } from '@/data/hotelMetadata';
 
 type LeaderboardEntry = { hotel: string; score: number; };
-interface Props { data: LeaderboardEntry[]; }
 
-// ── City / location labels for disambiguation ─────────────────────────────────
-// Shown beneath each logo — especially useful when two hotels share similar branding
-const HOTEL_META: Record<string, { city: string; flag: string }> = {
-  hiex:    { city: 'Dublin City',  flag: '🇮🇪' },
-  hida:    { city: 'Dublin Airport', flag: '🇮🇪' },
-  hbhdcc:  { city: 'Dublin',       flag: '🇮🇪' },
-  hiltonth:{ city: 'Dublin City',  flag: '🇮🇪' },
-  belfast: { city: 'Belfast',      flag: '🇬🇧' },
-  moxy:    { city: 'Cork',         flag: '🇮🇪' },
-  marina:  { city: 'Waterford',    flag: '🇮🇪' },
-  hbhe:    { city: 'Ealing',       flag: '🇬🇧' },
-  kensh:   { city: 'London',       flag: '🇬🇧' },
-};
-
-// Score → colour
-function scoreColor(s: number) {
-  if (s >= 85) return '#10b981';
-  if (s >= 70) return '#f59e0b';
-  return '#ef4444';
+interface Props {
+  data:                   LeaderboardEntry[];
+  selectedHotels:         string[];
+  onSelectedHotelsChange: (next: string[]) => void;
 }
 
-export default function ComplianceLeaderboard({ data }: Props) {
-  // Default to all hotels so nothing is hidden out of the box
-  const allIds = useMemo(() => Object.keys(hotelNames), []);
+// City shown under each logo — critical for telling the two Hamptons apart
+const HOTEL_CITY: Record<string, string> = {
+  hiex:     'Dublin City',
+  hida:     'Dublin Airport',
+  hbhdcc:   'Dublin',
+  hiltonth: 'Dublin City',
+  belfast:  'Belfast',
+  moxy:     'Cork',
+  marina:   'Waterford',
+  hbhe:     'Ealing',
+  kensh:    'London',
+};
 
-  const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
-  const [dropdownOpen,   setDropdownOpen]   = useState(false);
-  const [imgErrors,      setImgErrors]      = useState<Record<string, boolean>>({});
+const scoreColor = (s: number) =>
+  s >= 85 ? '#10b981' : s >= 70 ? '#f59e0b' : '#ef4444';
+
+const ALL_IDS     = Object.keys(hotelNames);
+const MIN_HOTELS  = 7;
+
+export default function ComplianceLeaderboard({ data, selectedHotels, onSelectedHotelsChange }: Props) {
+  const [dropOpen, setDropOpen] = useState(false);
 
   const hotelList = useMemo(() =>
     Object.entries(hotelNames)
@@ -45,212 +43,192 @@ export default function ComplianceLeaderboard({ data }: Props) {
     []
   );
 
-  // Hydrate from localStorage; fall back to all hotels
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('selectedHotels');
-      setSelectedHotels(saved ? JSON.parse(saved) : allIds);
-    } catch {
-      setSelectedHotels(allIds);
-    }
-  }, [allIds]);
-
-  // Close dropdown on outside click
+  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropdownOpen && !(e.target as Element).closest('[data-dropdown="hotel-filter"]'))
-        setDropdownOpen(false);
+      if (dropOpen && !(e.target as Element).closest('[data-dropdown="hotel-filter"]'))
+        setDropOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [dropdownOpen]);
+  }, [dropOpen]);
 
-  const toggleHotel = useCallback((id: string) => {
-    setSelectedHotels(prev => {
-      const next = prev.includes(id) ? prev.filter(h => h !== id) : [...prev, id];
-      try { localStorage.setItem('selectedHotels', JSON.stringify(next)); } catch {}
-      return next;
-    });
-  }, []);
+  const toggle = useCallback((id: string) => {
+    if (selectedHotels.includes(id)) {
+      if (selectedHotels.length <= MIN_HOTELS) return; // enforce minimum
+      onSelectedHotelsChange(selectedHotels.filter(h => h !== id));
+    } else {
+      onSelectedHotelsChange([...selectedHotels, id]);
+    }
+  }, [selectedHotels, onSelectedHotelsChange]);
 
-  const sortedData = useMemo(() =>
-    [...data].sort((a, b) =>
-      b.score === a.score ? a.hotel.localeCompare(b.hotel) : b.score - a.score
-    ), [data]
-  );
+  // Show ALL selected hotels — null score = no compliance data yet (e.g. Kensington)
+  // This is why a hotel can appear in the filter but not the bars in the old version
+  const apiScores = useMemo(() => new Map(data.map(e => [e.hotel, e.score])), [data]);
 
-  const filteredData = useMemo(() =>
-    sortedData.filter(e => selectedHotels.includes(e.hotel)),
-    [sortedData, selectedHotels]
+  const displayRows = useMemo(() =>
+    [...selectedHotels]
+      .map(id => ({ hotel: id, score: apiScores.has(id) ? (apiScores.get(id) as number) : null }))
+      .sort((a, b) => {
+        if (a.score === null && b.score === null) return 0;
+        if (a.score === null) return 1;
+        if (b.score === null) return -1;
+        return (b.score as number) - (a.score as number);
+      }),
+    [selectedHotels, apiScores]
   );
 
   return (
-    <div style={{ padding:'14px 16px 18px' }}>
+    <div style={{ padding:'12px 14px 16px' }}>
 
-      {/* ── Filter button ─────────────────────────────────────────── */}
-      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:12 }}>
+      {/* ── Filter button ── */}
+      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:10 }}>
         <div data-dropdown="hotel-filter" style={{ position:'relative' }}>
           <button
-            onClick={() => setDropdownOpen(o => !o)}
+            onClick={() => setDropOpen(o => !o)}
             style={{
-              display:'flex', alignItems:'center', justifyContent:'center',
-              padding:'5px 10px', gap:5,
+              display:'flex', alignItems:'center', gap:5, padding:'5px 10px',
               background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.1)',
-              borderRadius:8, cursor:'pointer', color:'rgba(255,255,255,.55)',
-              fontSize:'.72rem', transition:'background .15s,border-color .15s',
+              borderRadius:8, cursor:'pointer', color:'rgba(255,255,255,.55)', fontSize:'.71rem',
+              transition:'background .15s',
             }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,.09)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,.05)')}
-            title="Filter hotels"
           >
             <span>Filter</span>
-            <ChevronDown size={13} style={{ transform: dropdownOpen ? 'rotate(180deg)' : 'none', transition:'transform .2s' }}/>
+            <ChevronDown size={12} style={{ transform: dropOpen ? 'rotate(180deg)' : 'none', transition:'transform .2s' }}/>
           </button>
 
-          {dropdownOpen && (
+          {dropOpen && (
             <div style={{
               position:'absolute', top:'calc(100% + 6px)', right:0,
               background:'#0d1829', border:'1px solid rgba(255,255,255,.1)',
-              borderRadius:10, zIndex:50, width:210,
-              maxHeight:240, overflowY:'auto',
-              boxShadow:'0 8px 32px rgba(0,0,0,.7)',
-              padding:'6px',
+              borderRadius:10, zIndex:50, width:224, maxHeight:270, overflowY:'auto',
+              boxShadow:'0 8px 32px rgba(0,0,0,.75)', padding:6,
             }}>
-              {/* Select all / clear */}
-              <div style={{ display:'flex', gap:6, padding:'4px 6px 8px', borderBottom:'1px solid rgba(255,255,255,.07)', marginBottom:4 }}>
-                <button onClick={() => { setSelectedHotels(allIds); try { localStorage.setItem('selectedHotels', JSON.stringify(allIds)); } catch {} }}
-                  style={{ flex:1, fontSize:'.65rem', color:'rgba(147,197,253,.8)', background:'none', border:'none', cursor:'pointer', textAlign:'left' }}>
+              {/* Quick actions */}
+              <div style={{ display:'flex', gap:8, padding:'4px 6px 8px', borderBottom:'1px solid rgba(255,255,255,.07)', marginBottom:4 }}>
+                <button onClick={() => onSelectedHotelsChange(ALL_IDS)}
+                  style={{ flex:1, fontSize:'.64rem', color:'rgba(147,197,253,.8)', background:'none', border:'none', cursor:'pointer', textAlign:'left' }}>
                   All
                 </button>
-                <button onClick={() => { setSelectedHotels([]); try { localStorage.setItem('selectedHotels', JSON.stringify([])); } catch {} }}
-                  style={{ flex:1, fontSize:'.65rem', color:'rgba(255,255,255,.3)', background:'none', border:'none', cursor:'pointer', textAlign:'left' }}>
-                  None
+                <button onClick={() => onSelectedHotelsChange(ALL_IDS.slice(0, MIN_HOTELS))}
+                  style={{ flex:1, fontSize:'.64rem', color:'rgba(255,255,255,.3)', background:'none', border:'none', cursor:'pointer', textAlign:'right' }}>
+                  Reset
                 </button>
               </div>
 
-              {hotelList.map(hotel => (
-                <label key={hotel.id} style={{
-                  display:'flex', alignItems:'center', gap:8,
-                  padding:'6px 8px', borderRadius:7, cursor:'pointer',
-                  transition:'background .12s',
-                  background: selectedHotels.includes(hotel.id) ? 'rgba(59,130,246,.1)' : 'transparent',
-                }}
-                  onMouseEnter={e => { if (!selectedHotels.includes(hotel.id)) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,.04)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = selectedHotels.includes(hotel.id) ? 'rgba(59,130,246,.1)' : 'transparent'; }}
-                >
-                  {/* Custom checkbox */}
-                  <div style={{
-                    width:14, height:14, borderRadius:4, flexShrink:0,
-                    border: selectedHotels.includes(hotel.id) ? '2px solid #3b82f6' : '1.5px solid rgba(255,255,255,.25)',
-                    background: selectedHotels.includes(hotel.id) ? '#3b82f6' : 'transparent',
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                    transition:'all .15s',
-                  }}>
-                    {selectedHotels.includes(hotel.id) && (
-                      <svg width="8" height="8" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              {hotelList.map(hotel => {
+                const checked    = selectedHotels.includes(hotel.id);
+                const canRemove  = checked && selectedHotels.length > MIN_HOTELS;
+                const canAdd     = !checked;
+                const clickable  = canRemove || canAdd;
+
+                return (
+                  <div key={hotel.id}
+                    onClick={() => clickable && toggle(hotel.id)}
+                    style={{
+                      display:'flex', alignItems:'center', gap:8, padding:'6px 8px',
+                      borderRadius:7, cursor: clickable ? 'pointer' : 'not-allowed',
+                      background: checked ? 'rgba(59,130,246,.1)' : 'transparent',
+                      opacity: !checked && !canAdd ? .4 : checked && !canRemove ? .55 : 1,
+                      transition:'background .12s',
+                    }}
+                    title={checked && !canRemove ? `Minimum ${MIN_HOTELS} hotels must be selected` : ''}
+                  >
+                    {/* Checkbox */}
+                    <div style={{
+                      width:14, height:14, borderRadius:4, flexShrink:0,
+                      border: checked ? '2px solid #3b82f6' : '1.5px solid rgba(255,255,255,.25)',
+                      background: checked ? '#3b82f6' : 'transparent',
+                      display:'flex', alignItems:'center', justifyContent:'center', transition:'all .15s',
+                    }}>
+                      {checked && <svg width="8" height="8" viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                    </div>
+                    <span style={{ fontSize:'.72rem', color:'rgba(255,255,255,.72)', flex:1, lineHeight:1.3 }}>{hotel.name}</span>
+                    {HOTEL_CITY[hotel.id] && (
+                      <span style={{ fontSize:'.6rem', color:'rgba(255,255,255,.24)', whiteSpace:'nowrap' }}>
+                        {HOTEL_CITY[hotel.id]}
+                      </span>
                     )}
                   </div>
-                  <span style={{ fontSize:'.72rem', color:'rgba(255,255,255,.7)', lineHeight:1.3 }}>{hotel.name}</span>
-                  {/* Flag for disambiguation */}
-                  {HOTEL_META[hotel.id] && (
-                    <span style={{ marginLeft:'auto', fontSize:'.65rem', color:'rgba(255,255,255,.28)' }}>
-                      {HOTEL_META[hotel.id].flag}
-                    </span>
-                  )}
-                </label>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Leaderboard rows ──────────────────────────────────────── */}
-      {filteredData.length === 0 ? (
-        <div style={{ textAlign:'center', padding:'28px 0', color:'rgba(255,255,255,.3)' }}>
-          <div style={{ fontSize:'1.6rem', marginBottom:6 }}>⚠️</div>
-          <div style={{ fontSize:'.78rem' }}>No hotels selected or no data yet.</div>
-        </div>
-      ) : (
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-          {filteredData.map(entry => {
-            const meta  = HOTEL_META[entry.hotel];
-            const color = scoreColor(entry.score);
-            const imgOk = !imgErrors[entry.hotel];
+      {/* ── Leaderboard rows ── */}
+      <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+        {displayRows.map(({ hotel, score }) => {
+          const noData = score === null;
+          const city   = HOTEL_CITY[hotel];
 
-            return (
-              <div key={entry.hotel} style={{ display:'flex', alignItems:'center', gap:12 }}>
+          return (
+            <div key={hotel} style={{ display:'flex', alignItems:'center', gap:11 }}>
 
-                {/* Logo cell — fixed size so all icons are visually consistent */}
-                <Link href={`/hotels/${entry.hotel}`}
-                  style={{ textDecoration:'none', flexShrink:0 }}>
-                  <div style={{
-                    width:110, display:'flex', flexDirection:'column',
-                    alignItems:'center', gap:4,
-                    transition:'opacity .15s',
-                  }}
-                    onMouseEnter={e => (e.currentTarget.style.opacity = '.75')}
-                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-                  >
-                    {/* Icon in fixed box */}
-                    <div style={{ width:100, height:44, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      {imgOk ? (
-                        <img
-                          src={`/icons/${entry.hotel}-icon.png`}
-                          alt={hotelNames[entry.hotel] || entry.hotel}
-                          style={{ maxWidth:100, maxHeight:44, width:'auto', height:'auto', objectFit:'contain' }}
-                          onError={() => setImgErrors(prev => ({ ...prev, [entry.hotel]: true }))}
-                        />
-                      ) : (
-                        /* Fallback when no icon file exists */
-                        <div style={{
-                          width:44, height:44, borderRadius:10,
-                          background:'rgba(255,255,255,.06)',
-                          border:'1px solid rgba(255,255,255,.1)',
-                          display:'flex', alignItems:'center', justifyContent:'center',
-                        }}>
-                          <Building2 size={18} style={{ color:'rgba(255,255,255,.35)' }}/>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* City chip — always shown, crucial for Hampton disambiguation */}
-                    {meta && (
-                      <div style={{
-                        display:'flex', alignItems:'center', gap:3,
-                        fontSize:'.6rem', color:'rgba(255,255,255,.38)',
-                        fontFamily:'DM Mono,monospace', letterSpacing:'.02em',
-                      }}>
-                        <span>{meta.flag}</span>
-                        <span>{meta.city}</span>
+              {/* Logo */}
+              <Link href={`/hotels/${hotel}`} style={{ textDecoration:'none', flexShrink:0 }}>
+                <div style={{ width:106, display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '.7')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                >
+                  <div style={{ width:100, height:40, display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+                    <img
+                      src={`/icons/${hotel}-icon.png`}
+                      alt={hotelNames[hotel] || hotel}
+                      style={{ maxWidth:100, maxHeight:40, objectFit:'contain', display:'block' }}
+                      onError={e => {
+                        // Hide broken img, show fallback sibling
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                        const fb = (e.currentTarget as HTMLImageElement).parentElement?.querySelector('.icon-fallback') as HTMLElement;
+                        if (fb) fb.style.display = 'flex';
+                      }}
+                    />
+                    <div className="icon-fallback" style={{ display:'none', position:'absolute', inset:0, alignItems:'center', justifyContent:'center' }}>
+                      <div style={{ width:36, height:36, borderRadius:9, background:'rgba(255,255,255,.06)', border:'1px solid rgba(255,255,255,.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <Building2 size={15} style={{ color:'rgba(255,255,255,.32)' }}/>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </Link>
-
-                {/* Score bar */}
-                <div style={{ flex:1, position:'relative', height:26, background:'rgba(255,255,255,.07)', borderRadius:6, overflow:'hidden' }}>
-                  <div style={{
-                    height:'100%', width:`${entry.score}%`,
-                    background: `linear-gradient(90deg, ${color}cc, ${color})`,
-                    borderRadius:6,
-                    transition:'width .6s cubic-bezier(.16,1,.3,1)',
-                  }}/>
-                  {/* Score label */}
-                  <div style={{
-                    position:'absolute', right:10, top:'50%', transform:'translateY(-50%)',
-                    fontSize:'.75rem', fontWeight:600,
-                    fontFamily:'DM Mono,monospace',
-                    color: entry.score >= 40 ? '#fff' : 'rgba(255,255,255,.5)',
-                    textShadow: entry.score >= 40 ? '0 1px 3px rgba(0,0,0,.6)' : 'none',
-                  }}>
-                    {entry.score}%
-                  </div>
+                  {city && (
+                    <span style={{ fontSize:'.59rem', color:'rgba(255,255,255,.3)', fontFamily:'DM Mono,monospace', letterSpacing:'.02em', textAlign:'center' }}>
+                      {city}
+                    </span>
+                  )}
                 </div>
+              </Link>
+
+              {/* Score bar */}
+              <div style={{ flex:1, position:'relative', height:24, background:'rgba(255,255,255,.07)', borderRadius:6, overflow:'hidden' }}>
+                {noData ? (
+                  <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', paddingLeft:10, gap:5 }}>
+                    <Minus size={11} style={{ color:'rgba(255,255,255,.2)' }}/>
+                    <span style={{ fontSize:'.66rem', color:'rgba(255,255,255,.24)', fontFamily:'DM Mono,monospace' }}>No data yet</span>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{
+                      height:'100%', width:`${score}%`,
+                      background:`linear-gradient(90deg,${scoreColor(score!)}99,${scoreColor(score!)})`,
+                      borderRadius:6, transition:'width .65s cubic-bezier(.16,1,.3,1)',
+                    }}/>
+                    <div style={{
+                      position:'absolute', right:9, top:'50%', transform:'translateY(-50%)',
+                      fontSize:'.72rem', fontWeight:600, fontFamily:'DM Mono,monospace',
+                      color: score! >= 35 ? '#fff' : 'rgba(255,255,255,.45)',
+                      textShadow: score! >= 35 ? '0 1px 3px rgba(0,0,0,.6)' : 'none',
+                    }}>
+                      {score}%
+                    </div>
+                  </>
+                )}
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
