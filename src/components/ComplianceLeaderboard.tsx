@@ -34,15 +34,15 @@ const scoreColor = (s: number) =>
 // Decrease padding → logo appears larger (fills the box).
 // Tune these numbers to visually balance each brand's internal whitespace.
 const ICON_PADDING: Record<string, string> = {
-  hiex:     '2px 4px',   // Holiday Inn Express — good as-is
+  hiex:     '0px 0px',   // Holiday Inn Express — good as-is
   hida:     '0px 2px',   // Holiday Inn — thin green logo, let it breathe less
-  hbhdcc:   '6px 10px',  // Hampton Dublin — small badge, pad it out
-  hbhe:     '6px 10px',  // Hampton Ealing — same
+  hbhdcc:   '0px 0px',  // Hampton Dublin — small badge, pad it out
+  hbhe:     '0px 0px',  // Hampton Ealing — same
   hiltonth: '10px 16px', // Home2 — very wide logo, rein it in
   belfast:  '4px 6px',   // Aloft — decent as-is
-  moxy:     '14px 4px',  // Moxy — thin script, keep vertically small
+  moxy:     '0px 0px',  // Moxy — thin script, keep vertically small
   marina:   '6px 8px',   // Marina — small text logo
-  kensh:    '4px 6px',   // Kensington
+  kensh:    '0px 0px',   // Kensington
 };
 
 const ALL_IDS    = Object.keys(hotelNames);
