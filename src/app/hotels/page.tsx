@@ -2,7 +2,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Award, Zap, Shield, AlertCircle, CheckCircle2, Building2 } from 'lucide-react';
+import Link from 'next/link';
+import { X, Award, Zap, MapPin, CheckCircle2, ClipboardList } from 'lucide-react';
 
 import ComplianceLeaderboard from '@/components/ComplianceLeaderboard';
 import UtilitiesGraphs from '@/components/UtilitiesGraphs';
@@ -11,191 +12,141 @@ import AdminHeader from '@/components/AdminHeader';
 import WeatherWarningsBox from '@/components/WeatherWarningsBox';
 import UserPanel from '@/components/UserPanel';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
-import { hotelNames } from '@/lib/hotels';
+import { hotelNames } from '@/data/hotelMetadata';
 
-interface LeaderboardEntry {
-  hotel: string;
-  score: number;
-}
+// ─── Types ───────────────────────────────────────────────────────────────────
+interface LeaderboardEntry { hotel: string; score: number; }
+interface MonthlyTask     { task_id: string; frequency: string; confirmed: boolean; }
 
-// ─── Map coordinate helpers ──────────────────────────────────────────────────
-// ViewBox: 0 0 440 520
-// Lng: −11 → +2  (13°)  →  x = (lng + 11) × 33.85
-// Lat:  61 → 50  (11°)  →  y = (61 − lat) × 47.27  (inverted)
-function svgXY(lat: number, lng: number) {
-  return {
-    x: Math.round((lng + 11) * 33.85),
-    y: Math.round((61 - lat) * 47.27),
-  };
-}
-
+// ─── Hotel clusters ───────────────────────────────────────────────────────────
+// pctX / pctY = percentage position on the uk-logo.png image (1000×1000)
+// Calibrated from: left edge ≈ −10.8°W, right edge ≈ +2°E, top ≈ 61°N, bottom ≈ 50°N
 const CLUSTERS = [
-  { id: 'dublin',    label: 'Dublin',    lat: 53.35, lng: -6.26, count: 4, href: '#hotel-modal' },
-  { id: 'belfast',   label: 'Belfast',   lat: 54.60, lng: -5.93, count: 1, href: '/hotels/riba'  },
-  { id: 'cork',      label: 'Cork',      lat: 51.90, lng: -8.47, count: 1, href: '/hotels/moxy'  },
-  { id: 'waterford', label: 'Waterford', lat: 52.26, lng: -7.11, count: 1, href: '/hotels/marina'},
-];
+  { id: 'dublin',    label: 'Dublin',    pctX: 35.5, pctY: 55.5, hotels: ['hiex','hbhdcc','hiltonth','hida'] },
+  { id: 'belfast',   label: 'Belfast',   pctX: 39.0, pctY: 44.5, hotels: ['belfast']                        },
+  { id: 'waterford', label: 'Waterford', pctX: 28.5, pctY: 68.5, hotels: ['marina']                         },
+  { id: 'cork',      label: 'Cork',      pctX: 18.5, pctY: 72.5, hotels: ['moxy']                           },
+  { id: 'london',    label: 'London',    pctX: 74.0, pctY: 76.0, hotels: ['hbhe','kensh']                   },
+] as const;
 
-// ─── Component ───────────────────────────────────────────────────────────────
+type ClusterId = typeof CLUSTERS[number]['id'];
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function HotelsPage() {
-  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardData,  setLeaderboardData]  = useState<LeaderboardEntry[]>([]);
+  const [tasksPending,     setTasksPending]      = useState<number | null>(null);
+  const [tasksConfirmed,   setTasksConfirmed]    = useState<number | null>(null);
   const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
-  const [isUserPanelOpen, setIsUserPanelOpen] = useState(false);
+  const [isUserPanelOpen,  setIsUserPanelOpen]  = useState(false);
   const [showAdminSidebar, setShowAdminSidebar] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
-  const [hoveredCluster, setHoveredCluster] = useState<string | null>(null);
+  const [isMobile,         setIsMobile]         = useState(false);
+  const [activeCluster,    setActiveCluster]    = useState<ClusterId | null>(null);
+  const [hoveredCluster,   setHoveredCluster]   = useState<string | null>(null);
 
+  const totalHotels    = Object.keys(hotelNames).length;
+  const totalLocations = CLUSTERS.length;
+
+  // ── Data ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     fetchLeaderboard();
-    const handleResize = () => {
-      const mobile = window.innerWidth < 1024;
-      setIsMobile(mobile);
-      setShowAdminSidebar(!mobile);
+    fetchMonthlyTasks();
+    const onResize = () => {
+      const m = window.innerWidth < 1024;
+      setIsMobile(m);
+      setShowAdminSidebar(!m);
     };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
   const fetchLeaderboard = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`);
+      const res  = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`);
       const data: LeaderboardEntry[] = await res.json();
       setLeaderboardData([...data].sort((a, b) => b.score - a.score));
-    } catch {
-      setLeaderboardData([]);
-    }
+    } catch { setLeaderboardData([]); }
   };
 
-  const clusters = CLUSTERS.map(c => ({ ...c, ...svgXY(c.lat, c.lng) }));
+  const fetchMonthlyTasks = async () => {
+    try {
+      const res  = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`);
+      const data: MonthlyTask[] = await res.json();
+      const monthly = data.filter(t => t.frequency?.toLowerCase() === 'monthly');
+      setTasksPending(monthly.filter(t  => !t.confirmed).length);
+      setTasksConfirmed(monthly.filter(t =>  t.confirmed).length);
+    } catch { setTasksPending(null); setTasksConfirmed(null); }
+  };
 
+  const openCluster = activeCluster ? CLUSTERS.find(c => c.id === activeCluster) ?? null : null;
+
+  // Circular layout for multi-hotel picker
+  function circlePos(i: number, total: number, radius = 88) {
+    const angle = (2 * Math.PI / total) * i - Math.PI / 2;
+    return { left: 120 + radius * Math.cos(angle) - 34, top: 120 + radius * Math.sin(angle) - 34 };
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#060c1a', fontFamily: "'DM Sans', system-ui, sans-serif" }}>
 
-      {/* ── Global styles ─────────────────────────────────────────────── */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap');
-
         * { box-sizing: border-box; }
 
-        .panel {
-          background: rgba(255,255,255,0.035);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 18px;
-          overflow: hidden;
-        }
-
-        .panel-header {
-          padding: 18px 24px;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .panel-title {
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: rgba(255,255,255,0.92);
-          letter-spacing: -0.01em;
-        }
-
-        .panel-sub {
-          font-size: 0.72rem;
-          color: rgba(255,255,255,0.28);
-          margin-top: 2px;
-        }
+        .panel { background:rgba(255,255,255,.033); border:1px solid rgba(255,255,255,.068); border-radius:18px; overflow:hidden; }
+        .panel-hd { padding:16px 22px; border-bottom:1px solid rgba(255,255,255,.055); display:flex; align-items:center; justify-content:space-between; }
+        .ptitle { font-size:.85rem; font-weight:600; color:rgba(255,255,255,.9); letter-spacing:-.01em; }
+        .psub   { font-size:.7rem; color:rgba(255,255,255,.26); margin-top:2px; }
 
         .stat-card {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.065);
-          border-radius: 16px;
-          padding: 20px;
-          transition: background 0.2s, border-color 0.2s, transform 0.15s;
+          background:rgba(255,255,255,.03);
+          border:1px solid rgba(255,255,255,.062);
+          border-radius:15px; padding:18px;
+          transition:background .2s, border-color .2s, transform .15s;
         }
+        .stat-card:hover { background:rgba(255,255,255,.052); border-color:rgba(255,255,255,.12); transform:translateY(-2px); }
 
-        .stat-card:hover {
-          background: rgba(255,255,255,0.055);
-          border-color: rgba(255,255,255,0.13);
-          transform: translateY(-2px);
+        .mono { font-family:'DM Mono','Courier New',monospace; }
+        .ibadge { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
+        .live   { width:7px; height:7px; border-radius:50%; background:#34d399; box-shadow:0 0 8px #10b981; }
+
+        /* Map marker pulse */
+        @keyframes pulseRing {
+          0%   { transform:translate(-50%,-50%) scale(1);   opacity:.55; }
+          100% { transform:translate(-50%,-50%) scale(2.8); opacity:0;   }
         }
-
-        .mono { font-family: 'DM Mono', 'Courier New', monospace; }
-
-        /* Map */
-        .map-bg {
-          background:
-            radial-gradient(ellipse 70% 60% at 25% 45%, rgba(37,99,235,0.11) 0%, transparent 70%),
-            radial-gradient(ellipse 50% 40% at 75% 60%, rgba(15,30,70,0.5) 0%, transparent 70%),
-            linear-gradient(160deg, #081020 0%, #09142a 60%, #060d1e 100%);
+        .pulse-ring {
+          position:absolute; top:50%; left:50%;
+          width:38px; height:38px; border-radius:50%;
+          border:1.5px solid rgba(96,165,250,.5);
+          pointer-events:none;
+          animation:pulseRing 2.6s ease-out infinite;
         }
+        .pulse-ring-2 { animation-delay:.9s; }
 
-        .land-path {
-          fill: rgba(59,130,246,0.11);
-          stroke: rgba(99,165,250,0.32);
-          stroke-width: 0.9;
-          stroke-linejoin: round;
-          transition: fill 0.3s;
-        }
+        /* Entrance */
+        @keyframes fadeUp { from{opacity:0;transform:translateY(14px);} to{opacity:1;transform:translateY(0);} }
+        .fu { animation:fadeUp .55s cubic-bezier(.16,1,.3,1) both; }
 
-        .grid-line {
-          stroke: rgba(59,130,246,0.06);
-          stroke-width: 0.5;
-        }
+        /* Cluster picker */
+        @keyframes scaleIn { from{opacity:0;transform:scale(.88);} to{opacity:1;transform:scale(1);} }
+        .picker { animation:scaleIn .22s cubic-bezier(.16,1,.3,1) both; }
 
-        /* Marker pulse */
-        @keyframes pulseOut {
-          0%   { r: 9;  opacity: 0.55; }
-          100% { r: 24; opacity: 0;    }
-        }
-        .pulse1 { animation: pulseOut 2.4s ease-out infinite; fill: rgba(96,165,250,0.25); }
-        .pulse2 { animation: pulseOut 2.4s ease-out 0.8s infinite; fill: rgba(96,165,250,0.15); }
-
-        /* Fade-up entrance */
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(14px); }
-          to   { opacity: 1; transform: translateY(0);    }
-        }
-        .fade-up { animation: fadeUp 0.55s cubic-bezier(0.16,1,0.3,1) both; }
-
-        /* Icon badge */
-        .icon-badge {
-          width: 30px;
-          height: 30px;
-          border-radius: 9px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        /* Hairline separator */
-        .sep { border-color: rgba(255,255,255,0.06); }
-
-        /* Live dot */
-        .live-dot {
-          width: 7px; height: 7px;
-          border-radius: 50%;
-          background: #34d399;
-          box-shadow: 0 0 8px #10b981;
-          flex-shrink: 0;
-        }
+        /* Responsive */
+        @media (max-width:1200px) { .grid-main{grid-template-columns:1fr !important;} }
+        @media (max-width:900px)  { .grid-btm {grid-template-columns:1fr !important;} }
+        @media (max-width:700px)  { .grid-stat{grid-template-columns:repeat(2,1fr) !important;} }
       `}</style>
 
-      {/* ── Sidebar ───────────────────────────────────────────────────── */}
-      <AdminSidebar
-        isMobile={isMobile}
-        isOpen={showAdminSidebar}
-        onClose={() => setShowAdminSidebar(false)}
-      />
+      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+      <AdminSidebar isMobile={isMobile} isOpen={showAdminSidebar} onClose={() => setShowAdminSidebar(false)} />
 
-      {/* ── Main column ───────────────────────────────────────────────── */}
-      <div
-        className="flex-1 transition-all duration-300"
-        style={{ marginLeft: showAdminSidebar && !isMobile ? '288px' : '0' }}
-      >
+      {/* ── Main ────────────────────────────────────────────────────────── */}
+      <div className="flex-1 transition-all duration-300"
+        style={{ marginLeft: showAdminSidebar && !isMobile ? '288px' : 0 }}>
+
         <UserPanel isOpen={isUserPanelOpen} onClose={() => setIsUserPanelOpen(false)} />
-
         <AdminHeader
           showSidebar={showAdminSidebar}
           onToggleSidebar={() => setShowAdminSidebar(s => !s)}
@@ -204,327 +155,363 @@ export default function HotelsPage() {
           onOpenAccountSettings={() => {}}
           isMobile={isMobile}
         />
+        <HotelSelectorModal isOpen={isHotelModalOpen} setIsOpen={setIsHotelModalOpen} />
 
-        <HotelSelectorModal
-          isOpen={isHotelModalOpen}
-          setIsOpen={setIsHotelModalOpen}
-        />
+        {/* ── Page content ──────────────────────────────────────────────── */}
+        <div style={{ padding:'26px 26px 52px', display:'flex', flexDirection:'column', gap:'18px' }}>
 
-        {/* ── Page content ────────────────────────────────────────────── */}
-        <div style={{ padding: '28px 28px 48px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-          {/* ── Stat strip ────────────────────────────────────────────── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}
-               className="fade-up"
-               data-cols="stat">
+          {/* ─── Stat strip ────────────────────────────────────────────── */}
+          <div className="grid-stat" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'13px' }}>
             {[
-              { label: 'Properties',     value: '7',   detail: 'Active portfolio',  color: '#3b82f6', Icon: Building2  },
-              { label: 'Avg Compliance', value: '82%', detail: 'Portfolio score',   color: '#10b981', Icon: Shield     },
-              { label: 'Open Defects',   value: '14',  detail: 'Needs attention',   color: '#f59e0b', Icon: AlertCircle},
-              { label: 'Monthly Tasks',  value: '31',  detail: '18 confirmed',      color: '#a78bfa', Icon: CheckCircle2},
+              { label:'Hotels',      value:String(totalHotels),                                     detail:'Across 5 cities',   color:'#3b82f6', Icon:MapPin        },
+              { label:'Locations',   value:String(totalLocations),                                  detail:'IE & UK portfolio', color:'#38bdf8', Icon:MapPin        },
+              { label:'Tasks Done',  value:tasksConfirmed !== null ? String(tasksConfirmed) : '—',  detail:'Monthly confirmed', color:'#10b981', Icon:CheckCircle2  },
+              { label:'Outstanding', value:tasksPending   !== null ? String(tasksPending)   : '—',  detail:'Monthly remaining', color:'#f59e0b', Icon:ClipboardList },
             ].map(({ label, value, detail, color, Icon }, i) => (
-              <div key={label} className="stat-card fade-up" style={{ animationDelay: `${i * 70}ms` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
-                  <Icon size={15} style={{ color }} />
-                  <span className="mono" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.18)', letterSpacing: '0.06em' }}>LIVE</span>
+              <div key={label} className="stat-card fu" style={{ animationDelay:`${i*65}ms` }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'12px' }}>
+                  <Icon size={14} style={{ color }} />
+                  <span className="mono" style={{ fontSize:'.62rem', color:'rgba(255,255,255,.18)', letterSpacing:'.06em' }}>JMK</span>
                 </div>
-                <div className="mono" style={{ fontSize: '2rem', fontWeight: 500, color: '#fff', lineHeight: 1, marginBottom: '6px' }}>
-                  {value}
-                </div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'rgba(255,255,255,0.58)' }}>{label}</div>
-                <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.22)', marginTop: '2px' }}>{detail}</div>
+                <div className="mono" style={{ fontSize:'2rem', fontWeight:500, color:'#fff', lineHeight:1, marginBottom:'5px' }}>{value}</div>
+                <div style={{ fontSize:'.78rem', fontWeight:500, color:'rgba(255,255,255,.56)' }}>{label}</div>
+                <div style={{ fontSize:'.68rem', color:'rgba(255,255,255,.21)', marginTop:'2px' }}>{detail}</div>
               </div>
             ))}
           </div>
 
-          {/* ── Row 2: Map + Leaderboard ──────────────────────────────── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '20px' }}>
+          {/* ─── Map + Leaderboard ─────────────────────────────────────── */}
+          <div className="grid-main fu" style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:'18px', animationDelay:'110ms' }}>
 
-            {/* MAP ──────────────────────────────────────────────────── */}
-            <div className="panel fade-up" style={{ animationDelay: '130ms' }}>
-              <div className="panel-header">
+            {/* MAP ───────────────────────────────────────────────────── */}
+            <div className="panel">
+              <div className="panel-hd">
                 <div>
-                  <div className="panel-title">Portfolio Map</div>
-                  <div className="panel-sub">UK &amp; Ireland — 7 properties across 4 locations</div>
+                  <div className="ptitle">Portfolio Map</div>
+                  <div className="psub">9 hotels · 5 cities · UK &amp; Ireland — tap a city to select</div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className="live-dot" />
-                  <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.32)' }}>All operational</span>
+                <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+                  <span className="live" />
+                  <span style={{ fontSize:'.68rem', color:'rgba(255,255,255,.3)' }}>All operational</span>
                 </div>
               </div>
 
-              {/* SVG canvas */}
-              <div
-                className="map-bg"
-                style={{ padding: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '420px' }}
-              >
-                <svg
-                  viewBox="0 0 440 520"
-                  preserveAspectRatio="xMidYMid meet"
-                  style={{ width: '100%', maxHeight: '400px' }}
-                >
-                  {/* Latitude grid lines */}
-                  {[51,52,53,54,55,56,57,58,59].map(lat => {
-                    const y = (61 - lat) * 47.27;
-                    return <line key={`lat-${lat}`} x1="0" y1={y} x2="440" y2={y} className="grid-line" />;
-                  })}
-                  {/* Longitude grid lines */}
-                  {[-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,0,1].map(lng => {
-                    const x = (lng + 11) * 33.85;
-                    return <line key={`lng-${lng}`} x1={x} y1="0" x2={x} y2="520" className="grid-line" />;
-                  })}
+              {/* Image + overlaid markers */}
+              <div style={{ padding:'20px', display:'flex', justifyContent:'center', alignItems:'center' }}>
+                <div style={{ position:'relative', maxWidth:420, width:'100%' }}>
 
-                  {/* ── Ireland ─────────────────────────────────────── */}
-                  {/*
-                    Key coastline points (lat, lng → SVG x,y):
-                    Malin Head  55.37,-7.37 → 123,266   Fair Head   55.23,-6.15 → 164,273
-                    E coast N   54.80,-5.80 → 177,294   Strangford  54.38,-5.56 → 184,314
-                    Carlingford 54.03,-6.18 → 163,330   Dublin      53.35,-6.26 → 160,362
-                    Wicklow     52.98,-6.04 → 167,379   Wexford     52.33,-6.46 → 154,410
-                    Hook Head   52.12,-6.93 → 138,420   Cork Hbr    51.83,-8.27 →  92,435
-                    Mizen Head  51.45,-9.82 →  40,452   Valentia    51.93,-10.35→  22,429
-                    Loop Head   52.56,-9.93 →  36,399   Galway      53.27,-9.05 →  66,365
-                    Achill      53.97,-10.1 →  30,333   Erris       54.32,-10.0 →  34,316
-                    Sligo       54.27,-8.5  →  85,318   Donegal     54.65,-8.1  → 109,299
-                  */}
-                  <path className="land-path" d="
-                    M 123,266
-                    L 164,273
-                    L 177,294
-                    L 184,314
-                    L 163,330
-                    L 160,362
-                    L 167,379
-                    L 154,410
-                    L 138,420
-                    L 120,430
-                    L  92,435
-                    L  68,445
-                    L  40,452
-                    L  28,445
-                    L  22,429
-                    L  36,399
-                    L  57,385
-                    L  50,368
-                    L  32,348
-                    L  30,333
-                    L  34,316
-                    L  58,320
-                    L  85,318
-                    L 109,299
-                    Z
-                  "/>
+                  {/* Map image — black bg blends perfectly with the dark theme */}
+                  <img
+                    src="/uk-logo.png"
+                    alt="UK & Ireland map"
+                    style={{ width:'100%', display:'block', borderRadius:8 }}
+                    draggable={false}
+                  />
 
-                  {/* ── Great Britain ───────────────────────────────── */}
-                  {/*
-                    Land's End  50.07,-5.72 → 179,517   Lizard      49.95,-5.20 → 196,522
-                    Start Pt    50.22,-3.64 → 249,510   Portland    50.51,-2.46 → 289,496
-                    Dover       51.13,+1.37 → 419,467   Thames N    51.50,+0.70 → 396,449
-                    Norfolk     52.97,+1.65 → 428,380   Humber      53.70,-0.20 → 366,345
-                    Flamborough 54.12,-0.08 → 370,325   Tynemouth   55.01,-1.42 → 324,283
-                    Berwick     55.77,-1.99 → 305,247   Fife Ness   56.27,-2.58 → 285,224
-                    Montrose    56.71,-2.46 → 289,203   Fraserburgh 57.69,-2.00 → 305,156
-                    Duncansby   58.64,-3.07 → 268,112   Cape Wrath  58.63,-4.99 → 203,112
-                    Rubha Mor   57.89,-5.81 → 176,147   Ardnamurch. 56.72,-6.22 → 162,202
-                    Mull Kint.  55.30,-5.78 → 177,270   Ayr         55.47,-4.62 → 217,284
-                    Solway      54.70,-3.44 → 256,298   Barrow      54.10,-3.20 → 264,326
-                    Anglesey    53.43,-4.20 → 230,358   Pembroke    51.67,-5.15 → 198,441
-                    Worms Hd    51.57,-4.34 → 225,446   Cardiff     51.46,-3.18 → 265,451
-                    Avonmouth   51.50,-2.71 → 281,449   Hartland    51.01,-4.53 → 219,473
-                    Trevose     50.54,-5.03 → 202,495
-                  */}
-                  <path className="land-path" d="
-                    M 179,517
-                    L 196,522
-                    L 249,510
-                    L 289,496
-                    L 419,467
-                    L 396,449
-                    L 428,380
-                    L 389,369
-                    L 366,345
-                    L 370,325
-                    L 352,308
-                    L 324,283
-                    L 305,247
-                    L 282,234
-                    L 285,224
-                    L 289,203
-                    L 305,156
-                    L 268,112
-                    L 203,112
-                    L 190,130
-                    L 176,147
-                    L 162,202
-                    L 177,270
-                    L 217,284
-                    L 256,298
-                    L 264,326
-                    L 230,358
-                    L 198,441
-                    L 225,446
-                    L 265,451
-                    L 281,449
-                    L 271,467
-                    L 219,473
-                    L 202,495
-                    L 179,517
-                    Z
-                  "/>
+                  {/* Hotel markers — absolutely positioned as % of the image */}
+                  {CLUSTERS.map(c => {
+                    const hovered = hoveredCluster === c.id;
+                    const multi   = c.hotels.length > 1;
 
-                  {/* ── Compass rose ──────────────────────────────────── */}
-                  <g transform="translate(414,52)" opacity="0.28">
-                    <circle r="17" fill="none" stroke="rgba(99,160,250,0.5)" strokeWidth="0.7"/>
-                    <line x1="0" y1="-13" x2="0" y2="13" stroke="rgba(99,160,250,0.55)" strokeWidth="0.9"/>
-                    <line x1="-13" y1="0" x2="13" y2="0" stroke="rgba(99,160,250,0.55)" strokeWidth="0.9"/>
-                    <text x="0" y="-18" textAnchor="middle" fill="rgba(147,197,253,0.7)"
-                      fontSize="7.5" fontFamily="DM Mono, monospace" letterSpacing="0.05em">N</text>
-                  </g>
-
-                  {/* ── Scale bar ─────────────────────────────────────── */}
-                  <g transform="translate(22,495)" opacity="0.32">
-                    <line x1="0" y1="0" x2="34" y2="0" stroke="rgba(200,220,255,0.6)" strokeWidth="1"/>
-                    <line x1="0"  y1="-3" x2="0"  y2="3" stroke="rgba(200,220,255,0.6)" strokeWidth="1"/>
-                    <line x1="34" y1="-3" x2="34" y2="3" stroke="rgba(200,220,255,0.6)" strokeWidth="1"/>
-                    <text x="17" y="12" textAnchor="middle" fill="rgba(200,220,255,0.55)"
-                      fontSize="6.5" fontFamily="DM Mono, monospace">50 km</text>
-                  </g>
-
-                  {/* ── Hotel cluster markers ─────────────────────────── */}
-                  {clusters.map(c => (
-                    <g
-                      key={c.id}
-                      transform={`translate(${c.x},${c.y})`}
-                      style={{ cursor: 'pointer' }}
-                      onMouseEnter={() => setHoveredCluster(c.id)}
-                      onMouseLeave={() => setHoveredCluster(null)}
-                    >
-                      {/* Animated pulse rings */}
-                      <circle className="pulse1" />
-                      <circle className="pulse2" />
-
-                      {/* Glow halo */}
-                      <circle r="10" fill="rgba(59,130,246,0.18)"
-                        style={{ filter: 'blur(3px)' }} />
-
-                      {/* Core marker */}
-                      <circle r="7" fill="#1d4ed8" stroke="#93c5fd" strokeWidth="1.5"
-                        style={{ filter: 'drop-shadow(0 0 10px rgba(96,165,250,0.95))' }}
-                      />
-
-                      {/* Hotel count badge (multi-property locations) */}
-                      {c.count > 1 && (
-                        <g>
-                          <circle cx="7" cy="-7" r="7" fill="#0f172a" stroke="#3b82f6" strokeWidth="1.2"/>
-                          <text x="7" y="-4.5" textAnchor="middle" fill="#93c5fd"
-                            fontSize="7" fontWeight="600" fontFamily="DM Mono, monospace">
-                            {c.count}
-                          </text>
-                        </g>
-                      )}
-
-                      {/* City label */}
-                      <text
-                        x="0" y="21"
-                        textAnchor="middle"
-                        fill="rgba(255,255,255,0.82)"
-                        fontSize="9"
-                        fontWeight="500"
-                        fontFamily="DM Sans, system-ui"
-                        style={{ filter: 'drop-shadow(0 1px 4px rgba(0,0,0,1))' }}
+                    return (
+                      <div
+                        key={c.id}
+                        style={{
+                          position:'absolute',
+                          left:`${c.pctX}%`,
+                          top:`${c.pctY}%`,
+                          transform:'translate(-50%,-50%)',
+                          cursor:'pointer',
+                          zIndex:10,
+                        }}
+                        onClick={() => setActiveCluster(c.id as ClusterId)}
+                        onMouseEnter={() => setHoveredCluster(c.id)}
+                        onMouseLeave={() => setHoveredCluster(null)}
                       >
-                        {c.label}
-                      </text>
+                        {/* Pulse rings */}
+                        <div className="pulse-ring" />
+                        <div className="pulse-ring pulse-ring-2" />
 
-                      {/* Hover tooltip */}
-                      {hoveredCluster === c.id && (
-                        <g>
-                          <rect x="-44" y="-56" width="88" height="32" rx="6"
-                            fill="#0c1730" stroke="rgba(59,130,246,0.55)" strokeWidth="0.9"
-                            style={{ filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.6))' }}
+                        {/* Circular icon */}
+                        <div style={{
+                          position:'relative',
+                          width:38, height:38,
+                          borderRadius:'50%',
+                          overflow:'hidden',
+                          border: hovered ? '2.5px solid #93c5fd' : '2px solid #60a5fa',
+                          boxShadow: hovered
+                            ? '0 0 0 3px rgba(96,165,250,.25), 0 0 18px rgba(96,165,250,.9)'
+                            : '0 0 0 2px rgba(96,165,250,.15), 0 0 10px rgba(96,165,250,.6)',
+                          background:'#0f172a',
+                          transition:'border .15s, box-shadow .15s',
+                          zIndex:2,
+                        }}>
+                          <img
+                            src={`/icons/${c.hotels[0]}-icon.png`}
+                            alt={c.label}
+                            style={{ width:'100%', height:'100%', objectFit:'cover' }}
                           />
-                          <text x="0" y="-40" textAnchor="middle" fill="white"
-                            fontSize="8.5" fontWeight="500" fontFamily="DM Sans, system-ui">
-                            {c.count} {c.count === 1 ? 'hotel' : 'hotels'}
-                          </text>
-                          <text x="0" y="-29" textAnchor="middle" fill="rgba(147,197,253,0.7)"
-                            fontSize="7" fontFamily="DM Mono, monospace" letterSpacing="0.05em">
-                            {c.label.toUpperCase()}
-                          </text>
-                        </g>
-                      )}
-                    </g>
-                  ))}
-                </svg>
+                        </div>
+
+                        {/* Count badge for multi-hotel clusters */}
+                        {multi && (
+                          <div style={{
+                            position:'absolute',
+                            top:-3, right:-3,
+                            width:16, height:16,
+                            borderRadius:'50%',
+                            background:'#1e3a8a',
+                            border:'1.5px solid #93c5fd',
+                            display:'flex', alignItems:'center', justifyContent:'center',
+                            fontSize:'8px', fontWeight:700,
+                            color:'#e0f2fe',
+                            fontFamily:'DM Mono,monospace',
+                            zIndex:3,
+                            boxShadow:'0 2px 6px rgba(0,0,0,.5)',
+                          }}>
+                            {c.hotels.length}
+                          </div>
+                        )}
+
+                        {/* City label */}
+                        <div style={{
+                          position:'absolute',
+                          top:'calc(100% + 5px)',
+                          left:'50%',
+                          transform:'translateX(-50%)',
+                          fontSize:'8px', fontWeight:500,
+                          color:'rgba(255,255,255,.82)',
+                          whiteSpace:'nowrap',
+                          textShadow:'0 1px 5px rgba(0,0,0,1)',
+                          fontFamily:'DM Sans,system-ui',
+                          pointerEvents:'none',
+                        }}>
+                          {c.label}
+                        </div>
+
+                        {/* Hover tooltip */}
+                        {hovered && (
+                          <div style={{
+                            position:'absolute',
+                            bottom:'calc(100% + 8px)',
+                            left:'50%',
+                            transform:'translateX(-50%)',
+                            background:'#0c1730',
+                            border:'1px solid rgba(59,130,246,.55)',
+                            borderRadius:6,
+                            padding:'5px 10px',
+                            fontSize:'8px', fontWeight:500,
+                            color:'white',
+                            whiteSpace:'nowrap',
+                            boxShadow:'0 4px 14px rgba(0,0,0,.7)',
+                            zIndex:20,
+                            fontFamily:'DM Sans,system-ui',
+                          }}>
+                            {c.hotels.length} {c.hotels.length === 1 ? 'hotel' : 'hotels'}
+                            <div style={{ fontSize:'7px', color:'rgba(147,197,253,.6)', marginTop:2, fontFamily:'DM Mono,monospace', letterSpacing:'.05em' }}>
+                              TAP TO SELECT
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* COMPLIANCE LEADERBOARD ────────────────────────────────── */}
-            <div className="panel fade-up" style={{ animationDelay: '180ms' }}>
-              <div className="panel-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div className="icon-badge" style={{ background: 'rgba(16,185,129,0.13)' }}>
-                    <Award size={14} style={{ color: '#34d399' }} />
+            {/* LEADERBOARD ──────────────────────────────────────────── */}
+            <div className="panel fu" style={{ animationDelay:'170ms' }}>
+              <div className="panel-hd">
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <div className="ibadge" style={{ background:'rgba(16,185,129,.13)' }}>
+                    <Award size={13} style={{ color:'#34d399' }} />
                   </div>
                   <div>
-                    <div className="panel-title">Compliance Score</div>
-                    <div className="panel-sub">Updated daily</div>
+                    <div className="ptitle">Compliance Score</div>
+                    <div className="psub">Updated daily</div>
                   </div>
                 </div>
               </div>
-              <div>
-                <ComplianceLeaderboard data={leaderboardData} />
-              </div>
+              <ComplianceLeaderboard data={leaderboardData} />
             </div>
           </div>
 
-          {/* ── Row 3: Weather + Utilities ────────────────────────────── */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 3fr', gap: '20px' }}>
+          {/* ─── Weather + Utilities ───────────────────────────────────── */}
+          <div className="grid-btm fu" style={{ display:'grid', gridTemplateColumns:'2fr 3fr', gap:'18px', animationDelay:'220ms' }}>
 
-            {/* WEATHER ────────────────────────────────────────────────── */}
-            <div className="panel fade-up" style={{ animationDelay: '230ms' }}>
-              <div className="panel-header">
+            <div className="panel">
+              <div className="panel-hd">
                 <div>
-                  <div className="panel-title">Weather Warnings</div>
-                  <div className="panel-sub">Met Éireann &amp; Met Office · live</div>
+                  <div className="ptitle">Weather Warnings</div>
+                  <div className="psub">Met Éireann &amp; Met Office · live</div>
                 </div>
               </div>
-              <div>
-                <WeatherWarningsBox />
-              </div>
+              <WeatherWarningsBox />
             </div>
 
-            {/* UTILITIES ──────────────────────────────────────────────── */}
-            <div className="panel fade-up" style={{ animationDelay: '280ms' }}>
-              <div className="panel-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div className="icon-badge" style={{ background: 'rgba(139,92,246,0.13)' }}>
-                    <Zap size={14} style={{ color: '#a78bfa' }} />
+            <div className="panel">
+              <div className="panel-hd">
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <div className="ibadge" style={{ background:'rgba(139,92,246,.13)' }}>
+                    <Zap size={13} style={{ color:'#a78bfa' }} />
                   </div>
                   <div>
-                    <div className="panel-title">Utilities Comparison</div>
-                    <div className="panel-sub">Electricity &amp; gas · all properties</div>
+                    <div className="ptitle">Utilities Comparison</div>
+                    <div className="psub">Electricity &amp; gas · all properties</div>
                   </div>
                 </div>
               </div>
-              <div>
-                <UtilitiesGraphs />
-              </div>
+              <UtilitiesGraphs />
             </div>
           </div>
 
         </div>
       </div>
 
-      {/* ── Responsive stat grid override ─────────────────────────────── */}
-      <style>{`
-        @media (max-width: 1024px) {
-          [data-cols="stat"] { grid-template-columns: repeat(2,1fr) !important; }
-        }
-        @media (max-width: 640px) {
-          [data-cols="stat"] { grid-template-columns: repeat(2,1fr) !important; }
-        }
-      `}</style>
+      {/* ─── Cluster picker modal ─────────────────────────────────────────── */}
+      {activeCluster && openCluster && (
+        <div
+          style={{
+            position:'fixed', inset:0,
+            background:'rgba(0,0,0,.65)',
+            backdropFilter:'blur(6px)',
+            zIndex:200,
+            display:'flex', alignItems:'center', justifyContent:'center',
+          }}
+          onClick={() => setActiveCluster(null)}
+        >
+          <div
+            className="picker"
+            style={{
+              background:'linear-gradient(145deg,#0c1a36,#091228)',
+              border:'1px solid rgba(99,165,250,.22)',
+              borderRadius:22,
+              padding:'30px 26px 26px',
+              width:320,
+              boxShadow:'0 24px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.04)',
+              position:'relative',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setActiveCluster(null)}
+              style={{
+                position:'absolute', top:14, right:14,
+                background:'rgba(255,255,255,.06)', border:'none',
+                color:'rgba(255,255,255,.5)', borderRadius:8,
+                width:28, height:28, cursor:'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}
+            >
+              <X size={14}/>
+            </button>
+
+            <div style={{ textAlign:'center', marginBottom:22 }}>
+              <div style={{ fontSize:'.68rem', color:'rgba(147,197,253,.6)', fontFamily:'DM Mono,monospace', letterSpacing:'.08em', marginBottom:4 }}>
+                SELECT HOTEL
+              </div>
+              <div style={{ fontSize:'1.1rem', fontWeight:600, color:'#fff', letterSpacing:'-.02em' }}>
+                {openCluster.label}
+              </div>
+              <div style={{ fontSize:'.7rem', color:'rgba(255,255,255,.28)', marginTop:3 }}>
+                {openCluster.hotels.length} {openCluster.hotels.length === 1 ? 'property' : 'properties'}
+              </div>
+            </div>
+
+            {/* Single hotel → navigate directly */}
+            {openCluster.hotels.length === 1 ? (
+              <Link href={`/hotels/${openCluster.hotels[0]}`} onClick={() => setActiveCluster(null)}
+                style={{ display:'block', textDecoration:'none' }}>
+                <div style={{
+                  display:'flex', flexDirection:'column', alignItems:'center', gap:10,
+                  background:'rgba(59,130,246,.1)', border:'1px solid rgba(59,130,246,.25)',
+                  borderRadius:14, padding:'20px 12px', cursor:'pointer',
+                }}>
+                  <img src={`/icons/${openCluster.hotels[0]}-icon.png`}
+                    alt={hotelNames[openCluster.hotels[0]]}
+                    style={{ width:64, height:64, objectFit:'contain' }} />
+                  <div style={{ fontSize:'.82rem', fontWeight:500, color:'rgba(255,255,255,.85)', textAlign:'center' }}>
+                    {hotelNames[openCluster.hotels[0]]}
+                  </div>
+                </div>
+              </Link>
+            ) : (
+              /* Multi-hotel circular picker */
+              <div style={{ position:'relative', width:240, height:240, margin:'0 auto' }}>
+                {/* Centre pin */}
+                <div style={{
+                  position:'absolute', left:'50%', top:'50%',
+                  transform:'translate(-50%,-50%)',
+                  width:40, height:40, borderRadius:'50%',
+                  border:'1px dashed rgba(99,165,250,.22)',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                }}>
+                  <MapPin size={13} style={{ color:'rgba(147,197,253,.38)' }} />
+                </div>
+
+                {/* Connector lines */}
+                <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}>
+                  {openCluster.hotels.map((_, i) => {
+                    const pos = circlePos(i, openCluster.hotels.length);
+                    return <line key={i} x1="120" y1="120"
+                      x2={pos.left+34} y2={pos.top+34}
+                      stroke="rgba(59,130,246,.13)" strokeWidth="1" strokeDasharray="3,3" />;
+                  })}
+                </svg>
+
+                {/* Hotel icon tiles */}
+                {openCluster.hotels.map((hotelId, i) => {
+                  const pos = circlePos(i, openCluster.hotels.length);
+                  return (
+                    <Link key={hotelId} href={`/hotels/${hotelId}`}
+                      onClick={() => setActiveCluster(null)}
+                      style={{ position:'absolute', left:pos.left, top:pos.top, textDecoration:'none' }}
+                    >
+                      <div
+                        style={{
+                          width:68, height:68, borderRadius:14,
+                          background:'rgba(255,255,255,.05)',
+                          border:'1px solid rgba(99,165,250,.2)',
+                          display:'flex', flexDirection:'column',
+                          alignItems:'center', justifyContent:'center',
+                          gap:4, padding:'6px 4px', cursor:'pointer',
+                          transition:'background .15s, border-color .15s, transform .15s',
+                          boxShadow:'0 4px 16px rgba(0,0,0,.4)',
+                        }}
+                        onMouseEnter={e => {
+                          const t = e.currentTarget as HTMLDivElement;
+                          t.style.background  = 'rgba(59,130,246,.18)';
+                          t.style.borderColor = 'rgba(99,165,250,.5)';
+                          t.style.transform   = 'scale(1.1)';
+                        }}
+                        onMouseLeave={e => {
+                          const t = e.currentTarget as HTMLDivElement;
+                          t.style.background  = 'rgba(255,255,255,.05)';
+                          t.style.borderColor = 'rgba(99,165,250,.2)';
+                          t.style.transform   = 'scale(1)';
+                        }}
+                      >
+                        <img src={`/icons/${hotelId}-icon.png`} alt={hotelNames[hotelId]}
+                          style={{ width:40, height:40, objectFit:'contain' }} />
+                        <div style={{
+                          fontSize:'.52rem', fontWeight:500,
+                          color:'rgba(255,255,255,.5)',
+                          textAlign:'center', lineHeight:1.2, maxWidth:60,
+                          overflow:'hidden',
+                          display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical',
+                        }}>
+                          {hotelNames[hotelId]}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
