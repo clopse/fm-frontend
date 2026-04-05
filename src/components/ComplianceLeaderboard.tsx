@@ -29,6 +29,22 @@ const HOTEL_CITY: Record<string, string> = {
 const scoreColor = (s: number) =>
   s >= 85 ? '#10b981' : s >= 70 ? '#f59e0b' : '#ef4444';
 
+// Per-hotel padding inside the fixed 115×46 icon container.
+// Increase padding → logo appears smaller (more surrounding space).
+// Decrease padding → logo appears larger (fills the box).
+// Tune these numbers to visually balance each brand's internal whitespace.
+const ICON_PADDING: Record<string, string> = {
+  hiex:     '2px 4px',   // Holiday Inn Express — good as-is
+  hida:     '0px 2px',   // Holiday Inn — thin green logo, let it breathe less
+  hbhdcc:   '6px 10px',  // Hampton Dublin — small badge, pad it out
+  hbhe:     '6px 10px',  // Hampton Ealing — same
+  hiltonth: '10px 16px', // Home2 — very wide logo, rein it in
+  belfast:  '4px 6px',   // Aloft — decent as-is
+  moxy:     '14px 4px',  // Moxy — thin script, keep vertically small
+  marina:   '6px 8px',   // Marina — small text logo
+  kensh:    '4px 6px',   // Kensington
+};
+
 const ALL_IDS    = Object.keys(hotelNames);
 const MIN_HOTELS = 7;
 
@@ -207,12 +223,17 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
                   onMouseEnter={e => (e.currentTarget.style.opacity = '.7')}
                   onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                 >
-                  {/* Icon — 15% bigger: 100→115 wide, 40→46 tall */}
+                  {/* Fixed 115×46 container for all logos — padding controls apparent size */}
                   <div style={{ width:115, height:46, display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
                     <img
                       src={`/icons/${hotel}-icon.png`}
                       alt={hotelNames[hotel] || hotel}
-                      style={{ maxWidth:115, maxHeight:46, objectFit:'contain', display:'block' }}
+                      style={{
+                        width:'100%', height:'100%',
+                        objectFit:'contain',
+                        padding: ICON_PADDING[hotel] ?? '4px 6px',
+                        display:'block',
+                      }}
                       onError={e => {
                         (e.currentTarget as HTMLImageElement).style.display = 'none';
                         const fb = (e.currentTarget as HTMLImageElement).parentElement?.querySelector('.icon-fallback') as HTMLElement;
@@ -250,8 +271,8 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
                     <div style={{
                       position:'absolute', right:9, top:'50%', transform:'translateY(-50%)',
                       fontSize:'.72rem', fontWeight:700, fontFamily:'DM Mono,monospace',
-                      color: score! >= 35 ? '#fff' : color,
-                      textShadow: score! >= 35 ? '0 1px 3px rgba(0,0,0,.6)' : 'none',
+                      color: '#fff',
+                      textShadow: '0 1px 4px rgba(0,0,0,.7)',
                     }}>
                       {score}%
                     </div>
