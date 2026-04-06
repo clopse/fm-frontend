@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 import ComplianceLeaderboard from '@/components/ComplianceLeaderboard';
-import UtilitiesGraphs       from '@/components/AdminUtilitiesGraph';
+import UtilitiesGraphs       from '@/components/UtilitiesGraphs';
 import AdminSidebar          from '@/components/AdminSidebar';
 import UserPanel             from '@/components/UserPanel';
 import HotelSelectorModal    from '@/components/HotelSelectorModal';
@@ -155,9 +155,6 @@ export default function HotelsPage() {
     }));
   };
 
-  const isClusterActive = (c: typeof CLUSTERS[number]) =>
-    c.hotels.some(id => selectedHotels.includes(id));
-
   const openCluster = activeCluster ? CLUSTERS.find(c => c.id === activeCluster) ?? null : null;
   const circlePos   = (i: number, total: number, r = 88) => {
     const a = (2 * Math.PI / total) * i - Math.PI / 2;
@@ -265,29 +262,29 @@ export default function HotelsPage() {
                     <img src="/uk-logo.png" alt="UK & Ireland" style={{ width:'100%', display:'block', borderRadius:6 }} draggable={false}/>
 
                     {CLUSTERS.map(c => {
-                      const hov    = hoveredCluster === c.id;
-                      const multi  = c.hotels.length > 1;
-                      const active = isClusterActive(c);
-                      const selCount = c.hotels.filter(id => selectedHotels.includes(id)).length;
+                      const hov      = hoveredCluster === c.id;
+                      const multi    = c.hotels.length > 1;
 
                       return (
                         <div key={c.id}
                           style={{
                             position:'absolute', left:`${c.pctX}%`, top:`${c.pctY}%`,
-                            transform:'translate(-50%,-50%)', cursor: active ? 'pointer' : 'default',
-                            zIndex:10, opacity: active ? 1 : 0.25, transition:'opacity .35s',
-                            pointerEvents: active ? 'auto' : 'none',
+                            transform:'translate(-50%,-50%)', cursor:'pointer',
+                            zIndex:10, transition:'opacity .35s',
                           }}
                           onClick={() => setActiveCluster(c.id as ClusterId)}
                           onMouseEnter={() => setHoveredCluster(c.id)}
                           onMouseLeave={() => setHoveredCluster(null)}
                         >
-                          {active && <><div className="pr" style={{ width:MARKER, height:MARKER }}/><div className="pr pr2" style={{ width:MARKER, height:MARKER }}/></>}
+                          <div className="pr" style={{ width:MARKER, height:MARKER }}/>
+                          <div className="pr pr2" style={{ width:MARKER, height:MARKER }}/>
 
                           <div style={{
                             position:'relative', width:MARKER, height:MARKER, borderRadius:'50%', overflow:'hidden',
                             border: hov ? '2.5px solid #93c5fd' : '2px solid #60a5fa',
-                            boxShadow: active ? (hov ? `0 0 0 3px rgba(96,165,250,.2),0 0 18px rgba(96,165,250,.85)` : `0 0 0 2px rgba(96,165,250,.1),0 0 10px rgba(96,165,250,.5)`) : 'none',
+                            boxShadow: hov
+                              ? `0 0 0 3px rgba(96,165,250,.2),0 0 18px rgba(96,165,250,.85)`
+                              : `0 0 0 2px rgba(96,165,250,.1),0 0 10px rgba(96,165,250,.5)`,
                             background:'#0f172a', transition:'border .15s,box-shadow .15s', zIndex:2,
                           }}>
                             <img src={`/icons/${c.hotels[0]}-icon.png`} alt={c.label} style={{ width:'100%', height:'100%', objectFit:'contain', padding:'6px' }}/>
@@ -301,7 +298,7 @@ export default function HotelsPage() {
                               fontSize:'8px', fontWeight:700, color:'#e0f2fe', fontFamily:'DM Mono,monospace',
                               zIndex:3, boxShadow:'0 2px 6px rgba(0,0,0,.6)',
                             }}>
-                              {selCount || c.hotels.length}
+                              {c.hotels.length}
                             </div>
                           )}
 
@@ -311,14 +308,14 @@ export default function HotelsPage() {
                             whiteSpace:'nowrap', textShadow:'0 1px 6px rgba(0,0,0,1)', letterSpacing:'.02em', pointerEvents:'none',
                           }}>{c.label}</div>
 
-                          {hov && active && (
+                          {hov && (
                             <div style={{
                               position:'absolute', bottom:`calc(100% + 9px)`, left:'50%', transform:'translateX(-50%)',
                               background:'#0c1730', border:'1px solid rgba(59,130,246,.5)', borderRadius:7,
                               padding:'5px 11px', fontSize:'8.5px', fontWeight:500, color:'white',
                               whiteSpace:'nowrap', boxShadow:'0 4px 16px rgba(0,0,0,.75)', zIndex:20,
                             }}>
-                              {selCount} {selCount === 1 ? 'hotel' : 'hotels'}
+                              {c.hotels.length} {c.hotels.length === 1 ? 'hotel' : 'hotels'}
                               <div style={{ fontSize:'7px', color:'rgba(147,197,253,.6)', marginTop:2, fontFamily:'DM Mono,monospace', letterSpacing:'.05em' }}>TAP TO SELECT</div>
                             </div>
                           )}
