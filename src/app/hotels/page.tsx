@@ -131,7 +131,8 @@ export default function HotelsPage() {
     const init: Record<string, CityWeather> = {};
     WX_CITIES.forEach(c => { init[c.id] = { temp:0, apparent:0, wind:0, code:0, forecast:[], loading:true }; });
     setCityWeather(init);
-    await Promise.allSettled(WX_CITIES.map(async city => {
+    for (const [i, city] of WX_CITIES.entries()) {
+      if (i > 0) await new Promise(r => setTimeout(r, 150));
       try {
         const url = `https://api.open-meteo.com/v1/forecast`
           + `?latitude=${city.lat}&longitude=${city.lng}`
@@ -139,6 +140,11 @@ export default function HotelsPage() {
           + `&daily=weather_code,temperature_2m_max,temperature_2m_min`
           + `&wind_speed_unit=kmh&timezone=auto&forecast_days=6`;
         const d   = await (await fetch(url)).json();
+        if (!d.current) {
+          console.error(`[weather] bad response for ${city.id}:`, d);
+          setCityWeather(prev => ({ ...prev, [city.id]: { ...prev[city.id], loading:false } }));
+          continue;
+        }
         const cur = d.current;
         const forecast: DayForecast[] = d.daily.time.slice(1,6).map((date: string, i: number) => ({
           date, code: d.daily.weather_code[i+1],
@@ -149,10 +155,11 @@ export default function HotelsPage() {
           ...prev,
           [city.id]: { temp:Math.round(cur.temperature_2m), apparent:Math.round(cur.apparent_temperature), wind:Math.round(cur.wind_speed_10m), code:cur.weather_code, forecast, loading:false },
         }));
-      } catch {
+      } catch (err) {
+        console.error(`[weather] fetch failed for ${city.id}:`, err);
         setCityWeather(prev => ({ ...prev, [city.id]: { ...prev[city.id], loading:false } }));
       }
-    }));
+    }
   };
 
   const openCluster = activeCluster ? CLUSTERS.find(c => c.id === activeCluster) ?? null : null;
