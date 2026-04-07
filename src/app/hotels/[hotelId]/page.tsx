@@ -480,7 +480,7 @@ export default function HotelDashboard() {
   const [points, setPoints] = useState<string>('0/0');
   const [taskBreakdown, setTaskBreakdown] = useState<Record<string, number>>({});
   const [incompleteTasks, setIncompleteTasks] = useState<TaskItem[]>([]);
-  const [allHistoryEntries, setAllHistoryEntries] = useState<HistoryEntry[]>([]);
+  const [historyByTask, setHistoryByTask] = useState<Record<string, HistoryEntry[]>>({});
   
   // UI state
   const [initialLoading, setInitialLoading] = useState(true);
@@ -615,13 +615,14 @@ export default function HotelDashboard() {
 
   const fetchAllHistory = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/all`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/${hotelId}`);
       const data = await res.json();
-      setAllHistoryEntries(data.entries || []);
-      return data.entries || [];
+      const history = data.history || {};
+      setHistoryByTask(history);
+      return history;
     } catch (e) {
       console.error('Error loading history:', e);
-      return [];
+      return {};
     }
   };
 
@@ -630,25 +631,15 @@ export default function HotelDashboard() {
   }, []);
 
   const handleUploadOpen = useCallback(async (task: TaskItem) => {
-    if (allHistoryEntries.length === 0) {
-      await fetchAllHistory();
+    let history = historyByTask;
+    if (Object.keys(history).length === 0) {
+      history = await fetchAllHistory();
     }
-    
-    const seen = new Set<string>();
-    const taskHistory = allHistoryEntries
-      .filter(e => e.task_id === task.task_id && e.type === 'upload')
-      .filter(e => {
-        const key = `${e.reportDate}-${e.fileName}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .sort((a, b) => (b.reportDate || '').localeCompare(a.reportDate || ''));
 
     setActiveTask(task);
-    setActiveHistory(taskHistory);
+    setActiveHistory(history[task.task_id] || []);
     setUploadModalVisible(true);
-  }, [allHistoryEntries]);
+  }, [historyByTask]);
 
   const handleNavigate = useCallback((path: string) => {
     router.push(path);
