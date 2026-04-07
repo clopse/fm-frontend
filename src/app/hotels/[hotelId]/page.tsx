@@ -293,12 +293,15 @@ const ComplianceScoreCard = memo(function ComplianceScoreCard({
 });
 
 // ✅ SPLIT: Items Needed Card - only re-renders when incompleteTasks change
-const ItemsNeededCard = memo(function ItemsNeededCard({ 
-  incompleteTasks 
+const ItemsNeededCard = memo(function ItemsNeededCard({
+  incompleteTasks,
+  taskBreakdown,
 }: {
   incompleteTasks: TaskItem[];
+  taskBreakdown: Record<string, number>;
 }) {
-  const potentialPoints = incompleteTasks.reduce((sum, task) => sum + task.points, 0);
+  const potentialPoints = incompleteTasks.reduce((sum, task) =>
+    sum + (task.points - (taskBreakdown[task.task_id] || 0)), 0);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -394,12 +397,15 @@ const MonthlyChecklistSection = memo(function MonthlyChecklistSection({
 // ✅ MEMOIZED: Items Needed Section
 const ItemsNeededSection = memo(function ItemsNeededSection({
   incompleteTasks,
-  onUploadOpen
+  taskBreakdown,
+  onUploadOpen,
 }: {
   incompleteTasks: TaskItem[];
+  taskBreakdown: Record<string, number>;
   onUploadOpen: (task: TaskItem) => void;
 }) {
-  const potentialPoints = incompleteTasks.reduce((sum, task) => sum + task.points, 0);
+  const potentialPoints = incompleteTasks.reduce((sum, task) =>
+    sum + (task.points - (taskBreakdown[task.task_id] || 0)), 0);
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -438,7 +444,7 @@ const ItemsNeededSection = memo(function ItemsNeededSection({
                       {task.category}
                     </span>
                     <span className="text-orange-600 font-medium">
-                      +{task.points} pts
+                      +{task.points - (taskBreakdown[task.task_id] || 0)} pts
                     </span>
                   </div>
                 </div>
@@ -474,7 +480,7 @@ export default function HotelDashboard() {
   const [points, setPoints] = useState<string>('0/0');
   const [taskBreakdown, setTaskBreakdown] = useState<Record<string, number>>({});
   const [incompleteTasks, setIncompleteTasks] = useState<TaskItem[]>([]);
-  const [historyByTask, setHistoryByTask] = useState<Record<string, HistoryEntry[]>>({});
+  const [allHistoryEntries, setAllHistoryEntries] = useState<HistoryEntry[]>([]);
   
   // UI state
   const [initialLoading, setInitialLoading] = useState(true);
@@ -609,14 +615,13 @@ export default function HotelDashboard() {
 
   const fetchAllHistory = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/${hotelId}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/all`);
       const data = await res.json();
-      const history = data.history || {};
-      setHistoryByTask(history);
-      return history;
+      setAllHistoryEntries(data.entries || []);
+      return data.entries || [];
     } catch (e) {
       console.error('Error loading history:', e);
-      return {};
+      return [];
     }
   };
 
@@ -625,15 +630,25 @@ export default function HotelDashboard() {
   }, []);
 
   const handleUploadOpen = useCallback(async (task: TaskItem) => {
-    let history = historyByTask;
-    if (Object.keys(history).length === 0) {
-      history = await fetchAllHistory();
+    if (allHistoryEntries.length === 0) {
+      await fetchAllHistory();
     }
+    
+    const seen = new Set<string>();
+    const taskHistory = allHistoryEntries
+      .filter(e => e.task_id === task.task_id && e.type === 'upload')
+      .filter(e => {
+        const key = `${e.reportDate}-${e.fileName}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => (b.reportDate || '').localeCompare(a.reportDate || ''));
 
     setActiveTask(task);
-    setActiveHistory(history[task.task_id] || []);
+    setActiveHistory(taskHistory);
     setUploadModalVisible(true);
-  }, [historyByTask]);
+  }, [allHistoryEntries]);
 
   const handleNavigate = useCallback((path: string) => {
     router.push(path);
@@ -659,7 +674,7 @@ export default function HotelDashboard() {
             onRefresh={handleManualRefresh}
           />
 
-          <ItemsNeededCard incompleteTasks={incompleteTasks} />
+          <ItemsNeededCard incompleteTasks={incompleteTasks} taskBreakdown={taskBreakdown} />
 
           <QuickActionsCard hotelId={hotelId} onNavigate={handleNavigate} />
         </div>
@@ -673,6 +688,7 @@ export default function HotelDashboard() {
 
           <ItemsNeededSection
             incompleteTasks={incompleteTasks}
+            taskBreakdown={taskBreakdown}
             onUploadOpen={handleUploadOpen}
           />
         </div>
