@@ -624,12 +624,13 @@ export default function HotelDashboard() {
   }, []);
 
   const handleUploadOpen = useCallback(async (task: TaskItem) => {
-    if (allHistoryEntries.length === 0) {
-      await fetchAllHistory();
+    let entries = allHistoryEntries;
+    if (entries.length === 0) {
+      entries = await fetchAllHistory();
     }
     
     const seen = new Set<string>();
-    const taskHistory = allHistoryEntries
+    const taskHistory = entries
       .filter(e => e.task_id === task.task_id && e.type === 'upload')
       .filter(e => {
         const key = `${e.reportDate}-${e.fileName}`;
