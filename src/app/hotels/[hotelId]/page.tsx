@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, memo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { hotelNames } from '@/data/hotelMetadata';
+import { useUserRedirect } from '@/lib/auth';
 import { 
   TrendingUp, 
   CheckCircle, 
@@ -475,6 +476,10 @@ export default function HotelDashboard() {
   const router = useRouter();
   const hotelName = hotelNames[hotelId as keyof typeof hotelNames] || 'Unknown Hotel';
 
+  // ✅ FIX: Get the current logged-in user from auth
+  const { getCurrentUser } = useUserRedirect();
+  const currentUser = getCurrentUser();
+
   // Core state
   const [score, setScore] = useState<number>(0);
   const [points, setPoints] = useState<string>('0/0');
@@ -673,7 +678,7 @@ export default function HotelDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <MonthlyChecklistSection
             hotelId={hotelId}
-            userEmail="admin@jmk.ie"
+            userEmail={currentUser?.email ?? ''}
             onConfirm={handleChecklistUpdate}
           />
 
