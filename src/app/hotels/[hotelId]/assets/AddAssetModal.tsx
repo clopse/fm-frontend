@@ -1,7 +1,8 @@
 "use client";
 
 import { X, Plus } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useUserRedirect } from "@/lib/auth";
 
 interface Asset {
   id: number;
@@ -20,6 +21,9 @@ interface AddAssetModalProps {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
 export default function AddAssetModal({ hotelId, existingAssets, onClose, onAdd }: AddAssetModalProps) {
+  const { getCurrentUser } = useUserRedirect();
+  const currentUser = getCurrentUser();
+
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     hotel_id: hotelId.toLowerCase(), // Backend expects lowercase
@@ -52,7 +56,6 @@ export default function AddAssetModal({ hotelId, existingAssets, onClose, onAdd 
   const handleAssetCodeChange = (value: string) => {
     const hotelPrefix = hotelId.toUpperCase();
     
-    // If user enters something like "car-001" or "CAR-001"
     let cleanCode = value.trim().toUpperCase();
     
     // Remove hotel prefix if user already typed it
@@ -63,9 +66,7 @@ export default function AddAssetModal({ hotelId, existingAssets, onClose, onAdd 
     // Build the full code with prefix
     const fullCode = `${hotelPrefix}-${cleanCode}`;
     
-    // Check if this code exists and auto-increment if needed
     let finalCode = fullCode;
-    let counter = 1;
     
     // Extract base and number (e.g., "CAR-001" -> base="CAR", num=1)
     const match = cleanCode.match(/^(.+?)-(\d+)$/);
@@ -107,7 +108,6 @@ export default function AddAssetModal({ hotelId, existingAssets, onClose, onAdd 
 
     setIsSaving(true);
     try {
-      // Convert empty strings to null for numeric fields
       const payload = {
         ...formData,
         purchase_cost: formData.purchase_cost ? parseFloat(formData.purchase_cost) : null,
@@ -115,6 +115,8 @@ export default function AddAssetModal({ hotelId, existingAssets, onClose, onAdd 
         installation_date: formData.installation_date || null,
         warranty_start: formData.warranty_start || null,
         warranty_end: formData.warranty_end || null,
+        // ✅ FIX: Record the actual logged-in user
+        created_by: currentUser?.email ?? '',
       };
 
       const res = await fetch(`${API_BASE}/assets/`, {
