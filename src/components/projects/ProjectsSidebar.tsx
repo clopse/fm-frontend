@@ -29,11 +29,12 @@ interface Conversation {
 }
 
 interface ProjectDocument {
-  id: string;
-  filename: string;
-  status: 'ready' | 'processing' | 'error';
+  document_id: number;   // API field name — NOT "id"
+  filename: string;      // also used as the path param in the download URL
+  extracted: boolean;    // true = ready; no separate "status" field in list response
+  doc_type?: string;
+  chunks_created?: number;
   created_at?: string;
-  chunks?: number;
 }
 
 interface ProjectsSidebarProps {
@@ -84,7 +85,7 @@ function cleanFilename(raw: string): string {
   return (kept.length > 0 ? kept.join(' ') : base) + ext;
 }
 
-const STATUS_COLOR: Record<ProjectDocument['status'], string> = {
+const STATUS_COLOR: Record<'ready' | 'processing' | 'error', string> = {
   ready:      '#4ade80',
   processing: '#fbbf24',
   error:      '#f87171',
@@ -135,14 +136,10 @@ export default function ProjectsSidebar({
       const res = await apiFetch(`${BRAIN_URL}/projects/galway/documents`);
       if (!res.ok) return;
       const data = await res.json();
+      console.log('Documents API response:', data);
       const list: ProjectDocument[] = Array.isArray(data) ? data : (data.documents ?? []);
-      // Sort newest first, cap at 10
-      const sorted = [...list].sort((a, b) => {
-        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
-        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
-        return tb - ta;
-      });
-      setDocuments(sorted.slice(0, 10));
+      // Backend already returns newest-first (ORDER BY created_at DESC); just cap
+      setDocuments(list.slice(0, 10));
     } catch { /* silent */ }
   }, []);
 
@@ -349,10 +346,13 @@ export default function ProjectsSidebar({
                 </div>
               ) : (
                 documents.map((doc) => {
-                  const downloadHref = `${BRAIN_URL}/projects/galway/documents/${doc.id}/download`;
+                  // Download endpoint takes filename in the path, not document_id
+                  const downloadHref = `${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(doc.filename)}/download`;
+                  // List response has extracted:bool, not a status string
+                  const status = doc.extracted ? 'ready' : 'processing';
                   return (
                     <a
-                      key={doc.id}
+                      key={doc.document_id}
                       href={downloadHref}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -377,11 +377,11 @@ export default function ProjectsSidebar({
                       </div>
 
                       <span
-                        className={doc.status === 'processing' ? styles.docPulse : undefined}
-                        title={doc.status}
+                        className={status === 'processing' ? styles.docPulse : undefined}
+                        title={status}
                         style={{
                           width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                          backgroundColor: STATUS_COLOR[doc.status] ?? '#555',
+                          backgroundColor: STATUS_COLOR[status] ?? '#555',
                           display: 'inline-block',
                         }}
                       />
