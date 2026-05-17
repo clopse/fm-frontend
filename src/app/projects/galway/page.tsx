@@ -429,7 +429,7 @@ export default function GalwayPage() {
     setFlagsLoading(true);
     setFlagsError(null);
     try {
-      const res = await apiFetch(`${API}/api/brain/projects/galway/check`, {
+      const res = await apiFetch(`${API}/brain/projects/galway/check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -460,7 +460,7 @@ export default function GalwayPage() {
       // Raw fetch — apiFetch always injects Content-Type: application/json which
       // corrupts the multipart boundary. Auth header added manually.
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      const res = await fetch(`${API}/api/brain/projects/galway/documents/upload`, {
+      const res = await fetch(`${API}/brain/projects/galway/documents/upload`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
@@ -491,7 +491,7 @@ export default function GalwayPage() {
       setIsTyping(true);
 
       try {
-        const res = await apiFetch(`${API}/api/brain/projects/galway/chat`, {
+        const res = await apiFetch(`${API}/brain/projects/galway/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
