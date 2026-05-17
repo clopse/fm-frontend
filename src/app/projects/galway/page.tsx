@@ -108,7 +108,7 @@ function UploadObservationRow({ obs }: { obs: UploadObservation }) {
   const [confirming, setConfirming] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
-  const icon = obs.type === 'flag' ? '🔴' : obs.type === 'confirm' ? '🟡' : 'ℹ️';
+  const icon   = obs.type === 'flag' ? '🔴' : obs.type === 'confirm' ? '🟡' : 'ℹ️';
   const suffix = obs.rule_ref ? ` (${obs.rule_ref})` : '';
 
   const handleConfirm = async () => {
@@ -119,15 +119,15 @@ function UploadObservationRow({ obs }: { obs: UploadObservation }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          key: obs.confirm_key,
-          value: obs.confirm_value,
+          key:          obs.confirm_key,
+          value:        obs.confirm_value,
           confirmed_by: 'user',
         }),
       });
       if (!res.ok) throw new Error();
       setConfirmed(true);
     } catch {
-      // silent — add error feedback if needed
+      // silent
     } finally {
       setConfirming(false);
     }
@@ -136,7 +136,6 @@ function UploadObservationRow({ obs }: { obs: UploadObservation }) {
   return (
     <div style={{ fontSize: 14, color: '#c0c0c0', lineHeight: 1.55 }}>
       <span>{icon} {obs.text}{suffix}</span>
-
       {obs.type === 'confirm' && (
         <div style={{ marginTop: 7, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           {confirmed ? (
@@ -184,7 +183,6 @@ function UploadResultBubble({ result }: { result: UploadResult }) {
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
       <JmkAvatar />
       <div style={{ flex: 1, paddingTop: 4 }}>
-        {/* Header */}
         <div style={{ fontSize: 15, color: '#d4d4d4', lineHeight: 1.5, marginBottom: result.observations.length > 0 ? 14 : 0 }}>
           📄{' '}
           <a
@@ -197,13 +195,11 @@ function UploadResultBubble({ result }: { result: UploadResult }) {
           </a>
           {' '}uploaded ({result.chunks} chunks)
         </div>
-
         {result.observations.length === 0 && (
           <p style={{ margin: '6px 0 0', fontSize: 14, color: '#777' }}>
             Ask me anything about this document.
           </p>
         )}
-
         {result.observations.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {result.observations.map((obs, i) => (
@@ -279,12 +275,7 @@ function MessageBubble({ message }: { message: Message }) {
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
       <JmkAvatar />
       <div style={{ flex: 1, paddingTop: 4 }}>
-        <div
-          style={{
-            fontSize: 15, lineHeight: 1.65, color: '#d4d4d4',
-            whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-          }}
-        >
+        <div style={{ fontSize: 15, lineHeight: 1.65, color: '#d4d4d4', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
           {message.content}
         </div>
         {uniqueSources.length > 0 && (
@@ -340,11 +331,13 @@ function EmptyState({ onSuggest }: { onSuggest: (text: string) => void }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function GalwayPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [toast, setToast] = useState<Toast | null>(null);
+  const [messages,              setMessages]              = useState<Message[]>([]);
+  const [input,                 setInput]                 = useState('');
+  const [isTyping,              setIsTyping]              = useState(false);
+  const [uploading,             setUploading]             = useState(false);
+  const [toast,                 setToast]                 = useState<Toast | null>(null);
+  const [conversationId,        setConversationId]        = useState<string | null>(null);
+  const [convRefreshKey,        setConvRefreshKey]        = useState(0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef    = useRef<HTMLTextAreaElement>(null);
@@ -357,11 +350,68 @@ export default function GalwayPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
+  // ── Load conversation from the backend ─────────────────────────────────────
+
+  const loadConversation = useCallback(async (id: string) => {
+    try {
+      const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations/${id}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const rawMsgs: any[] = Array.isArray(data.messages) ? data.messages : []; // eslint-disable-line @typescript-eslint/no-explicit-any
+      const loaded: Message[] = rawMsgs
+        .filter((m) => m?.role === 'user' || m?.role === 'assistant')
+        .map((m, i) => ({
+          id: `loaded-${id}-${i}`,
+          role: m.role as 'user' | 'assistant',
+          content: m.content ?? '',
+          ...(Array.isArray(m.sources) && m.sources.length > 0 ? { sources: m.sources } : {}),
+        }));
+      setMessages(loaded);
+      setConversationId(id);
+    } catch {
+      // silent — leave messages empty so the page still works
+    }
+  }, []); // state setters are stable refs
+
+  // ── On mount: load the most recent conversation ─────────────────────────────
+
+  useEffect(() => {
+    let active = true;
+
+    async function init() {
+      try {
+        const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations`);
+        if (!res.ok || !active) return;
+        const data = await res.json();
+        const list: any[] = Array.isArray(data) ? data : (data.conversations ?? []); // eslint-disable-line @typescript-eslint/no-explicit-any
+        if (list.length === 0 || !active) return;
+        await loadConversation(list[0].id);
+      } catch {
+        // start fresh
+      }
+    }
+
+    init();
+    return () => { active = false; };
+  }, [loadConversation]);
+
+  // ── New conversation ────────────────────────────────────────────────────────
+
+  const handleNewConversation = useCallback(() => {
+    setMessages([]);
+    setConversationId(null);
+    setConvRefreshKey((k) => k + 1);
+  }, []);
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+
   const showToastMsg = useCallback((message: string, type: Toast['type']) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToast({ message, type });
     toastTimer.current = setTimeout(() => setToast(null), 3000);
   }, []);
+
+  // ── Upload handler ──────────────────────────────────────────────────────────
 
   const handleFileSelect = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -373,8 +423,6 @@ export default function GalwayPage() {
     formData.append('doc_type', 'auto');
 
     try {
-      // Raw fetch — apiFetch injects Content-Type: application/json which
-      // corrupts the multipart boundary. Auth header added manually.
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       const res = await fetch(`${BRAIN_URL}/projects/galway/documents/upload`, {
         method: 'POST',
@@ -407,6 +455,8 @@ export default function GalwayPage() {
     }
   }, [showToastMsg]);
 
+  // ── Send message ────────────────────────────────────────────────────────────
+
   const sendMessage = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
@@ -418,16 +468,39 @@ export default function GalwayPage() {
       if (textareaRef.current) textareaRef.current.style.height = 'auto';
       setIsTyping(true);
 
+      // Create a conversation on first message of a new session
+      let currentConvId = conversationId;
+      if (!currentConvId) {
+        try {
+          const convRes = await apiFetch(`${BRAIN_URL}/projects/galway/conversations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+          });
+          if (convRes.ok) {
+            const convData = await convRes.json();
+            currentConvId = convData.id ?? convData.conversation_id ?? null;
+            if (currentConvId) {
+              setConversationId(currentConvId);
+              setConvRefreshKey((k) => k + 1); // tell sidebar to re-fetch list
+            }
+          }
+        } catch {
+          // proceed without a conversation ID — chat still works
+        }
+      }
+
       try {
         const res = await apiFetch(`${BRAIN_URL}/projects/galway/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: trimmed,
-            conversation_history: messages.map((m) => ({
-              role: m.role,
-              content: m.content,
-            })),
+            // Filter out upload-result messages — they're UI-only and have no content
+            conversation_history: messages
+              .filter((m) => !m.uploadResult)
+              .map((m) => ({ role: m.role, content: m.content })),
+            ...(currentConvId ? { conversation_id: currentConvId } : {}),
           }),
         });
 
@@ -453,17 +526,13 @@ export default function GalwayPage() {
       } catch {
         setMessages((prev) => [
           ...prev,
-          {
-            id: `a-${Date.now()}`,
-            role: 'assistant',
-            content: 'Something went wrong, please try again.',
-          },
+          { id: `a-${Date.now()}`, role: 'assistant', content: 'Something went wrong, please try again.' },
         ]);
       } finally {
         setIsTyping(false);
       }
     },
-    [isTyping, messages],
+    [isTyping, messages, conversationId],
   );
 
   const handleInputChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -484,7 +553,12 @@ export default function GalwayPage() {
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden', height: '100%' }}>
-      <ProjectsSidebar />
+      <ProjectsSidebar
+        activeConversationId={conversationId}
+        onSelectConversation={loadConversation}
+        onNewConversation={handleNewConversation}
+        conversationRefreshKey={convRefreshKey}
+      />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#1a1a1a' }}>
         {/* Title bar */}
@@ -539,7 +613,6 @@ export default function GalwayPage() {
               style={{ display: 'none' }}
               onChange={handleFileSelect}
             />
-
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
@@ -558,7 +631,6 @@ export default function GalwayPage() {
                 <Paperclip size={17} />
               </span>
             </button>
-
             <textarea
               ref={textareaRef}
               value={input}
@@ -574,7 +646,6 @@ export default function GalwayPage() {
                 maxHeight: 180, overflowY: 'auto', scrollbarWidth: 'none',
               }}
             />
-
             <button
               onClick={() => sendMessage(input)}
               disabled={!canSend}
