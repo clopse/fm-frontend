@@ -1,4 +1,3 @@
-// src/lib/auth.ts
 import { User } from '@/types/user';
 import { hotels } from './hotels';
 
@@ -11,199 +10,186 @@ export interface UserPermissions {
   region?: string;
 }
 
-// Helper function to check if a path should bypass authentication
-export function isPublicPath(pathname: string): boolean {
-  const publicPaths = [
-    '/login',
-    '/forgot-password',
-    '/reset-password',
-    '/training/' // All training paths
-  ];
-  
-  return publicPaths.some(publicPath => {
-    if (publicPath.endsWith('/')) {
-      return pathname.startsWith(publicPath);
-    }
-    return pathname === publicPath || pathname.startsWith(publicPath + '/');
-  });
+// ─── Role Sets — exact match only, prevents substring/prefix spoofing ────────
+
+const SYSTEM_ROLES = new Set<string>([
+  'admin', 'superadmin', 'system_admin', 'system',
+]);
+
+const GROUP_ROLES = new Set<string>([
+  'ceo', 'director', 'executive', 'president',
+  'vp', 'vice_president', 'group_manager',
+  'group_facilities_manager', 'head_of_facilities', 'head_of_operations',
+]);
+
+const MANAGEMENT_ROLES = new Set<string>([
+  'manager', 'supervisor', 'lead',
+  'cluster_manager', 'regional_manager', 'area_manager',
+  'facility_manager', 'hotel_manager',
+]);
+
+// Simple helpers for call-sites that only need a boolean
+export function isAdmin(role: string): boolean {
+  return SYSTEM_ROLES.has(role);
 }
 
-// Legacy function name for compatibility
+export function isManager(role: string): boolean {
+  return MANAGEMENT_ROLES.has(role) || GROUP_ROLES.has(role);
+}
+
+export function hasAccess(role: string): boolean {
+  return SYSTEM_ROLES.has(role) || GROUP_ROLES.has(role) || MANAGEMENT_ROLES.has(role);
+}
+
+// ─── Public path helpers ──────────────────────────────────────────────────────
+
+const EXACT_PUBLIC_PATHS = new Set(['/login', '/forgot-password', '/reset-password']);
+
+export function isPublicPath(pathname: string): boolean {
+  if (EXACT_PUBLIC_PATHS.has(pathname)) return true;
+  return pathname.startsWith('/training/');
+}
+
 export function isPublicTrainingPath(pathname: string): boolean {
   return pathname.includes('/training/');
 }
+
+// ─── Permission resolution ────────────────────────────────────────────────────
 
 export function getUserPermissions(user: User): UserPermissions {
   const role = user.role.toLowerCase();
   const userHotel = user.hotel;
 
-  // System Admin - look for admin-related keywords
-  if (role.includes('admin') || role.includes('system')) {
+  if (SYSTEM_ROLES.has(role)) {
     return {
       canAccessAllHotels: true,
       allowedHotels: hotels.map(h => h.id),
       defaultRedirect: '/hotels',
       canAccessAdmin: true,
-      managementLevel: 'system'
+      managementLevel: 'system',
     };
   }
 
-  // Group/Executive level - look for senior management keywords
-  const groupKeywords = ['ceo', 'director', 'executive', 'president', 'vp', 'vice president', 'group', 'head of'];
-  if (groupKeywords.some(keyword => role.includes(keyword))) {
+  if (GROUP_ROLES.has(role)) {
     return {
       canAccessAllHotels: true,
       allowedHotels: hotels.map(h => h.id),
       defaultRedirect: '/hotels',
-      canAccessAdmin: true, // Group level gets admin access
-      managementLevel: 'group'
+      canAccessAdmin: true,
+      managementLevel: 'group',
     };
   }
 
-  // Regional/Cluster management - look for management keywords
-  const managementKeywords = ['manager', 'supervisor', 'lead', 'boss', 'regional', 'cluster', 'area'];
-  const isManagement = managementKeywords.some(keyword => role.includes(keyword));
+  const isManagement = MANAGEMENT_ROLES.has(role);
 
-  // Multi-hotel users (regardless of role) get admin access
   if (userHotel === 'All Hotels') {
     return {
       canAccessAllHotels: true,
       allowedHotels: hotels.map(h => h.id),
       defaultRedirect: '/hotels',
-      canAccessAdmin: true, // Multi-hotel = admin access
-      managementLevel: isManagement ? 'regional' : 'group'
+      canAccessAdmin: true,
+      managementLevel: isManagement ? 'regional' : 'group',
     };
   }
 
-  // Parse hotel assignments
   const userHotels = userHotel ? userHotel.split(', ') : [];
-  const hotelIds = userHotels.map(hotelName => 
-    hotels.find(h => h.name === hotelName)?.id
-  ).filter(Boolean) as string[];
+  const hotelIds = userHotels
+    .map(name => hotels.find(h => h.name === name)?.id)
+    .filter(Boolean) as string[];
 
-  // Multi-hotel users (more than 1 hotel) get admin access
   if (hotelIds.length > 1) {
     return {
       canAccessAllHotels: false,
       allowedHotels: hotelIds,
-      defaultRedirect: '/hotels', // Show hotel list for multi-hotel users
-      canAccessAdmin: true, // Multi-hotel = admin access
-      managementLevel: isManagement ? 'regional' : 'cluster'
+      defaultRedirect: '/hotels',
+      canAccessAdmin: true,
+      managementLevel: isManagement ? 'regional' : 'cluster',
     };
   }
 
-  // Single hotel users
   if (hotelIds.length === 1) {
     return {
       canAccessAllHotels: false,
       allowedHotels: hotelIds,
-      defaultRedirect: `/hotels/${hotelIds[0]}`, // Direct to their hotel
-      canAccessAdmin: isManagement, // Only managers get admin access for single hotel
-      managementLevel: 'property'
+      defaultRedirect: `/hotels/${hotelIds[0]}`,
+      canAccessAdmin: isManagement,
+      managementLevel: 'property',
     };
   }
 
-  // Fallback for users with no hotel assignments
   return {
     canAccessAllHotels: false,
     allowedHotels: [],
     defaultRedirect: '/login',
     canAccessAdmin: false,
-    managementLevel: 'property'
+    managementLevel: 'property',
   };
 }
 
+// ─── Utility helpers ──────────────────────────────────────────────────────────
+
 export function getHotelIdFromName(hotelName: string): string | null {
-  const hotel = hotels.find(h => h.name === hotelName);
-  return hotel ? hotel.id : null;
+  return hotels.find(h => h.name === hotelName)?.id ?? null;
 }
 
 export function getHotelNameFromId(hotelId: string): string | null {
-  const hotel = hotels.find(h => h.id === hotelId);
-  return hotel ? hotel.name : null;
+  return hotels.find(h => h.id === hotelId)?.name ?? null;
 }
 
 export function canAccessHotel(user: User, hotelId: string): boolean {
-  const permissions = getUserPermissions(user);
-  return permissions.canAccessAllHotels || permissions.allowedHotels.includes(hotelId);
+  const { canAccessAllHotels, allowedHotels } = getUserPermissions(user);
+  return canAccessAllHotels || allowedHotels.includes(hotelId);
 }
 
 export function canAccessAdminPages(user: User): boolean {
-  const permissions = getUserPermissions(user);
-  return permissions.canAccessAdmin;
+  return getUserPermissions(user).canAccessAdmin;
 }
 
 export function getRedirectUrl(user: User, requestedPath?: string): string {
   const permissions = getUserPermissions(user);
 
-  // BYPASS AUTH FOR PUBLIC PAGES
-  if (requestedPath && isPublicPath(requestedPath)) {
-    return requestedPath;
-  }
+  if (requestedPath && isPublicPath(requestedPath)) return requestedPath;
 
-  // If they have full access and requested a specific path, allow it
-  if (permissions.canAccessAllHotels && requestedPath) {
-    return requestedPath;
-  }
+  if (permissions.canAccessAllHotels && requestedPath) return requestedPath;
 
-  // If they requested a hotel page, check if they can access it
   if (requestedPath?.startsWith('/hotels/')) {
     const hotelId = requestedPath.split('/')[2];
-    if (canAccessHotel(user, hotelId)) {
-      return requestedPath;
-    }
+    if (canAccessHotel(user, hotelId)) return requestedPath;
   }
 
-  // If they requested an admin page, check permissions
   if (requestedPath?.startsWith('/admin/')) {
-    if (canAccessAdminPages(user)) {
-      return requestedPath;
-    }
-    // Redirect to their default page if they can't access admin
+    if (canAccessAdminPages(user)) return requestedPath;
     return permissions.defaultRedirect;
   }
 
-  // Default redirect based on their permissions
   return permissions.defaultRedirect;
 }
 
-// Helper hook for Next.js components
+// ─── Hook for Next.js components ─────────────────────────────────────────────
+
 export function useUserRedirect() {
-  const getCurrentUser = () => {
-    if (typeof window !== 'undefined') {
-      const userStr = localStorage.getItem('user');
-      return userStr ? JSON.parse(userStr) : null;
-    }
-    return null;
+  const getCurrentUser = (): User | null => {
+    if (typeof window === 'undefined') return null;
+    const userStr = localStorage.getItem('user');
+    return userStr ? JSON.parse(userStr) : null;
   };
 
-  const redirectToUserDefault = (router: any) => {
+  const redirectToUserDefault = (router: { push: (url: string) => void }) => {
     const user = getCurrentUser();
-    if (user) {
-      const redirectUrl = getRedirectUrl(user);
-      router.push(redirectUrl);
-    } else {
-      router.push('/login');
-    }
+    router.push(user ? getRedirectUrl(user) : '/login');
   };
 
-  const checkPageAccess = (router: any, currentPath: string) => {
-    // BYPASS AUTH CHECK FOR PUBLIC PAGES
-    if (isPublicPath(currentPath)) {
-      return true;
-    }
+  const checkPageAccess = (
+    router: { push: (url: string) => void },
+    currentPath: string,
+  ): boolean => {
+    if (isPublicPath(currentPath)) return true;
 
     const user = getCurrentUser();
-    if (!user) {
-      router.push('/login');
-      return false;
-    }
+    if (!user) { router.push('/login'); return false; }
 
     const allowedUrl = getRedirectUrl(user, currentPath);
-    if (allowedUrl !== currentPath) {
-      router.push(allowedUrl);
-      return false;
-    }
+    if (allowedUrl !== currentPath) { router.push(allowedUrl); return false; }
 
     return true;
   };
@@ -216,6 +202,6 @@ export function useUserRedirect() {
     canAccessHotel: (user: User, hotelId: string) => canAccessHotel(user, hotelId),
     canAccessAdminPages: (user: User) => canAccessAdminPages(user),
     isPublicPath,
-    isPublicTrainingPath // Keep for backward compatibility
+    isPublicTrainingPath,
   };
 }

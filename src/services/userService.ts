@@ -1,63 +1,155 @@
-// FILE: src/services/userService.ts
-import { User, UserCreate, UserUpdate, LoginRequest, LoginResponse, UserStats } from '../types/user';
+import { User, UserCreate, UserUpdate, LoginRequest, LoginResponse, TokenResponse, UserStats } from '../types/user';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
+const ACCESS_KEY = 'access_token';
+const REFRESH_KEY = 'refresh_token';
 
-// Helper function to check if current path is training
-function isTrainingPath(): boolean {
-  if (typeof window !== 'undefined') {
-    return window.location.pathname.includes('/training/');
+// ─── JWT helpers ─────────────────────────────────────────────────────────────
+
+function getJwtExpiry(token: string): number | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return typeof payload.exp === 'number' ? payload.exp : null;
+  } catch {
+    return null;
   }
-  return false;
 }
 
-// Generic fetch wrapper with auth
-export async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem('access_token');
-  
-  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...(options?.headers || {}),
-    },
+function isExpiredOrNear(token: string, bufferSeconds = 300): boolean {
+  const exp = getJwtExpiry(token);
+  if (exp === null) return true;
+  return exp - bufferSeconds < Math.floor(Date.now() / 1000);
+}
+
+function isTrainingPath(): boolean {
+  return typeof window !== 'undefined' && window.location.pathname.includes('/training/');
+}
+
+function getStoredTokens() {
+  return {
+    access: localStorage.getItem(ACCESS_KEY),
+    refresh: localStorage.getItem(REFRESH_KEY),
+  };
+}
+
+function storeTokens(accessToken: string, refreshToken: string): void {
+  localStorage.setItem(ACCESS_KEY, accessToken);
+  localStorage.setItem(REFRESH_KEY, refreshToken);
+}
+
+function clearTokens(): void {
+  localStorage.removeItem(ACCESS_KEY);
+  localStorage.removeItem(REFRESH_KEY);
+  localStorage.removeItem('user');
+}
+
+function redirectToLogin(): void {
+  const redirect = window.location.pathname + window.location.search;
+  window.location.href = `/login?redirect=${encodeURIComponent(redirect)}`;
+}
+
+// ─── Standalone exports (used by RouteGuard) ─────────────────────────────────
+
+export async function silentRefresh(): Promise<boolean> {
+  const { refresh } = getStoredTokens();
+  if (!refresh) return false;
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/users/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refresh }),
+    });
+    if (!res.ok) return false;
+    const data: TokenResponse = await res.json();
+    storeTokens(data.access_token, data.refresh_token);
+    if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function isAuthenticated(): boolean {
+  if (isTrainingPath()) return true;
+  if (typeof window === 'undefined') return false;
+  const { access } = getStoredTokens();
+  if (!access) return false;
+  return !isExpiredOrNear(access, 0);
+}
+
+// Module-level apiFetch — returns raw Response; re-exported by utils/api.ts
+export async function apiFetch(input: RequestInfo, init: RequestInit = {}): Promise<Response> {
+  let { access } = getStoredTokens();
+
+  if (access && isExpiredOrNear(access)) {
+    const ok = await silentRefresh();
+    if (!ok) { clearTokens(); redirectToLogin(); throw new Error('Session expired'); }
+    access = getStoredTokens().access;
+  }
+
+  const buildHeaders = (token: string | null): Record<string, string> => ({
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(init.headers as Record<string, string> || {}),
   });
-  
+
+  let res = await fetch(input, { ...init, headers: buildHeaders(access) });
+
+  if (res.status === 401) {
+    const ok = await silentRefresh();
+    if (!ok) { clearTokens(); redirectToLogin(); throw new Error('Unauthorized'); }
+    access = getStoredTokens().access;
+    res = await fetch(input, { ...init, headers: buildHeaders(access) });
+  }
+
+  if (res.status === 401) { clearTokens(); redirectToLogin(); throw new Error('Unauthorized'); }
+
+  return res;
+}
+
+// ─── Internal JSON fetch used by UserService class methods ───────────────────
+
+async function classFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const res = await apiFetch(`${API_BASE_URL}${endpoint}`, options);
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.detail || `API error: ${res.status}`);
   }
-  
   return res.json();
 }
 
-// ADDED: Result interface for user creation with email status
+// ─── Result type for user creation with email status ─────────────────────────
+
 interface CreateUserResult {
   user: User;
   emailSent: boolean;
   emailError?: string;
 }
 
+// ─── UserService class ───────────────────────────────────────────────────────
+
 class UserService {
-  // Authentication
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const data = await apiFetch<LoginResponse>('/api/users/auth/login', {
+    const res = await fetch(`${API_BASE_URL}/api/users/auth/login`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
     });
-    // Store token and user
-    localStorage.setItem('access_token', data.access_token);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Invalid credentials');
+    }
+    const data: TokenResponse = await res.json();
+    storeTokens(data.access_token, data.refresh_token);
     localStorage.setItem('user', JSON.stringify(data.user));
     return data;
   }
 
   async logout(): Promise<void> {
     try {
-      await apiFetch('/api/users/auth/logout', { method: 'POST' });
+      await classFetch('/api/users/auth/logout', { method: 'POST' });
     } finally {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
+      clearTokens();
     }
   }
 
@@ -67,25 +159,9 @@ class UserService {
   }
 
   isAuthenticated(): boolean {
-    // BYPASS AUTH FOR TRAINING PAGES
-    if (isTrainingPath()) {
-      return true; // Always return true for training pages
-    }
-    
-    // Normal auth check for other pages
-    if (typeof window === 'undefined') {
-      return false; // Server-side, assume not authenticated
-    }
-    
-    try {
-      return !!localStorage.getItem('access_token');
-    } catch (error) {
-      console.error('localStorage access error:', error);
-      return false;
-    }
+    return isAuthenticated();
   }
 
-  // User CRUD operations
   async getUsers(filters?: {
     role?: string;
     hotel?: string;
@@ -97,84 +173,62 @@ class UserService {
     if (filters?.hotel && filters.hotel !== 'All Hotels') params.append('hotel', filters.hotel);
     if (filters?.status) params.append('status', filters.status);
     if (filters?.search) params.append('search', filters.search);
-    return apiFetch<User[]>(`/api/users/?${params}`);
+    return classFetch<User[]>(`/api/users/?${params}`);
   }
 
   async getUser(userId: string): Promise<User> {
-    return apiFetch<User>(`/api/users/${userId}`);
+    return classFetch<User>(`/api/users/${userId}`);
   }
 
-  // MODIFIED: Updated createUser method with email support
-  async createUser(userData: UserCreate, sendWelcomeEmail: boolean = false): Promise<CreateUserResult> {
-    let user: User;
+  async createUser(userData: UserCreate, sendWelcomeEmail = false): Promise<CreateUserResult> {
+    const user = await classFetch<User>('/api/users/', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    });
+
     let emailSent = false;
     let emailError: string | undefined;
 
-    try {
-      // Step 1: Create the user first (this always happens)
-      user = await apiFetch<User>('/api/users/', {
-        method: 'POST',
-        body: JSON.stringify(userData),
-      });
-
-      // Step 2: If email is requested, try to send it
-      if (sendWelcomeEmail) {
-        try {
-          await this.sendWelcomeEmail(user.id.toString());
-          emailSent = true;
-        } catch (emailErr) {
-          // Email failed but user was created successfully
-          emailError = emailErr instanceof Error ? emailErr.message : 'Failed to send welcome email';
-          console.warn('User created but welcome email failed:', emailError);
-        }
+    if (sendWelcomeEmail) {
+      try {
+        await this.sendWelcomeEmail(user.id.toString());
+        emailSent = true;
+      } catch (err) {
+        emailError = err instanceof Error ? err.message : 'Failed to send welcome email';
       }
-
-      return {
-        user,
-        emailSent,
-        emailError
-      };
-
-    } catch (userCreationError) {
-      // If user creation fails, throw the error
-      throw userCreationError;
     }
+
+    return { user, emailSent, emailError };
   }
 
   async updateUser(userId: string, userData: UserUpdate): Promise<User> {
-    return apiFetch<User>(`/api/users/${userId}`, {
+    return classFetch<User>(`/api/users/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(userData),
     });
   }
 
   async deleteUser(userId: string): Promise<void> {
-    await apiFetch(`/api/users/${userId}`, { method: 'DELETE' });
+    await classFetch(`/api/users/${userId}`, { method: 'DELETE' });
   }
 
   async resetPassword(userId: string, newPassword: string): Promise<void> {
-    await apiFetch(`/api/users/${userId}/reset-password`, {
+    await classFetch(`/api/users/${userId}/reset-password`, {
       method: 'POST',
-      body: JSON.stringify({
-        email: '',
-        new_password: newPassword,
-      }),
+      body: JSON.stringify({ email: '', new_password: newPassword }),
     });
   }
 
   async activateUser(userId: string): Promise<void> {
-    await apiFetch(`/api/users/${userId}/activate`, { method: 'POST' });
+    await classFetch(`/api/users/${userId}/activate`, { method: 'POST' });
   }
 
   async getUserStats(): Promise<UserStats> {
-    return apiFetch<UserStats>('/api/users/stats/summary');
+    return classFetch<UserStats>('/api/users/stats/summary');
   }
 
-  // ADDED: Separate method for sending welcome emails
   async sendWelcomeEmail(userId: string): Promise<void> {
-    await apiFetch(`/api/users/auth/send-welcome-email/${userId}`, {
-      method: 'POST',
-    });
+    await classFetch(`/api/users/auth/send-welcome-email/${userId}`, { method: 'POST' });
   }
 }
 

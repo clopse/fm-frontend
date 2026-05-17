@@ -1,77 +1,55 @@
-// src/components/RouteGuard.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { userService } from '@/services/userService';
-import { useUserRedirect } from '@/lib/auth';
+import { usePathname, useRouter } from 'next/navigation';
+import { isAuthenticated, silentRefresh } from '@/services/userService';
 
-interface RouteGuardProps {
-  children: React.ReactNode;
-}
+const PUBLIC_PATHS = new Set(['/login', '/forgot-password', '/reset-password']);
 
-export default function RouteGuard({ children }: RouteGuardProps) {
+export default function RouteGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const { checkPageAccess } = useUserRedirect();
-
-  // Define public routes that don't require authentication
-  const publicRoutes = [
-    '/login',
-    '/forgot-password',
-    '/reset-password'
-  ];
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Don't check auth for public routes
-        if (publicRoutes.includes(pathname)) {
-          setIsLoading(false);
-          setIsAuthorized(true);
-          return;
-        }
+    // Training paths and other public routes bypass auth entirely
+    if (PUBLIC_PATHS.has(pathname) || pathname.startsWith('/training/')) {
+      setReady(true);
+      return;
+    }
 
-        // Check if user is authenticated
-        if (!userService.isAuthenticated()) {
-          router.push('/login');
-          return;
-        }
+    // Gate content while checking; cancelled flag prevents stale state updates
+    // if the user navigates away before the async check resolves
+    setReady(false);
+    let cancelled = false;
 
-        // Check if user can access this specific page
-        const hasAccess = checkPageAccess(router, pathname);
-        setIsAuthorized(hasAccess);
-        
-      } catch (error) {
-        console.error('Auth check error:', error);
-        router.push('/login');
-      } finally {
-        setIsLoading(false);
+    async function guard() {
+      // Fast path: valid, non-expired token in storage
+      if (isAuthenticated()) {
+        if (!cancelled) setReady(true);
+        return;
       }
+
+      // Token missing or expired — attempt silent refresh before redirecting
+      const refreshed = await silentRefresh();
+      if (cancelled) return;
+
+      if (refreshed) {
+        setReady(true);
+        return;
+      }
+
+      // No valid session — send to login preserving the intended destination
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+    }
+
+    guard();
+
+    return () => {
+      cancelled = true;
     };
+  }, [pathname]); // router intentionally omitted — stable ref; including it causes spurious re-runs
 
-    checkAuth();
-  }, [pathname, router, checkPageAccess]);
-
-  // Show loading spinner while checking auth
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex items-center space-x-3 text-gray-600">
-          <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-lg">Loading...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Show children only if authorized
-  if (isAuthorized) {
-    return <>{children}</>;
-  }
-
-  // Return null if not authorized (redirect is handled in useEffect)
-  return null;
+  if (!ready) return null;
+  return <>{children}</>;
 }
