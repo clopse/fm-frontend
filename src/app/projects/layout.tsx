@@ -1,5 +1,6 @@
 'use client';
 
+import '@/styles/projects-theme.css';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';

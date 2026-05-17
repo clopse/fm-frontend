@@ -1,0 +1,64 @@
+/* ═══════════════════════════════════════════════════════
+   Projects section theme variables — plain global CSS
+   (not a CSS Module; imported by src/app/projects/layout.tsx)
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  --pr-bg:                    #1a1a1a;
+  --pr-sidebar-bg:            #1a1a1a;
+  --pr-sidebar-border:        #222222;
+  --pr-chat-bg:               #1a1a1a;
+  --pr-text-primary:          #e5e5e5;
+  --pr-text-secondary:        #d4d4d4;
+  --pr-text-muted:            #555555;
+  --pr-border:                #242424;
+  --pr-divider:               #272727;
+  --pr-input-bg:              #2a2a2a;
+  --pr-input-border:          #363636;
+  --pr-card-bg:               #252525;
+  --pr-nav-active-bg:         #252525;
+  --pr-nav-hover-bg:          #252525;
+  --pr-nav-inactive:          #aaaaaa;
+  --pr-nav-icon:              #666666;
+  --pr-section-label:         #505050;
+  --pr-user-circle-bg:        #252525;
+  --pr-user-circle-border:    #353535;
+  /* Markdown */
+  --pr-md-heading:            #e8e8e8;
+  --pr-md-text:               #d4d4d4;
+  --pr-md-em:                 #aaaaaa;
+  --pr-md-code-bg:            #2a2a2a;
+  --pr-md-code-text:          #c0c0c0;
+  --pr-md-blockquote:         #909090;
+  --pr-md-blockquote-border:  #c96442;
+}
+
+[data-theme="light"] {
+  --pr-bg:                    #f5f5f0;
+  --pr-sidebar-bg:            #f0ede8;
+  --pr-sidebar-border:        #e0ddd8;
+  --pr-chat-bg:               #ffffff;
+  --pr-text-primary:          #1a1a1a;
+  --pr-text-secondary:        #1a1a1a;
+  --pr-text-muted:            #777777;
+  --pr-border:                #e0ddd8;
+  --pr-divider:               #e0ddd8;
+  --pr-input-bg:              #f0ede8;
+  --pr-input-border:          #d0cdc8;
+  --pr-card-bg:               #f0ede8;
+  --pr-nav-active-bg:         #e8e5e0;
+  --pr-nav-hover-bg:          #e8e5e0;
+  --pr-nav-inactive:          #666666;
+  --pr-nav-icon:              #888888;
+  --pr-section-label:         #999999;
+  --pr-user-circle-bg:        #e8e5e0;
+  --pr-user-circle-border:    #d8d5d0;
+  /* Markdown */
+  --pr-md-heading:            #111111;
+  --pr-md-text:               #1a1a1a;
+  --pr-md-em:                 #666666;
+  --pr-md-code-bg:            #ede9e4;
+  --pr-md-code-text:          #444444;
+  --pr-md-blockquote:         #666666;
+  --pr-md-blockquote-border:  #c96442;
+}
