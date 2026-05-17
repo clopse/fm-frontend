@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
   type ChangeEvent,
 } from 'react';
-import { ArrowUp, ChevronDown, ChevronRight, AlertTriangle, Paperclip, Upload, FileText } from 'lucide-react';
+import { ArrowUp, Paperclip, FileText } from 'lucide-react';
 import ProjectsSidebar from '@/components/projects/ProjectsSidebar';
 import { apiFetch } from '@/utils/api';
 import styles from '@/styles/projects.module.css';
@@ -17,15 +17,19 @@ const BRAIN_URL = process.env.NEXT_PUBLIC_BRAIN_URL || 'https://api.jmkfacilitie
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type FlagType = 'FLAG' | 'CONFIRM' | 'MATCH' | 'GAP';
+interface UploadObservation {
+  type: 'confirm' | 'flag' | 'info';
+  rule_ref: string | null;
+  text: string;
+  confirm_key: string | null;
+  confirm_value: string | null;
+}
 
-interface Flag {
-  id: string;
-  type: FlagType;
-  ruleRef: string;
-  systemName: string;
-  summary: string;
-  chunkPreview?: string;
+interface UploadResult {
+  filename: string;
+  displayName: string;
+  chunks: number;
+  observations: UploadObservation[];
 }
 
 interface Message {
@@ -33,6 +37,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   sources?: string[];
+  uploadResult?: UploadResult;
 }
 
 interface Toast {
@@ -48,71 +53,22 @@ const SUGGESTIONS = [
   'What LEED credits are at risk?',
 ] as const;
 
-const BADGE: Record<FlagType, { bg: string; text: string; label: string }> = {
-  FLAG:    { bg: 'rgba(239,68,68,0.18)',   text: '#f87171', label: 'FLAG'    },
-  CONFIRM: { bg: 'rgba(245,158,11,0.18)',  text: '#fbbf24', label: 'CONFIRM' },
-  MATCH:   { bg: 'rgba(34,197,94,0.18)',   text: '#4ade80', label: 'MATCH'   },
-  GAP:     { bg: 'rgba(156,163,175,0.18)', text: '#9ca3af', label: 'GAP'     },
-};
+// ─── Source name helpers ──────────────────────────────────────────────────────
 
-// ─── Response normalisation ───────────────────────────────────────────────────
-
-function normaliseFlagType(raw: unknown): FlagType {
-  const upper = String(raw ?? '').toUpperCase().trim();
-  if (upper === 'FLAG' || upper === 'CONFIRM' || upper === 'MATCH' || upper === 'GAP') {
-    return upper as FlagType;
-  }
-  return 'GAP';
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normaliseFlag(raw: any, index: number): Flag {
-  return {
-    id:           raw.id          ?? raw.rule_ref  ?? `flag-${index}`,
-    type:         normaliseFlagType(raw.flag_type  ?? raw.type),
-    ruleRef:      raw.rule_ref    ?? raw.ruleRef   ?? '',
-    systemName:   raw.system      ?? raw.systemName ?? raw.system_name ?? '',
-    summary:      raw.one_line_summary ?? raw.summary ?? '',
-    chunkPreview: raw.matched_chunk_preview ?? raw.chunkPreview,
-  };
-}
-
-// Build a readable display name from a raw source string like:
-//   "25-158-REN-XX-XX-FP-XX-0001_-_M&E_Services_Strategy_rev0.pdf chunk 2"
-//   "Tonerys_Bohermore_BREEAM_PreAssessment_v1a.pdf"
-//
-// Algorithm:
-//   1. Strip " chunk N" suffix to get raw filename
-//   2. Split on underscores
-//   3. Drop parts that are drawing-reference codes (start with a digit, or
-//      are a single character like the "-" separator)
-//   4. If 4 or fewer meaningful parts remain, keep all of them.
-//      If 5 or more, take the last 3 (drops company/project prefix tokens).
-//   5. Re-join with spaces and restore the extension.
 function parseSource(raw: string): { filename: string; display: string } {
   const filename = raw.replace(/\s+chunk\s+\d+.*$/i, '').trim();
-
-  // Separate extension so we can restore it exactly
   const extMatch = filename.match(/(\.\w+)$/);
   const ext  = extMatch ? extMatch[1] : '';
   const base = ext ? filename.slice(0, -ext.length) : filename;
-
   const parts = base.split('_');
-
-  // Drop: single chars (e.g. lone "-"), parts that start with a digit
-  // (drawing reference prefixes like "25-158-REN-XX-XX-FP-XX-0001").
   const meaningful = parts.filter((p) => p.length > 1 && !/^\d/.test(p));
-
-  // ≤4 parts → keep all; ≥5 parts → drop leading tokens, keep last 3
   const kept = meaningful.length > 4 ? meaningful.slice(-3) : meaningful;
-
   const display = (kept.length > 0 ? kept.join(' ') : base) + ext;
   return { filename, display };
 }
 
-// Deduplicate by filename, preserving first-seen order.
 function deduplicateSources(sources: string[]): Array<{ filename: string; display: string }> {
-  const seen = new Map<string, string>(); // filename → display
+  const seen = new Map<string, string>();
   for (const src of sources) {
     const { filename, display } = parseSource(src);
     if (filename && !seen.has(filename)) seen.set(filename, display);
@@ -132,19 +88,12 @@ function SourcePill({ filename, display }: { filename: string; display: string }
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        backgroundColor: '#2a2a2a',
-        borderRadius: 9999,
-        padding: '4px 10px 4px 8px',
-        fontSize: 11,
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        backgroundColor: '#2a2a2a', borderRadius: 9999,
+        padding: '4px 10px 4px 8px', fontSize: 11,
         color: hovered ? '#c96442' : '#707070',
-        textDecoration: 'none',
-        cursor: 'pointer',
-        transition: 'color 0.15s',
-        userSelect: 'none',
-        whiteSpace: 'nowrap',
+        textDecoration: 'none', cursor: 'pointer',
+        transition: 'color 0.15s', userSelect: 'none', whiteSpace: 'nowrap',
       }}
     >
       <FileText size={11} style={{ flexShrink: 0 }} />
@@ -153,21 +102,130 @@ function SourcePill({ filename, display }: { filename: string; display: string }
   );
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Upload result components ─────────────────────────────────────────────────
+
+function UploadObservationRow({ obs }: { obs: UploadObservation }) {
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+
+  const icon = obs.type === 'flag' ? '🔴' : obs.type === 'confirm' ? '🟡' : 'ℹ️';
+  const suffix = obs.rule_ref ? ` (${obs.rule_ref})` : '';
+
+  const handleConfirm = async () => {
+    if (!obs.confirm_key) return;
+    setConfirming(true);
+    try {
+      const res = await apiFetch(`${BRAIN_URL}/projects/galway/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: obs.confirm_key,
+          value: obs.confirm_value,
+          confirmed_by: 'user',
+        }),
+      });
+      if (!res.ok) throw new Error();
+      setConfirmed(true);
+    } catch {
+      // silent — add error feedback if needed
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  return (
+    <div style={{ fontSize: 14, color: '#c0c0c0', lineHeight: 1.55 }}>
+      <span>{icon} {obs.text}{suffix}</span>
+
+      {obs.type === 'confirm' && (
+        <div style={{ marginTop: 7, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {confirmed ? (
+            <span style={{ fontSize: 13, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
+              ✅ Confirmed in project brain
+            </span>
+          ) : (
+            <>
+              <button
+                onClick={handleConfirm}
+                disabled={confirming}
+                style={{
+                  padding: '4px 14px', borderRadius: 9999,
+                  border: '1px solid rgba(74,222,128,0.35)',
+                  backgroundColor: 'rgba(74,222,128,0.08)',
+                  color: '#4ade80', fontSize: 12,
+                  cursor: confirming ? 'default' : 'pointer',
+                  fontFamily: 'inherit',
+                  opacity: confirming ? 0.6 : 1,
+                  transition: 'opacity 0.15s',
+                }}
+              >
+                {confirming ? 'Confirming…' : 'Yes, correct'}
+              </button>
+              <button
+                style={{
+                  padding: '4px 14px', borderRadius: 9999,
+                  border: '1px solid #333', backgroundColor: 'transparent',
+                  color: '#666', fontSize: 12,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                No, change it
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UploadResultBubble({ result }: { result: UploadResult }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
+      <JmkAvatar />
+      <div style={{ flex: 1, paddingTop: 4 }}>
+        {/* Header */}
+        <div style={{ fontSize: 15, color: '#d4d4d4', lineHeight: 1.5, marginBottom: result.observations.length > 0 ? 14 : 0 }}>
+          📄{' '}
+          <a
+            href={`${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(result.filename)}/download`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#d4d4d4', textDecoration: 'underline', textDecorationColor: '#484848', cursor: 'pointer' }}
+          >
+            {result.displayName}
+          </a>
+          {' '}uploaded ({result.chunks} chunks)
+        </div>
+
+        {result.observations.length === 0 && (
+          <p style={{ margin: '6px 0 0', fontSize: 14, color: '#777' }}>
+            Ask me anything about this document.
+          </p>
+        )}
+
+        {result.observations.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {result.observations.map((obs, i) => (
+              <UploadObservationRow key={i} obs={obs} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Chat sub-components ──────────────────────────────────────────────────────
 
 function JmkAvatar() {
   return (
     <div
       style={{
-        width: 28,
-        height: 28,
-        borderRadius: '50%',
+        width: 28, height: 28, borderRadius: '50%',
         backgroundColor: '#c96442',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-        marginTop: 2,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0, marginTop: 2,
       }}
     >
       <span style={{ fontSize: 9, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1 }}>
@@ -191,21 +249,20 @@ function TypingIndicator() {
 }
 
 function MessageBubble({ message }: { message: Message }) {
+  if (message.uploadResult) {
+    return <UploadResultBubble result={message.uploadResult} />;
+  }
+
   if (message.role === 'user') {
     return (
       <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '4px 0' }}>
         <div
           style={{
-            backgroundColor: '#c96442',
-            color: '#fff',
-            borderRadius: 18,
-            borderBottomRightRadius: 4,
-            padding: '10px 16px',
-            maxWidth: '70%',
-            fontSize: 15,
-            lineHeight: 1.55,
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
+            backgroundColor: '#c96442', color: '#fff',
+            borderRadius: 18, borderBottomRightRadius: 4,
+            padding: '10px 16px', maxWidth: '70%',
+            fontSize: 15, lineHeight: 1.55,
+            whiteSpace: 'pre-wrap', wordBreak: 'break-word',
           }}
         >
           {message.content}
@@ -224,11 +281,8 @@ function MessageBubble({ message }: { message: Message }) {
       <div style={{ flex: 1, paddingTop: 4 }}>
         <div
           style={{
-            fontSize: 15,
-            lineHeight: 1.65,
-            color: '#d4d4d4',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-word',
+            fontSize: 15, lineHeight: 1.65, color: '#d4d4d4',
+            whiteSpace: 'pre-wrap', wordBreak: 'break-word',
           }}
         >
           {message.content}
@@ -249,14 +303,9 @@ function EmptyState({ onSuggest }: { onSuggest: (text: string) => void }) {
   return (
     <div
       style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 28,
-        padding: '40px 24px',
-        textAlign: 'center',
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        gap: 28, padding: '40px 24px', textAlign: 'center',
       }}
     >
       <div>
@@ -274,15 +323,10 @@ function EmptyState({ onSuggest }: { onSuggest: (text: string) => void }) {
             onClick={() => onSuggest(s)}
             className={styles.suggestionPill}
             style={{
-              padding: '9px 16px',
-              borderRadius: 9999,
-              border: '1px solid #333',
-              backgroundColor: '#242424',
-              color: '#c0c0c0',
-              fontSize: 13,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              lineHeight: 1,
+              padding: '9px 16px', borderRadius: 9999,
+              border: '1px solid #333', backgroundColor: '#242424',
+              color: '#c0c0c0', fontSize: 13,
+              cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1,
             }}
           >
             {s}
@@ -293,188 +337,12 @@ function EmptyState({ onSuggest }: { onSuggest: (text: string) => void }) {
   );
 }
 
-function SkeletonCard() {
-  return (
-    <div style={{ backgroundColor: '#252525', borderRadius: 12, padding: '14px 16px', marginBottom: 8 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <div className={styles.skeletonShimmer} style={{ width: 36, height: 14 }} />
-        <div className={styles.skeletonShimmer} style={{ width: 56, height: 18, borderRadius: 4 }} />
-      </div>
-      <div className={styles.skeletonShimmer} style={{ width: '78%', height: 15, marginBottom: 8 }} />
-      <div className={styles.skeletonShimmer} style={{ width: '55%', height: 12 }} />
-    </div>
-  );
-}
-
-function FlagCard({ flag, expanded, onToggle }: { flag: Flag; expanded: boolean; onToggle: () => void }) {
-  const badge = BADGE[flag.type] ?? BADGE.GAP;
-  const Chevron = expanded ? ChevronDown : ChevronRight;
-
-  return (
-    <div
-      onClick={onToggle}
-      className={styles.flagCard}
-      style={{ backgroundColor: '#252525', borderRadius: 12, padding: '13px 15px', marginBottom: 8, userSelect: 'none' }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <Chevron size={13} style={{ color: '#555', flexShrink: 0, marginTop: 1 }} />
-          <span
-            style={{
-              fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
-              fontSize: 11, color: '#c96442', fontWeight: 600, letterSpacing: '0.04em',
-            }}
-          >
-            {flag.ruleRef}
-          </span>
-        </div>
-        <span
-          style={{
-            fontSize: 10, fontWeight: 600, letterSpacing: '0.07em',
-            color: badge.text, backgroundColor: badge.bg,
-            padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase', flexShrink: 0,
-          }}
-        >
-          {badge.label}
-        </span>
-      </div>
-
-      <p style={{ margin: '0 0 5px', fontSize: 14, fontWeight: 600, color: '#e8e8e8', lineHeight: 1.35 }}>
-        {flag.systemName}
-      </p>
-      <p style={{ margin: 0, fontSize: 12, color: '#707070', lineHeight: 1.5 }}>
-        {flag.summary}
-      </p>
-
-      {expanded && flag.chunkPreview && (
-        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #333' }}>
-          <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 600, color: '#555', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            Source excerpt
-          </p>
-          <div
-            style={{
-              backgroundColor: '#1a1a1a', borderRadius: 6, padding: '10px 12px',
-              fontSize: 12, color: '#909090', lineHeight: 1.6,
-              fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
-              whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 160, overflowY: 'auto',
-            }}
-          >
-            {flag.chunkPreview}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function FlagsPanel({
-  flags,
-  totalCount,
-  loading,
-  error,
-  loaded,
-  expandedId,
-  onToggle,
-  showAll,
-  onToggleShowAll,
-}: {
-  flags: Flag[];
-  totalCount: number;
-  loading: boolean;
-  error: string | null;
-  loaded: boolean;
-  expandedId: string | null;
-  onToggle: (id: string) => void;
-  showAll: boolean;
-  onToggleShowAll: () => void;
-}) {
-  return (
-    <aside
-      style={{
-        width: 320, minWidth: 320,
-        backgroundColor: '#1e1e1e',
-        borderLeft: '1px solid #282828',
-        display: 'flex', flexDirection: 'column',
-        height: '100%', overflow: 'hidden',
-      }}
-    >
-      <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #282828', flexShrink: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              Document Flags
-            </span>
-            {loaded && totalCount > 0 && (
-              <span style={{ fontSize: 11, color: '#505050' }}>
-                {totalCount} {totalCount === 1 ? 'flag' : 'flags'}
-              </span>
-            )}
-          </div>
-          {loaded && totalCount > 0 && (
-            <button
-              onClick={onToggleShowAll}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 11, color: showAll ? '#c96442' : '#555',
-                padding: '2px 0', fontFamily: 'inherit', transition: 'color 0.15s',
-              }}
-            >
-              {showAll ? 'Fewer' : 'Show all'}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className={styles.flagsPanel} style={{ flex: 1, padding: '10px 12px', overflowY: 'auto' }}>
-        {loading ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        ) : error ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, color: '#555', textAlign: 'center', padding: 24 }}>
-            <AlertTriangle size={20} style={{ color: '#484848' }} />
-            <p style={{ margin: 0, fontSize: 13 }}>{error}</p>
-          </div>
-        ) : !loaded ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, padding: 24, textAlign: 'center' }}>
-            <Upload size={20} style={{ color: '#3a3a3a' }} />
-            <p style={{ margin: 0, fontSize: 13, color: '#484848', lineHeight: 1.5 }}>
-              Upload a document to see flags
-            </p>
-          </div>
-        ) : flags.length === 0 ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#484848', fontSize: 13, padding: 24, textAlign: 'center' }}>
-            {showAll ? 'No flags found for this project.' : 'No FLAG or CONFIRM items. Try "Show all".'}
-          </div>
-        ) : (
-          flags.map((flag) => (
-            <FlagCard
-              key={flag.id}
-              flag={flag}
-              expanded={expandedId === flag.id}
-              onToggle={() => onToggle(flag.id)}
-            />
-          ))
-        )}
-      </div>
-    </aside>
-  );
-}
-
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function GalwayPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [flags, setFlags] = useState<Flag[]>([]);
-  const [flagsLoading, setFlagsLoading] = useState(false);
-  const [flagsError, setFlagsError] = useState<string | null>(null);
-  const [flagsLoaded, setFlagsLoaded] = useState(false);
-  const [expandedFlagId, setExpandedFlagId] = useState<string | null>(null);
-  const [showAllFlags, setShowAllFlags] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState<Toast | null>(null);
 
@@ -495,28 +363,6 @@ export default function GalwayPage() {
     toastTimer.current = setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const loadFlags = useCallback(async () => {
-    setFlagsLoading(true);
-    setFlagsError(null);
-    try {
-      const res = await apiFetch(`${BRAIN_URL}/projects/galway/check`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) throw new Error(`Status ${res.status}`);
-      const data = await res.json();
-      const raw: unknown[] = Array.isArray(data.flags) ? data.flags : [];
-      const normalised = raw.filter((f) => f != null).map((f, i) => normaliseFlag(f, i));
-      setFlags(normalised);
-      setFlagsLoaded(true);
-    } catch {
-      setFlagsError('Could not load flags');
-    } finally {
-      setFlagsLoading(false);
-    }
-  }, []);
-
   const handleFileSelect = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -527,7 +373,7 @@ export default function GalwayPage() {
     formData.append('doc_type', 'auto');
 
     try {
-      // Raw fetch — apiFetch always injects Content-Type: application/json which
+      // Raw fetch — apiFetch injects Content-Type: application/json which
       // corrupts the multipart boundary. Auth header added manually.
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       const res = await fetch(`${BRAIN_URL}/projects/galway/documents/upload`, {
@@ -538,16 +384,28 @@ export default function GalwayPage() {
 
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const data = await res.json();
-      const chunks = data.chunks_extracted ?? data.chunks ?? data.count ?? '?';
-      showToastMsg(`${chunks} chunks extracted`, 'success');
-      await loadFlags();
+
+      const filename: string = data.filename ?? file.name;
+      const chunks: number   = data.chunks_created ?? data.chunks_extracted ?? data.chunks ?? 0;
+      const observations: UploadObservation[] = Array.isArray(data.observations) ? data.observations : [];
+      const { display: displayName } = parseSource(filename);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `upload-${Date.now()}`,
+          role: 'assistant',
+          content: '',
+          uploadResult: { filename, displayName, chunks, observations },
+        },
+      ]);
     } catch {
       showToastMsg('Upload failed. Please try again.', 'error');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  }, [loadFlags, showToastMsg]);
+  }, [showToastMsg]);
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -622,21 +480,14 @@ export default function GalwayPage() {
     }
   };
 
-  const toggleFlag = useCallback((id: string) => {
-    setExpandedFlagId((prev) => (prev === id ? null : id));
-  }, []);
-
   const canSend = input.trim().length > 0 && !isTyping;
-
-  const visibleFlags = showAllFlags
-    ? flags
-    : flags.filter((f) => f.type === 'FLAG' || f.type === 'CONFIRM');
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden', height: '100%' }}>
       <ProjectsSidebar />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#1a1a1a' }}>
+        {/* Title bar */}
         <div style={{ padding: '16px 28px', borderBottom: '1px solid #242424', flexShrink: 0 }}>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#e0e0e0', letterSpacing: '-0.01em' }}>
             Galway – Aloft Bohermore
@@ -646,6 +497,7 @@ export default function GalwayPage() {
           </p>
         </div>
 
+        {/* Messages */}
         <div
           className={styles.messagesArea}
           style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
@@ -669,6 +521,7 @@ export default function GalwayPage() {
           )}
         </div>
 
+        {/* Input bar */}
         <div style={{ padding: '14px 20px 18px', flexShrink: 0, backgroundColor: '#1a1a1a' }}>
           <div
             style={{
@@ -693,7 +546,8 @@ export default function GalwayPage() {
               title={uploading ? 'Uploading…' : 'Upload document'}
               className={styles.uploadButton}
               style={{
-                background: 'none', border: 'none', cursor: uploading ? 'default' : 'pointer',
+                background: 'none', border: 'none',
+                cursor: uploading ? 'default' : 'pointer',
                 padding: '4px 6px', borderRadius: 6, marginBottom: 2,
                 color: uploading ? '#c96442' : '#555',
                 display: 'flex', alignItems: 'center', flexShrink: 0,
@@ -741,18 +595,6 @@ export default function GalwayPage() {
           </p>
         </div>
       </div>
-
-      <FlagsPanel
-        flags={visibleFlags}
-        totalCount={flags.length}
-        loading={flagsLoading}
-        error={flagsError}
-        loaded={flagsLoaded}
-        expandedId={expandedFlagId}
-        onToggle={toggleFlag}
-        showAll={showAllFlags}
-        onToggleShowAll={() => setShowAllFlags((p) => !p)}
-      />
 
       {toast && (
         <div
