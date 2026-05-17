@@ -31,6 +31,7 @@ interface UploadResult {
   displayName: string;
   documentId?: string;   // returned by upload; used for polling
   processing?: boolean;  // true while backend is still extracting
+  duplicate?: boolean;   // file already exists and is ready — no polling needed
   error?: string;        // set on polling timeout
   chunks: number;
   observations: UploadObservation[];
@@ -208,6 +209,31 @@ function UploadProcessingBubble({ displayName }: { displayName: string }) {
 function UploadResultBubble({ result, onRetry }: { result: UploadResult; onRetry?: () => void }) {
   if (result.processing) {
     return <UploadProcessingBubble displayName={result.displayName} />;
+  }
+
+  if (result.duplicate) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
+        <JmkAvatar />
+        <div style={{ flex: 1, paddingTop: 4 }}>
+          <div style={{ fontSize: 15, color: 'var(--pr-text-secondary)', lineHeight: 1.5 }}>
+            📄{' '}
+            <a
+              href={`${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(result.filename)}/download`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--pr-text-secondary)', textDecoration: 'underline', textDecorationColor: 'var(--pr-border)', cursor: 'pointer' }}
+            >
+              {result.displayName}
+            </a>
+            {' '}is already uploaded and ready.
+          </div>
+          <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--pr-text-muted)' }}>
+            Ask me anything about it.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (result.error === 'failed') {
@@ -610,8 +636,13 @@ export default function GalwayPage() {
       const documentId: string | null = data.id ?? data.document_id ?? null;
       const msgId = `upload-${Date.now()}`;
 
-      // If the backend already finished synchronously, show the full result immediately
-      if (data.extracted === true || (data.chunks_created != null && data.chunks_created > 0)) {
+      // Duplicate: file already exists and is ready — skip spinner and polling
+      if (data.duplicate === true) {
+        setMessages((prev) => [...prev, {
+          id: msgId, role: 'assistant', content: '',
+          uploadResult: { filename, displayName, duplicate: true, chunks: 0, observations: [] },
+        }]);
+      } else if (data.extracted === true || (data.chunks_created != null && data.chunks_created > 0)) {
         const chunks = data.chunks_created ?? data.chunks ?? 0;
         const observations: UploadObservation[] = Array.isArray(data.observations) ? data.observations : [];
         setMessages((prev) => [...prev, {
