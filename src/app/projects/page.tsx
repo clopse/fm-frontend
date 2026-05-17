@@ -1,7 +1,8 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, BedDouble } from 'lucide-react';
+import { Plus, BedDouble, Menu } from 'lucide-react';
 import ProjectsSidebar from '@/components/projects/ProjectsSidebar';
 import styles from '@/styles/projects.module.css';
 
@@ -171,39 +172,70 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
 
 export default function ProjectsPage() {
   const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile,    setIsMobile]    = useState(false);
+
+  useEffect(() => {
+    const initialised = { current: false };
+    function check() {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!initialised.current) {
+        setSidebarOpen(!mobile);
+        initialised.current = true;
+      }
+    }
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden', height: '100%' }}>
       {/* ── Sidebar ─────────────────────────────────── */}
-      <ProjectsSidebar />
+      <ProjectsSidebar
+        isOpen={sidebarOpen}
+        isMobile={isMobile}
+        onClose={() => setSidebarOpen(false)}
+      />
 
       {/* ── Main content ────────────────────────────── */}
       <main
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '44px 48px',
+          padding: isMobile ? '24px 20px' : '44px 48px',
           scrollbarWidth: 'thin',
           scrollbarColor: '#333 transparent',
         }}
       >
         {/* Header */}
-        <div style={{ marginBottom: 36 }}>
-          <h1
-            style={{
-              margin: '0 0 6px',
-              fontSize: 28,
-              fontWeight: 700,
-              color: '#f0f0f0',
-              letterSpacing: '-0.03em',
-              lineHeight: 1.2,
-            }}
+        <div style={{ marginBottom: 36, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <button
+            onClick={() => setSidebarOpen((v) => !v)}
+            title="Toggle sidebar"
+            className={styles.themeToggle}
+            style={{ marginTop: 4, flexShrink: 0 }}
           >
-            Projects
-          </h1>
-          <p style={{ margin: 0, fontSize: 14, color: '#555' }}>
-            Development &amp; Pre-Opening
-          </p>
+            <Menu size={18} />
+          </button>
+          <div>
+            <h1
+              style={{
+                margin: '0 0 6px',
+                fontSize: 28,
+                fontWeight: 700,
+                color: 'var(--pr-text-primary)',
+                letterSpacing: '-0.03em',
+                lineHeight: 1.2,
+              }}
+            >
+              Projects
+            </h1>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--pr-text-muted)' }}>
+              Development &amp; Pre-Opening
+            </p>
+          </div>
         </div>
 
         {/* Cards grid */}

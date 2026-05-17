@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
   type ChangeEvent,
 } from 'react';
-import { ArrowUp, Paperclip, FileText, Sun, Moon } from 'lucide-react';
+import { ArrowUp, Paperclip, FileText, Sun, Moon, Menu } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import ProjectsSidebar from '@/components/projects/ProjectsSidebar';
 import { apiFetch } from '@/utils/api';
@@ -339,11 +339,30 @@ export default function GalwayPage() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [convRefreshKey, setConvRefreshKey] = useState(0);
   const [theme,          setTheme]          = useState<Theme>('dark');
+  const [sidebarOpen,    setSidebarOpen]    = useState(true);
+  const [isMobile,       setIsMobile]       = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef    = useRef<HTMLTextAreaElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Sidebar resize detection ───────────────────────────────────────────────
+
+  useEffect(() => {
+    const initialised = { current: false };
+    function check() {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (!initialised.current) {
+        setSidebarOpen(!mobile);
+        initialised.current = true;
+      }
+    }
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   // ── Theme ──────────────────────────────────────────────────────────────────
 
@@ -549,18 +568,31 @@ export default function GalwayPage() {
         onSelectConversation={loadConversation}
         onNewConversation={handleNewConversation}
         conversationRefreshKey={convRefreshKey}
+        isOpen={sidebarOpen}
+        isMobile={isMobile}
+        onClose={() => setSidebarOpen(false)}
       />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--pr-chat-bg)' }}>
         {/* Title bar */}
-        <div style={{ padding: '14px 28px', borderBottom: '1px solid var(--pr-border)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--pr-text-primary)', letterSpacing: '-0.01em' }}>
-              Galway – Aloft Bohermore
-            </p>
-            <p style={{ margin: 0, fontSize: 12, color: 'var(--pr-text-muted)' }}>
-              New construction · AI assistant
-            </p>
+        <div style={{ padding: '14px 20px 14px 16px', borderBottom: '1px solid var(--pr-border)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Sidebar toggle */}
+            <button
+              onClick={() => setSidebarOpen((v) => !v)}
+              title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+              className={styles.themeToggle}
+            >
+              <Menu size={17} />
+            </button>
+            <div>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--pr-text-primary)', letterSpacing: '-0.01em' }}>
+                Galway – Aloft Bohermore
+              </p>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--pr-text-muted)' }}>
+                New construction · AI assistant
+              </p>
+            </div>
           </div>
           <button
             onClick={toggleTheme}
