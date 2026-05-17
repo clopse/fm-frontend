@@ -1,3 +1,68 @@
+/* ═══════════════════════════════════════════════════════════════
+   CSS VARIABLES — dark defaults, light overrides
+   Applied via data-theme="light" on document.documentElement
+   ═══════════════════════════════════════════════════════════════ */
+
+:global(:root) {
+  --pr-bg:                #1a1a1a;
+  --pr-sidebar-bg:        #1a1a1a;
+  --pr-sidebar-border:    #222222;
+  --pr-chat-bg:           #1a1a1a;
+  --pr-text-primary:      #e5e5e5;
+  --pr-text-secondary:    #d4d4d4;
+  --pr-text-muted:        #555555;
+  --pr-border:            #242424;
+  --pr-divider:           #272727;
+  --pr-input-bg:          #2a2a2a;
+  --pr-input-border:      #363636;
+  --pr-card-bg:           #252525;
+  --pr-nav-active-bg:     #252525;
+  --pr-nav-hover-bg:      #252525;
+  --pr-nav-inactive:      #aaaaaa;
+  --pr-nav-icon:          #666666;
+  --pr-section-label:     #505050;
+  --pr-user-circle-bg:    #252525;
+  --pr-user-circle-border:#353535;
+  /* Markdown */
+  --pr-md-heading:        #e8e8e8;
+  --pr-md-text:           #d4d4d4;
+  --pr-md-em:             #aaaaaa;
+  --pr-md-code-bg:        #2a2a2a;
+  --pr-md-code-text:      #c0c0c0;
+  --pr-md-blockquote:     #909090;
+  --pr-md-blockquote-border: #c96442;
+}
+
+:global([data-theme="light"]) {
+  --pr-bg:                #f5f5f0;
+  --pr-sidebar-bg:        #f0ede8;
+  --pr-sidebar-border:    #e0ddd8;
+  --pr-chat-bg:           #ffffff;
+  --pr-text-primary:      #1a1a1a;
+  --pr-text-secondary:    #1a1a1a;
+  --pr-text-muted:        #777777;
+  --pr-border:            #e0ddd8;
+  --pr-divider:           #e0ddd8;
+  --pr-input-bg:          #f0ede8;
+  --pr-input-border:      #d0cdc8;
+  --pr-card-bg:           #f0ede8;
+  --pr-nav-active-bg:     #e8e5e0;
+  --pr-nav-hover-bg:      #e8e5e0;
+  --pr-nav-inactive:      #666666;
+  --pr-nav-icon:          #888888;
+  --pr-section-label:     #999999;
+  --pr-user-circle-bg:    #e8e5e0;
+  --pr-user-circle-border:#d8d5d0;
+  /* Markdown */
+  --pr-md-heading:        #111111;
+  --pr-md-text:           #1a1a1a;
+  --pr-md-em:             #666666;
+  --pr-md-code-bg:        #ede9e4;
+  --pr-md-code-text:      #444444;
+  --pr-md-blockquote:     #666666;
+  --pr-md-blockquote-border: #c96442;
+}
+
 /* ── Sidebar ─────────────────────────────────────────────── */
 
 .sidebar {
@@ -5,17 +70,17 @@
 }
 
 .navItem:hover {
-  background-color: #252525 !important;
-  color: #ffffff !important;
+  background-color: var(--pr-nav-hover-bg) !important;
+  color: var(--pr-text-primary) !important;
 }
 
 .sidebarButton:hover {
-  background-color: #252525 !important;
-  color: #e0e0e0 !important;
+  background-color: var(--pr-nav-hover-bg) !important;
+  color: var(--pr-text-primary) !important;
 }
 
 .logoutButton:hover {
-  color: #c0c0c0 !important;
+  color: var(--pr-text-primary) !important;
 }
 
 /* ── Messages scroll area ─────────────────────────────────── */
@@ -35,27 +100,6 @@
 }
 
 .messagesArea::-webkit-scrollbar-thumb {
-  background-color: #333;
-  border-radius: 999px;
-}
-
-/* ── Flags panel scroll ───────────────────────────────────── */
-
-.flagsPanel {
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #333 transparent;
-}
-
-.flagsPanel::-webkit-scrollbar {
-  width: 4px;
-}
-
-.flagsPanel::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.flagsPanel::-webkit-scrollbar-thumb {
   background-color: #333;
   border-radius: 999px;
 }
@@ -85,7 +129,7 @@
 .dot:nth-child(2) { animation-delay: 0.18s; }
 .dot:nth-child(3) { animation-delay: 0.36s; }
 
-/* ── Loading skeleton shimmer ─────────────────────────────── */
+/* ── Skeleton shimmer ─────────────────────────────────────── */
 
 @keyframes shimmer {
   0%   { background-position: -600px 0; }
@@ -93,12 +137,7 @@
 }
 
 .skeletonShimmer {
-  background: linear-gradient(
-    90deg,
-    #2a2a2a 0%,
-    #323232 50%,
-    #2a2a2a 100%
-  );
+  background: linear-gradient(90deg, #2a2a2a 0%, #323232 50%, #2a2a2a 100%);
   background-size: 600px 100%;
   animation: shimmer 1.6s ease-in-out infinite;
   border-radius: 5px;
@@ -122,41 +161,13 @@
   color: #888 !important;
 }
 
-/* ── Flag cards ───────────────────────────────────────────── */
-
-.flagCard {
-  cursor: pointer;
-  transition: background-color 0.12s ease;
-}
-
-.flagCard:hover {
-  background-color: #2c2c2c !important;
-}
-
-/* ── Suggestion pills ─────────────────────────────────────── */
-
-.suggestionPill {
-  transition: background-color 0.12s ease, border-color 0.12s ease;
-}
-
-.suggestionPill:hover {
-  background-color: #2e2e2e !important;
-  border-color: #484848 !important;
-}
-
-/* ── Send button ──────────────────────────────────────────── */
-
-.sendButton:hover:not(:disabled) {
-  background-color: #b8563a !important;
-}
-
-/* ── Paperclip upload button ──────────────────────────────── */
+/* ── Upload button ────────────────────────────────────────── */
 
 .uploadButton:hover {
   color: #c96442 !important;
 }
 
-/* ── Spinning state (upload in progress) ─────────────────── */
+/* ── Spin (uploading state) ───────────────────────────────── */
 
 @keyframes spin {
   from { transform: rotate(0deg); }
@@ -169,12 +180,139 @@
   align-items: center;
 }
 
-/* ── Textarea placeholder ─────────────────────────────────── */
+/* ── Send button ──────────────────────────────────────────── */
 
-.chatInput::placeholder {
-  color: #555;
+.sendButton:hover:not(:disabled) {
+  background-color: #b8563a !important;
 }
 
-.chatInput:focus {
-  outline: none;
+/* ── Suggestion pills ─────────────────────────────────────── */
+
+.suggestionPill:hover {
+  background-color: var(--pr-nav-hover-bg) !important;
+  border-color: #484848 !important;
+}
+
+/* ── Theme toggle ─────────────────────────────────────────── */
+
+.themeToggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  color: var(--pr-text-muted);
+  display: flex;
+  align-items: center;
+  transition: color 0.15s, background-color 0.15s;
+  font-family: inherit;
+}
+
+.themeToggle:hover {
+  color: var(--pr-text-primary) !important;
+  background-color: var(--pr-nav-hover-bg) !important;
+}
+
+/* ── Markdown body ────────────────────────────────────────── */
+
+.markdownBody {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--pr-md-text);
+  word-break: break-word;
+}
+
+.markdownBody > *:first-child { margin-top: 0 !important; }
+.markdownBody > *:last-child  { margin-bottom: 0 !important; }
+
+.markdownBody p {
+  margin: 0 0 10px;
+  color: var(--pr-md-text);
+}
+
+.markdownBody h1,
+.markdownBody h2,
+.markdownBody h3,
+.markdownBody h4 {
+  color: var(--pr-md-heading);
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 18px 0 8px;
+}
+
+.markdownBody h1 { font-size: 20px; }
+.markdownBody h2 { font-size: 18px; }
+.markdownBody h3 { font-size: 16px; }
+.markdownBody h4 { font-size: 15px; }
+
+.markdownBody strong {
+  color: var(--pr-md-heading);
+  font-weight: 600;
+}
+
+.markdownBody em {
+  color: var(--pr-md-em);
+  font-style: italic;
+}
+
+.markdownBody ul,
+.markdownBody ol {
+  margin: 0 0 10px;
+  padding-left: 22px;
+  color: var(--pr-md-text);
+}
+
+.markdownBody li {
+  margin-bottom: 4px;
+  line-height: 1.55;
+}
+
+.markdownBody blockquote {
+  border-left: 3px solid var(--pr-md-blockquote-border);
+  margin: 12px 0;
+  padding: 2px 0 2px 14px;
+  color: var(--pr-md-blockquote);
+  font-style: italic;
+}
+
+.markdownBody blockquote p {
+  margin: 0;
+  color: inherit;
+}
+
+.markdownBody pre {
+  background-color: var(--pr-md-code-bg);
+  border-radius: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  margin: 10px 0;
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.markdownBody code {
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  color: var(--pr-md-code-text);
+}
+
+/* Inline code (not inside pre) */
+.markdownBody :not(pre) > code {
+  background-color: var(--pr-md-code-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--pr-md-code-text);
+}
+
+.markdownBody hr {
+  border: none;
+  border-top: 1px solid var(--pr-border);
+  margin: 14px 0;
+}
+
+.markdownBody a {
+  color: #c96442;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }

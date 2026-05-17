@@ -8,7 +8,8 @@ import {
   type KeyboardEvent,
   type ChangeEvent,
 } from 'react';
-import { ArrowUp, Paperclip, FileText } from 'lucide-react';
+import { ArrowUp, Paperclip, FileText, Sun, Moon } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import ProjectsSidebar from '@/components/projects/ProjectsSidebar';
 import { apiFetch } from '@/utils/api';
 import styles from '@/styles/projects.module.css';
@@ -44,6 +45,8 @@ interface Toast {
   message: string;
   type: 'success' | 'error';
 }
+
+type Theme = 'dark' | 'light';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -89,9 +92,9 @@ function SourcePill({ filename, display }: { filename: string; display: string }
       onMouseLeave={() => setHovered(false)}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 5,
-        backgroundColor: '#2a2a2a', borderRadius: 9999,
+        backgroundColor: 'var(--pr-input-bg)', borderRadius: 9999,
         padding: '4px 10px 4px 8px', fontSize: 11,
-        color: hovered ? '#c96442' : '#707070',
+        color: hovered ? '#c96442' : 'var(--pr-text-muted)',
         textDecoration: 'none', cursor: 'pointer',
         transition: 'color 0.15s', userSelect: 'none', whiteSpace: 'nowrap',
       }}
@@ -118,11 +121,7 @@ function UploadObservationRow({ obs }: { obs: UploadObservation }) {
       const res = await apiFetch(`${BRAIN_URL}/projects/galway/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key:          obs.confirm_key,
-          value:        obs.confirm_value,
-          confirmed_by: 'user',
-        }),
+        body: JSON.stringify({ key: obs.confirm_key, value: obs.confirm_value, confirmed_by: 'user' }),
       });
       if (!res.ok) throw new Error();
       setConfirmed(true);
@@ -134,7 +133,7 @@ function UploadObservationRow({ obs }: { obs: UploadObservation }) {
   };
 
   return (
-    <div style={{ fontSize: 14, color: '#c0c0c0', lineHeight: 1.55 }}>
+    <div style={{ fontSize: 14, color: 'var(--pr-text-secondary)', lineHeight: 1.55 }}>
       <span>{icon} {obs.text}{suffix}</span>
       {obs.type === 'confirm' && (
         <div style={{ marginTop: 7, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -153,8 +152,7 @@ function UploadObservationRow({ obs }: { obs: UploadObservation }) {
                   backgroundColor: 'rgba(74,222,128,0.08)',
                   color: '#4ade80', fontSize: 12,
                   cursor: confirming ? 'default' : 'pointer',
-                  fontFamily: 'inherit',
-                  opacity: confirming ? 0.6 : 1,
+                  fontFamily: 'inherit', opacity: confirming ? 0.6 : 1,
                   transition: 'opacity 0.15s',
                 }}
               >
@@ -163,8 +161,9 @@ function UploadObservationRow({ obs }: { obs: UploadObservation }) {
               <button
                 style={{
                   padding: '4px 14px', borderRadius: 9999,
-                  border: '1px solid #333', backgroundColor: 'transparent',
-                  color: '#666', fontSize: 12,
+                  border: '1px solid var(--pr-input-border)',
+                  backgroundColor: 'transparent',
+                  color: 'var(--pr-text-muted)', fontSize: 12,
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
@@ -183,20 +182,20 @@ function UploadResultBubble({ result }: { result: UploadResult }) {
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
       <JmkAvatar />
       <div style={{ flex: 1, paddingTop: 4 }}>
-        <div style={{ fontSize: 15, color: '#d4d4d4', lineHeight: 1.5, marginBottom: result.observations.length > 0 ? 14 : 0 }}>
+        <div style={{ fontSize: 15, color: 'var(--pr-text-secondary)', lineHeight: 1.5, marginBottom: result.observations.length > 0 ? 14 : 0 }}>
           📄{' '}
           <a
             href={`${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(result.filename)}/download`}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#d4d4d4', textDecoration: 'underline', textDecorationColor: '#484848', cursor: 'pointer' }}
+            style={{ color: 'var(--pr-text-secondary)', textDecoration: 'underline', textDecorationColor: 'var(--pr-border)', cursor: 'pointer' }}
           >
             {result.displayName}
           </a>
           {' '}uploaded ({result.chunks} chunks)
         </div>
         {result.observations.length === 0 && (
-          <p style={{ margin: '6px 0 0', fontSize: 14, color: '#777' }}>
+          <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--pr-text-muted)' }}>
             Ask me anything about this document.
           </p>
         )}
@@ -275,8 +274,8 @@ function MessageBubble({ message }: { message: Message }) {
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
       <JmkAvatar />
       <div style={{ flex: 1, paddingTop: 4 }}>
-        <div style={{ fontSize: 15, lineHeight: 1.65, color: '#d4d4d4', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {message.content}
+        <div className={styles.markdownBody}>
+          <ReactMarkdown>{message.content}</ReactMarkdown>
         </div>
         {uniqueSources.length > 0 && (
           <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -300,10 +299,10 @@ function EmptyState({ onSuggest }: { onSuggest: (text: string) => void }) {
       }}
     >
       <div>
-        <p style={{ fontSize: 23, fontWeight: 600, color: '#e0e0e0', margin: '0 0 8px', letterSpacing: '-0.02em' }}>
+        <p style={{ fontSize: 23, fontWeight: 600, color: 'var(--pr-text-primary)', margin: '0 0 8px', letterSpacing: '-0.02em' }}>
           Ask anything about Galway
         </p>
-        <p style={{ fontSize: 14, color: '#555', margin: 0 }}>
+        <p style={{ fontSize: 14, color: 'var(--pr-text-muted)', margin: 0 }}>
           Powered by document analysis · Aloft Bohermore
         </p>
       </div>
@@ -315,8 +314,9 @@ function EmptyState({ onSuggest }: { onSuggest: (text: string) => void }) {
             className={styles.suggestionPill}
             style={{
               padding: '9px 16px', borderRadius: 9999,
-              border: '1px solid #333', backgroundColor: '#242424',
-              color: '#c0c0c0', fontSize: 13,
+              border: '1px solid var(--pr-input-border)',
+              backgroundColor: 'var(--pr-input-bg)',
+              color: 'var(--pr-nav-inactive)', fontSize: 13,
               cursor: 'pointer', fontFamily: 'inherit', lineHeight: 1,
             }}
           >
@@ -331,18 +331,37 @@ function EmptyState({ onSuggest }: { onSuggest: (text: string) => void }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function GalwayPage() {
-  const [messages,              setMessages]              = useState<Message[]>([]);
-  const [input,                 setInput]                 = useState('');
-  const [isTyping,              setIsTyping]              = useState(false);
-  const [uploading,             setUploading]             = useState(false);
-  const [toast,                 setToast]                 = useState<Toast | null>(null);
-  const [conversationId,        setConversationId]        = useState<string | null>(null);
-  const [convRefreshKey,        setConvRefreshKey]        = useState(0);
+  const [messages,       setMessages]       = useState<Message[]>([]);
+  const [input,          setInput]          = useState('');
+  const [isTyping,       setIsTyping]       = useState(false);
+  const [uploading,      setUploading]      = useState(false);
+  const [toast,          setToast]          = useState<Toast | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [convRefreshKey, setConvRefreshKey] = useState(0);
+  const [theme,          setTheme]          = useState<Theme>('dark');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef    = useRef<HTMLTextAreaElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Theme ──────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const stored = localStorage.getItem('jmk_theme') as Theme | null;
+    if (stored === 'light' || stored === 'dark') setTheme(stored);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('jmk_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  }, []);
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
@@ -350,7 +369,7 @@ export default function GalwayPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // ── Load conversation from the backend ─────────────────────────────────────
+  // ── Conversation loading ───────────────────────────────────────────────────
 
   const loadConversation = useCallback(async (id: string) => {
     try {
@@ -369,15 +388,12 @@ export default function GalwayPage() {
       setMessages(loaded);
       setConversationId(id);
     } catch {
-      // silent — leave messages empty so the page still works
+      // silent
     }
-  }, []); // state setters are stable refs
-
-  // ── On mount: load the most recent conversation ─────────────────────────────
+  }, []);
 
   useEffect(() => {
     let active = true;
-
     async function init() {
       try {
         const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations`);
@@ -386,16 +402,11 @@ export default function GalwayPage() {
         const list: any[] = Array.isArray(data) ? data : (data.conversations ?? []); // eslint-disable-line @typescript-eslint/no-explicit-any
         if (list.length === 0 || !active) return;
         await loadConversation(list[0].id);
-      } catch {
-        // start fresh
-      }
+      } catch { /* start fresh */ }
     }
-
     init();
     return () => { active = false; };
   }, [loadConversation]);
-
-  // ── New conversation ────────────────────────────────────────────────────────
 
   const handleNewConversation = useCallback(() => {
     setMessages([]);
@@ -403,7 +414,7 @@ export default function GalwayPage() {
     setConvRefreshKey((k) => k + 1);
   }, []);
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
   const showToastMsg = useCallback((message: string, type: Toast['type']) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -411,17 +422,15 @@ export default function GalwayPage() {
     toastTimer.current = setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // ── Upload handler ──────────────────────────────────────────────────────────
+  // ── Upload ─────────────────────────────────────────────────────────────────
 
   const handleFileSelect = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
     formData.append('doc_type', 'auto');
-
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       const res = await fetch(`${BRAIN_URL}/projects/galway/documents/upload`, {
@@ -429,23 +438,15 @@ export default function GalwayPage() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
-
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const data = await res.json();
-
       const filename: string = data.filename ?? file.name;
       const chunks: number   = data.chunks_created ?? data.chunks_extracted ?? data.chunks ?? 0;
       const observations: UploadObservation[] = Array.isArray(data.observations) ? data.observations : [];
       const { display: displayName } = parseSource(filename);
-
       setMessages((prev) => [
         ...prev,
-        {
-          id: `upload-${Date.now()}`,
-          role: 'assistant',
-          content: '',
-          uploadResult: { filename, displayName, chunks, observations },
-        },
+        { id: `upload-${Date.now()}`, role: 'assistant', content: '', uploadResult: { filename, displayName, chunks, observations } },
       ]);
     } catch {
       showToastMsg('Upload failed. Please try again.', 'error');
@@ -455,7 +456,7 @@ export default function GalwayPage() {
     }
   }, [showToastMsg]);
 
-  // ── Send message ────────────────────────────────────────────────────────────
+  // ── Send message ───────────────────────────────────────────────────────────
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -468,7 +469,6 @@ export default function GalwayPage() {
       if (textareaRef.current) textareaRef.current.style.height = 'auto';
       setIsTyping(true);
 
-      // Create a conversation on first message of a new session
       let currentConvId = conversationId;
       if (!currentConvId) {
         try {
@@ -482,12 +482,10 @@ export default function GalwayPage() {
             currentConvId = convData.id ?? convData.conversation_id ?? null;
             if (currentConvId) {
               setConversationId(currentConvId);
-              setConvRefreshKey((k) => k + 1); // tell sidebar to re-fetch list
+              setConvRefreshKey((k) => k + 1);
             }
           }
-        } catch {
-          // proceed without a conversation ID — chat still works
-        }
+        } catch { /* proceed without ID */ }
       }
 
       try {
@@ -496,7 +494,6 @@ export default function GalwayPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: trimmed,
-            // Filter out upload-result messages — they're UI-only and have no content
             conversation_history: messages
               .filter((m) => !m.uploadResult)
               .map((m) => ({ role: m.role, content: m.content })),
@@ -510,18 +507,12 @@ export default function GalwayPage() {
 
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const data = JSON.parse(rawText);
-
         const reply: string = data.response ?? 'No response received.';
         const sources: string[] = Array.isArray(data.sources) ? data.sources : [];
 
         setMessages((prev) => [
           ...prev,
-          {
-            id: `a-${Date.now()}`,
-            role: 'assistant',
-            content: reply,
-            ...(sources.length > 0 ? { sources } : {}),
-          },
+          { id: `a-${Date.now()}`, role: 'assistant', content: reply, ...(sources.length > 0 ? { sources } : {}) },
         ]);
       } catch {
         setMessages((prev) => [
@@ -560,32 +551,38 @@ export default function GalwayPage() {
         conversationRefreshKey={convRefreshKey}
       />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#1a1a1a' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--pr-chat-bg)' }}>
         {/* Title bar */}
-        <div style={{ padding: '16px 28px', borderBottom: '1px solid #242424', flexShrink: 0 }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#e0e0e0', letterSpacing: '-0.01em' }}>
-            Galway – Aloft Bohermore
-          </p>
-          <p style={{ margin: 0, fontSize: 12, color: '#555' }}>
-            New construction · AI assistant
-          </p>
+        <div style={{ padding: '14px 28px', borderBottom: '1px solid var(--pr-border)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--pr-text-primary)', letterSpacing: '-0.01em' }}>
+              Galway – Aloft Bohermore
+            </p>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--pr-text-muted)' }}>
+              New construction · AI assistant
+            </p>
+          </div>
+          <button
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            className={styles.themeToggle}
+          >
+            {theme === 'dark'
+              ? <Sun size={16} />
+              : <Moon size={16} />
+            }
+          </button>
         </div>
 
         {/* Messages */}
         <div
           className={styles.messagesArea}
-          style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
+          style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--pr-chat-bg)' }}
         >
           {messages.length === 0 && !isTyping ? (
             <EmptyState onSuggest={sendMessage} />
           ) : (
-            <div
-              style={{
-                maxWidth: 720, width: '100%', margin: '0 auto',
-                padding: '28px 28px 16px',
-                display: 'flex', flexDirection: 'column', gap: 16,
-              }}
-            >
+            <div style={{ maxWidth: 720, width: '100%', margin: '0 auto', padding: '28px 28px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
               {messages.filter(Boolean).map((msg) => (
                 <MessageBubble key={msg.id} message={msg} />
               ))}
@@ -596,12 +593,12 @@ export default function GalwayPage() {
         </div>
 
         {/* Input bar */}
-        <div style={{ padding: '14px 20px 18px', flexShrink: 0, backgroundColor: '#1a1a1a' }}>
+        <div style={{ padding: '14px 20px 18px', flexShrink: 0, backgroundColor: 'var(--pr-chat-bg)' }}>
           <div
             style={{
               maxWidth: 720, margin: '0 auto',
-              backgroundColor: '#2a2a2a',
-              borderRadius: 24, border: '1px solid #363636',
+              backgroundColor: 'var(--pr-input-bg)',
+              borderRadius: 24, border: '1px solid var(--pr-input-border)',
               display: 'flex', alignItems: 'flex-end',
               padding: '10px 12px 10px 14px', gap: 6,
             }}
@@ -622,7 +619,7 @@ export default function GalwayPage() {
                 background: 'none', border: 'none',
                 cursor: uploading ? 'default' : 'pointer',
                 padding: '4px 6px', borderRadius: 6, marginBottom: 2,
-                color: uploading ? '#c96442' : '#555',
+                color: uploading ? '#c96442' : 'var(--pr-text-muted)',
                 display: 'flex', alignItems: 'center', flexShrink: 0,
                 transition: 'color 0.15s', fontFamily: 'inherit',
               }}
@@ -641,7 +638,7 @@ export default function GalwayPage() {
               className={styles.chatInput}
               style={{
                 flex: 1, background: 'transparent', border: 'none',
-                resize: 'none', color: '#e5e5e5', fontSize: 15,
+                resize: 'none', color: 'var(--pr-text-primary)', fontSize: 15,
                 lineHeight: '1.55', fontFamily: 'inherit',
                 maxHeight: 180, overflowY: 'auto', scrollbarWidth: 'none',
               }}
@@ -652,16 +649,16 @@ export default function GalwayPage() {
               className={canSend ? styles.sendButton : undefined}
               style={{
                 width: 34, height: 34, borderRadius: '50%',
-                backgroundColor: canSend ? '#c96442' : '#2e2e2e',
+                backgroundColor: canSend ? '#c96442' : 'var(--pr-card-bg)',
                 border: 'none', cursor: canSend ? 'pointer' : 'default',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0, transition: 'background-color 0.15s',
               }}
             >
-              <ArrowUp size={17} style={{ color: canSend ? '#fff' : '#484848' }} />
+              <ArrowUp size={17} style={{ color: canSend ? '#fff' : 'var(--pr-text-muted)' }} />
             </button>
           </div>
-          <p style={{ textAlign: 'center', fontSize: 11, color: '#404040', margin: '8px 0 0' }}>
+          <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--pr-text-muted)', margin: '8px 0 0' }}>
             Responses are generated from uploaded project documents.
           </p>
         </div>
