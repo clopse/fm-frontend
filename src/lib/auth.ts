@@ -13,7 +13,8 @@ export interface UserPermissions {
 // ─── Role Sets — exact match only, prevents substring/prefix spoofing ────────
 
 const SYSTEM_ROLES = new Set<string>([
-  'admin', 'superadmin', 'system_admin', 'system',
+  'admin', 'administrator',
+  'system admin', 'system_admin', 'superadmin', 'system',
 ]);
 
 const GROUP_ROLES = new Set<string>([
