@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
   type ChangeEvent,
 } from 'react';
-import { ArrowUp, ChevronDown, ChevronRight, AlertTriangle, Paperclip, Upload } from 'lucide-react';
+import { ArrowUp, ChevronDown, ChevronRight, AlertTriangle, Paperclip, Upload, FileText } from 'lucide-react';
 import ProjectsSidebar from '@/components/projects/ProjectsSidebar';
 import { apiFetch } from '@/utils/api';
 import styles from '@/styles/projects.module.css';
@@ -77,17 +77,40 @@ function normaliseFlag(raw: any, index: number): Flag {
   };
 }
 
-// Strip " chunk N" suffix to get the raw filename, then derive a readable
-// display name by taking everything after the last underscore (removes
-// date/project prefixes like "2024_galway_"). Falls back to the full name.
+// Build a readable display name from a raw source string like:
+//   "25-158-REN-XX-XX-FP-XX-0001_-_M&E_Services_Strategy_rev0.pdf chunk 2"
+//   "Tonerys_Bohermore_BREEAM_PreAssessment_v1a.pdf"
+//
+// Algorithm:
+//   1. Strip " chunk N" suffix to get raw filename
+//   2. Split on underscores
+//   3. Drop parts that are drawing-reference codes (start with a digit, or
+//      are a single character like the "-" separator)
+//   4. If 4 or fewer meaningful parts remain, keep all of them.
+//      If 5 or more, take the last 3 (drops company/project prefix tokens).
+//   5. Re-join with spaces and restore the extension.
 function parseSource(raw: string): { filename: string; display: string } {
   const filename = raw.replace(/\s+chunk\s+\d+.*$/i, '').trim();
-  const lastUs = filename.lastIndexOf('_');
-  const display = lastUs !== -1 ? filename.slice(lastUs + 1) : filename;
+
+  // Separate extension so we can restore it exactly
+  const extMatch = filename.match(/(\.\w+)$/);
+  const ext  = extMatch ? extMatch[1] : '';
+  const base = ext ? filename.slice(0, -ext.length) : filename;
+
+  const parts = base.split('_');
+
+  // Drop: single chars (e.g. lone "-"), parts that start with a digit
+  // (drawing reference prefixes like "25-158-REN-XX-XX-FP-XX-0001").
+  const meaningful = parts.filter((p) => p.length > 1 && !/^\d/.test(p));
+
+  // ≤4 parts → keep all; ≥5 parts → drop leading tokens, keep last 3
+  const kept = meaningful.length > 4 ? meaningful.slice(-3) : meaningful;
+
+  const display = (kept.length > 0 ? kept.join(' ') : base) + ext;
   return { filename, display };
 }
 
-// Deduplicate sources by filename, preserving first-seen order.
+// Deduplicate by filename, preserving first-seen order.
 function deduplicateSources(sources: string[]): Array<{ filename: string; display: string }> {
   const seen = new Map<string, string>(); // filename → display
   for (const src of sources) {
@@ -95,6 +118,39 @@ function deduplicateSources(sources: string[]): Array<{ filename: string; displa
     if (filename && !seen.has(filename)) seen.set(filename, display);
   }
   return Array.from(seen.entries()).map(([filename, display]) => ({ filename, display }));
+}
+
+// ─── Source pill ──────────────────────────────────────────────────────────────
+
+function SourcePill({ filename, display }: { filename: string; display: string }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <a
+      href={`${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(filename)}/download`}
+      target="_blank"
+      rel="noopener noreferrer"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 5,
+        backgroundColor: '#2a2a2a',
+        borderRadius: 9999,
+        padding: '4px 10px 4px 8px',
+        fontSize: 11,
+        color: hovered ? '#c96442' : '#707070',
+        textDecoration: 'none',
+        cursor: 'pointer',
+        transition: 'color 0.15s',
+        userSelect: 'none',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <FileText size={11} style={{ flexShrink: 0 }} />
+      {display}
+    </a>
+  );
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -178,26 +234,9 @@ function MessageBubble({ message }: { message: Message }) {
           {message.content}
         </div>
         {uniqueSources.length > 0 && (
-          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {uniqueSources.map(({ filename, display }) => (
-              <a
-                key={filename}
-                href={`${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(filename)}/download`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontSize: 11,
-                  color: '#505050',
-                  fontStyle: 'italic',
-                  lineHeight: 1.4,
-                  textDecoration: 'underline',
-                  textDecorationColor: '#3a3a3a',
-                  textUnderlineOffset: '2px',
-                  cursor: 'pointer',
-                }}
-              >
-                Source: {display}
-              </a>
+              <SourcePill key={filename} filename={filename} display={display} />
             ))}
           </div>
         )}
