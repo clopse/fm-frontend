@@ -13,7 +13,7 @@ import ProjectsSidebar from '@/components/projects/ProjectsSidebar';
 import { apiFetch } from '@/utils/api';
 import styles from '@/styles/projects.module.css';
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? '';
+const BRAIN_URL = process.env.NEXT_PUBLIC_BRAIN_URL || 'https://api.jmkfacilities.ie/api/brain';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -429,7 +429,7 @@ export default function GalwayPage() {
     setFlagsLoading(true);
     setFlagsError(null);
     try {
-      const res = await apiFetch(`${API}/brain/projects/galway/check`, {
+      const res = await apiFetch(`${BRAIN_URL}/projects/galway/check`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -460,7 +460,7 @@ export default function GalwayPage() {
       // Raw fetch — apiFetch always injects Content-Type: application/json which
       // corrupts the multipart boundary. Auth header added manually.
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      const res = await fetch(`${API}/brain/projects/galway/documents/upload`, {
+      const res = await fetch(`${BRAIN_URL}/projects/galway/documents/upload`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
@@ -491,7 +491,7 @@ export default function GalwayPage() {
       setIsTyping(true);
 
       try {
-        const res = await apiFetch(`${API}/brain/projects/galway/chat`, {
+        const res = await apiFetch(`${BRAIN_URL}/projects/galway/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
