@@ -1,32 +1,41 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { isAuthenticated } from '@/services/userService';
 import { userService } from '@/services/userService';
 import { isAdmin } from '@/lib/auth';
 
 export default function ProjectsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const [authorized, setAuthorized] = useState(false);
+
+  // null  = check not yet run (first render, before effect fires)
+  // true  = authorized, render children
+  // redirect fires on failure — this state never explicitly becomes false
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
+    // useEffect only runs in the browser — localStorage is guaranteed available here.
+    // Starting from null (not false) ensures the first synchronous render returns null
+    // silently rather than firing a redirect before the check has actually run.
+    if (typeof window === 'undefined') return;
+
     if (!isAuthenticated()) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+      router.replace('/login?redirect=/projects/galway');
       return;
     }
 
     const user = userService.getCurrentUser();
     if (!user || !isAdmin(user.role.toLowerCase())) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+      // Authenticated but no admin rights — send to the main app, not login
+      router.replace('/hotels');
       return;
     }
 
     setAuthorized(true);
-  }, [pathname]); // router intentionally omitted — stable ref
+  }, []); // run once on mount; auth state is stable within a session
 
-  if (!authorized) return null;
+  if (authorized !== true) return null;
 
   return (
     <div
