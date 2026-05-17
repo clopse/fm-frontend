@@ -49,6 +49,30 @@ const BADGE: Record<FlagType, { bg: string; text: string; label: string }> = {
   GAP:     { bg: 'rgba(156,163,175,0.18)', text: '#9ca3af', label: 'GAP'     },
 };
 
+// ─── Response normalisation ───────────────────────────────────────────────────
+
+// The backend returns snake_case fields; map them to the frontend Flag shape.
+// flag_type may arrive in any case (e.g. "flag", "FLAG", "Flag").
+function normaliseFlagType(raw: unknown): FlagType {
+  const upper = String(raw ?? '').toUpperCase().trim();
+  if (upper === 'FLAG' || upper === 'CONFIRM' || upper === 'MATCH' || upper === 'GAP') {
+    return upper as FlagType;
+  }
+  return 'GAP'; // safe fallback — renders without crashing
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normaliseFlag(raw: any, index: number): Flag {
+  return {
+    id:           raw.id          ?? raw.rule_ref  ?? `flag-${index}`,
+    type:         normaliseFlagType(raw.flag_type  ?? raw.type),
+    ruleRef:      raw.rule_ref    ?? raw.ruleRef   ?? '',
+    systemName:   raw.system      ?? raw.systemName ?? raw.system_name ?? '',
+    summary:      raw.one_line_summary ?? raw.summary ?? '',
+    chunkPreview: raw.matched_chunk_preview ?? raw.chunkPreview,
+  };
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function JmkAvatar() {
@@ -127,14 +151,7 @@ function MessageBubble({ message }: { message: Message }) {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 12,
-        padding: '4px 0',
-      }}
-    >
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
       <JmkAvatar />
       <div
         style={{
@@ -254,7 +271,8 @@ function FlagCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const badge = BADGE[flag.type];
+  // Guard: if type is somehow not in BADGE, fall back to GAP rather than crash
+  const badge = BADGE[flag.type] ?? BADGE.GAP;
   const Chevron = expanded ? ChevronDown : ChevronRight;
 
   return (
@@ -513,7 +531,15 @@ export default function GalwayPage() {
         });
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const data = await res.json();
-        if (!cancelled) setFlags(data.flags ?? []);
+
+        // Normalise snake_case backend fields → camelCase Flag interface.
+        // Without this, flag.type is undefined and BADGE[undefined].text crashes.
+        const raw: unknown[] = Array.isArray(data.flags) ? data.flags : [];
+        const normalised = raw
+          .filter((f) => f != null)
+          .map((f, i) => normaliseFlag(f, i));
+
+        if (!cancelled) setFlags(normalised);
       } catch {
         if (!cancelled) setFlagsError('Could not load flags');
       } finally {
@@ -663,7 +689,7 @@ export default function GalwayPage() {
                 gap: 16,
               }}
             >
-              {messages.map((msg) => (
+              {messages.filter(Boolean).map((msg) => (
                 <MessageBubble key={msg.id} message={msg} />
               ))}
               {isTyping && <TypingIndicator />}
