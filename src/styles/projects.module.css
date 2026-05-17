@@ -150,6 +150,25 @@
   background-color: #b8563a !important;
 }
 
+/* ── Paperclip upload button ──────────────────────────────── */
+
+.uploadButton:hover {
+  color: #c96442 !important;
+}
+
+/* ── Spinning state (upload in progress) ─────────────────── */
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 0.75s linear infinite;
+  display: inline-flex;
+  align-items: center;
+}
+
 /* ── Textarea placeholder ─────────────────────────────────── */
 
 .chatInput::placeholder {
