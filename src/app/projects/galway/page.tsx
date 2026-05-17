@@ -504,8 +504,12 @@ export default function GalwayPage() {
           }),
         });
 
+        console.log('Chat response status:', res.status);
+        const rawText = await res.text();
+        console.log('Chat raw response:', rawText);
+
         if (!res.ok) throw new Error(`Status ${res.status}`);
-        const data = await res.json();
+        const data = JSON.parse(rawText);
 
         const reply: string = data.response ?? 'No response received.';
         const sources: string[] = Array.isArray(data.sources) ? data.sources : [];
