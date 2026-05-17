@@ -267,78 +267,6 @@ export default function ProjectsSidebar({
             );
           })}
 
-          {/* ── Documents ─────────────────────────────── */}
-          {onGalwayPage && (
-            <div style={{ marginTop: 12 }}>
-              {/* Section header */}
-              <div style={{ padding: '6px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--pr-section-label)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  Documents
-                </span>
-                {onUploadClick && (
-                  <button
-                    onClick={onUploadClick}
-                    title="Upload document"
-                    className={styles.sidebarButton}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 4, color: 'var(--pr-nav-icon)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontFamily: 'inherit' }}
-                  >
-                    <Upload size={12} />
-                    Upload
-                  </button>
-                )}
-              </div>
-
-              {/* Document rows */}
-              {documents.length === 0 ? (
-                <div style={{ padding: '6px 14px 4px', fontSize: 12, color: 'var(--pr-section-label)', fontStyle: 'italic' }}>
-                  No documents yet
-                </div>
-              ) : (
-                documents.map((doc) => {
-                  const downloadHref = `${BRAIN_URL}/projects/galway/documents/${doc.id}/download`;
-                  return (
-                    <a
-                      key={doc.id}
-                      href={downloadHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.navItem}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 7,
-                        padding: '5px 12px', borderRadius: 8,
-                        textDecoration: 'none', marginBottom: 1, minHeight: 32,
-                      }}
-                    >
-                      <FileText size={12} style={{ color: 'var(--pr-nav-icon)', flexShrink: 0 }} />
-
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, color: 'var(--pr-nav-inactive)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-                          {cleanFilename(doc.filename)}
-                        </div>
-                        {doc.created_at && (
-                          <div style={{ fontSize: 10, color: 'var(--pr-section-label)', marginTop: 1 }}>
-                            {timeAgo(doc.created_at)}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Status dot */}
-                      <span
-                        className={doc.status === 'processing' ? styles.docPulse : undefined}
-                        title={doc.status}
-                        style={{
-                          width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
-                          backgroundColor: STATUS_COLOR[doc.status] ?? '#555',
-                          display: 'inline-block',
-                        }}
-                      />
-                    </a>
-                  );
-                })
-              )}
-            </div>
-          )}
-
           {/* ── Conversation history ───────────────────── */}
           {onGalwayPage && (
             <div style={{ marginTop: 10 }}>
@@ -389,6 +317,75 @@ export default function ProjectsSidebar({
                         </div>
                       )}
                     </button>
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          {/* ── Documents ─────────────────────────────── */}
+          {onGalwayPage && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ padding: '6px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--pr-section-label)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  Documents
+                </span>
+                {onUploadClick && (
+                  <button
+                    onClick={onUploadClick}
+                    title="Upload document"
+                    className={styles.sidebarButton}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 4, color: 'var(--pr-nav-icon)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontFamily: 'inherit' }}
+                  >
+                    <Upload size={12} />
+                    Upload
+                  </button>
+                )}
+              </div>
+
+              {documents.length === 0 ? (
+                <div style={{ padding: '6px 14px 4px', fontSize: 12, color: 'var(--pr-section-label)', fontStyle: 'italic' }}>
+                  No documents yet
+                </div>
+              ) : (
+                documents.map((doc) => {
+                  const downloadHref = `${BRAIN_URL}/projects/galway/documents/${doc.id}/download`;
+                  return (
+                    <a
+                      key={doc.id}
+                      href={downloadHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.navItem}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 7,
+                        padding: '5px 12px', borderRadius: 8,
+                        textDecoration: 'none', marginBottom: 1, minHeight: 32,
+                      }}
+                    >
+                      <FileText size={12} style={{ color: 'var(--pr-nav-icon)', flexShrink: 0 }} />
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, color: 'var(--pr-nav-inactive)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                          {cleanFilename(doc.filename)}
+                        </div>
+                        {doc.created_at && (
+                          <div style={{ fontSize: 10, color: 'var(--pr-section-label)', marginTop: 1 }}>
+                            {timeAgo(doc.created_at)}
+                          </div>
+                        )}
+                      </div>
+
+                      <span
+                        className={doc.status === 'processing' ? styles.docPulse : undefined}
+                        title={doc.status}
+                        style={{
+                          width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                          backgroundColor: STATUS_COLOR[doc.status] ?? '#555',
+                          display: 'inline-block',
+                        }}
+                      />
+                    </a>
                   );
                 })
               )}
