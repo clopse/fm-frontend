@@ -77,6 +77,26 @@ function normaliseFlag(raw: any, index: number): Flag {
   };
 }
 
+// Strip " chunk N" suffix to get the raw filename, then derive a readable
+// display name by taking everything after the last underscore (removes
+// date/project prefixes like "2024_galway_"). Falls back to the full name.
+function parseSource(raw: string): { filename: string; display: string } {
+  const filename = raw.replace(/\s+chunk\s+\d+.*$/i, '').trim();
+  const lastUs = filename.lastIndexOf('_');
+  const display = lastUs !== -1 ? filename.slice(lastUs + 1) : filename;
+  return { filename, display };
+}
+
+// Deduplicate sources by filename, preserving first-seen order.
+function deduplicateSources(sources: string[]): Array<{ filename: string; display: string }> {
+  const seen = new Map<string, string>(); // filename → display
+  for (const src of sources) {
+    const { filename, display } = parseSource(src);
+    if (filename && !seen.has(filename)) seen.set(filename, display);
+  }
+  return Array.from(seen.entries()).map(([filename, display]) => ({ filename, display }));
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function JmkAvatar() {
@@ -138,6 +158,10 @@ function MessageBubble({ message }: { message: Message }) {
     );
   }
 
+  const uniqueSources = message.sources && message.sources.length > 0
+    ? deduplicateSources(message.sources)
+    : [];
+
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
       <JmkAvatar />
@@ -153,20 +177,27 @@ function MessageBubble({ message }: { message: Message }) {
         >
           {message.content}
         </div>
-        {message.sources && message.sources.length > 0 && (
-          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {message.sources.map((src, i) => (
-              <span
-                key={i}
+        {uniqueSources.length > 0 && (
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {uniqueSources.map(({ filename, display }) => (
+              <a
+                key={filename}
+                href={`${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(filename)}/download`}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   fontSize: 11,
                   color: '#505050',
                   fontStyle: 'italic',
                   lineHeight: 1.4,
+                  textDecoration: 'underline',
+                  textDecorationColor: '#3a3a3a',
+                  textUnderlineOffset: '2px',
+                  cursor: 'pointer',
                 }}
               >
-                Source: {src}
-              </span>
+                Source: {display}
+              </a>
             ))}
           </div>
         )}
@@ -496,7 +527,6 @@ export default function GalwayPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: trimmed,
-            // Send full history excluding the message we just added
             conversation_history: messages.map((m) => ({
               role: m.role,
               content: m.content,
@@ -568,7 +598,6 @@ export default function GalwayPage() {
       <ProjectsSidebar />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#1a1a1a' }}>
-        {/* Title bar */}
         <div style={{ padding: '16px 28px', borderBottom: '1px solid #242424', flexShrink: 0 }}>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#e0e0e0', letterSpacing: '-0.01em' }}>
             Galway – Aloft Bohermore
@@ -578,7 +607,6 @@ export default function GalwayPage() {
           </p>
         </div>
 
-        {/* Messages */}
         <div
           className={styles.messagesArea}
           style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
@@ -602,7 +630,6 @@ export default function GalwayPage() {
           )}
         </div>
 
-        {/* Input bar */}
         <div style={{ padding: '14px 20px 18px', flexShrink: 0, backgroundColor: '#1a1a1a' }}>
           <div
             style={{
