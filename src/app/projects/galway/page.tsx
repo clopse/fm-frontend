@@ -32,6 +32,7 @@ interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  sources?: string[];
 }
 
 interface Toast {
@@ -140,18 +141,35 @@ function MessageBubble({ message }: { message: Message }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
       <JmkAvatar />
-      <div
-        style={{
-          flex: 1,
-          fontSize: 15,
-          lineHeight: 1.65,
-          color: '#d4d4d4',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          paddingTop: 4,
-        }}
-      >
-        {message.content}
+      <div style={{ flex: 1, paddingTop: 4 }}>
+        <div
+          style={{
+            fontSize: 15,
+            lineHeight: 1.65,
+            color: '#d4d4d4',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          }}
+        >
+          {message.content}
+        </div>
+        {message.sources && message.sources.length > 0 && (
+          <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {message.sources.map((src, i) => (
+              <span
+                key={i}
+                style={{
+                  fontSize: 11,
+                  color: '#505050',
+                  fontStyle: 'italic',
+                  lineHeight: 1.4,
+                }}
+              >
+                Source: {src}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -310,7 +328,6 @@ function FlagsPanel({
         height: '100%', overflow: 'hidden',
       }}
     >
-      {/* Panel header */}
       <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #282828', flexShrink: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -329,8 +346,7 @@ function FlagsPanel({
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 fontSize: 11, color: showAll ? '#c96442' : '#555',
-                padding: '2px 0', fontFamily: 'inherit',
-                transition: 'color 0.15s',
+                padding: '2px 0', fontFamily: 'inherit', transition: 'color 0.15s',
               }}
             >
               {showAll ? 'Fewer' : 'Show all'}
@@ -339,7 +355,6 @@ function FlagsPanel({
         </div>
       </div>
 
-      {/* Scrollable card list */}
       <div className={styles.flagsPanel} style={{ flex: 1, padding: '10px 12px', overflowY: 'auto' }}>
         {loading ? (
           <>
@@ -353,7 +368,6 @@ function FlagsPanel({
             <p style={{ margin: 0, fontSize: 13 }}>{error}</p>
           </div>
         ) : !loaded ? (
-          // Pre-upload empty state
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 10, padding: 24, textAlign: 'center' }}>
             <Upload size={20} style={{ color: '#3a3a3a' }} />
             <p style={{ margin: 0, fontSize: 13, color: '#484848', lineHeight: 1.5 }}>
@@ -399,10 +413,8 @@ export default function GalwayPage() {
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Clear toast timer on unmount
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
 
-  // Scroll to latest message
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
@@ -413,7 +425,6 @@ export default function GalwayPage() {
     toastTimer.current = setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // loadFlags is called after a successful upload, not on page load
   const loadFlags = useCallback(async () => {
     setFlagsLoading(true);
     setFlagsError(null);
@@ -425,7 +436,6 @@ export default function GalwayPage() {
       });
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const data = await res.json();
-
       const raw: unknown[] = Array.isArray(data.flags) ? data.flags : [];
       const normalised = raw.filter((f) => f != null).map((f, i) => normaliseFlag(f, i));
       setFlags(normalised);
@@ -447,8 +457,8 @@ export default function GalwayPage() {
     formData.append('doc_type', 'auto');
 
     try {
-      // Use fetch directly — apiFetch always sets Content-Type: application/json
-      // which would corrupt the multipart boundary. Auth header added manually.
+      // Raw fetch — apiFetch always injects Content-Type: application/json which
+      // corrupts the multipart boundary. Auth header added manually.
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       const res = await fetch(`${API}/api/brain/projects/galway/documents/upload`, {
         method: 'POST',
@@ -460,14 +470,11 @@ export default function GalwayPage() {
       const data = await res.json();
       const chunks = data.chunks_extracted ?? data.chunks ?? data.count ?? '?';
       showToastMsg(`${chunks} chunks extracted`, 'success');
-
-      // Refresh flags panel after upload
       await loadFlags();
     } catch {
       showToastMsg('Upload failed. Please try again.', 'error');
     } finally {
       setUploading(false);
-      // Reset so the same file can be re-uploaded if needed
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }, [loadFlags, showToastMsg]);
@@ -489,14 +496,38 @@ export default function GalwayPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: trimmed,
-            history: messages.map((m) => ({ role: m.role, content: m.content })),
+            // Send full history excluding the message we just added
+            conversation_history: messages.map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
           }),
         });
+
+        if (!res.ok) throw new Error(`Status ${res.status}`);
         const data = await res.json();
-        const reply: string = data.reply ?? data.message ?? data.content ?? 'No response received.';
-        setMessages((prev) => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: reply }]);
+
+        const reply: string = data.response ?? 'No response received.';
+        const sources: string[] = Array.isArray(data.sources) ? data.sources : [];
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `a-${Date.now()}`,
+            role: 'assistant',
+            content: reply,
+            ...(sources.length > 0 ? { sources } : {}),
+          },
+        ]);
       } catch {
-        setMessages((prev) => [...prev, { id: `a-${Date.now()}`, role: 'assistant', content: 'Something went wrong. Please try again.' }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `a-${Date.now()}`,
+            role: 'assistant',
+            content: 'Something went wrong, please try again.',
+          },
+        ]);
       } finally {
         setIsTyping(false);
       }
@@ -524,19 +555,16 @@ export default function GalwayPage() {
 
   const canSend = input.trim().length > 0 && !isTyping;
 
-  // Only FLAG and CONFIRM shown by default; showAllFlags reveals MATCH + GAP
   const visibleFlags = showAllFlags
     ? flags
     : flags.filter((f) => f.type === 'FLAG' || f.type === 'CONFIRM');
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden', height: '100%' }}>
-      {/* ── Left sidebar ──────────────────────────────── */}
       <ProjectsSidebar />
 
-      {/* ── Centre: chat ──────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#1a1a1a' }}>
-        {/* Project title bar */}
+        {/* Title bar */}
         <div style={{ padding: '16px 28px', borderBottom: '1px solid #242424', flexShrink: 0 }}>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#e0e0e0', letterSpacing: '-0.01em' }}>
             Galway – Aloft Bohermore
@@ -546,7 +574,7 @@ export default function GalwayPage() {
           </p>
         </div>
 
-        {/* Messages area */}
+        {/* Messages */}
         <div
           className={styles.messagesArea}
           style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}
@@ -581,7 +609,6 @@ export default function GalwayPage() {
               padding: '10px 12px 10px 14px', gap: 6,
             }}
           >
-            {/* Hidden file input */}
             <input
               ref={fileInputRef}
               type="file"
@@ -590,7 +617,6 @@ export default function GalwayPage() {
               onChange={handleFileSelect}
             />
 
-            {/* Paperclip upload button */}
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
@@ -601,8 +627,7 @@ export default function GalwayPage() {
                 padding: '4px 6px', borderRadius: 6, marginBottom: 2,
                 color: uploading ? '#c96442' : '#555',
                 display: 'flex', alignItems: 'center', flexShrink: 0,
-                transition: 'color 0.15s',
-                fontFamily: 'inherit',
+                transition: 'color 0.15s', fontFamily: 'inherit',
               }}
             >
               <span className={uploading ? styles.spin : undefined}>
@@ -647,7 +672,6 @@ export default function GalwayPage() {
         </div>
       </div>
 
-      {/* ── Right panel: flags ────────────────────────── */}
       <FlagsPanel
         flags={visibleFlags}
         totalCount={flags.length}
@@ -660,24 +684,16 @@ export default function GalwayPage() {
         onToggleShowAll={() => setShowAllFlags((p) => !p)}
       />
 
-      {/* ── Toast ─────────────────────────────────────── */}
       {toast && (
         <div
           style={{
-            position: 'fixed',
-            bottom: 32,
-            left: '50%',
-            transform: 'translateX(-50%)',
+            position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
             backgroundColor: toast.type === 'success' ? '#0e2418' : '#2a0e0e',
             color: toast.type === 'success' ? '#4ade80' : '#f87171',
             border: `1px solid ${toast.type === 'success' ? 'rgba(74,222,128,0.25)' : 'rgba(248,113,113,0.25)'}`,
-            borderRadius: 8,
-            padding: '10px 20px',
-            fontSize: 13,
-            fontWeight: 500,
-            zIndex: 9999,
-            whiteSpace: 'nowrap',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+            borderRadius: 8, padding: '10px 20px',
+            fontSize: 13, fontWeight: 500, zIndex: 9999,
+            whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
             pointerEvents: 'none',
           }}
         >
