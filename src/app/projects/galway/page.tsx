@@ -205,17 +205,58 @@ function UploadProcessingBubble({ displayName }: { displayName: string }) {
   );
 }
 
-function UploadResultBubble({ result }: { result: UploadResult }) {
+function UploadResultBubble({ result, onRetry }: { result: UploadResult; onRetry?: () => void }) {
   if (result.processing) {
     return <UploadProcessingBubble displayName={result.displayName} />;
   }
 
-  if (result.error) {
+  if (result.error === 'failed') {
     return (
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
         <JmkAvatar />
-        <div style={{ paddingTop: 4, fontSize: 14, color: '#f87171' }}>
-          ⚠️ {result.error}
+        <div style={{ paddingTop: 4 }}>
+          <p style={{ margin: '0 0 10px', fontSize: 15, color: '#f87171', lineHeight: 1.5 }}>
+            ⚠️ Processing failed — please try uploading again
+          </p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              style={{
+                padding: '6px 16px', borderRadius: 9999, border: 'none',
+                backgroundColor: 'rgba(239,68,68,0.15)', color: '#f87171',
+                fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Re-upload file
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (result.error === 'timeout') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
+        <JmkAvatar />
+        <div style={{ paddingTop: 4 }}>
+          <p style={{ margin: '0 0 10px', fontSize: 15, color: 'var(--pr-text-secondary)', lineHeight: 1.55 }}>
+            ⏱️ Processing is taking longer than expected. The file was uploaded successfully — try asking a question about it, or re-upload if needed.
+          </p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              style={{
+                padding: '6px 16px', borderRadius: 9999,
+                border: '1px solid var(--pr-input-border)',
+                backgroundColor: 'transparent',
+                color: 'var(--pr-text-muted)', fontSize: 13,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Re-upload file
+            </button>
+          )}
         </div>
       </div>
     );
@@ -286,9 +327,9 @@ function TypingIndicator() {
   );
 }
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({ message, onRetry }: { message: Message; onRetry?: () => void }) {
   if (message.uploadResult) {
-    return <UploadResultBubble result={message.uploadResult} />;
+    return <UploadResultBubble result={message.uploadResult} onRetry={onRetry} />;
   }
 
   if (message.role === 'user') {
@@ -493,15 +534,24 @@ export default function GalwayPage() {
 
   // ── Upload ─────────────────────────────────────────────────────────────────
 
-  // Poll /documents/{id}/status every 3 s until extracted=true or timeout
+  // Poll /documents/{id}/status every 3 s.
+  // Stops on status "ready" | "error", or after 20 attempts (60 s).
   const startPolling = useCallback((
     msgId: string,
     documentId: string,
     filename: string,
     displayName: string,
   ) => {
-    const MAX = 40; // 40 × 3 s = 2 min
+    const MAX = 20; // 20 × 3 s = 60 seconds
     let attempts = 0;
+
+    const resolve = (result: Omit<UploadResult, 'filename' | 'displayName'>) => {
+      clearInterval(interval);
+      pollingRefs.current.delete(msgId);
+      setMessages((prev) => prev.map((m) =>
+        m.id === msgId ? { ...m, uploadResult: { filename, displayName, ...result } } : m,
+      ));
+    };
 
     const interval = setInterval(async () => {
       attempts++;
@@ -509,29 +559,25 @@ export default function GalwayPage() {
         const res = await apiFetch(`${BRAIN_URL}/projects/galway/documents/${documentId}/status`);
         if (res.ok) {
           const data = await res.json();
-          if (data.extracted === true) {
-            clearInterval(interval);
-            pollingRefs.current.delete(msgId);
-            const chunks = data.chunks_created ?? data.chunks ?? 0;
-            const observations: UploadObservation[] = Array.isArray(data.observations) ? data.observations : [];
-            setMessages((prev) => prev.map((m) =>
-              m.id === msgId
-                ? { ...m, uploadResult: { filename, displayName, chunks, observations } }
-                : m,
-            ));
+          const status: string = data.status ?? '';
+
+          if (status === 'ready' || data.extracted === true) {
+            resolve({
+              chunks: data.chunks_created ?? data.chunks ?? 0,
+              observations: Array.isArray(data.observations) ? data.observations : [],
+            });
+            return;
+          }
+
+          if (status === 'error') {
+            resolve({ chunks: 0, observations: [], error: 'failed' });
             return;
           }
         }
-      } catch { /* silent — keep polling */ }
+      } catch { /* network hiccup — keep polling */ }
 
       if (attempts >= MAX) {
-        clearInterval(interval);
-        pollingRefs.current.delete(msgId);
-        setMessages((prev) => prev.map((m) =>
-          m.id === msgId
-            ? { ...m, uploadResult: { filename, displayName, chunks: 0, observations: [], error: 'Processing timed out. Try re-uploading.' } }
-            : m,
-        ));
+        resolve({ chunks: 0, observations: [], error: 'timeout' });
       }
     }, 3000);
 
@@ -727,7 +773,11 @@ export default function GalwayPage() {
           ) : (
             <div style={{ maxWidth: 720, width: '100%', margin: '0 auto', padding: '28px 28px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
               {messages.filter(Boolean).map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
+                <MessageBubble
+                  key={msg.id}
+                  message={msg}
+                  onRetry={() => fileInputRef.current?.click()}
+                />
               ))}
               {isTyping && <TypingIndicator />}
               <div ref={messagesEndRef} />
