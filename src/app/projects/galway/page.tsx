@@ -506,7 +506,11 @@ export default function GalwayPage() {
 
     async function loadFlags() {
       try {
-        const res = await apiFetch(`${API}/api/brain/projects/galway/check`);
+        const res = await apiFetch(`${API}/api/brain/projects/galway/check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const data = await res.json();
         if (!cancelled) setFlags(data.flags ?? []);
