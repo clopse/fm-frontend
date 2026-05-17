@@ -255,3 +255,22 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* ── Upload processing progress bar ──────────────────────── */
+
+@keyframes progressSlide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(360%); }
+}
+
+.progressBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28%;
+  height: 100%;
+  background-color: #c96442;
+  border-radius: 1px;
+  animation: progressSlide 1.8s ease-in-out infinite;
+  opacity: 0.75;
+}

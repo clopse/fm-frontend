@@ -29,6 +29,9 @@ interface UploadObservation {
 interface UploadResult {
   filename: string;
   displayName: string;
+  documentId?: string;   // returned by upload; used for polling
+  processing?: boolean;  // true while backend is still extracting
+  error?: string;        // set on polling timeout
   chunks: number;
   observations: UploadObservation[];
 }
@@ -177,7 +180,47 @@ function UploadObservationRow({ obs }: { obs: UploadObservation }) {
   );
 }
 
+function UploadProcessingBubble({ displayName }: { displayName: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
+      <JmkAvatar />
+      <div style={{ flex: 1, paddingTop: 4 }}>
+        <div style={{ fontSize: 15, color: 'var(--pr-text-secondary)', lineHeight: 1.5, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <span>
+            📄 <span style={{ color: 'var(--pr-text-primary)', fontWeight: 500 }}>{displayName}</span>
+            {' '}received — analysing document
+          </span>
+          <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+            <span className={styles.dot} />
+            <span className={styles.dot} />
+            <span className={styles.dot} />
+          </span>
+        </div>
+        {/* Indeterminate progress bar */}
+        <div style={{ position: 'relative', marginTop: 10, height: 2, backgroundColor: 'var(--pr-input-bg)', borderRadius: 1, overflow: 'hidden' }}>
+          <div className={styles.progressBar} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function UploadResultBubble({ result }: { result: UploadResult }) {
+  if (result.processing) {
+    return <UploadProcessingBubble displayName={result.displayName} />;
+  }
+
+  if (result.error) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
+        <JmkAvatar />
+        <div style={{ paddingTop: 4, fontSize: 14, color: '#f87171' }}>
+          ⚠️ {result.error}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
       <JmkAvatar />
@@ -346,6 +389,7 @@ export default function GalwayPage() {
   const textareaRef    = useRef<HTMLTextAreaElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollingRefs    = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
 
   // ── Sidebar resize detection ───────────────────────────────────────────────
 
@@ -382,7 +426,13 @@ export default function GalwayPage() {
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
-  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
+  useEffect(() => {
+    const refs = pollingRefs.current;
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      refs.forEach((id) => clearInterval(id));
+    };
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -443,6 +493,51 @@ export default function GalwayPage() {
 
   // ── Upload ─────────────────────────────────────────────────────────────────
 
+  // Poll /documents/{id}/status every 3 s until extracted=true or timeout
+  const startPolling = useCallback((
+    msgId: string,
+    documentId: string,
+    filename: string,
+    displayName: string,
+  ) => {
+    const MAX = 40; // 40 × 3 s = 2 min
+    let attempts = 0;
+
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await apiFetch(`${BRAIN_URL}/projects/galway/documents/${documentId}/status`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.extracted === true) {
+            clearInterval(interval);
+            pollingRefs.current.delete(msgId);
+            const chunks = data.chunks_created ?? data.chunks ?? 0;
+            const observations: UploadObservation[] = Array.isArray(data.observations) ? data.observations : [];
+            setMessages((prev) => prev.map((m) =>
+              m.id === msgId
+                ? { ...m, uploadResult: { filename, displayName, chunks, observations } }
+                : m,
+            ));
+            return;
+          }
+        }
+      } catch { /* silent — keep polling */ }
+
+      if (attempts >= MAX) {
+        clearInterval(interval);
+        pollingRefs.current.delete(msgId);
+        setMessages((prev) => prev.map((m) =>
+          m.id === msgId
+            ? { ...m, uploadResult: { filename, displayName, chunks: 0, observations: [], error: 'Processing timed out. Try re-uploading.' } }
+            : m,
+        ));
+      }
+    }, 3000);
+
+    pollingRefs.current.set(msgId, interval);
+  }, []);
+
   const handleFileSelect = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -451,6 +546,7 @@ export default function GalwayPage() {
     formData.append('file', file);
     formData.append('doc_type', 'auto');
     try {
+      // Raw fetch — apiFetch injects Content-Type:application/json which breaks multipart
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
       const res = await fetch(`${BRAIN_URL}/projects/galway/documents/upload`, {
         method: 'POST',
@@ -459,21 +555,36 @@ export default function GalwayPage() {
       });
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const data = await res.json();
-      const filename: string = data.filename ?? file.name;
-      const chunks: number   = data.chunks_created ?? data.chunks_extracted ?? data.chunks ?? 0;
-      const observations: UploadObservation[] = Array.isArray(data.observations) ? data.observations : [];
+
+      const filename: string    = data.filename ?? file.name;
       const { display: displayName } = parseSource(filename);
-      setMessages((prev) => [
-        ...prev,
-        { id: `upload-${Date.now()}`, role: 'assistant', content: '', uploadResult: { filename, displayName, chunks, observations } },
-      ]);
+      const documentId: string | null = data.id ?? data.document_id ?? null;
+      const msgId = `upload-${Date.now()}`;
+
+      // If the backend already finished synchronously, show the full result immediately
+      if (data.extracted === true || (data.chunks_created != null && data.chunks_created > 0)) {
+        const chunks = data.chunks_created ?? data.chunks ?? 0;
+        const observations: UploadObservation[] = Array.isArray(data.observations) ? data.observations : [];
+        setMessages((prev) => [...prev, {
+          id: msgId, role: 'assistant', content: '',
+          uploadResult: { filename, displayName, chunks, observations },
+        }]);
+      } else {
+        // Show the "analysing…" processing message immediately
+        setMessages((prev) => [...prev, {
+          id: msgId, role: 'assistant', content: '',
+          uploadResult: { filename, displayName, documentId: documentId ?? undefined, processing: true, chunks: 0, observations: [] },
+        }]);
+        // Start polling if we have a document ID to check
+        if (documentId) startPolling(msgId, documentId, filename, displayName);
+      }
     } catch {
       showToastMsg('Upload failed. Please try again.', 'error');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  }, [showToastMsg]);
+  }, [showToastMsg, startPolling]);
 
   // ── Send message ───────────────────────────────────────────────────────────
 
