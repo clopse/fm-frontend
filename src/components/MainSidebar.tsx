@@ -204,7 +204,7 @@ export default function MainSidebar({
           {showProjects && (
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
               <Link
-                href="/projects/galway"
+                href="/projects"
                 className={`flex items-center px-4 py-3 rounded-lg transition-all duration-200 group ${
                   pathname.startsWith('/projects')
                     ? 'bg-blue-600 text-white shadow-lg'

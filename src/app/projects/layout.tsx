@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
 import { isAuthenticated } from '@/services/userService';
 import { userService } from '@/services/userService';
 import { isAdmin } from '@/lib/auth';
+
+const ACCESS_KEY   = 'access_token';
+const COOKIE_TOKEN = 'jmk_access_token';
+const COOKIE_USER  = 'jmk_user';
 
 export default function ProjectsLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -15,19 +20,31 @@ export default function ProjectsLayout({ children }: { children: React.ReactNode
   const [authorized, setAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // useEffect only runs in the browser — localStorage is guaranteed available here.
-    // Starting from null (not false) ensures the first synchronous render returns null
-    // silently rather than firing a redirect before the check has actually run.
     if (typeof window === 'undefined') return;
 
+    // ── Cross-subdomain hydration ─────────────────────────────────────────
+    // If this subdomain's localStorage is empty but the shared .jmkfacilities.ie
+    // cookie exists (set during login on the main domain), populate localStorage
+    // so the rest of the auth system works exactly as normal.
+    const cookieToken = Cookies.get(COOKIE_TOKEN);
+    const cookieUser  = Cookies.get(COOKIE_USER);
+
+    if (cookieToken && !localStorage.getItem(ACCESS_KEY)) {
+      localStorage.setItem(ACCESS_KEY, cookieToken);
+    }
+    if (cookieUser && !localStorage.getItem('user')) {
+      localStorage.setItem('user', cookieUser);
+    }
+
+    // ── Auth check ────────────────────────────────────────────────────────
     if (!isAuthenticated()) {
-      router.replace('/login?redirect=/projects/galway');
+      router.replace('/login?redirect=/projects');
       return;
     }
 
     const user = userService.getCurrentUser();
     if (!user || !isAdmin(user.role.toLowerCase())) {
-      // Authenticated but no admin rights — send to the main app, not login
+      // Valid session but no admin rights — send to main app, not login
       router.replace('/hotels');
       return;
     }

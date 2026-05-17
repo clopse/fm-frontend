@@ -1,8 +1,11 @@
+import Cookies from 'js-cookie';
 import { User, UserCreate, UserUpdate, LoginRequest, LoginResponse, TokenResponse, UserStats } from '../types/user';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '';
-const ACCESS_KEY = 'access_token';
-const REFRESH_KEY = 'refresh_token';
+const ACCESS_KEY   = 'access_token';
+const REFRESH_KEY  = 'refresh_token';
+const COOKIE_TOKEN = 'jmk_access_token';
+const COOKIE_USER  = 'jmk_user';
 
 // ─── JWT helpers ─────────────────────────────────────────────────────────────
 
@@ -25,22 +28,60 @@ function isTrainingPath(): boolean {
   return typeof window !== 'undefined' && window.location.pathname.includes('/training/');
 }
 
+// Leading-dot domain so the cookie is shared across all *.jmkfacilities.ie
+// subdomains. Returns undefined on localhost so the cookie still sets
+// (scoped to localhost) without throwing.
+function getCookieDomain(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return window.location.hostname.endsWith('jmkfacilities.ie')
+    ? '.jmkfacilities.ie'
+    : undefined;
+}
+
+function cookieOptions(expires?: Date): Cookies.CookieAttributes {
+  return {
+    domain:   getCookieDomain(),
+    path:     '/',
+    secure:   typeof window !== 'undefined' && window.location.protocol === 'https:',
+    sameSite: 'lax',
+    expires,
+  };
+}
+
+// ─── Storage helpers ──────────────────────────────────────────────────────────
+
 function getStoredTokens() {
   return {
-    access: localStorage.getItem(ACCESS_KEY),
+    access:  localStorage.getItem(ACCESS_KEY),
     refresh: localStorage.getItem(REFRESH_KEY),
   };
 }
 
 function storeTokens(accessToken: string, refreshToken: string): void {
-  localStorage.setItem(ACCESS_KEY, accessToken);
+  localStorage.setItem(ACCESS_KEY,  accessToken);
   localStorage.setItem(REFRESH_KEY, refreshToken);
+
+  // Mirror the access token in a cross-subdomain cookie
+  const exp     = getJwtExpiry(accessToken);
+  const expires = exp ? new Date(exp * 1000) : undefined;
+  Cookies.set(COOKIE_TOKEN, accessToken, cookieOptions(expires));
+}
+
+function storeUserCookie(user: User): void {
+  // Store minimal user data so subdomains can hydrate localStorage
+  Cookies.set(COOKIE_USER, JSON.stringify(user), cookieOptions(
+    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+  ));
 }
 
 function clearTokens(): void {
   localStorage.removeItem(ACCESS_KEY);
   localStorage.removeItem(REFRESH_KEY);
   localStorage.removeItem('user');
+
+  const opts = { domain: getCookieDomain(), path: '/' };
+  Cookies.remove(COOKIE_TOKEN, opts);
+  Cookies.remove(COOKIE_USER,  opts);
 }
 
 function redirectToLogin(): void {
@@ -48,21 +89,24 @@ function redirectToLogin(): void {
   window.location.href = `/login?redirect=${encodeURIComponent(redirect)}`;
 }
 
-// ─── Standalone exports (used by RouteGuard) ─────────────────────────────────
+// ─── Standalone exports (used by RouteGuard & projects layout) ────────────────
 
 export async function silentRefresh(): Promise<boolean> {
   const { refresh } = getStoredTokens();
   if (!refresh) return false;
   try {
     const res = await fetch(`${API_BASE_URL}/api/users/auth/refresh`, {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refresh }),
+      body:    JSON.stringify({ refresh_token: refresh }),
     });
     if (!res.ok) return false;
     const data: TokenResponse = await res.json();
     storeTokens(data.access_token, data.refresh_token);
-    if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+      storeUserCookie(data.user);
+    }
     return true;
   } catch {
     return false;
@@ -121,8 +165,8 @@ async function classFetch<T>(endpoint: string, options?: RequestInit): Promise<T
 // ─── Result type for user creation with email status ─────────────────────────
 
 interface CreateUserResult {
-  user: User;
-  emailSent: boolean;
+  user:        User;
+  emailSent:   boolean;
   emailError?: string;
 }
 
@@ -131,9 +175,9 @@ interface CreateUserResult {
 class UserService {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
     const res = await fetch(`${API_BASE_URL}/api/users/auth/login`, {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials),
+      body:    JSON.stringify(credentials),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -142,6 +186,7 @@ class UserService {
     const data: TokenResponse = await res.json();
     storeTokens(data.access_token, data.refresh_token);
     localStorage.setItem('user', JSON.stringify(data.user));
+    storeUserCookie(data.user);
     return data;
   }
 
@@ -149,7 +194,7 @@ class UserService {
     try {
       await classFetch('/api/users/auth/logout', { method: 'POST' });
     } finally {
-      clearTokens();
+      clearTokens(); // clears localStorage + both cookies
     }
   }
 
@@ -163,16 +208,16 @@ class UserService {
   }
 
   async getUsers(filters?: {
-    role?: string;
-    hotel?: string;
+    role?:   string;
+    hotel?:  string;
     status?: string;
     search?: string;
   }): Promise<User[]> {
     const params = new URLSearchParams();
-    if (filters?.role) params.append('role', filters.role);
+    if (filters?.role)                           params.append('role',   filters.role);
     if (filters?.hotel && filters.hotel !== 'All Hotels') params.append('hotel', filters.hotel);
-    if (filters?.status) params.append('status', filters.status);
-    if (filters?.search) params.append('search', filters.search);
+    if (filters?.status)                         params.append('status', filters.status);
+    if (filters?.search)                         params.append('search', filters.search);
     return classFetch<User[]>(`/api/users/?${params}`);
   }
 
@@ -183,10 +228,10 @@ class UserService {
   async createUser(userData: UserCreate, sendWelcomeEmail = false): Promise<CreateUserResult> {
     const user = await classFetch<User>('/api/users/', {
       method: 'POST',
-      body: JSON.stringify(userData),
+      body:   JSON.stringify(userData),
     });
 
-    let emailSent = false;
+    let emailSent  = false;
     let emailError: string | undefined;
 
     if (sendWelcomeEmail) {
@@ -204,7 +249,7 @@ class UserService {
   async updateUser(userId: string, userData: UserUpdate): Promise<User> {
     return classFetch<User>(`/api/users/${userId}`, {
       method: 'PUT',
-      body: JSON.stringify(userData),
+      body:   JSON.stringify(userData),
     });
   }
 
@@ -215,7 +260,7 @@ class UserService {
   async resetPassword(userId: string, newPassword: string): Promise<void> {
     await classFetch(`/api/users/${userId}/reset-password`, {
       method: 'POST',
-      body: JSON.stringify({ email: '', new_password: newPassword }),
+      body:   JSON.stringify({ email: '', new_password: newPassword }),
     });
   }
 
