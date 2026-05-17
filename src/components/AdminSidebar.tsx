@@ -11,6 +11,7 @@ import {
   Settings,
   GraduationCap,
   Building,
+  FolderOpen,
   X,
   Menu
 } from 'lucide-react';
@@ -21,10 +22,10 @@ interface AdminSidebarProps {
   onClose?: () => void;
 }
 
-export default function AdminSidebar({ 
-  isMobile = false, 
+export default function AdminSidebar({
+  isMobile = false,
   isOpen = true,
-  onClose 
+  onClose
 }: AdminSidebarProps) {
   const pathname = usePathname();
 
@@ -78,14 +79,14 @@ export default function AdminSidebar({
       href: '/admin/settings',
       icon: Settings,
       description: 'Platform configuration'
-    }
+    },
   ];
 
   return (
     <>
       {/* Mobile Overlay */}
       {isMobile && isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden"
           onClick={onClose}
         />
@@ -94,25 +95,23 @@ export default function AdminSidebar({
       {/* Sidebar */}
       <div className={`
         fixed top-0 left-0 h-full bg-slate-900 text-white z-50 transition-transform duration-300 ease-in-out w-72
-        ${isMobile 
-          ? `${isOpen ? 'translate-x-0' : '-translate-x-full'}` 
+        ${isMobile
+          ? `${isOpen ? 'translate-x-0' : '-translate-x-full'}`
           : `${isOpen ? 'translate-x-0' : '-translate-x-full'}`
         }
       `}>
-        
+
         {/* Header with Logo and Toggle Button */}
         <div className="p-6 border-b border-slate-700">
           <div className="flex items-center justify-between">
-            {/* JMK Logo */}
             <Link href="/hotels" onClick={handleLogoClick}>
-              <img 
-                src="/jmk-logo.png" 
-                alt="JMK Logo" 
+              <img
+                src="/jmk-logo.png"
+                alt="JMK Logo"
                 className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
               />
             </Link>
-            
-            {/* Hide/Close Button */}
+
             <button
               onClick={onClose}
               className="p-2 text-gray-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
@@ -128,15 +127,15 @@ export default function AdminSidebar({
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
-            
+
             return (
-              <Link 
+              <Link
                 key={item.href}
-                href={item.href} 
+                href={item.href}
                 className={`
                   flex items-center px-4 py-3 rounded-lg mb-2 transition-all duration-200 group
-                  ${active 
-                    ? 'bg-blue-600 text-white shadow-lg' 
+                  ${active
+                    ? 'bg-blue-600 text-white shadow-lg'
                     : 'text-gray-300 hover:bg-slate-700 hover:text-white'
                   }
                 `}
@@ -152,6 +151,45 @@ export default function AdminSidebar({
               </Link>
             );
           })}
+
+          {/* Projects — separated by a faint rule */}
+          <div className="mt-2 pt-2 border-t border-slate-700/50">
+            <Link
+              href="/projects"
+              className={`
+                flex items-center px-4 py-3 rounded-lg mb-2 transition-all duration-200 group
+                ${isActive('/projects')
+                  ? 'bg-blue-600 text-white shadow-lg'
+                  : 'text-gray-300 hover:bg-slate-700 hover:text-white'
+                }
+              `}
+              onClick={() => isMobile && onClose && onClose()}
+            >
+              <FolderOpen className={`w-5 h-5 mr-3 ${isActive('/projects') ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
+              <div className="flex-1">
+                <div className="font-medium flex items-center gap-2">
+                  Projects
+                  <span
+                    style={{
+                      fontSize: 10,
+                      backgroundColor: '#c96442',
+                      color: '#fff',
+                      padding: '2px 6px',
+                      borderRadius: 4,
+                      fontWeight: 700,
+                      letterSpacing: '0.05em',
+                      lineHeight: 1,
+                    }}
+                  >
+                    NEW
+                  </span>
+                </div>
+                <div className={`text-xs mt-0.5 ${isActive('/projects') ? 'text-blue-100' : 'text-gray-500 group-hover:text-gray-300'}`}>
+                  Development &amp; Pre-Opening
+                </div>
+              </div>
+            </Link>
+          </div>
         </nav>
 
         {/* Footer */}
