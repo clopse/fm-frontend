@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Plus, Building2, LogOut, User, MessageSquarePlus, X } from 'lucide-react';
+import { Plus, Building2, LogOut, User, MessageSquarePlus, X, FileText, Upload } from 'lucide-react';
 import { userService } from '@/services/userService';
 import { apiFetch } from '@/utils/api';
 import styles from '@/styles/projects.module.css';
@@ -28,12 +28,23 @@ interface Conversation {
   updated_at?: string;
 }
 
+interface ProjectDocument {
+  id: string;
+  filename: string;
+  status: 'ready' | 'processing' | 'error';
+  created_at?: string;
+  chunks?: number;
+}
+
 interface ProjectsSidebarProps {
   // Conversation props (galway page only)
   activeConversationId?: string | null;
   onSelectConversation?: (id: string) => void;
   onNewConversation?: () => void;
   conversationRefreshKey?: number;
+  // Document props (galway page only)
+  documentRefreshKey?: number;
+  onUploadClick?: () => void;
   // Sidebar open/close
   isOpen?: boolean;
   isMobile?: boolean;
@@ -46,12 +57,12 @@ function timeAgo(iso: string): string {
   if (!iso) return '';
   const diff = Date.now() - new Date(iso).getTime();
   const s = Math.floor(diff / 1000);
-  if (s < 60)    return 'Just now';
+  if (s < 60)  return 'Just now';
   const m = Math.floor(s / 60);
-  if (m < 60)    return `${m}m ago`;
+  if (m < 60)  return `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24)    return `${h}h ago`;
-  if (h < 48)    return 'Yesterday';
+  if (h < 24)  return `${h}h ago`;
+  if (h < 48)  return 'Yesterday';
   return `${Math.floor(h / 24)}d ago`;
 }
 
@@ -60,6 +71,25 @@ function convTitle(c: Conversation): string {
   return raw.length > 60 ? raw.slice(0, 57) + '…' : raw;
 }
 
+// Strip drawing-reference prefixes (starts-with-digit tokens) and show the
+// last 3 meaningful underscore-separated parts — same logic as parseSource
+// in galway/page.tsx but without the "chunk N" suffix stripping.
+function cleanFilename(raw: string): string {
+  const extMatch = raw.match(/(\.\w+)$/);
+  const ext  = extMatch ? extMatch[1] : '';
+  const base = ext ? raw.slice(0, -ext.length) : raw;
+  const parts = base.split('_');
+  const meaningful = parts.filter((p) => p.length > 1 && !/^\d/.test(p));
+  const kept = meaningful.length > 4 ? meaningful.slice(-3) : meaningful;
+  return (kept.length > 0 ? kept.join(' ') : base) + ext;
+}
+
+const STATUS_COLOR: Record<ProjectDocument['status'], string> = {
+  ready:      '#4ade80',
+  processing: '#fbbf24',
+  error:      '#f87171',
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ProjectsSidebar({
@@ -67,28 +97,30 @@ export default function ProjectsSidebar({
   onSelectConversation,
   onNewConversation,
   conversationRefreshKey = 0,
+  documentRefreshKey = 0,
+  onUploadClick,
   isOpen = true,
   isMobile = false,
   onClose,
 }: ProjectsSidebarProps) {
   const pathname = usePathname();
   const user = userService.getCurrentUser();
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [documents,     setDocuments]     = useState<ProjectDocument[]>([]);
 
   const onGalwayPage = pathname.startsWith('/projects/galway');
+
+  // ── Conversation fetch ────────────────────────────────────────────────────
 
   const fetchConversations = useCallback(async () => {
     try {
       const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations`);
       if (!res.ok) return;
       const data = await res.json();
-      const list: Conversation[] = Array.isArray(data)
-        ? data
-        : (data.conversations ?? []);
+      const list: Conversation[] = Array.isArray(data) ? data : (data.conversations ?? []);
       setConversations(list.slice(0, 20));
-    } catch {
-      // silent
-    }
+    } catch { /* silent */ }
   }, []);
 
   useEffect(() => {
@@ -96,7 +128,33 @@ export default function ProjectsSidebar({
     fetchConversations();
   }, [onGalwayPage, conversationRefreshKey, fetchConversations]);
 
-  // On mobile: close sidebar after navigation actions
+  // ── Document fetch (with 30-second auto-refresh) ──────────────────────────
+
+  const fetchDocuments = useCallback(async () => {
+    try {
+      const res = await apiFetch(`${BRAIN_URL}/projects/galway/documents`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const list: ProjectDocument[] = Array.isArray(data) ? data : (data.documents ?? []);
+      // Sort newest first, cap at 10
+      const sorted = [...list].sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return tb - ta;
+      });
+      setDocuments(sorted.slice(0, 10));
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => {
+    if (!onGalwayPage) { setDocuments([]); return; }
+    fetchDocuments();
+    const interval = setInterval(fetchDocuments, 30_000);
+    return () => clearInterval(interval);
+  }, [onGalwayPage, documentRefreshKey, fetchDocuments]);
+
+  // ── Mobile close-on-nav helpers ───────────────────────────────────────────
+
   const handleSelectConversation = (id: string) => {
     onSelectConversation?.(id);
     if (isMobile) onClose?.();
@@ -107,35 +165,25 @@ export default function ProjectsSidebar({
     if (isMobile) onClose?.();
   };
 
-  // ── Layout: mobile = fixed overlay, desktop = in-flow with width transition ──
+  // ── Layout ────────────────────────────────────────────────────────────────
 
   const asideStyle: React.CSSProperties = isMobile
     ? {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        zIndex: 50,
-        height: '100vh',
-        width: 260,
-        minWidth: 260,
+        position: 'fixed', top: 0, left: 0, zIndex: 50,
+        height: '100vh', width: 260, minWidth: 260,
         transform: isOpen ? 'translateX(0)' : 'translateX(-260px)',
         transition: 'transform 0.25s ease',
         backgroundColor: 'var(--pr-sidebar-bg)',
-        display: 'flex',
-        flexDirection: 'column',
-        userSelect: 'none',
-        borderRight: '1px solid var(--pr-sidebar-border)',
+        display: 'flex', flexDirection: 'column',
+        userSelect: 'none', borderRight: '1px solid var(--pr-sidebar-border)',
       }
     : {
-        width: isOpen ? 260 : 0,
-        minWidth: isOpen ? 260 : 0,
+        width: isOpen ? 260 : 0, minWidth: isOpen ? 260 : 0,
         overflow: 'hidden',
         transition: 'width 0.25s ease, min-width 0.25s ease',
         backgroundColor: 'var(--pr-sidebar-bg)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        userSelect: 'none',
+        display: 'flex', flexDirection: 'column',
+        height: '100vh', userSelect: 'none',
         borderRight: isOpen ? '1px solid var(--pr-sidebar-border)' : 'none',
       };
 
@@ -145,16 +193,12 @@ export default function ProjectsSidebar({
       {isMobile && isOpen && (
         <div
           onClick={onClose}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            zIndex: 49,
-          }}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 49 }}
         />
       )}
 
       <aside className={styles.sidebar} style={asideStyle}>
+
         {/* ── Brand ─────────────────────────────────────── */}
         <div style={{ padding: '22px 18px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
@@ -163,18 +207,11 @@ export default function ProjectsSidebar({
               JMK Projects
             </span>
           </div>
-          {/* Close button — always shown so desktop users can collapse too */}
           <button
             onClick={onClose}
             title="Close sidebar"
             className={styles.logoutButton}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: 5, borderRadius: 5,
-              color: 'var(--pr-section-label)',
-              display: 'flex', alignItems: 'center',
-              fontFamily: 'inherit', flexShrink: 0,
-            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 5, borderRadius: 5, color: 'var(--pr-section-label)', display: 'flex', alignItems: 'center', fontFamily: 'inherit', flexShrink: 0 }}
           >
             <X size={15} />
           </button>
@@ -184,13 +221,7 @@ export default function ProjectsSidebar({
         <div style={{ padding: '0 8px 10px', flexShrink: 0 }}>
           <button
             className={styles.sidebarButton}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-              padding: '9px 12px', borderRadius: 8, border: 'none',
-              backgroundColor: 'transparent', color: 'var(--pr-nav-inactive)',
-              cursor: 'pointer', fontSize: 14, textAlign: 'left', fontFamily: 'inherit',
-              whiteSpace: 'nowrap',
-            }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', backgroundColor: 'transparent', color: 'var(--pr-nav-inactive)', cursor: 'pointer', fontSize: 14, textAlign: 'left', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
           >
             <Plus size={15} style={{ color: 'var(--pr-nav-icon)', flexShrink: 0 }} />
             New Project
@@ -200,15 +231,17 @@ export default function ProjectsSidebar({
         {/* ── Divider ───────────────────────────────────── */}
         <div style={{ height: 1, backgroundColor: 'var(--pr-divider)', margin: '0 14px 12px', flexShrink: 0 }} />
 
-        {/* ── Section label ─────────────────────────────── */}
+        {/* ── Active label ──────────────────────────────── */}
         <div style={{ padding: '0 20px 8px', flexShrink: 0 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--pr-section-label)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             Active
           </span>
         </div>
 
-        {/* ── Nav ───────────────────────────────────────── */}
+        {/* ── Scrollable nav ────────────────────────────── */}
         <nav style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
+
+          {/* Project links */}
           {PROJECTS.map(({ label, href, icon: Icon }) => {
             const active = pathname.startsWith(href);
             return (
@@ -219,8 +252,7 @@ export default function ProjectsSidebar({
                 onClick={() => isMobile && onClose?.()}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '9px 12px', borderRadius: 8,
-                  textDecoration: 'none', fontSize: 14,
+                  padding: '9px 12px', borderRadius: 8, textDecoration: 'none', fontSize: 14,
                   color: active ? 'var(--pr-text-primary)' : 'var(--pr-nav-inactive)',
                   backgroundColor: active ? 'var(--pr-nav-active-bg)' : 'transparent',
                   borderLeft: `2px solid ${active ? '#c96442' : 'transparent'}`,
@@ -235,6 +267,78 @@ export default function ProjectsSidebar({
             );
           })}
 
+          {/* ── Documents ─────────────────────────────── */}
+          {onGalwayPage && (
+            <div style={{ marginTop: 12 }}>
+              {/* Section header */}
+              <div style={{ padding: '6px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--pr-section-label)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  Documents
+                </span>
+                {onUploadClick && (
+                  <button
+                    onClick={onUploadClick}
+                    title="Upload document"
+                    className={styles.sidebarButton}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 4, color: 'var(--pr-nav-icon)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontFamily: 'inherit' }}
+                  >
+                    <Upload size={12} />
+                    Upload
+                  </button>
+                )}
+              </div>
+
+              {/* Document rows */}
+              {documents.length === 0 ? (
+                <div style={{ padding: '6px 14px 4px', fontSize: 12, color: 'var(--pr-section-label)', fontStyle: 'italic' }}>
+                  No documents yet
+                </div>
+              ) : (
+                documents.map((doc) => {
+                  const downloadHref = `${BRAIN_URL}/projects/galway/documents/${doc.id}/download`;
+                  return (
+                    <a
+                      key={doc.id}
+                      href={downloadHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.navItem}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 7,
+                        padding: '5px 12px', borderRadius: 8,
+                        textDecoration: 'none', marginBottom: 1, minHeight: 32,
+                      }}
+                    >
+                      <FileText size={12} style={{ color: 'var(--pr-nav-icon)', flexShrink: 0 }} />
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, color: 'var(--pr-nav-inactive)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                          {cleanFilename(doc.filename)}
+                        </div>
+                        {doc.created_at && (
+                          <div style={{ fontSize: 10, color: 'var(--pr-section-label)', marginTop: 1 }}>
+                            {timeAgo(doc.created_at)}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Status dot */}
+                      <span
+                        className={doc.status === 'processing' ? styles.docPulse : undefined}
+                        title={doc.status}
+                        style={{
+                          width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                          backgroundColor: STATUS_COLOR[doc.status] ?? '#555',
+                          display: 'inline-block',
+                        }}
+                      />
+                    </a>
+                  );
+                })
+              )}
+            </div>
+          )}
+
           {/* ── Conversation history ───────────────────── */}
           {onGalwayPage && (
             <div style={{ marginTop: 10 }}>
@@ -247,13 +351,7 @@ export default function ProjectsSidebar({
                     onClick={handleNewConversation}
                     title="New conversation"
                     className={styles.sidebarButton}
-                    style={{
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      padding: '2px 4px', borderRadius: 4,
-                      color: 'var(--pr-nav-icon)',
-                      display: 'flex', alignItems: 'center', gap: 4,
-                      fontSize: 11, fontFamily: 'inherit',
-                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 4, color: 'var(--pr-nav-icon)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontFamily: 'inherit' }}
                   >
                     <MessageSquarePlus size={13} />
                     New
@@ -317,6 +415,7 @@ export default function ProjectsSidebar({
             </button>
           </div>
         </div>
+
       </aside>
     </>
   );

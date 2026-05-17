@@ -422,6 +422,7 @@ export default function GalwayPage() {
   const [toast,          setToast]          = useState<Toast | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [convRefreshKey, setConvRefreshKey] = useState(0);
+  const [docRefreshKey,  setDocRefreshKey]  = useState(0);
   const [theme,          setTheme]          = useState<Theme>('dark');
   const [sidebarOpen,    setSidebarOpen]    = useState(true);
   const [isMobile,       setIsMobile]       = useState(false);
@@ -551,6 +552,8 @@ export default function GalwayPage() {
       setMessages((prev) => prev.map((m) =>
         m.id === msgId ? { ...m, uploadResult: { filename, displayName, ...result } } : m,
       ));
+      // Refresh the sidebar documents list when processing succeeds
+      if (!result.error) setDocRefreshKey((k) => k + 1);
     };
 
     const interval = setInterval(async () => {
@@ -615,6 +618,7 @@ export default function GalwayPage() {
           id: msgId, role: 'assistant', content: '',
           uploadResult: { filename, displayName, chunks, observations },
         }]);
+        setDocRefreshKey((k) => k + 1);
       } else {
         // Show the "analysing…" processing message immediately
         setMessages((prev) => [...prev, {
@@ -725,6 +729,8 @@ export default function GalwayPage() {
         onSelectConversation={loadConversation}
         onNewConversation={handleNewConversation}
         conversationRefreshKey={convRefreshKey}
+        documentRefreshKey={docRefreshKey}
+        onUploadClick={() => fileInputRef.current?.click()}
         isOpen={sidebarOpen}
         isMobile={isMobile}
         onClose={() => setSidebarOpen(false)}
