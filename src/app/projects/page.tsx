@@ -32,45 +32,46 @@ const PROJECTS: Project[] = [
   },
 ];
 
-// ─── Badge configs ────────────────────────────────────────────────────────────
+// ─── Badge configs — light palette ───────────────────────────────────────────
 
 const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
-  'Pre-Opening': { bg: 'rgba(245,158,11,0.18)',  text: '#fbbf24' },
-  'Open':        { bg: 'rgba(34,197,94,0.18)',   text: '#4ade80' },
-  'Planning':    { bg: 'rgba(156,163,175,0.18)', text: '#9ca3af' },
-  'On Hold':     { bg: 'rgba(239,68,68,0.18)',   text: '#f87171' },
+  'Pre-Opening': { bg: '#fef3c7', text: '#d97706' },
+  'Open':        { bg: '#dcfce7', text: '#16a34a' },
+  'Planning':    { bg: '#f1f5f9', text: '#64748b' },
+  'On Hold':     { bg: '#fee2e2', text: '#dc2626' },
 };
 
 const SUSTAINABILITY_BADGE: Record<string, { bg: string; text: string }> = {
-  'LEED Gold':        { bg: 'rgba(34,197,94,0.15)',   text: '#4ade80' },
-  'LEED Platinum':    { bg: 'rgba(34,197,94,0.22)',   text: '#86efac' },
-  'LEED Silver':      { bg: 'rgba(34,197,94,0.10)',   text: '#6ee7b7' },
-  'BREEAM Excellent': { bg: 'rgba(56,189,248,0.15)',  text: '#7dd3fc' },
-  'BREEAM Outstanding':{ bg: 'rgba(56,189,248,0.22)', text: '#bae6fd' },
-  'BREEAM Very Good': { bg: 'rgba(56,189,248,0.10)',  text: '#93c5fd' },
+  'LEED Gold':          { bg: '#dcfce7', text: '#16a34a' },
+  'LEED Platinum':      { bg: '#bbf7d0', text: '#15803d' },
+  'LEED Silver':        { bg: '#d1fae5', text: '#059669' },
+  'BREEAM Excellent':   { bg: '#e0f2fe', text: '#0284c7' },
+  'BREEAM Outstanding': { bg: '#bae6fd', text: '#0369a1' },
+  'BREEAM Very Good':   { bg: '#dbeafe', text: '#1d4ed8' },
 };
 
 function defaultBadge(label: string): { bg: string; text: string } {
-  return SUSTAINABILITY_BADGE[label] ?? { bg: 'rgba(156,163,175,0.15)', text: '#9ca3af' };
+  return SUSTAINABILITY_BADGE[label] ?? { bg: '#f1f5f9', text: '#64748b' };
 }
 
 // ─── Project card ─────────────────────────────────────────────────────────────
 
 function ProjectCard({ project, onClick }: { project: Project; onClick: () => void }) {
-  const statusStyle = STATUS_BADGE[project.status] ?? { bg: 'rgba(156,163,175,0.18)', text: '#9ca3af' };
+  const statusStyle = STATUS_BADGE[project.status] ?? { bg: '#f1f5f9', text: '#64748b' };
 
   return (
     <div
       onClick={onClick}
       className={styles.projectCard}
       style={{
-        backgroundColor: '#252525',
+        backgroundColor: '#ffffff',
         borderRadius: 16,
         padding: '22px 24px',
         display: 'flex',
         flexDirection: 'column',
         gap: 0,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+        border: '1px solid #e5e7eb',
         position: 'relative',
         userSelect: 'none',
       }}
@@ -100,50 +101,32 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
           margin: '0 0 5px',
           fontSize: 18,
           fontWeight: 700,
-          color: '#f0f0f0',
+          color: '#0f172a',
           letterSpacing: '-0.02em',
           lineHeight: 1.25,
-          paddingRight: 100, // keep clear of status badge
+          paddingRight: 100,
         }}
       >
         {project.name}
       </p>
 
       {/* Brand · Country */}
-      <p
-        style={{
-          margin: '0 0 18px',
-          fontSize: 13,
-          color: '#666',
-          lineHeight: 1.4,
-        }}
-      >
+      <p style={{ margin: '0 0 18px', fontSize: 13, color: '#64748b', lineHeight: 1.4 }}>
         {project.brand}
-        <span style={{ margin: '0 6px', color: '#404040' }}>·</span>
+        <span style={{ margin: '0 6px', color: '#cbd5e1' }}>·</span>
         {project.country}
       </p>
 
       {/* Divider */}
-      <div style={{ height: 1, backgroundColor: '#333', marginBottom: 16 }} />
+      <div style={{ height: 1, backgroundColor: '#e5e7eb', marginBottom: 16 }} />
 
       {/* Bottom row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        {/* Room count */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 5,
-            fontSize: 13,
-            color: '#888',
-            marginRight: 4,
-          }}
-        >
-          <BedDouble size={14} style={{ color: '#555' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#64748b', marginRight: 4 }}>
+          <BedDouble size={14} style={{ color: '#94a3b8' }} />
           {project.rooms} rooms
         </div>
 
-        {/* Sustainability pills */}
         {project.sustainability.map((label) => {
           const badge = defaultBadge(label);
           return (
@@ -191,22 +174,22 @@ export default function ProjectsPage() {
   }, []);
 
   return (
-    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', height: '100%' }}>
-      {/* ── Sidebar ─────────────────────────────────── */}
+    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', height: '100%', backgroundColor: '#f9fafb' }}>
+      {/* Sidebar */}
       <ProjectsSidebar
         isOpen={sidebarOpen}
         isMobile={isMobile}
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* ── Main content ────────────────────────────── */}
+      {/* Main content */}
       <main
         style={{
           flex: 1,
           overflowY: 'auto',
           padding: isMobile ? '24px 20px' : '44px 48px',
           scrollbarWidth: 'thin',
-          scrollbarColor: '#333 transparent',
+          scrollbarColor: '#d1d5db transparent',
         }}
       >
         {/* Header */}
@@ -225,14 +208,14 @@ export default function ProjectsPage() {
                 margin: '0 0 6px',
                 fontSize: 28,
                 fontWeight: 700,
-                color: 'var(--pr-text-primary)',
+                color: '#0f172a',
                 letterSpacing: '-0.03em',
                 lineHeight: 1.2,
               }}
             >
               Projects
             </h1>
-            <p style={{ margin: 0, fontSize: 14, color: 'var(--pr-text-muted)' }}>
+            <p style={{ margin: 0, fontSize: 14, color: '#6b7280' }}>
               Development &amp; Pre-Opening
             </p>
           </div>
@@ -265,10 +248,10 @@ export default function ProjectsPage() {
             alignItems: 'center',
             gap: 8,
             padding: '11px 20px',
-            border: '1px dashed #2e2e2e',
+            border: '1px dashed #d1d5db',
             borderRadius: 12,
             backgroundColor: 'transparent',
-            color: '#444',
+            color: '#9ca3af',
             cursor: 'pointer',
             fontSize: 14,
             fontFamily: 'inherit',

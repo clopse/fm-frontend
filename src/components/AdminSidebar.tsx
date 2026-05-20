@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
-  ShieldCheck,
   FileSearch,
   Receipt,
   Settings,
@@ -23,176 +22,134 @@ interface AdminSidebarProps {
   onClose?: () => void;
 }
 
+const BADGE: React.CSSProperties = {
+  fontSize: 10,
+  backgroundColor: '#c96442',
+  color: '#fff',
+  padding: '2px 6px',
+  borderRadius: 4,
+  fontWeight: 700,
+  letterSpacing: '0.05em',
+  lineHeight: 1,
+};
+
 export default function AdminSidebar({
   isMobile = false,
   isOpen = true,
-  onClose
+  onClose,
 }: AdminSidebarProps) {
   const pathname = usePathname();
 
-  const handleLogoClick = () => {
-    if (isMobile && onClose) onClose();
-  };
-
-  const isActive = (path: string) => {
-    return pathname === path || pathname.startsWith(path);
-  };
+  const isActive = (path: string) => pathname === path || pathname.startsWith(path);
 
   const navItems = [
-    {
-      label: 'Dashboard',
-      href: '/hotels',
-      icon: LayoutDashboard,
-      description: 'Main admin overview'
-    },
-    {
-      label: 'Audit Files',
-      href: '/admin/audit',
-      icon: FileSearch,
-      description: 'Historical audit documents'
-    },
-    {
-      label: 'Utilities Manager',
-      href: '/admin/utilities',
-      icon: Receipt,
-      description: 'View and manage utility bills'
-    },
-    {
-      label: 'User Management',
-      href: '/admin/users',
-      icon: Users,
-      description: 'Manage all system users'
-    },
-    {
-      label: 'Courses & Training',
-      href: '/admin/training',
-      icon: GraduationCap,
-      description: 'Manage staff training'
-    },
-    {
-      label: 'Hotel Management',
-      href: '/admin/hotels',
-      icon: Building,
-      description: 'Manage hotel properties'
-    },
-    {
-      label: 'System Settings',
-      href: '/admin/settings',
-      icon: Settings,
-      description: 'Platform configuration'
-    },
-    {
-      label: 'Rules & Standards',
-      href: '/rules',
-      icon: ScrollText,
-      description: 'Group rules and brand standards'
-    },
+    { label: 'Dashboard',        href: '/hotels',           icon: LayoutDashboard, description: 'Main admin overview' },
+    { label: 'Audit Files',      href: '/admin/audit',      icon: FileSearch,      description: 'Historical audit documents' },
+    { label: 'Utilities Manager',href: '/admin/utilities',  icon: Receipt,         description: 'View and manage utility bills' },
+    { label: 'User Management',  href: '/admin/users',      icon: Users,           description: 'Manage all system users' },
+    { label: 'Courses & Training',href: '/admin/training',  icon: GraduationCap,   description: 'Manage staff training' },
+    { label: 'Hotel Management', href: '/admin/hotels',     icon: Building,        description: 'Manage hotel properties' },
+    { label: 'System Settings',  href: '/admin/settings',   icon: Settings,        description: 'Platform configuration' },
   ];
+
+  const linkClass = (active: boolean) =>
+    `flex items-center px-4 py-3 rounded-lg mb-2 transition-all duration-200 group ${
+      active
+        ? 'bg-blue-50 text-blue-700'
+        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+    }`;
+
+  const iconClass = (active: boolean) =>
+    `w-5 h-5 mr-3 ${active ? 'text-blue-600' : 'text-gray-400 group-hover:text-gray-900'}`;
+
+  const descClass = (active: boolean) =>
+    `text-xs mt-0.5 ${active ? 'text-blue-500' : 'text-gray-500 group-hover:text-gray-600'}`;
 
   return (
     <>
-      {/* Mobile Overlay */}
       {isMobile && isOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 lg:hidden" onClick={onClose} />
       )}
 
-      {/* Sidebar */}
       <div className={`
-        fixed top-0 left-0 h-full bg-slate-900 text-white z-50 transition-transform duration-300 ease-in-out w-72
-        ${isMobile
-          ? `${isOpen ? 'translate-x-0' : '-translate-x-full'}`
-          : `${isOpen ? 'translate-x-0' : '-translate-x-full'}`
-        }
+        fixed top-0 left-0 h-full bg-white border-r border-gray-200 text-gray-900 z-50
+        transition-transform duration-300 ease-in-out w-72
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-
-        {/* Header with Logo and Toggle Button */}
-        <div className="p-6 border-b border-slate-700">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <Link href="/hotels" onClick={handleLogoClick}>
+            <Link href="/hotels" onClick={() => isMobile && onClose?.()}>
               <img
                 src="/jmk-logo.png"
                 alt="JMK Logo"
                 className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
               />
             </Link>
-
             <button
               onClick={onClose}
-              className="p-2 text-gray-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-              title={isMobile ? "Close Menu" : "Hide Sidebar"}
+              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              title={isMobile ? 'Close Menu' : 'Hide Sidebar'}
             >
               {isMobile ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="mt-6 px-4 flex-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.href);
-
+        {/* Nav */}
+        <nav className="mt-6 px-4 overflow-y-auto">
+          {navItems.map(({ label, href, icon: Icon, description }) => {
+            const active = isActive(href);
             return (
               <Link
-                key={item.href}
-                href={item.href}
-                className={`
-                  flex items-center px-4 py-3 rounded-lg mb-2 transition-all duration-200 group
-                  ${active
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-gray-300 hover:bg-slate-700 hover:text-white'
-                  }
-                `}
-                onClick={() => isMobile && onClose && onClose()}
+                key={href}
+                href={href}
+                className={linkClass(active)}
+                onClick={() => isMobile && onClose?.()}
               >
-                <Icon className={`w-5 h-5 mr-3 ${active ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
+                <Icon className={iconClass(active)} />
                 <div className="flex-1">
-                  <div className="font-medium">{item.label}</div>
-                  <div className={`text-xs mt-0.5 ${active ? 'text-blue-100' : 'text-gray-500 group-hover:text-gray-300'}`}>
-                    {item.description}
-                  </div>
+                  <div className="font-medium">{label}</div>
+                  <div className={descClass(active)}>{description}</div>
                 </div>
               </Link>
             );
           })}
 
-          {/* Projects — separated by a faint rule */}
-          <div className="mt-2 pt-2 border-t border-slate-700/50">
+          {/* Projects + Rules — separated section */}
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            {/* Projects */}
             <Link
               href="/projects"
-              className={`
-                flex items-center px-4 py-3 rounded-lg mb-2 transition-all duration-200 group
-                ${isActive('/projects')
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'text-gray-300 hover:bg-slate-700 hover:text-white'
-                }
-              `}
-              onClick={() => isMobile && onClose && onClose()}
+              className={linkClass(isActive('/projects'))}
+              onClick={() => isMobile && onClose?.()}
             >
-              <FolderOpen className={`w-5 h-5 mr-3 ${isActive('/projects') ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
+              <FolderOpen className={iconClass(isActive('/projects'))} />
               <div className="flex-1">
                 <div className="font-medium flex items-center gap-2">
                   Projects
-                  <span
-                    style={{
-                      fontSize: 10,
-                      backgroundColor: '#c96442',
-                      color: '#fff',
-                      padding: '2px 6px',
-                      borderRadius: 4,
-                      fontWeight: 700,
-                      letterSpacing: '0.05em',
-                      lineHeight: 1,
-                    }}
-                  >
-                    NEW
-                  </span>
+                  <span style={BADGE}>NEW</span>
                 </div>
-                <div className={`text-xs mt-0.5 ${isActive('/projects') ? 'text-blue-100' : 'text-gray-500 group-hover:text-gray-300'}`}>
+                <div className={descClass(isActive('/projects'))}>
                   Development &amp; Pre-Opening
+                </div>
+              </div>
+            </Link>
+
+            {/* Rules & Standards */}
+            <Link
+              href="/rules"
+              className={linkClass(isActive('/rules'))}
+              onClick={() => isMobile && onClose?.()}
+            >
+              <ScrollText className={iconClass(isActive('/rules'))} />
+              <div className="flex-1">
+                <div className="font-medium flex items-center gap-2">
+                  Rules &amp; Standards
+                  <span style={BADGE}>NEW</span>
+                </div>
+                <div className={descClass(isActive('/rules'))}>
+                  Group rules and brand standards
                 </div>
               </div>
             </Link>
@@ -200,10 +157,10 @@ export default function AdminSidebar({
         </nav>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-700">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white">
           <div className="text-center">
-            <div className="text-xs text-gray-400">JMK Facilities Management</div>
-            <div className="text-xs text-gray-500 mt-1">Admin Portal v2.0</div>
+            <div className="text-xs text-gray-500">JMK Facilities Management</div>
+            <div className="text-xs text-gray-400 mt-1">Admin Portal v2.0</div>
           </div>
         </div>
       </div>
