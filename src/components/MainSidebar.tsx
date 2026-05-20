@@ -10,7 +10,6 @@ import {
   FileText,
   ClipboardList,
   FolderOpen,
-  ScrollText,
   X,
   Menu,
   Home,
@@ -200,26 +199,6 @@ export default function MainSidebar({
               pathname={pathname}
             />
           ))}
-
-          <div className="mt-2 pt-2 border-t border-slate-700/50">
-            <Link
-              href="/rules"
-              className={`flex items-center px-4 py-3 rounded-lg mb-2 transition-all duration-200 group ${
-                pathname.startsWith('/rules')
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'text-gray-300 hover:bg-slate-700 hover:text-white'
-              }`}
-              onClick={handleClick}
-            >
-              <ScrollText className={`w-5 h-5 mr-3 ${pathname.startsWith('/rules') ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
-              <div className="flex-1">
-                <div className="font-medium">Rules & Standards</div>
-                <div className={`text-xs mt-0.5 ${pathname.startsWith('/rules') ? 'text-blue-100' : 'text-gray-500 group-hover:text-gray-300'}`}>
-                  Group rules and brand standards
-                </div>
-              </div>
-            </Link>
-          </div>
         </nav>
 
         <div className="p-4 border-t border-slate-700">
