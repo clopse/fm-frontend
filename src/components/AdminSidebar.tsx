@@ -12,6 +12,7 @@ import {
   GraduationCap,
   Building,
   FolderOpen,
+  ScrollText,
   X,
   Menu
 } from 'lucide-react';
@@ -79,6 +80,12 @@ export default function AdminSidebar({
       href: '/admin/settings',
       icon: Settings,
       description: 'Platform configuration'
+    },
+    {
+      label: 'Rules & Standards',
+      href: '/rules',
+      icon: ScrollText,
+      description: 'Group rules and brand standards'
     },
   ];
 

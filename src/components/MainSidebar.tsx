@@ -10,6 +10,7 @@ import {
   FileText,
   ClipboardList,
   FolderOpen,
+  ScrollText,
   X,
   Menu,
   Home,
@@ -43,7 +44,6 @@ export default function MainSidebar({
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
 
   const currentUser = userService.getCurrentUser();
-  const showProjects = currentUser ? isAdmin(currentUser.role.toLowerCase()) : false;
 
   const navItems = useMemo(() => [
     {
@@ -201,55 +201,25 @@ export default function MainSidebar({
             />
           ))}
 
-          {showProjects && (
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-              <Link
-                href="/projects"
-                className={`flex items-center px-4 py-3 rounded-lg transition-all duration-200 group ${
-                  pathname.startsWith('/projects')
-                    ? 'bg-blue-600 text-white shadow-lg'
-                    : 'text-gray-300 hover:bg-slate-700 hover:text-white'
-                }`}
-                onClick={handleClick}
-              >
-                <FolderOpen
-                  className={`w-5 h-5 mr-3 ${
-                    pathname.startsWith('/projects')
-                      ? 'text-white'
-                      : 'text-gray-400 group-hover:text-white'
-                  }`}
-                />
-                <div className="flex-1">
-                  <div className="font-medium flex items-center gap-2">
-                    Projects
-                    <span
-                      style={{
-                        fontSize: 10,
-                        backgroundColor: '#c96442',
-                        color: '#fff',
-                        padding: '2px 6px',
-                        borderRadius: 4,
-                        fontWeight: 700,
-                        letterSpacing: '0.05em',
-                        lineHeight: 1,
-                      }}
-                    >
-                      NEW
-                    </span>
-                  </div>
-                  <div
-                    className={`text-xs mt-0.5 ${
-                      pathname.startsWith('/projects')
-                        ? 'text-blue-100'
-                        : 'text-gray-500 group-hover:text-gray-300'
-                    }`}
-                  >
-                    AI project workspace
-                  </div>
+          <div className="mt-2 pt-2 border-t border-slate-700/50">
+            <Link
+              href="/rules"
+              className={`flex items-center px-4 py-3 rounded-lg mb-2 transition-all duration-200 group ${
+                pathname.startsWith('/rules')
+                  ? 'bg-blue-600 text-white shadow-lg'
+                  : 'text-gray-300 hover:bg-slate-700 hover:text-white'
+              }`}
+              onClick={handleClick}
+            >
+              <ScrollText className={`w-5 h-5 mr-3 ${pathname.startsWith('/rules') ? 'text-white' : 'text-gray-400 group-hover:text-white'}`} />
+              <div className="flex-1">
+                <div className="font-medium">Rules & Standards</div>
+                <div className={`text-xs mt-0.5 ${pathname.startsWith('/rules') ? 'text-blue-100' : 'text-gray-500 group-hover:text-gray-300'}`}>
+                  Group rules and brand standards
                 </div>
-              </Link>
-            </div>
-          )}
+              </div>
+            </Link>
+          </div>
         </nav>
 
         <div className="p-4 border-t border-slate-700">

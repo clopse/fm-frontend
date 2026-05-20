@@ -35,6 +35,7 @@ interface ProjectDocument {
   doc_type?: string;
   chunks_created?: number;
   created_at?: string;
+  observations?: { type?: string; text?: string }[];
 }
 
 interface ProjectsSidebarProps {
@@ -348,8 +349,11 @@ export default function ProjectsSidebar({
                 documents.map((doc) => {
                   // Download endpoint takes filename in the path, not document_id
                   const downloadHref = `${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(doc.filename)}/download`;
-                  // List response has extracted:bool, not a status string
-                  const status = doc.extracted ? 'ready' : 'processing';
+                  // List response has extracted:bool; observations array signals error state
+                  const hasError = Array.isArray(doc.observations) &&
+                    doc.observations.some((o) => o.type === 'error');
+                  const status: 'ready' | 'processing' | 'error' =
+                    hasError ? 'error' : doc.extracted ? 'ready' : 'processing';
                   return (
                     <a
                       key={doc.document_id}

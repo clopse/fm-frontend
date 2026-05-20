@@ -267,7 +267,7 @@ function UploadResultBubble({ result, onRetry }: { result: UploadResult; onRetry
         <JmkAvatar />
         <div style={{ paddingTop: 4 }}>
           <p style={{ margin: '0 0 10px', fontSize: 15, color: 'var(--pr-text-secondary)', lineHeight: 1.55 }}>
-            ⏱️ Processing is taking longer than expected. The file was uploaded successfully — try asking a question about it, or re-upload if needed.
+            Processing is taking longer than expected. The document will be ready shortly — refresh the page to check.
           </p>
           {onRetry && (
             <button
@@ -562,14 +562,14 @@ export default function GalwayPage() {
   // ── Upload ─────────────────────────────────────────────────────────────────
 
   // Poll /documents/{id}/status every 3 s.
-  // Stops on status "ready" | "error", or after 20 attempts (60 s).
+  // Stops on status "ready" | "error", or after 40 attempts (120 s).
   const startPolling = useCallback((
     msgId: string,
     documentId: string,
     filename: string,
     displayName: string,
   ) => {
-    const MAX = 20; // 20 × 3 s = 60 seconds
+    const MAX = 40; // 40 × 3 s = 120 seconds
     let attempts = 0;
 
     const resolve = (result: Omit<UploadResult, 'filename' | 'displayName'>) => {
