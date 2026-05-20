@@ -174,7 +174,7 @@ export default function ProjectsPage() {
   }, []);
 
   return (
-    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', height: '100%', backgroundColor: '#f9fafb' }}>
+    <div data-theme="light" style={{ display: 'flex', flex: 1, overflow: 'hidden', height: '100%', backgroundColor: '#f9fafb' }}>
       {/* Sidebar */}
       <ProjectsSidebar
         isOpen={sidebarOpen}
