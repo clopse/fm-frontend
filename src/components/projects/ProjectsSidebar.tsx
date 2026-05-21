@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Plus, Building2, LogOut, User, MessageSquarePlus, X, FileText, Upload } from 'lucide-react';
+import { Plus, Building2, LogOut, User, MessageSquarePlus, X, FileText, Upload, MoreVertical, Pencil, Info, Trash2, Check } from 'lucide-react';
 import { userService } from '@/services/userService';
 import { apiFetch } from '@/utils/api';
 import styles from '@/styles/projects.module.css';
@@ -44,6 +44,7 @@ interface ProjectsSidebarProps {
   onSelectConversation?: (id: string) => void;
   onNewConversation?: () => void;
   conversationRefreshKey?: number;
+  onConversationDeleted?: (id: string) => void;
   // Document props (galway page only)
   documentRefreshKey?: number;
   onUploadClick?: () => void;
@@ -51,6 +52,11 @@ interface ProjectsSidebarProps {
   isOpen?: boolean;
   isMobile?: boolean;
   onClose?: () => void;
+}
+
+interface ConversationInfo {
+  messageCount: number;
+  sources: string[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -99,6 +105,7 @@ export default function ProjectsSidebar({
   onSelectConversation,
   onNewConversation,
   conversationRefreshKey = 0,
+  onConversationDeleted,
   documentRefreshKey = 0,
   onUploadClick,
   isOpen = true,
@@ -110,6 +117,17 @@ export default function ProjectsSidebar({
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [documents,     setDocuments]     = useState<ProjectDocument[]>([]);
+
+  // Per-row transient UI state. Only one of menu/rename/info/delete is active per row.
+  const [openMenuId,       setOpenMenuId]       = useState<string | null>(null);
+  const [renamingId,       setRenamingId]       = useState<string | null>(null);
+  const [renameValue,      setRenameValue]      = useState('');
+  const [renameSaving,     setRenameSaving]     = useState(false);
+  const [infoId,           setInfoId]           = useState<string | null>(null);
+  const [infoCache,        setInfoCache]        = useState<Record<string, ConversationInfo>>({});
+  const [infoLoading,      setInfoLoading]      = useState<string | null>(null);
+  const [confirmDeleteId,  setConfirmDeleteId]  = useState<string | null>(null);
+  const [deletePending,    setDeletePending]    = useState(false);
 
   const onGalwayPage = pathname.startsWith('/projects/galway');
 
@@ -162,6 +180,106 @@ export default function ProjectsSidebar({
     onNewConversation?.();
     if (isMobile) onClose?.();
   };
+
+  // ── Conversation row actions ──────────────────────────────────────────────
+
+  const startRename = (conv: Conversation) => {
+    setRenameValue(conv.title ?? conv.first_message ?? '');
+    setRenamingId(conv.id);
+    setOpenMenuId(null);
+    setInfoId(null);
+  };
+
+  const cancelRename = () => {
+    setRenamingId(null);
+    setRenameValue('');
+  };
+
+  const saveRename = async (convId: string) => {
+    const trimmed = renameValue.trim();
+    if (!trimmed) { cancelRename(); return; }
+    setRenameSaving(true);
+    try {
+      const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations/${convId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: trimmed }),
+      });
+      if (res.ok) {
+        setConversations((prev) => prev.map((c) =>
+          c.id === convId ? { ...c, title: trimmed } : c,
+        ));
+      }
+    } catch { /* silent — input stays, user can retry or cancel */ }
+    finally {
+      setRenameSaving(false);
+      setRenamingId(null);
+      setRenameValue('');
+    }
+  };
+
+  const openInfo = async (convId: string) => {
+    setInfoId(convId);
+    setOpenMenuId(null);
+    if (infoCache[convId]) return;
+    setInfoLoading(convId);
+    try {
+      const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations/${convId}`);
+      if (res.ok) {
+        const data = await res.json();
+        const msgs: { sources?: string[] }[] = Array.isArray(data.messages) ? data.messages : [];
+        const sourceSet = new Set<string>();
+        msgs.forEach((m) => {
+          if (Array.isArray(m.sources)) {
+            m.sources.forEach((s) => {
+              // Strip "chunk N" suffix to dedupe at the file level
+              const filename = s.replace(/\s+chunk\s+\d+.*$/i, '').trim();
+              if (filename) sourceSet.add(filename);
+            });
+          }
+        });
+        setInfoCache((prev) => ({
+          ...prev,
+          [convId]: { messageCount: msgs.length, sources: Array.from(sourceSet) },
+        }));
+      }
+    } catch { /* silent — popover will show '—' */ }
+    finally {
+      setInfoLoading(null);
+    }
+  };
+
+  const handleDelete = async (convId: string) => {
+    setDeletePending(true);
+    try {
+      const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations/${convId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok || res.status === 204) {
+        setConversations((prev) => prev.filter((c) => c.id !== convId));
+        onConversationDeleted?.(convId);
+      }
+    } catch { /* silent */ }
+    finally {
+      setDeletePending(false);
+      setConfirmDeleteId(null);
+    }
+  };
+
+  // Click-outside: closes menu + info popover. Rename and delete-confirm have
+  // their own explicit cancel buttons so they stay open until the user dismisses.
+  useEffect(() => {
+    if (openMenuId === null && infoId === null) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-conv-popover]') && !target.closest('[data-conv-menu-trigger]')) {
+        setOpenMenuId(null);
+        setInfoId(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openMenuId, infoId]);
 
   // ── Layout ────────────────────────────────────────────────────────────────
 
@@ -293,30 +411,267 @@ export default function ProjectsSidebar({
                 </div>
               ) : (
                 conversations.map((conv) => {
-                  const isActive = activeConversationId === conv.id;
-                  const ts = conv.updated_at ?? conv.created_at ?? '';
+                  const isActive          = activeConversationId === conv.id;
+                  const ts                = conv.updated_at ?? conv.created_at ?? '';
+                  const isRenaming        = renamingId       === conv.id;
+                  const isMenuOpen        = openMenuId       === conv.id;
+                  const isInfoOpen        = infoId           === conv.id;
+                  const isConfirmDelete   = confirmDeleteId  === conv.id;
+                  const info              = infoCache[conv.id];
+                  const isInfoLoading     = infoLoading      === conv.id;
+
                   return (
-                    <button
+                    <div
                       key={conv.id}
-                      onClick={() => handleSelectConversation(conv.id)}
-                      className={isActive ? undefined : styles.navItem}
+                      className={styles.convRow}
                       style={{
-                        display: 'block', width: '100%', textAlign: 'left',
-                        padding: '7px 12px', borderRadius: 8, border: 'none',
+                        display: 'flex', alignItems: 'center',
+                        padding: '7px 12px', borderRadius: 8,
                         backgroundColor: isActive ? 'var(--pr-nav-active-bg)' : 'transparent',
                         borderLeft: `2px solid ${isActive ? '#c96442' : 'transparent'}`,
-                        cursor: 'pointer', fontFamily: 'inherit', marginBottom: 1,
+                        marginBottom: 1, minHeight: 38,
                       }}
                     >
-                      <div style={{ fontSize: 12, color: isActive ? 'var(--pr-text-primary)' : 'var(--pr-nav-inactive)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
-                        {convTitle(conv)}
-                      </div>
-                      {ts && (
-                        <div style={{ fontSize: 10, color: 'var(--pr-section-label)', marginTop: 2 }}>
-                          {timeAgo(ts)}
+                      {isConfirmDelete ? (
+                        // ── Delete confirm takes over the row ────────────
+                        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 6 }}>
+                          <span style={{ fontSize: 11, color: 'var(--pr-text-secondary)', lineHeight: 1.3 }}>
+                            Delete this conversation?
+                          </span>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button
+                              onClick={() => handleDelete(conv.id)}
+                              disabled={deletePending}
+                              style={{
+                                flex: 1, padding: '4px 8px', fontSize: 11, fontWeight: 600,
+                                backgroundColor: '#ef4444', color: '#fff',
+                                border: 'none', borderRadius: 6,
+                                cursor: deletePending ? 'default' : 'pointer',
+                                fontFamily: 'inherit', opacity: deletePending ? 0.6 : 1,
+                              }}
+                            >
+                              {deletePending ? '…' : 'Confirm'}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              disabled={deletePending}
+                              style={{
+                                flex: 1, padding: '4px 8px', fontSize: 11,
+                                backgroundColor: 'transparent', color: 'var(--pr-text-muted)',
+                                border: '1px solid var(--pr-input-border)', borderRadius: 6,
+                                cursor: deletePending ? 'default' : 'pointer',
+                                fontFamily: 'inherit',
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
+                      ) : isRenaming ? (
+                        // ── Inline rename input ──────────────────────────
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, width: '100%' }}>
+                          <input
+                            type="text"
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter')  { e.preventDefault(); saveRename(conv.id); }
+                              if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
+                            }}
+                            autoFocus
+                            disabled={renameSaving}
+                            style={{
+                              flex: 1, minWidth: 0,
+                              padding: '3px 6px', fontSize: 12,
+                              border: '1px solid var(--pr-input-border)', borderRadius: 4,
+                              backgroundColor: 'var(--pr-input-bg)', color: 'var(--pr-text-primary)',
+                              fontFamily: 'inherit', outline: 'none',
+                            }}
+                          />
+                          <button
+                            onClick={() => saveRename(conv.id)}
+                            disabled={renameSaving}
+                            title="Save"
+                            style={{
+                              background: 'none', border: 'none', padding: 2,
+                              color: 'var(--pr-text-primary)',
+                              cursor: renameSaving ? 'default' : 'pointer',
+                              display: 'flex', alignItems: 'center', fontFamily: 'inherit',
+                            }}
+                          >
+                            <Check size={13} />
+                          </button>
+                          <button
+                            onClick={cancelRename}
+                            disabled={renameSaving}
+                            title="Cancel"
+                            style={{
+                              background: 'none', border: 'none', padding: 2,
+                              color: 'var(--pr-text-muted)',
+                              cursor: renameSaving ? 'default' : 'pointer',
+                              display: 'flex', alignItems: 'center', fontFamily: 'inherit',
+                            }}
+                          >
+                            <X size={13} />
+                          </button>
+                        </div>
+                      ) : (
+                        // ── Default row: title + time + 3-dot menu ───────
+                        <>
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => handleSelectConversation(conv.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleSelectConversation(conv.id);
+                              }
+                            }}
+                            style={{
+                              flex: 1, minWidth: 0, cursor: 'pointer',
+                              paddingRight: 4,
+                            }}
+                          >
+                            <div style={{ fontSize: 12, color: isActive ? 'var(--pr-text-primary)' : 'var(--pr-nav-inactive)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
+                              {convTitle(conv)}
+                            </div>
+                            {ts && (
+                              <div style={{ fontSize: 10, color: 'var(--pr-section-label)', marginTop: 2 }}>
+                                {timeAgo(ts)}
+                              </div>
+                            )}
+                          </div>
+
+                          <button
+                            data-conv-menu-trigger
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(isMenuOpen ? null : conv.id);
+                              setInfoId(null);
+                            }}
+                            title="More options"
+                            aria-label="Conversation actions"
+                            className={`${styles.convMenuButton} ${(isMenuOpen || isInfoOpen) ? styles.convMenuButtonOpen : ''}`}
+                            style={{
+                              flexShrink: 0,
+                              background: 'none', border: 'none',
+                              padding: 4, marginLeft: 4, borderRadius: 4,
+                              cursor: 'pointer', color: 'var(--pr-text-muted)',
+                              display: 'flex', alignItems: 'center',
+                              fontFamily: 'inherit',
+                            }}
+                          >
+                            <MoreVertical size={14} />
+                          </button>
+
+                          {isMenuOpen && (
+                            <div
+                              data-conv-popover
+                              role="menu"
+                              style={{
+                                position: 'absolute', top: '100%', right: 6, marginTop: 2,
+                                backgroundColor: '#ffffff',
+                                border: '1px solid var(--pr-border)',
+                                borderRadius: 8,
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                padding: 4, zIndex: 20, minWidth: 130,
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => startRename(conv)}
+                                className={styles.convMenuItem}
+                                role="menuitem"
+                              >
+                                <Pencil size={12} />
+                                <span>Rename</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openInfo(conv.id)}
+                                className={styles.convMenuItem}
+                                role="menuitem"
+                              >
+                                <Info size={12} />
+                                <span>Info</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setConfirmDeleteId(conv.id);
+                                  setOpenMenuId(null);
+                                  setInfoId(null);
+                                }}
+                                className={`${styles.convMenuItem} ${styles.convMenuItemDanger}`}
+                                role="menuitem"
+                              >
+                                <Trash2 size={12} />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
+
+                          {isInfoOpen && (
+                            <div
+                              data-conv-popover
+                              style={{
+                                position: 'absolute', top: '100%', right: 6, marginTop: 2,
+                                backgroundColor: '#ffffff',
+                                border: '1px solid var(--pr-border)',
+                                borderRadius: 8,
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                padding: '10px 12px', zIndex: 20, width: 220,
+                                fontSize: 11, color: 'var(--pr-text-primary)',
+                              }}
+                            >
+                              {isInfoLoading ? (
+                                <div style={{ color: 'var(--pr-text-muted)', textAlign: 'center', padding: 6 }}>
+                                  Loading…
+                                </div>
+                              ) : (
+                                <>
+                                  {conv.created_at && (
+                                    <div style={{ marginBottom: 6 }}>
+                                      <span style={{ color: 'var(--pr-text-muted)' }}>Created:</span>{' '}
+                                      <span>{new Date(conv.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                  )}
+                                  <div style={{ marginBottom: 8 }}>
+                                    <span style={{ color: 'var(--pr-text-muted)' }}>Messages:</span>{' '}
+                                    <span>{info?.messageCount ?? '—'}</span>
+                                  </div>
+                                  <div>
+                                    <div style={{ color: 'var(--pr-text-muted)', marginBottom: 4 }}>Sources cited:</div>
+                                    {info && info.sources.length > 0 ? (
+                                      <div style={{ maxHeight: 140, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                        {info.sources.map((s) => (
+                                          <div
+                                            key={s}
+                                            title={s}
+                                            style={{
+                                              fontSize: 10, lineHeight: 1.4,
+                                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                            }}
+                                          >
+                                            {cleanFilename(s)}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div style={{ fontSize: 10, color: 'var(--pr-text-muted)', fontStyle: 'italic' }}>
+                                        None
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </>
                       )}
-                    </button>
+                    </div>
                   );
                 })
               )}

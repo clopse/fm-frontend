@@ -594,6 +594,9 @@ export default function GalwayPage() {
         onSelectConversation={loadConversation}
         onNewConversation={handleNewConversation}
         conversationRefreshKey={convRefreshKey}
+        onConversationDeleted={(id) => {
+          if (id === conversationId) handleNewConversation();
+        }}
         documentRefreshKey={docRefreshKey}
         onUploadClick={() => fileInputRef.current?.click()}
         isOpen={sidebarOpen}

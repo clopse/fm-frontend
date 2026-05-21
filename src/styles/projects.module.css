@@ -13,6 +13,61 @@
   color: var(--pr-text-primary) !important;
 }
 
+/* ── Conversation row + 3-dot menu reveal ─────────────────── */
+
+.convRow {
+  position: relative;
+  transition: background-color 0.12s ease;
+}
+
+.convRow:hover {
+  background-color: var(--pr-nav-hover-bg);
+}
+
+.convMenuButton {
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+}
+
+.convRow:hover .convMenuButton,
+.convMenuButton.convMenuButtonOpen {
+  opacity: 1;
+}
+
+.convMenuButton:hover {
+  background-color: var(--pr-nav-hover-bg) !important;
+  color: var(--pr-text-primary) !important;
+}
+
+.convMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: var(--pr-text-primary);
+  transition: background-color 0.1s ease;
+}
+
+.convMenuItem:hover {
+  background-color: var(--pr-nav-hover-bg);
+}
+
+.convMenuItemDanger {
+  color: #ef4444;
+}
+
+.convMenuItemDanger:hover {
+  background-color: rgba(239, 68, 68, 0.08);
+}
+
 .sidebarButton:hover {
   background-color: var(--pr-nav-hover-bg) !important;
   color: var(--pr-text-primary) !important;
