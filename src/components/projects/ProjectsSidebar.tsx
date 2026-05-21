@@ -26,6 +26,8 @@ interface Conversation {
   first_message?: string;
   created_at?: string;
   updated_at?: string;
+  message_count?: number;
+  documents?: string[];
 }
 
 interface ProjectDocument {
@@ -54,10 +56,6 @@ interface ProjectsSidebarProps {
   onClose?: () => void;
 }
 
-interface ConversationInfo {
-  messageCount: number;
-  sources: string[];
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -124,8 +122,6 @@ export default function ProjectsSidebar({
   const [renameValue,      setRenameValue]      = useState('');
   const [renameSaving,     setRenameSaving]     = useState(false);
   const [infoId,           setInfoId]           = useState<string | null>(null);
-  const [infoCache,        setInfoCache]        = useState<Record<string, ConversationInfo>>({});
-  const [infoLoading,      setInfoLoading]      = useState<string | null>(null);
   const [confirmDeleteId,  setConfirmDeleteId]  = useState<string | null>(null);
   const [deletePending,    setDeletePending]    = useState(false);
 
@@ -206,11 +202,11 @@ export default function ProjectsSidebar({
         body: JSON.stringify({ title: trimmed }),
       });
       if (res.ok) {
-        setConversations((prev) => prev.map((c) =>
-          c.id === convId ? { ...c, title: trimmed } : c,
-        ));
+        // Refresh the list so we pick up whatever the backend returned for
+        // updated_at, etc., not just the title we typed.
+        fetchConversations();
       }
-    } catch { /* silent — input stays, user can retry or cancel */ }
+    } catch { /* silent — user can retry */ }
     finally {
       setRenameSaving(false);
       setRenamingId(null);
@@ -218,35 +214,10 @@ export default function ProjectsSidebar({
     }
   };
 
-  const openInfo = async (convId: string) => {
+  // Info has no async work — message_count and documents are on the list row.
+  const openInfo = (convId: string) => {
     setInfoId(convId);
     setOpenMenuId(null);
-    if (infoCache[convId]) return;
-    setInfoLoading(convId);
-    try {
-      const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations/${convId}`);
-      if (res.ok) {
-        const data = await res.json();
-        const msgs: { sources?: string[] }[] = Array.isArray(data.messages) ? data.messages : [];
-        const sourceSet = new Set<string>();
-        msgs.forEach((m) => {
-          if (Array.isArray(m.sources)) {
-            m.sources.forEach((s) => {
-              // Strip "chunk N" suffix to dedupe at the file level
-              const filename = s.replace(/\s+chunk\s+\d+.*$/i, '').trim();
-              if (filename) sourceSet.add(filename);
-            });
-          }
-        });
-        setInfoCache((prev) => ({
-          ...prev,
-          [convId]: { messageCount: msgs.length, sources: Array.from(sourceSet) },
-        }));
-      }
-    } catch { /* silent — popover will show '—' */ }
-    finally {
-      setInfoLoading(null);
-    }
   };
 
   const handleDelete = async (convId: string) => {
@@ -417,8 +388,6 @@ export default function ProjectsSidebar({
                   const isMenuOpen        = openMenuId       === conv.id;
                   const isInfoOpen        = infoId           === conv.id;
                   const isConfirmDelete   = confirmDeleteId  === conv.id;
-                  const info              = infoCache[conv.id];
-                  const isInfoLoading     = infoLoading      === conv.id;
 
                   return (
                     <div
@@ -626,47 +595,39 @@ export default function ProjectsSidebar({
                                 fontSize: 11, color: 'var(--pr-text-primary)',
                               }}
                             >
-                              {isInfoLoading ? (
-                                <div style={{ color: 'var(--pr-text-muted)', textAlign: 'center', padding: 6 }}>
-                                  Loading…
+                              {conv.created_at && (
+                                <div style={{ marginBottom: 6 }}>
+                                  <span style={{ color: 'var(--pr-text-muted)' }}>Created:</span>{' '}
+                                  <span>{new Date(conv.created_at).toLocaleDateString()}</span>
                                 </div>
-                              ) : (
-                                <>
-                                  {conv.created_at && (
-                                    <div style={{ marginBottom: 6 }}>
-                                      <span style={{ color: 'var(--pr-text-muted)' }}>Created:</span>{' '}
-                                      <span>{new Date(conv.created_at).toLocaleDateString()}</span>
-                                    </div>
-                                  )}
-                                  <div style={{ marginBottom: 8 }}>
-                                    <span style={{ color: 'var(--pr-text-muted)' }}>Messages:</span>{' '}
-                                    <span>{info?.messageCount ?? '—'}</span>
-                                  </div>
-                                  <div>
-                                    <div style={{ color: 'var(--pr-text-muted)', marginBottom: 4 }}>Sources cited:</div>
-                                    {info && info.sources.length > 0 ? (
-                                      <div style={{ maxHeight: 140, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                        {info.sources.map((s) => (
-                                          <div
-                                            key={s}
-                                            title={s}
-                                            style={{
-                                              fontSize: 10, lineHeight: 1.4,
-                                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                                            }}
-                                          >
-                                            {cleanFilename(s)}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <div style={{ fontSize: 10, color: 'var(--pr-text-muted)', fontStyle: 'italic' }}>
-                                        None
-                                      </div>
-                                    )}
-                                  </div>
-                                </>
                               )}
+                              <div style={{ marginBottom: 8 }}>
+                                <span style={{ color: 'var(--pr-text-muted)' }}>Messages:</span>{' '}
+                                <span>{conv.message_count ?? '—'}</span>
+                              </div>
+                              <div>
+                                <div style={{ color: 'var(--pr-text-muted)', marginBottom: 4 }}>Documents referenced:</div>
+                                {conv.documents && conv.documents.length > 0 ? (
+                                  <div style={{ maxHeight: 140, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    {conv.documents.map((d) => (
+                                      <div
+                                        key={d}
+                                        title={d}
+                                        style={{
+                                          fontSize: 10, lineHeight: 1.4,
+                                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                        }}
+                                      >
+                                        {cleanFilename(d)}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div style={{ fontSize: 10, color: 'var(--pr-text-muted)', fontStyle: 'italic' }}>
+                                    None
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
                         </>
