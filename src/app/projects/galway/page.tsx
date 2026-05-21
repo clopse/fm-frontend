@@ -18,23 +18,12 @@ const BRAIN_URL = process.env.NEXT_PUBLIC_BRAIN_URL || 'https://api.jmkfacilitie
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface UploadObservation {
-  type: 'confirm' | 'flag' | 'info';
-  rule_ref: string | null;
-  text: string;
-  confirm_key: string | null;
-  confirm_value: string | null;
-}
-
 interface UploadResult {
-  filename: string;
-  displayName: string;
-  documentId?: string;   // returned by upload; used for polling
-  processing?: boolean;  // true while backend is still extracting
-  duplicate?: boolean;   // file already exists and is ready — no polling needed
-  error?: string;        // set on polling timeout
-  chunks: number;
-  observations: UploadObservation[];
+  filename: string;       // backend safe_name — used for download URL
+  displayName: string;    // original file.name — what we show in chat
+  textPreview?: string;   // first slice of extracted text from the new sync contract
+  errorDetail?: string;   // backend `detail` from a 400 — shown in red
+  loading?: boolean;      // true while the synchronous upload is in flight
 }
 
 interface Message {
@@ -44,6 +33,10 @@ interface Message {
   sources?: string[];
   uploadResult?: UploadResult;
 }
+
+type UploadAction = 'none' | 'pending' | 'confirming' | 'done';
+
+const AWAITING_PREFIX = '[AWAITING_SAVE_CONFIRMATION]';
 
 interface Toast {
   message: string;
@@ -109,190 +102,54 @@ function SourcePill({ filename, display }: { filename: string; display: string }
   );
 }
 
-// ─── Upload result components ─────────────────────────────────────────────────
+// ─── Upload result component ──────────────────────────────────────────────────
 
-function UploadObservationRow({ obs }: { obs: UploadObservation }) {
-  const [confirming, setConfirming] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
-
-  const icon   = obs.type === 'flag' ? '🔴' : obs.type === 'confirm' ? '🟡' : 'ℹ️';
-  const suffix = obs.rule_ref ? ` (${obs.rule_ref})` : '';
-
-  const handleConfirm = async () => {
-    if (!obs.confirm_key) return;
-    setConfirming(true);
-    try {
-      const res = await apiFetch(`${BRAIN_URL}/projects/galway/confirm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: obs.confirm_key, value: obs.confirm_value, confirmed_by: 'user' }),
-      });
-      if (!res.ok) throw new Error();
-      setConfirmed(true);
-    } catch {
-      // silent
-    } finally {
-      setConfirming(false);
-    }
-  };
-
-  return (
-    <div style={{ fontSize: 14, color: 'var(--pr-text-secondary)', lineHeight: 1.55 }}>
-      <span>{icon} {obs.text}{suffix}</span>
-      {obs.type === 'confirm' && (
-        <div style={{ marginTop: 7, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          {confirmed ? (
-            <span style={{ fontSize: 13, color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}>
-              ✅ Confirmed in project brain
-            </span>
-          ) : (
-            <>
-              <button
-                onClick={handleConfirm}
-                disabled={confirming}
-                style={{
-                  padding: '4px 14px', borderRadius: 9999,
-                  border: '1px solid rgba(74,222,128,0.35)',
-                  backgroundColor: 'rgba(74,222,128,0.08)',
-                  color: '#4ade80', fontSize: 12,
-                  cursor: confirming ? 'default' : 'pointer',
-                  fontFamily: 'inherit', opacity: confirming ? 0.6 : 1,
-                  transition: 'opacity 0.15s',
-                }}
-              >
-                {confirming ? 'Confirming…' : 'Yes, correct'}
-              </button>
-              <button
-                style={{
-                  padding: '4px 14px', borderRadius: 9999,
-                  border: '1px solid var(--pr-input-border)',
-                  backgroundColor: 'transparent',
-                  color: 'var(--pr-text-muted)', fontSize: 12,
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}
-              >
-                No, change it
-              </button>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function UploadProcessingBubble({ displayName }: { displayName: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
-      <JmkAvatar />
-      <div style={{ flex: 1, paddingTop: 4 }}>
-        <div style={{ fontSize: 15, color: 'var(--pr-text-secondary)', lineHeight: 1.5, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-          <span>
-            📄 <span style={{ color: 'var(--pr-text-primary)', fontWeight: 500 }}>{displayName}</span>
-            {' '}received — analysing document
-          </span>
-          <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
-            <span className={styles.dot} />
-            <span className={styles.dot} />
-            <span className={styles.dot} />
-          </span>
-        </div>
-        {/* Indeterminate progress bar */}
-        <div style={{ position: 'relative', marginTop: 10, height: 2, backgroundColor: 'var(--pr-input-bg)', borderRadius: 1, overflow: 'hidden' }}>
-          <div className={styles.progressBar} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function UploadResultBubble({ result, onRetry }: { result: UploadResult; onRetry?: () => void }) {
-  if (result.processing) {
-    return <UploadProcessingBubble displayName={result.displayName} />;
-  }
-
-  if (result.duplicate) {
+function UploadResultBubble({ result }: { result: UploadResult }) {
+  // Loading — synchronous extraction in progress
+  if (result.loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
         <JmkAvatar />
         <div style={{ flex: 1, paddingTop: 4 }}>
-          <div style={{ fontSize: 15, color: 'var(--pr-text-secondary)', lineHeight: 1.5 }}>
-            📄{' '}
-            <a
-              href={`${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(result.filename)}/download`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: 'var(--pr-text-secondary)', textDecoration: 'underline', textDecorationColor: 'var(--pr-border)', cursor: 'pointer' }}
-            >
-              {result.displayName}
-            </a>
-            {' '}is already uploaded and ready.
+          <div style={{ fontSize: 15, color: 'var(--pr-text-secondary)', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+              <span className={styles.dot} />
+            </span>
+            <span>Reading document…</span>
           </div>
-          <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--pr-text-muted)' }}>
-            Ask me anything about it.
+          <div style={{ position: 'relative', marginTop: 10, height: 2, backgroundColor: 'var(--pr-input-bg)', borderRadius: 1, overflow: 'hidden' }}>
+            <div className={styles.progressBar} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error — show the backend `detail` verbatim in red
+  if (result.errorDetail) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
+        <JmkAvatar />
+        <div style={{ paddingTop: 4 }}>
+          <p style={{ margin: 0, fontSize: 15, color: '#f87171', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+            {result.errorDetail}
           </p>
         </div>
       </div>
     );
   }
 
-  if (result.error === 'failed') {
-    return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
-        <JmkAvatar />
-        <div style={{ paddingTop: 4 }}>
-          <p style={{ margin: '0 0 10px', fontSize: 15, color: '#f87171', lineHeight: 1.5 }}>
-            ⚠️ Processing failed — please try uploading again
-          </p>
-          {onRetry && (
-            <button
-              onClick={onRetry}
-              style={{
-                padding: '6px 16px', borderRadius: 9999, border: 'none',
-                backgroundColor: 'rgba(239,68,68,0.15)', color: '#f87171',
-                fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              Re-upload file
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (result.error === 'timeout') {
-    return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
-        <JmkAvatar />
-        <div style={{ paddingTop: 4 }}>
-          <p style={{ margin: '0 0 10px', fontSize: 15, color: 'var(--pr-text-secondary)', lineHeight: 1.55 }}>
-            Processing is taking longer than expected. The document will be ready shortly — refresh the page to check.
-          </p>
-          {onRetry && (
-            <button
-              onClick={onRetry}
-              style={{
-                padding: '6px 16px', borderRadius: 9999,
-                border: '1px solid var(--pr-input-border)',
-                backgroundColor: 'transparent',
-                color: 'var(--pr-text-muted)', fontSize: 13,
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-            >
-              Re-upload file
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
+  // Success — "📄 [filename] ready to discuss. \n Preview: ..."
+  const preview = result.textPreview ?? '';
+  const previewSnippet = preview.length > 150 ? preview.slice(0, 150) + '…' : preview;
 
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
       <JmkAvatar />
       <div style={{ flex: 1, paddingTop: 4 }}>
-        <div style={{ fontSize: 15, color: 'var(--pr-text-secondary)', lineHeight: 1.5, marginBottom: result.observations.length > 0 ? 14 : 0 }}>
+        <div style={{ fontSize: 15, color: 'var(--pr-text-secondary)', lineHeight: 1.5 }}>
           📄{' '}
           <a
             href={`${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(result.filename)}/download`}
@@ -302,19 +159,13 @@ function UploadResultBubble({ result, onRetry }: { result: UploadResult; onRetry
           >
             {result.displayName}
           </a>
-          {' '}uploaded ({result.chunks} chunks)
+          {' '}ready to discuss.
         </div>
-        {result.observations.length === 0 && (
-          <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--pr-text-muted)' }}>
-            Ask me anything about this document.
+        {previewSnippet && (
+          <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--pr-text-muted)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+            <span style={{ fontWeight: 500, color: 'var(--pr-text-secondary)' }}>Preview:</span>{' '}
+            {previewSnippet}
           </p>
-        )}
-        {result.observations.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {result.observations.map((obs, i) => (
-              <UploadObservationRow key={i} obs={obs} />
-            ))}
-          </div>
         )}
       </div>
     </div>
@@ -353,9 +204,9 @@ function TypingIndicator() {
   );
 }
 
-function MessageBubble({ message, onRetry }: { message: Message; onRetry?: () => void }) {
+function MessageBubble({ message }: { message: Message }) {
   if (message.uploadResult) {
-    return <UploadResultBubble result={message.uploadResult} onRetry={onRetry} />;
+    return <UploadResultBubble result={message.uploadResult} />;
   }
 
   if (message.role === 'user') {
@@ -452,12 +303,12 @@ export default function GalwayPage() {
   const [theme,          setTheme]          = useState<Theme>('dark');
   const [sidebarOpen,    setSidebarOpen]    = useState(true);
   const [isMobile,       setIsMobile]       = useState(false);
+  const [uploadAction,   setUploadAction]   = useState<UploadAction>('none');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef    = useRef<HTMLTextAreaElement>(null);
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const toastTimer     = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pollingRefs    = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
 
   // ── Sidebar resize detection ───────────────────────────────────────────────
 
@@ -495,10 +346,8 @@ export default function GalwayPage() {
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    const refs = pollingRefs.current;
     return () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
-      refs.forEach((id) => clearInterval(id));
     };
   }, []);
 
@@ -561,65 +410,28 @@ export default function GalwayPage() {
 
   // ── Upload ─────────────────────────────────────────────────────────────────
 
-  // Poll /documents/{id}/status every 3 s.
-  // Stops on status "ready" | "error", or after 40 attempts (120 s).
-  const startPolling = useCallback((
-    msgId: string,
-    documentId: string,
-    filename: string,
-    displayName: string,
-  ) => {
-    const MAX = 40; // 40 × 3 s = 120 seconds
-    let attempts = 0;
-
-    const resolve = (result: Omit<UploadResult, 'filename' | 'displayName'>) => {
-      clearInterval(interval);
-      pollingRefs.current.delete(msgId);
-      setMessages((prev) => prev.map((m) =>
-        m.id === msgId ? { ...m, uploadResult: { filename, displayName, ...result } } : m,
-      ));
-      // Refresh the sidebar documents list when processing succeeds
-      if (!result.error) setDocRefreshKey((k) => k + 1);
-    };
-
-    const interval = setInterval(async () => {
-      attempts++;
-      try {
-        const res = await apiFetch(`${BRAIN_URL}/projects/galway/documents/${documentId}/status`);
-        if (res.ok) {
-          const data = await res.json();
-          const status: string = data.status ?? '';
-
-          if (status === 'ready' || data.extracted === true) {
-            resolve({
-              chunks: data.chunks_created ?? data.chunks ?? 0,
-              observations: Array.isArray(data.observations) ? data.observations : [],
-            });
-            return;
-          }
-
-          if (status === 'error') {
-            resolve({ chunks: 0, observations: [], error: 'failed' });
-            return;
-          }
-        }
-      } catch { /* network hiccup — keep polling */ }
-
-      if (attempts >= MAX) {
-        resolve({ chunks: 0, observations: [], error: 'timeout' });
-      }
-    }, 3000);
-
-    pollingRefs.current.set(msgId, interval);
-  }, []);
-
+  // Synchronous contract — POST returns {filename, text_preview, refreshed?} on 200
+  // or {detail} on 400. No polling. The "Reading document…" bubble stays in the
+  // chat until the response lands.
   const handleFileSelect = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Keep the user's original filename — backend safe_name is technical noise
+    const displayName = file.name;
+    const msgId = `upload-${Date.now()}`;
+
+    // Show loading bubble immediately
+    setMessages((prev) => [...prev, {
+      id: msgId, role: 'assistant', content: '',
+      uploadResult: { filename: file.name, displayName, loading: true },
+    }]);
     setUploading(true);
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('doc_type', 'auto');
+
     try {
       // Raw fetch — apiFetch injects Content-Type:application/json which breaks multipart
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
@@ -628,44 +440,53 @@ export default function GalwayPage() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
       });
-      if (!res.ok) throw new Error(`Status ${res.status}`);
-      const data = await res.json();
 
-      const filename: string    = data.filename ?? file.name;
-      const { display: displayName } = parseSource(filename);
-      const documentId: string | null = data.id ?? data.document_id ?? null;
-      const msgId = `upload-${Date.now()}`;
+      const data: { filename?: string; text_preview?: string; refreshed?: boolean; detail?: string } =
+        await res.json().catch(() => ({}));
 
-      // Duplicate: file already exists and is ready — skip spinner and polling
-      if (data.duplicate === true) {
-        setMessages((prev) => [...prev, {
-          id: msgId, role: 'assistant', content: '',
-          uploadResult: { filename, displayName, duplicate: true, chunks: 0, observations: [] },
-        }]);
-      } else if (data.extracted === true || (data.chunks_created != null && data.chunks_created > 0)) {
-        const chunks = data.chunks_created ?? data.chunks ?? 0;
-        const observations: UploadObservation[] = Array.isArray(data.observations) ? data.observations : [];
-        setMessages((prev) => [...prev, {
-          id: msgId, role: 'assistant', content: '',
-          uploadResult: { filename, displayName, chunks, observations },
-        }]);
-        setDocRefreshKey((k) => k + 1);
-      } else {
-        // Show the "analysing…" processing message immediately
-        setMessages((prev) => [...prev, {
-          id: msgId, role: 'assistant', content: '',
-          uploadResult: { filename, displayName, documentId: documentId ?? undefined, processing: true, chunks: 0, observations: [] },
-        }]);
-        // Start polling if we have a document ID to check
-        if (documentId) startPolling(msgId, documentId, filename, displayName);
+      if (res.status === 400) {
+        const errorDetail = data.detail ?? 'Upload rejected.';
+        setMessages((prev) => prev.map((m) =>
+          m.id === msgId
+            ? { ...m, uploadResult: { filename: file.name, displayName, errorDetail } }
+            : m,
+        ));
+        return;
+      }
+
+      if (!res.ok) {
+        setMessages((prev) => prev.map((m) =>
+          m.id === msgId
+            ? { ...m, uploadResult: { filename: file.name, displayName, errorDetail: 'Upload failed. Please try again.' } }
+            : m,
+        ));
+        return;
+      }
+
+      // 200 — synchronous success
+      const filename = data.filename ?? file.name; // backend safe_name → download URL
+      setMessages((prev) => prev.map((m) =>
+        m.id === msgId
+          ? { ...m, uploadResult: { filename, displayName, textPreview: data.text_preview } }
+          : m,
+      ));
+      setDocRefreshKey((k) => k + 1);
+      setUploadAction('pending');
+
+      if (data.refreshed === true) {
+        showToastMsg('Previous upload replaced with new version.', 'success');
       }
     } catch {
-      showToastMsg('Upload failed. Please try again.', 'error');
+      setMessages((prev) => prev.map((m) =>
+        m.id === msgId
+          ? { ...m, uploadResult: { filename: file.name, displayName, errorDetail: 'Upload failed. Please try again.' } }
+          : m,
+      ));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  }, [showToastMsg, startPolling]);
+  }, [showToastMsg]);
 
   // ── Send message ───────────────────────────────────────────────────────────
 
@@ -718,13 +539,26 @@ export default function GalwayPage() {
 
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const data = JSON.parse(rawText);
-        const reply: string = data.response ?? 'No response received.';
+        const rawReply: string = data.response ?? 'No response received.';
         const sources: string[] = Array.isArray(data.sources) ? data.sources : [];
+
+        // If the backend flags a mismatch on /save, strip the marker from the
+        // displayed text and switch the action buttons to confirm/cancel.
+        const awaitingConfirm = rawReply.startsWith(AWAITING_PREFIX);
+        const reply = awaitingConfirm
+          ? rawReply.slice(AWAITING_PREFIX.length).replace(/^[:\s]+/, '')
+          : rawReply;
 
         setMessages((prev) => [
           ...prev,
           { id: `a-${Date.now()}`, role: 'assistant', content: reply, ...(sources.length > 0 ? { sources } : {}) },
         ]);
+
+        if (awaitingConfirm) {
+          setUploadAction('confirming');
+        } else if (trimmed === '/save' || trimmed === '/discard' || trimmed === 'confirm') {
+          setUploadAction('done');
+        }
       } catch {
         setMessages((prev) => [
           ...prev,
@@ -810,11 +644,7 @@ export default function GalwayPage() {
           ) : (
             <div style={{ maxWidth: 720, width: '100%', margin: '0 auto', padding: '28px 28px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
               {messages.filter(Boolean).map((msg) => (
-                <MessageBubble
-                  key={msg.id}
-                  message={msg}
-                  onRetry={() => fileInputRef.current?.click()}
-                />
+                <MessageBubble key={msg.id} message={msg} />
               ))}
               {isTyping && <TypingIndicator />}
               <div ref={messagesEndRef} />
@@ -888,6 +718,75 @@ export default function GalwayPage() {
               <ArrowUp size={17} style={{ color: canSend ? '#fff' : 'var(--pr-text-muted)' }} />
             </button>
           </div>
+
+          {(uploadAction === 'pending' || uploadAction === 'confirming') && (
+            <div style={{ maxWidth: 720, margin: '10px auto 0', display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {uploadAction === 'pending' ? (
+                <>
+                  <button
+                    onClick={() => sendMessage('/save')}
+                    disabled={isTyping}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, border: 'none',
+                      backgroundColor: 'var(--accent, #c96442)', color: '#fff',
+                      fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+                      cursor: isTyping ? 'default' : 'pointer',
+                      opacity: isTyping ? 0.6 : 1, transition: 'opacity 0.15s',
+                    }}
+                  >
+                    Save to project files
+                  </button>
+                  <button
+                    onClick={() => sendMessage('/discard')}
+                    disabled={isTyping}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8,
+                      border: '1px solid var(--pr-input-border)',
+                      backgroundColor: 'transparent',
+                      color: 'var(--pr-text-muted)',
+                      fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
+                      cursor: isTyping ? 'default' : 'pointer',
+                      opacity: isTyping ? 0.6 : 1, transition: 'opacity 0.15s',
+                    }}
+                  >
+                    Discard
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => sendMessage('confirm')}
+                    disabled={isTyping}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, border: 'none',
+                      backgroundColor: 'var(--accent, #c96442)', color: '#fff',
+                      fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+                      cursor: isTyping ? 'default' : 'pointer',
+                      opacity: isTyping ? 0.6 : 1, transition: 'opacity 0.15s',
+                    }}
+                  >
+                    Yes, save anyway
+                  </button>
+                  <button
+                    onClick={() => sendMessage('/discard')}
+                    disabled={isTyping}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8,
+                      border: '1px solid var(--pr-input-border)',
+                      backgroundColor: 'transparent',
+                      color: 'var(--pr-text-muted)',
+                      fontSize: 13, fontWeight: 500, fontFamily: 'inherit',
+                      cursor: isTyping ? 'default' : 'pointer',
+                      opacity: isTyping ? 0.6 : 1, transition: 'opacity 0.15s',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--pr-text-muted)', margin: '8px 0 0' }}>
             Responses are generated from uploaded project documents.
           </p>
