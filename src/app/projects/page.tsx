@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, BedDouble, Menu } from 'lucide-react';
 import ProjectsSidebar from '@/components/projects/ProjectsSidebar';
+import NewProjectModal from '@/components/projects/NewProjectModal';
 import styles from '@/styles/projects.module.css';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -157,6 +158,7 @@ export default function ProjectsPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile,    setIsMobile]    = useState(false);
+  const [modalOpen,   setModalOpen]   = useState(false);
 
   useEffect(() => {
     const initialised = { current: false };
@@ -172,6 +174,17 @@ export default function ProjectsPage() {
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  // Open the modal when navigated to with ?new=1 (e.g. from sidebar on another /projects/* page).
+  // Read directly from window.location to avoid the Suspense-boundary requirement on useSearchParams.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('new') === '1') {
+      setModalOpen(true);
+      router.replace('/projects', { scroll: false });
+    }
+  }, [router]);
 
   return (
     <div data-theme="light" style={{ display: 'flex', flex: 1, overflow: 'hidden', height: '100%', backgroundColor: '#f9fafb' }}>
@@ -242,6 +255,7 @@ export default function ProjectsPage() {
 
         {/* New Project */}
         <button
+          onClick={() => setModalOpen(true)}
           className={styles.newProjectButton}
           style={{
             display: 'flex',
@@ -262,6 +276,8 @@ export default function ProjectsPage() {
           New Project
         </button>
       </main>
+
+      <NewProjectModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   );
 }

@@ -217,13 +217,15 @@ export default function ProjectsSidebar({
 
         {/* ── New Project ───────────────────────────────── */}
         <div style={{ padding: '0 8px 10px', flexShrink: 0 }}>
-          <button
+          <Link
+            href="/projects?new=1"
+            onClick={() => isMobile && onClose?.()}
             className={styles.sidebarButton}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', backgroundColor: 'transparent', color: 'var(--pr-nav-inactive)', cursor: 'pointer', fontSize: 14, textAlign: 'left', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', backgroundColor: 'transparent', color: 'var(--pr-nav-inactive)', cursor: 'pointer', fontSize: 14, textAlign: 'left', fontFamily: 'inherit', whiteSpace: 'nowrap', textDecoration: 'none', boxSizing: 'border-box' }}
           >
             <Plus size={15} style={{ color: 'var(--pr-nav-icon)', flexShrink: 0 }} />
             New Project
-          </button>
+          </Link>
         </div>
 
         {/* ── Divider ───────────────────────────────────── */}
