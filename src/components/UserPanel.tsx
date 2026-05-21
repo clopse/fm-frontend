@@ -105,16 +105,16 @@ export default function UserPanel({
       />
       
       {/* Slide-in panel */}
-      <div className={`fixed top-0 right-0 h-full w-80 bg-white shadow-xl transition-transform duration-300 ease-in-out z-[2000] ${
+      <div className={`fixed top-0 right-0 h-full w-80 bg-surface shadow-xl transition-transform duration-300 ease-in-out z-[2000] ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}>
-        
+
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Account</h2>
-          <button 
-            onClick={onClose} 
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        <div className="flex items-center justify-between p-6 border-b border-border-soft">
+          <h2 className="text-xl font-semibold text-text-primary">Account</h2>
+          <button
+            onClick={onClose}
+            className="p-2 text-text-muted hover:text-text-primary hover:bg-sidebar-hover rounded-lg transition-colors"
           >
             <X size={20} />
           </button>
@@ -124,8 +124,8 @@ export default function UserPanel({
         <div className="p-6 flex flex-col gap-4">
           {loading ? (
             <div className="flex justify-center items-center py-12">
-              <div className="flex items-center space-x-2 text-gray-500">
-                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <div className="flex items-center space-x-2 text-text-muted">
+                <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
                 <span>Loading user data...</span>
               </div>
             </div>
@@ -133,52 +133,52 @@ export default function UserPanel({
             <>
               {/* User Avatar */}
               <div className="flex items-center space-x-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 bg-accent rounded-full flex items-center justify-center shadow-card">
                   <span className="text-lg font-semibold text-white">
                     {user.name.split(' ').map(n => n[0]).join('')}
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">{user.name}</h3>
-                  <p className="text-sm text-gray-500">{user.role}</p>
+                  <h3 className="font-semibold text-text-primary">{user.name}</h3>
+                  <p className="text-sm text-text-muted">{user.role}</p>
                 </div>
               </div>
 
               {/* User Details */}
               <div className="space-y-4">
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div className="bg-card-bg border border-border-soft rounded-lg p-4 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600">Email</span>
-                    <span className="text-sm text-gray-900">{user.email}</span>
+                    <span className="text-sm font-medium text-text-muted">Email</span>
+                    <span className="text-sm text-text-primary">{user.email}</span>
                   </div>
-                  
+
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600">Hotel Access</span>
-                    <span className="text-sm text-gray-900">{user.hotel}</span>
+                    <span className="text-sm font-medium text-text-muted">Hotel Access</span>
+                    <span className="text-sm text-text-primary">{user.hotel}</span>
                   </div>
-                  
+
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600">Status</span>
+                    <span className="text-sm font-medium text-text-muted">Status</span>
                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      user.status === 'Active' 
-                        ? 'bg-green-100 text-green-800' 
+                      user.status === 'Active'
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}>
                       {user.status}
                     </span>
                   </div>
-                  
+
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600">Last Login</span>
-                    <span className="text-sm text-gray-900">{formatLastLogin(user.last_login)}</span>
+                    <span className="text-sm font-medium text-text-muted">Last Login</span>
+                    <span className="text-sm text-text-primary">{formatLastLogin(user.last_login)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <button 
-                  className="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+              <div className="mt-8 pt-6 border-t border-border-soft">
+                <button
+                  className="w-full bg-text-primary hover:opacity-90 text-white font-medium py-3 px-4 rounded-lg transition-opacity duration-200 flex items-center justify-center space-x-2"
                   onClick={handleLogout}
                 >
                   <span>Sign Out</span>
@@ -187,9 +187,9 @@ export default function UserPanel({
             </>
           ) : (
             <div className="text-center py-12">
-              <div className="text-gray-500 mb-6">Unable to load user data</div>
-              <button 
-                className="w-full bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200"
+              <div className="text-text-muted mb-6">Unable to load user data</div>
+              <button
+                className="w-full bg-text-primary hover:opacity-90 text-white font-medium py-3 px-4 rounded-lg transition-opacity duration-200"
                 onClick={handleLogout}
               >
                 Sign Out
