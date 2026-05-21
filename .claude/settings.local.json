@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx --no-install tsc --noEmit)",
+      "Bash(git check-ignore *)",
+      "Bash(git commit *)",
+      "Bash(git config *)",
+      "Bash(git *)"
+    ]
+  }
+}

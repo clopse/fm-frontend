@@ -62,7 +62,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   return (
-    <div className="h-screen bg-gray-50 overflow-hidden">
+    <div className="h-screen bg-background overflow-hidden">
       {/* Header - Always visible */}
       <HeaderBar
         onHotelSelectClick={() => setIsHotelModalOpen(true)}
@@ -107,7 +107,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             </div>
           ) : (
             // Other pages get standard padding and background
-            <div className="bg-gradient-to-br from-slate-50 to-blue-50 min-h-full">
+            <div className="bg-background min-h-full">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {children}
               </div>

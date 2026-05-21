@@ -3,6 +3,47 @@
 @tailwind utilities;
 
 /* =============================================================================
+   Design tokens — beige theme (extracted from src/styles/projects-theme.css
+   [data-theme="light"] block; accent from inline use in ProjectsSidebar.tsx).
+   The Projects section's --pr-* vars are intentionally left untouched so the
+   /projects routes keep their existing dark/light toggle.
+   ============================================================================= */
+:root {
+  /* Surfaces */
+  --background:         #f5f5f0;
+  --surface:            #ffffff;
+  --card-bg:            #ffffff;
+
+  /* Sidebar */
+  --sidebar-bg:         #f0ede8;
+  --sidebar-border:     #e0ddd8;
+  --sidebar-active:     #e8e5e0;
+  --sidebar-hover:      #e8e5e0;
+  --sidebar-text:       #1a1a1a;
+  --sidebar-text-muted: #666666;
+  --sidebar-icon:       #888888;
+  --sidebar-section:    #999999;
+
+  /* Text */
+  --text-primary:       #1a1a1a;
+  --text-secondary:     #1a1a1a;
+  --text-muted:         #777777;
+
+  /* Lines & form fields */
+  --border:             #e0ddd8;
+  --divider:            #e0ddd8;
+  --input-bg:           #f0ede8;
+  --input-border:       #d0cdc8;
+
+  /* Accent */
+  --accent:             #c96442;
+  --accent-hover:       #b85838;
+
+  /* Shadow */
+  --card-shadow:        0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* =============================================================================
    Global HTML & Body Rules
    ============================================================================= */
 html {
@@ -32,8 +73,15 @@ body {
   width: 100%;
   overflow-x: hidden;
   font-family: 'Inter', sans-serif;
-  color: #000;
-  background-color: #fff;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  background-color: var(--background);
+}
+
+/* Lighter, more refined heading weight */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 500;
 }
 
 a {
@@ -90,17 +138,17 @@ a:hover {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: var(--background);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #9ca3af;
+  background: #c4bdae;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: #a89f8c;
 }
 
 /* =============================================================================
@@ -152,12 +200,12 @@ a:hover {
 }
 
 ::selection {
-  background-color: rgba(59, 130, 246, 0.2);
+  background-color: rgba(201, 100, 66, 0.22);
   color: inherit;
 }
 
 ::-moz-selection {
-  background-color: rgba(59, 130, 246, 0.2);
+  background-color: rgba(201, 100, 66, 0.22);
   color: inherit;
 }
 
@@ -168,7 +216,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid rgba(59, 130, 246, 0.5);
+  outline: 2px solid rgba(201, 100, 66, 0.5);
   outline-offset: 2px;
 }
 

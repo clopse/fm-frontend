@@ -150,7 +150,7 @@ export default function MainSidebar({
   }, []);
 
   const sidebarClasses = useMemo(() => `
-    fixed top-0 left-0 h-screen w-72 bg-slate-800 text-white z-50
+    fixed top-0 left-0 h-screen w-72 bg-sidebar text-sidebar-text border-r border-sidebar-border z-50
     flex flex-col transition-transform duration-300 ease-in-out
     ${isMobile
       ? `${isOpen ? 'translate-x-0' : '-translate-x-full'}`
@@ -168,7 +168,7 @@ export default function MainSidebar({
       )}
 
       <div className={sidebarClasses}>
-        <div className="p-4 xl:p-6 border-b border-slate-700 flex-shrink-0">
+        <div className="p-4 xl:p-6 border-b border-sidebar-border flex-shrink-0">
           <div className="flex items-center justify-between">
             <Link href="https://jmkfacilities.ie/hotels" onClick={handleLogoClick}>
               <img
@@ -179,7 +179,7 @@ export default function MainSidebar({
             </Link>
             <button
               onClick={onClose}
-              className="p-2 text-gray-300 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+              className="p-2 text-sidebar-muted hover:text-sidebar-text hover:bg-sidebar-hover rounded-lg transition-colors"
               title={isMobile ? "Close Menu" : "Hide Sidebar"}
             >
               {isMobile ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -202,10 +202,10 @@ export default function MainSidebar({
           ))}
         </nav>
 
-        <div className="p-3 xl:p-4 border-t border-slate-700 flex-shrink-0">
+        <div className="p-3 xl:p-4 border-t border-sidebar-border flex-shrink-0">
           <div className="text-center">
-            <div className="text-xs text-gray-400">JMK Facilities Management</div>
-            <div className="text-xs text-gray-500 mt-1">Hotel Portal v2.0</div>
+            <div className="text-xs text-sidebar-muted">JMK Facilities Management</div>
+            <div className="text-xs text-sidebar-section mt-1">Hotel Portal v2.0</div>
           </div>
         </div>
       </div>
@@ -259,19 +259,19 @@ const NavItem = ({
   const mainItemClasses = useMemo(() => `
     flex items-center px-3 py-2 xl:px-4 xl:py-3 rounded-lg transition-all duration-200 group flex-1
     ${isHighlighted
-      ? 'bg-blue-600 text-white shadow-lg'
-      : 'text-gray-300 hover:bg-slate-700 hover:text-white'
+      ? 'bg-sidebar-active text-sidebar-text'
+      : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-text'
     }
   `, [isHighlighted]);
 
   const iconClasses = useMemo(() => `w-4 h-4 mr-2 xl:w-5 xl:h-5 xl:mr-3 ${
-    isHighlighted ? 'text-white' : 'text-gray-400 group-hover:text-white'
+    isHighlighted ? 'text-accent' : 'text-sidebar-icon group-hover:text-sidebar-text'
   }`, [isHighlighted]);
 
   const labelClasses = 'font-medium text-sm xl:text-base';
 
   const descriptionClasses = useMemo(() => `text-[11px] xl:text-xs mt-0.5 ${
-    isHighlighted ? 'text-blue-100' : 'text-gray-500 group-hover:text-gray-300'
+    isHighlighted ? 'text-text-muted' : 'text-sidebar-section group-hover:text-sidebar-muted'
   }`, [isHighlighted]);
 
   return (
@@ -295,12 +295,12 @@ const NavItem = ({
             onClick={handleToggleClick}
             className={`p-2 mr-2 rounded transition-colors ${
               isHighlighted
-                ? 'text-white hover:bg-blue-700' 
-                : 'text-gray-400 hover:text-white hover:bg-slate-700'
+                ? 'text-sidebar-text hover:bg-sidebar-hover'
+                : 'text-sidebar-icon hover:text-sidebar-text hover:bg-sidebar-hover'
             }`}
           >
-            {isExpanded ? 
-              <ChevronDown className="w-4 h-4" /> : 
+            {isExpanded ?
+              <ChevronDown className="w-4 h-4" /> :
               <ChevronRight className="w-4 h-4" />
             }
           </button>
@@ -350,17 +350,17 @@ const SubNavItem = ({ subItem, isActive, onClick }: SubNavItemProps) => {
   const subItemClasses = useMemo(() => `
     flex items-center px-2 py-1.5 xl:px-3 xl:py-2 rounded-md transition-all duration-200 group text-xs xl:text-sm
     ${isActive
-      ? 'bg-blue-500 text-white shadow-md'
-      : 'text-gray-400 hover:bg-slate-700 hover:text-white'
+      ? 'bg-sidebar-active text-sidebar-text'
+      : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-text'
     }
   `, [isActive]);
 
   const subIconClasses = useMemo(() => `w-3.5 h-3.5 mr-2 xl:w-4 xl:h-4 xl:mr-3 ${
-    isActive ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'
+    isActive ? 'text-accent' : 'text-sidebar-icon group-hover:text-sidebar-text'
   }`, [isActive]);
 
   const subDescriptionClasses = useMemo(() => `text-[10px] xl:text-xs mt-0.5 ${
-    isActive ? 'text-blue-100' : 'text-gray-500 group-hover:text-gray-400'
+    isActive ? 'text-text-muted' : 'text-sidebar-section group-hover:text-sidebar-muted'
   }`, [isActive]);
 
   return (
