@@ -169,40 +169,40 @@ export default function HotelsPage() {
   };
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor:'#060c1a', fontFamily:"'DM Sans', system-ui, sans-serif" }}>
+    <div className="min-h-screen flex" style={{ backgroundColor:'var(--background)', fontFamily:"'DM Sans', system-ui, sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap');
         * { box-sizing:border-box; }
         .content-wrap { max-width:1380px; margin:0 auto; padding:16px 16px 48px; display:flex; flex-direction:column; gap:14px; }
-        .panel    { background:rgba(255,255,255,.033); border:1px solid rgba(255,255,255,.068); border-radius:16px; overflow:hidden; }
-        .panel-hd { padding:13px 18px; border-bottom:1px solid rgba(255,255,255,.055); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
-        .ptitle   { font-size:.83rem; font-weight:600; color:rgba(255,255,255,.9); letter-spacing:-.01em; }
-        .psub     { font-size:.67rem; color:rgba(255,255,255,.26); margin-top:1px; }
-        .stat-card { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.062); border-radius:13px; padding:15px; transition:background .2s,border-color .2s,transform .15s; }
-        .stat-card:hover { background:rgba(255,255,255,.052); border-color:rgba(255,255,255,.12); transform:translateY(-2px); }
-        .top-bar { position:sticky; top:0; z-index:30; background:rgba(6,12,26,.94); backdrop-filter:blur(16px); border-bottom:1px solid rgba(255,255,255,.07); height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
-        .top-btn { background:none; border:none; cursor:pointer; color:rgba(255,255,255,.45); width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; transition:background .15s,color .15s; }
-        .top-btn:hover { background:rgba(255,255,255,.07); color:rgba(255,255,255,.9); }
+        .panel    { background:var(--card-bg); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+        .panel-hd { padding:13px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+        .ptitle   { font-size:.83rem; font-weight:600; color:var(--text-primary); letter-spacing:-.01em; }
+        .psub     { font-size:.67rem; color:var(--text-muted); margin-top:1px; }
+        .stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:13px; padding:15px; transition:background .2s,border-color .2s,transform .15s; box-shadow:var(--card-shadow); }
+        .stat-card:hover { background:#fbfaf7; border-color:rgba(201,100,66,.35); transform:translateY(-2px); }
+        .top-bar { position:sticky; top:0; z-index:30; background:rgba(245,245,240,.94); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
+        .top-btn { background:none; border:none; cursor:pointer; color:var(--text-muted); width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; transition:background .15s,color .15s; }
+        .top-btn:hover { background:rgba(0,0,0,.05); color:var(--text-primary); }
         .mono  { font-family:'DM Mono','Courier New',monospace; }
         .ibadge{ width:25px; height:25px; border-radius:7px; display:flex; align-items:center; justify-content:center; }
         .live  { width:6px; height:6px; border-radius:50%; background:#34d399; box-shadow:0 0 7px #10b981; flex-shrink:0; }
         @keyframes pulseRing { 0%{transform:translate(-50%,-50%) scale(1);opacity:.5;} 100%{transform:translate(-50%,-50%) scale(2.4);opacity:0;} }
-        .pr  { position:absolute; top:50%; left:50%; border-radius:50%; border:1.5px solid rgba(96,165,250,.45); pointer-events:none; animation:pulseRing 2.8s ease-out infinite; }
+        .pr  { position:absolute; top:50%; left:50%; border-radius:50%; border:1.5px solid rgba(201,100,66,.45); pointer-events:none; animation:pulseRing 2.8s ease-out infinite; }
         .pr2 { animation-delay:1s; }
         @keyframes fadeUp { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
         .fu { animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both; }
         @keyframes scaleIn { from{opacity:0;transform:scale(.88);} to{opacity:1;transform:scale(1);} }
         .picker { animation:scaleIn .2s cubic-bezier(.16,1,.3,1) both; }
         .wx-row { display:flex; align-items:center; gap:6px; padding:6px 9px; border-radius:8px; cursor:default; transition:background .15s; position:relative; }
-        .wx-row:hover { background:rgba(255,255,255,.055); }
-        .wx-tip { position:absolute; right:calc(100% + 10px); top:50%; transform:translateY(-50%); background:linear-gradient(145deg,#0d1e3a,#091228); border:1px solid rgba(99,165,250,.2); border-radius:13px; padding:15px; z-index:100; width:220px; box-shadow:0 12px 40px rgba(0,0,0,.8); pointer-events:none; }
+        .wx-row:hover { background:rgba(0,0,0,.04); }
+        .wx-tip { position:absolute; right:calc(100% + 10px); top:50%; transform:translateY(-50%); background:#ffffff; border:1px solid var(--border); border-radius:13px; padding:15px; z-index:100; width:220px; box-shadow:0 12px 40px rgba(0,0,0,.18); pointer-events:none; color:var(--text-primary); }
         /* Map panel — flex column so it can grow to match leaderboard */
         .map-panel { display:flex; flex-direction:column; }
         .map-body  { flex:1; display:flex; align-items:center; gap:10; padding:10px 14px 14px; }
         /* Below 640px — weather drops under the map as a horizontal row */
         @media (max-width:640px) {
           .map-body { flex-direction:column; align-items:stretch; }
-          .wx-strip { width:100% !important; flex-direction:row !important; flex-wrap:wrap; gap:4px !important; padding-top:8px; border-top:1px solid rgba(255,255,255,.06); }
+          .wx-strip { width:100% !important; flex-direction:row !important; flex-wrap:wrap; gap:4px !important; padding-top:8px; border-top:1px solid var(--border); }
           .wx-row   { flex:1 1 40%; min-width:90px; }
         }
         @media (max-width:1100px) { .grid-main{grid-template-columns:1fr !important;} }
@@ -228,19 +228,19 @@ export default function HotelsPage() {
           {/* Stat strip */}
           <div className="grid-stat" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'11px' }}>
             {[
-              { label:'Hotels',      value:String(totalHotels),                                   detail:'Across 5 cities',   color:'#3b82f6', Icon:MapPin        },
-              { label:'Locations',   value:String(totalLocations),                                detail:'IE & UK portfolio', color:'#38bdf8', Icon:MapPin        },
+              { label:'Hotels',      value:String(totalHotels),                                   detail:'Across 5 cities',   color:'#c96442', Icon:MapPin        },
+              { label:'Locations',   value:String(totalLocations),                                detail:'IE & UK portfolio', color:'#c96442', Icon:MapPin        },
               { label:'Tasks Done',  value:tasksConfirmed != null ? String(tasksConfirmed) : '—', detail:'Monthly confirmed', color:'#10b981', Icon:CheckCircle2  },
               { label:'Outstanding', value:tasksPending   != null ? String(tasksPending)   : '—', detail:'Monthly remaining', color:'#f59e0b', Icon:ClipboardList },
             ].map(({ label, value, detail, color, Icon }, i) => (
               <div key={label} className="stat-card fu" style={{ animationDelay:`${i*55}ms` }}>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:9 }}>
                   <Icon size={13} style={{ color }}/>
-                  <span className="mono" style={{ fontSize:'.57rem', color:'rgba(255,255,255,.18)', letterSpacing:'.06em' }}>JMK</span>
+                  <span className="mono" style={{ fontSize:'.57rem', color:'rgba(0,0,0,.18)', letterSpacing:'.06em' }}>JMK</span>
                 </div>
-                <div className="mono" style={{ fontSize:'1.75rem', fontWeight:500, color:'#fff', lineHeight:1, marginBottom:4 }}>{value}</div>
-                <div style={{ fontSize:'.74rem', fontWeight:500, color:'rgba(255,255,255,.54)' }}>{label}</div>
-                <div style={{ fontSize:'.64rem', color:'rgba(255,255,255,.2)', marginTop:2 }}>{detail}</div>
+                <div className="mono" style={{ fontSize:'1.75rem', fontWeight:500, color:'var(--text-primary)', lineHeight:1, marginBottom:4 }}>{value}</div>
+                <div style={{ fontSize:'.74rem', fontWeight:500, color:'var(--text-muted)' }}>{label}</div>
+                <div style={{ fontSize:'.64rem', color:'rgba(0,0,0,.35)', marginTop:2 }}>{detail}</div>
               </div>
             ))}
           </div>
@@ -257,7 +257,7 @@ export default function HotelsPage() {
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                   <span className="live"/>
-                  <span style={{ fontSize:'.65rem', color:'rgba(255,255,255,.28)' }}>All operational</span>
+                  <span style={{ fontSize:'.65rem', color:'var(--text-muted)' }}>All operational</span>
                 </div>
               </div>
 
@@ -288,11 +288,11 @@ export default function HotelsPage() {
 
                           <div style={{
                             position:'relative', width:MARKER, height:MARKER, borderRadius:'50%', overflow:'hidden',
-                            border: hov ? '2.5px solid #93c5fd' : '2px solid #60a5fa',
+                            border: hov ? '2.5px solid #c96442' : '2px solid #d97757',
                             boxShadow: hov
-                              ? `0 0 0 3px rgba(96,165,250,.2),0 0 18px rgba(96,165,250,.85)`
-                              : `0 0 0 2px rgba(96,165,250,.1),0 0 10px rgba(96,165,250,.5)`,
-                            background:'#0f172a', transition:'border .15s,box-shadow .15s', zIndex:2,
+                              ? `0 0 0 3px rgba(201,100,66,.2),0 0 18px rgba(201,100,66,.6)`
+                              : `0 0 0 2px rgba(201,100,66,.1),0 0 10px rgba(201,100,66,.35)`,
+                            background:'#ffffff', transition:'border .15s,box-shadow .15s', zIndex:2,
                           }}>
                             <img src={`/icons/${c.hotels[0]}-icon.png`} alt={c.label} style={{ width:'100%', height:'100%', objectFit:'contain', padding:'6px' }}/>
                           </div>
@@ -300,10 +300,10 @@ export default function HotelsPage() {
                           {multi && (
                             <div style={{
                               position:'absolute', top:-3, right:-3, width:17, height:17, borderRadius:'50%',
-                              background:'#1e3a8a', border:'1.5px solid #93c5fd',
+                              background:'#c96442', border:'1.5px solid #f5f5f0',
                               display:'flex', alignItems:'center', justifyContent:'center',
-                              fontSize:'8px', fontWeight:700, color:'#e0f2fe', fontFamily:'DM Mono,monospace',
-                              zIndex:3, boxShadow:'0 2px 6px rgba(0,0,0,.6)',
+                              fontSize:'8px', fontWeight:700, color:'#ffffff', fontFamily:'DM Mono,monospace',
+                              zIndex:3, boxShadow:'0 2px 6px rgba(0,0,0,.18)',
                             }}>
                               {c.hotels.length}
                             </div>
@@ -311,19 +311,19 @@ export default function HotelsPage() {
 
                           <div style={{
                             position:'absolute', top:`calc(100% + 6px)`, left:'50%', transform:'translateX(-50%)',
-                            fontSize:'8.5px', fontWeight:600, color:'rgba(255,255,255,.82)',
-                            whiteSpace:'nowrap', textShadow:'0 1px 6px rgba(0,0,0,1)', letterSpacing:'.02em', pointerEvents:'none',
+                            fontSize:'8.5px', fontWeight:600, color:'var(--text-primary)',
+                            whiteSpace:'nowrap', letterSpacing:'.02em', pointerEvents:'none',
                           }}>{c.label}</div>
 
                           {hov && (
                             <div style={{
                               position:'absolute', bottom:`calc(100% + 9px)`, left:'50%', transform:'translateX(-50%)',
-                              background:'#0c1730', border:'1px solid rgba(59,130,246,.5)', borderRadius:7,
-                              padding:'5px 11px', fontSize:'8.5px', fontWeight:500, color:'white',
-                              whiteSpace:'nowrap', boxShadow:'0 4px 16px rgba(0,0,0,.75)', zIndex:20,
+                              background:'#ffffff', border:'1px solid var(--border)', borderRadius:7,
+                              padding:'5px 11px', fontSize:'8.5px', fontWeight:500, color:'var(--text-primary)',
+                              whiteSpace:'nowrap', boxShadow:'0 4px 16px rgba(0,0,0,.15)', zIndex:20,
                             }}>
                               {c.hotels.length} {c.hotels.length === 1 ? 'hotel' : 'hotels'}
-                              <div style={{ fontSize:'7px', color:'rgba(147,197,253,.6)', marginTop:2, fontFamily:'DM Mono,monospace', letterSpacing:'.05em' }}>TAP TO SELECT</div>
+                              <div style={{ fontSize:'7px', color:'var(--accent)', marginTop:2, fontFamily:'DM Mono,monospace', letterSpacing:'.05em' }}>TAP TO SELECT</div>
                             </div>
                           )}
                         </div>
@@ -334,47 +334,47 @@ export default function HotelsPage() {
 
                 {/* Weather strip */}
                 <div className="wx-strip" style={{ width:128, flexShrink:0, display:'flex', flexDirection:'column', justifyContent:'center', gap:1 }}>
-                  <div style={{ fontSize:'.58rem', color:'rgba(255,255,255,.22)', fontFamily:'DM Mono,monospace', letterSpacing:'.07em', marginBottom:5, paddingLeft:9 }}>WEATHER</div>
+                  <div style={{ fontSize:'.58rem', color:'var(--text-muted)', fontFamily:'DM Mono,monospace', letterSpacing:'.07em', marginBottom:5, paddingLeft:9 }}>WEATHER</div>
                   {WX_CITIES.map(city => {
                     const wx   = cityWeather[city.id];
                     const info = wx && !wx.loading ? wxInfo(wx.code) : null;
                     const warn = wx && !wx.loading && isAlert(wx.code, wx.wind);
                     return (
                       <div key={city.id} className="wx-row" onMouseEnter={() => setHoveredWeather(city.id)} onMouseLeave={() => setHoveredWeather(null)}>
-                        <span style={{ flex:1, fontSize:'.7rem', fontWeight:500, color:'rgba(255,255,255,.65)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{city.name}</span>
-                        {(!wx || wx.loading) && <div style={{ width:28, height:8, borderRadius:4, background:'rgba(255,255,255,.08)' }}/>}
-                        {info && (<><span className="mono" style={{ fontSize:'.74rem', fontWeight:600, color:'#fff' }}>{wx.temp}°</span><span style={{ fontSize:'.92rem', lineHeight:1 }}>{info.emoji}</span>{warn && <AlertTriangle size={10} style={{ color:'#f59e0b', flexShrink:0 }}/>}</>)}
+                        <span style={{ flex:1, fontSize:'.7rem', fontWeight:500, color:'var(--text-primary)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{city.name}</span>
+                        {(!wx || wx.loading) && <div style={{ width:28, height:8, borderRadius:4, background:'rgba(0,0,0,.08)' }}/>}
+                        {info && (<><span className="mono" style={{ fontSize:'.74rem', fontWeight:600, color:'var(--text-primary)' }}>{wx.temp}°</span><span style={{ fontSize:'.92rem', lineHeight:1 }}>{info.emoji}</span>{warn && <AlertTriangle size={10} style={{ color:'#f59e0b', flexShrink:0 }}/>}</>)}
                         {hoveredWeather === city.id && info && wx && (
                           <div className="wx-tip">
                             <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:10 }}>
                               <div>
-                                <div style={{ fontSize:'.68rem', fontWeight:600, color:'rgba(255,255,255,.4)', letterSpacing:'.04em', marginBottom:3 }}>{city.name.toUpperCase()}</div>
-                                <div style={{ fontSize:'1.8rem', fontWeight:500, color:'#fff', fontFamily:'DM Mono,monospace', lineHeight:1 }}>{wx.temp}°<span style={{ fontSize:'.85rem', color:'rgba(255,255,255,.32)' }}>C</span></div>
-                                <div style={{ fontSize:'.68rem', color:'rgba(255,255,255,.4)', marginTop:3 }}>{info.label}</div>
+                                <div style={{ fontSize:'.68rem', fontWeight:600, color:'var(--text-muted)', letterSpacing:'.04em', marginBottom:3 }}>{city.name.toUpperCase()}</div>
+                                <div style={{ fontSize:'1.8rem', fontWeight:500, color:'var(--text-primary)', fontFamily:'DM Mono,monospace', lineHeight:1 }}>{wx.temp}°<span style={{ fontSize:'.85rem', color:'var(--text-muted)' }}>C</span></div>
+                                <div style={{ fontSize:'.68rem', color:'var(--text-muted)', marginTop:3 }}>{info.label}</div>
                               </div>
                               <span style={{ fontSize:'1.9rem', lineHeight:1, marginTop:2 }}>{info.emoji}</span>
                             </div>
-                            <div style={{ display:'flex', gap:12, marginBottom:10, paddingBottom:9, borderBottom:'1px solid rgba(255,255,255,.07)' }}>
-                              <span style={{ fontSize:'.64rem', color:'rgba(255,255,255,.35)' }}>Feels {wx.apparent}°C</span>
-                              <span style={{ display:'flex', alignItems:'center', gap:3, fontSize:'.64rem', color:'rgba(255,255,255,.35)' }}><Wind size={9}/>{wx.wind} km/h</span>
+                            <div style={{ display:'flex', gap:12, marginBottom:10, paddingBottom:9, borderBottom:'1px solid var(--border)' }}>
+                              <span style={{ fontSize:'.64rem', color:'var(--text-muted)' }}>Feels {wx.apparent}°C</span>
+                              <span style={{ display:'flex', alignItems:'center', gap:3, fontSize:'.64rem', color:'var(--text-muted)' }}><Wind size={9}/>{wx.wind} km/h</span>
                             </div>
                             {warn && (
-                              <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10, padding:'5px 7px', background:'rgba(245,158,11,.1)', border:'1px solid rgba(245,158,11,.25)', borderRadius:6 }}>
-                                <AlertTriangle size={10} style={{ color:'#f59e0b', flexShrink:0 }}/>
-                                <span style={{ fontSize:'.62rem', color:'#fbbf24', lineHeight:1.3 }}>Adverse conditions — check Met Éireann / Met Office</span>
+                              <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10, padding:'5px 7px', background:'rgba(245,158,11,.1)', border:'1px solid rgba(245,158,11,.3)', borderRadius:6 }}>
+                                <AlertTriangle size={10} style={{ color:'#d97706', flexShrink:0 }}/>
+                                <span style={{ fontSize:'.62rem', color:'#92400e', lineHeight:1.3 }}>Adverse conditions — check Met Éireann / Met Office</span>
                               </div>
                             )}
                             {wx.forecast.length > 0 && (
                               <div>
-                                <div style={{ fontSize:'.58rem', color:'rgba(255,255,255,.22)', fontFamily:'DM Mono,monospace', letterSpacing:'.06em', marginBottom:5 }}>5-DAY FORECAST</div>
+                                <div style={{ fontSize:'.58rem', color:'var(--text-muted)', fontFamily:'DM Mono,monospace', letterSpacing:'.06em', marginBottom:5 }}>5-DAY FORECAST</div>
                                 <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
                                   {wx.forecast.map(day => (
                                     <div key={day.date} style={{ display:'flex', alignItems:'center', gap:6 }}>
-                                      <span style={{ width:26, fontSize:'.65rem', color:'rgba(255,255,255,.38)', fontFamily:'DM Mono,monospace' }}>{shortDay(day.date)}</span>
+                                      <span style={{ width:26, fontSize:'.65rem', color:'var(--text-muted)', fontFamily:'DM Mono,monospace' }}>{shortDay(day.date)}</span>
                                       <span style={{ fontSize:'.88rem', lineHeight:1 }}>{wxInfo(day.code).emoji}</span>
                                       <span style={{ flex:1 }}/>
-                                      <span style={{ fontSize:'.67rem', fontWeight:600, color:'#fff', fontFamily:'DM Mono,monospace' }}>{day.high}°</span>
-                                      <span style={{ fontSize:'.63rem', color:'rgba(255,255,255,.3)', fontFamily:'DM Mono,monospace' }}>{day.low}°</span>
+                                      <span style={{ fontSize:'.67rem', fontWeight:600, color:'var(--text-primary)', fontFamily:'DM Mono,monospace' }}>{day.high}°</span>
+                                      <span style={{ fontSize:'.63rem', color:'var(--text-muted)', fontFamily:'DM Mono,monospace' }}>{day.low}°</span>
                                     </div>
                                   ))}
                                 </div>
@@ -420,46 +420,46 @@ export default function HotelsPage() {
 
       {/* Cluster picker */}
       {activeCluster && openCluster && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.65)', backdropFilter:'blur(6px)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center' }}
+        <div style={{ position:'fixed', inset:0, background:'rgba(15,23,42,.45)', backdropFilter:'blur(6px)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center' }}
           onClick={() => setActiveCluster(null)}>
           <div className="picker"
-            style={{ background:'linear-gradient(145deg,#0c1a36,#091228)', border:'1px solid rgba(99,165,250,.22)', borderRadius:20, padding:'26px 22px 22px', width:290, boxShadow:'0 24px 80px rgba(0,0,0,.7)', position:'relative' }}
+            style={{ background:'#ffffff', border:'1px solid var(--border)', borderRadius:20, padding:'26px 22px 22px', width:290, boxShadow:'0 24px 80px rgba(0,0,0,.18)', position:'relative' }}
             onClick={e => e.stopPropagation()}>
-            <button onClick={() => setActiveCluster(null)} style={{ position:'absolute', top:12, right:12, background:'rgba(255,255,255,.06)', border:'none', color:'rgba(255,255,255,.5)', borderRadius:7, width:25, height:25, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <button onClick={() => setActiveCluster(null)} style={{ position:'absolute', top:12, right:12, background:'rgba(0,0,0,.04)', border:'none', color:'var(--text-muted)', borderRadius:7, width:25, height:25, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
               <X size={13}/>
             </button>
             <div style={{ textAlign:'center', marginBottom:18 }}>
-              <div style={{ fontSize:'.63rem', color:'rgba(147,197,253,.6)', fontFamily:'DM Mono,monospace', letterSpacing:'.08em', marginBottom:3 }}>SELECT HOTEL</div>
-              <div style={{ fontSize:'1rem', fontWeight:600, color:'#fff' }}>{openCluster.label}</div>
-              <div style={{ fontSize:'.67rem', color:'rgba(255,255,255,.28)', marginTop:2 }}>
+              <div style={{ fontSize:'.63rem', color:'var(--accent)', fontFamily:'DM Mono,monospace', letterSpacing:'.08em', marginBottom:3 }}>SELECT HOTEL</div>
+              <div style={{ fontSize:'1rem', fontWeight:600, color:'var(--text-primary)' }}>{openCluster.label}</div>
+              <div style={{ fontSize:'.67rem', color:'var(--text-muted)', marginTop:2 }}>
                 {openCluster.hotels.length} {openCluster.hotels.length === 1 ? 'property' : 'properties'}
               </div>
             </div>
 
             {openCluster.hotels.length === 1 ? (
               <Link href={`/hotels/${openCluster.hotels[0]}`} onClick={() => setActiveCluster(null)} style={{ display:'block', textDecoration:'none' }}>
-                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8, background:'rgba(59,130,246,.1)', border:'1px solid rgba(59,130,246,.25)', borderRadius:12, padding:'16px 12px', cursor:'pointer' }}>
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8, background:'rgba(201,100,66,.08)', border:'1px solid rgba(201,100,66,.25)', borderRadius:12, padding:'16px 12px', cursor:'pointer' }}>
                   <img src={`/icons/${openCluster.hotels[0]}-icon.png`} alt={hotelNames[openCluster.hotels[0]]} style={{ width:56, height:56, objectFit:'contain' }}/>
-                  <div style={{ fontSize:'.78rem', fontWeight:500, color:'rgba(255,255,255,.85)', textAlign:'center' }}>{hotelNames[openCluster.hotels[0]]}</div>
+                  <div style={{ fontSize:'.78rem', fontWeight:500, color:'var(--text-primary)', textAlign:'center' }}>{hotelNames[openCluster.hotels[0]]}</div>
                 </div>
               </Link>
             ) : (
               <div style={{ position:'relative', width:230, height:230, margin:'0 auto' }}>
-                <div style={{ position:'absolute', left:'50%', top:'50%', transform:'translate(-50%,-50%)', width:36, height:36, borderRadius:'50%', border:'1px dashed rgba(99,165,250,.22)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <MapPin size={11} style={{ color:'rgba(147,197,253,.35)' }}/>
+                <div style={{ position:'absolute', left:'50%', top:'50%', transform:'translate(-50%,-50%)', width:36, height:36, borderRadius:'50%', border:'1px dashed rgba(201,100,66,.25)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <MapPin size={11} style={{ color:'var(--text-muted)' }}/>
                 </div>
                 <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}>
-                  {openCluster.hotels.map((_, i) => { const p=circlePos(i,openCluster.hotels.length); return <line key={i} x1="115" y1="115" x2={p.left+34} y2={p.top+34} stroke="rgba(59,130,246,.12)" strokeWidth="1" strokeDasharray="3,3"/>; })}
+                  {openCluster.hotels.map((_, i) => { const p=circlePos(i,openCluster.hotels.length); return <line key={i} x1="115" y1="115" x2={p.left+34} y2={p.top+34} stroke="rgba(201,100,66,.18)" strokeWidth="1" strokeDasharray="3,3"/>; })}
                 </svg>
                 {openCluster.hotels.map((id, i) => {
                   const p = circlePos(i, openCluster.hotels.length);
                   return (
                     <Link key={id} href={`/hotels/${id}`} onClick={() => setActiveCluster(null)} style={{ position:'absolute', left:p.left, top:p.top, textDecoration:'none' }}>
-                      <div style={{ width:66, height:66, borderRadius:12, background:'rgba(255,255,255,.05)', border:'1px solid rgba(99,165,250,.2)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3, padding:'6px 4px', cursor:'pointer', transition:'background .15s,border-color .15s,transform .15s', boxShadow:'0 4px 14px rgba(0,0,0,.4)' }}
-                        onMouseEnter={e=>{const t=e.currentTarget as HTMLDivElement;t.style.background='rgba(59,130,246,.18)';t.style.borderColor='rgba(99,165,250,.5)';t.style.transform='scale(1.1)';}}
-                        onMouseLeave={e=>{const t=e.currentTarget as HTMLDivElement;t.style.background='rgba(255,255,255,.05)';t.style.borderColor='rgba(99,165,250,.2)';t.style.transform='scale(1)';}}>
+                      <div style={{ width:66, height:66, borderRadius:12, background:'#f9f8f4', border:'1px solid var(--border)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3, padding:'6px 4px', cursor:'pointer', transition:'background .15s,border-color .15s,transform .15s', boxShadow:'0 4px 14px rgba(0,0,0,.06)' }}
+                        onMouseEnter={e=>{const t=e.currentTarget as HTMLDivElement;t.style.background='rgba(201,100,66,.1)';t.style.borderColor='rgba(201,100,66,.5)';t.style.transform='scale(1.1)';}}
+                        onMouseLeave={e=>{const t=e.currentTarget as HTMLDivElement;t.style.background='#f9f8f4';t.style.borderColor='var(--border)';t.style.transform='scale(1)';}}>
                         <img src={`/icons/${id}-icon.png`} alt={hotelNames[id]} style={{ width:38, height:38, objectFit:'contain' }}/>
-                        <div style={{ fontSize:'.5rem', fontWeight:500, color:'rgba(255,255,255,.5)', textAlign:'center', lineHeight:1.2, maxWidth:58, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{hotelNames[id]}</div>
+                        <div style={{ fontSize:'.5rem', fontWeight:500, color:'var(--text-muted)', textAlign:'center', lineHeight:1.2, maxWidth:58, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{hotelNames[id]}</div>
                       </div>
                     </Link>
                   );
