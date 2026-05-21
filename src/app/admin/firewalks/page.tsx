@@ -407,7 +407,7 @@ export default function FirewalksPage() {
                 <div className="relative">
                   <button
                     onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
-                    className="flex items-center justify-between w-40 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex items-center justify-between w-40 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-accent focus:border-blue-500"
                   >
                     <span className="truncate">{getMonthDropdownText()}</span>
                     <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${isMonthDropdownOpen ? 'rotate-180' : ''}`} />
@@ -442,7 +442,7 @@ export default function FirewalksPage() {
                 <div className="relative">
                   <button
                     onClick={() => setIsHotelDropdownOpen(!isHotelDropdownOpen)}
-                    className="flex items-center justify-between w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex items-center justify-between w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-accent focus:border-blue-500"
                   >
                     <span className="truncate">{getHotelDropdownText()}</span>
                     <ChevronDown className={`w-4 h-4 ml-2 transition-transform ${isHotelDropdownOpen ? 'rotate-180' : ''}`} />
@@ -456,7 +456,7 @@ export default function FirewalksPage() {
                           type="checkbox"
                           checked={selectedHotels.includes('all')}
                           onChange={() => handleHotelSelection('all')}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-accent"
                         />
                         <span className="ml-2 text-sm text-gray-900 font-medium">All Hotels</span>
                         {selectedHotels.includes('all') && <Check className="w-4 h-4 ml-auto text-blue-600" />}
@@ -471,7 +471,7 @@ export default function FirewalksPage() {
                             type="checkbox"
                             checked={selectedHotels.includes(hotel.id) && !selectedHotels.includes('all')}
                             onChange={() => handleHotelSelection(hotel.id)}
-                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-accent"
                           />
                           <span className="ml-2 text-sm text-gray-900">{hotel.name}</span>
                           {selectedHotels.includes(hotel.id) && !selectedHotels.includes('all') && (

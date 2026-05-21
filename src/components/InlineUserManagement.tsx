@@ -108,7 +108,7 @@ function ViewUserModal({ isOpen, onClose, user }: ViewUserModalProps) {
                 <button
                   onClick={handleSendWelcomeEmail}
                   disabled={sendingEmail}
-                  className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {sendingEmail ? (
                     <>
@@ -318,7 +318,7 @@ function EditUserModal({ isOpen, onClose, onUserUpdated, user }: EditUserModalPr
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
@@ -329,7 +329,7 @@ function EditUserModal({ isOpen, onClose, onUserUpdated, user }: EditUserModalPr
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
@@ -340,7 +340,7 @@ function EditUserModal({ isOpen, onClose, onUserUpdated, user }: EditUserModalPr
               required
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
               placeholder="Enter role (e.g., Hotel Manager, System Admin, etc.)"
             />
           </div>
@@ -368,7 +368,7 @@ function EditUserModal({ isOpen, onClose, onUserUpdated, user }: EditUserModalPr
                     type="checkbox"
                     checked={selectedHotels.includes(hotel.name)}
                     onChange={() => handleHotelToggle(hotel.name)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-accent"
                   />
                   <span className="text-sm text-gray-900">{hotel.name}</span>
                 </label>
@@ -536,7 +536,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
@@ -547,7 +547,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
@@ -558,7 +558,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
               required
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
               placeholder="Enter role (e.g., Hotel Manager, System Admin, etc.)"
             />
           </div>
@@ -586,7 +586,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
                     type="checkbox"
                     checked={selectedHotels.includes(hotel.name)}
                     onChange={() => handleHotelToggle(hotel.name)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-accent"
                   />
                   <span className="text-sm text-gray-900">{hotel.name}</span>
                 </label>
@@ -612,7 +612,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
               minLength={6}
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
@@ -623,7 +623,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
                 type="checkbox"
                 checked={sendWelcomeEmail}
                 onChange={(e) => setSendWelcomeEmail(e.target.checked)}
-                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-accent"
               />
               <div>
                 <span className="text-sm font-medium text-gray-900">Send welcome email</span>
@@ -825,7 +825,7 @@ export default function InlineUserManagement({ className = '' }: InlineUserManag
                   placeholder="Search users..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="pl-10 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-blue-500"
                 />
               </div>
             </div>
@@ -836,7 +836,7 @@ export default function InlineUserManagement({ className = '' }: InlineUserManag
               <select 
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-blue-500"
               >
                 <option value="">All Roles</option>
                 <option value="admin">Administrator</option>
@@ -852,7 +852,7 @@ export default function InlineUserManagement({ className = '' }: InlineUserManag
               <select 
                 value={hotelFilter}
                 onChange={(e) => setHotelFilter(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-blue-500"
               >
                 <option value="">All Hotels</option>
                 {hotels.map(hotel => (

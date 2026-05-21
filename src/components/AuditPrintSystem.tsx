@@ -737,7 +737,7 @@ const ProfessionalAuditPDF: React.FC = () => {
             <select
               value={selectedHotel}
               onChange={(e) => setSelectedHotel(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-accent focus:border-blue-500 transition-colors"
             >
               <option value="">Choose a hotel...</option>
               {hotels.map(hotel => (
@@ -755,7 +755,7 @@ const ProfessionalAuditPDF: React.FC = () => {
             <select
               value={selectedAudit}
               onChange={(e) => setSelectedAudit(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-accent focus:border-blue-500 transition-colors"
             >
               <option value="">Choose audit type...</option>
               {auditTypes.map(audit => (
@@ -777,7 +777,7 @@ const ProfessionalAuditPDF: React.FC = () => {
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               max={today}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-accent focus:border-blue-500 transition-colors"
             />
           </div>
 
@@ -790,7 +790,7 @@ const ProfessionalAuditPDF: React.FC = () => {
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               max={today}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-accent focus:border-blue-500 transition-colors"
             />
           </div>
         </div>

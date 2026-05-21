@@ -239,7 +239,7 @@ export default function BulkAssetManagementPage() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Asset code, location..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                   />
                 </div>
               </div>
@@ -255,7 +255,7 @@ export default function BulkAssetManagementPage() {
                     setSelectedCategory(e.target.value);
                     setSelectedSubcategory("");
                   }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                 >
                   <option value="">All Categories</option>
                   {categories.map(cat => (
@@ -273,7 +273,7 @@ export default function BulkAssetManagementPage() {
                   <select
                     value={selectedSubcategory}
                     onChange={(e) => setSelectedSubcategory(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                   >
                     <option value="">All Items</option>
                     {subcategories.map(sub => (
@@ -319,7 +319,7 @@ export default function BulkAssetManagementPage() {
                     value={bulkUpdate.purchase_cost || ''}
                     onChange={(e) => setBulkUpdate({ ...bulkUpdate, purchase_cost: parseFloat(e.target.value) || undefined })}
                     placeholder="Leave empty to skip"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent"
                   />
                 </div>
 
@@ -332,7 +332,7 @@ export default function BulkAssetManagementPage() {
                     value={bulkUpdate.manufacturer || ''}
                     onChange={(e) => setBulkUpdate({ ...bulkUpdate, manufacturer: e.target.value || undefined })}
                     placeholder="e.g., Samsung, LG"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent"
                   />
                 </div>
 
@@ -345,7 +345,7 @@ export default function BulkAssetManagementPage() {
                     value={bulkUpdate.model || ''}
                     onChange={(e) => setBulkUpdate({ ...bulkUpdate, model: e.target.value || undefined })}
                     placeholder="e.g., UN50TU7000"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent"
                   />
                 </div>
 
@@ -358,7 +358,7 @@ export default function BulkAssetManagementPage() {
                     value={bulkUpdate.expected_lifespan_years || ''}
                     onChange={(e) => setBulkUpdate({ ...bulkUpdate, expected_lifespan_years: parseInt(e.target.value) || undefined })}
                     placeholder="e.g., 7"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent"
                   />
                 </div>
 
@@ -371,7 +371,7 @@ export default function BulkAssetManagementPage() {
                     value={bulkUpdate.supplier || ''}
                     onChange={(e) => setBulkUpdate({ ...bulkUpdate, supplier: e.target.value || undefined })}
                     placeholder="e.g., Direct Supply Co."
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent"
                   />
                 </div>
 
@@ -384,7 +384,7 @@ export default function BulkAssetManagementPage() {
                     value={bulkUpdate.warranty_years || ''}
                     onChange={(e) => setBulkUpdate({ ...bulkUpdate, warranty_years: parseInt(e.target.value) || undefined })}
                     placeholder="e.g., 2"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent"
                   />
                 </div>
               </div>
@@ -455,7 +455,7 @@ export default function BulkAssetManagementPage() {
                           type="checkbox"
                           checked={!excludedAssets.has(asset.id)}
                           onChange={() => toggleExclude(asset.id)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-accent"
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">

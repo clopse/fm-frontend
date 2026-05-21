@@ -451,7 +451,7 @@ const ItemsNeededSection = memo(function ItemsNeededSection({
                 </div>
                 <button
                   onClick={() => onUploadOpen(task)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 font-medium"
+                  className="bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 font-medium"
                 >
                   <Upload className="w-4 h-4" />
                   <span>Upload</span>

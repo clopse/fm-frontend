@@ -278,7 +278,7 @@ export default function SettingsPage() {
                             type="text"
                             value={settings.companyName}
                             onChange={(e) => handleInputChange('companyName', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                           />
                         </div>
                         
@@ -289,7 +289,7 @@ export default function SettingsPage() {
                           <select
                             value={settings.timezone}
                             onChange={(e) => handleInputChange('timezone', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                           >
                             <option value="Europe/Dublin">Dublin Time (GMT+0/+1)</option>
                             <option value="Europe/London">London Time (GMT+0/+1)</option>
@@ -305,7 +305,7 @@ export default function SettingsPage() {
                           <select
                             value={settings.dateFormat}
                             onChange={(e) => handleInputChange('dateFormat', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                           >
                             <option value="DD/MM/YYYY">DD/MM/YYYY</option>
                             <option value="MM/DD/YYYY">MM/DD/YYYY</option>
@@ -320,7 +320,7 @@ export default function SettingsPage() {
                           <select
                             value={settings.currency}
                             onChange={(e) => handleInputChange('currency', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                           >
                             <option value="EUR">EUR - Euro</option>
                             <option value="GBP">GBP - British Pound</option>
@@ -349,7 +349,7 @@ export default function SettingsPage() {
                             type="number"
                             value={settings.sessionTimeout}
                             onChange={(e) => handleInputChange('sessionTimeout', parseInt(e.target.value))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                           />
                         </div>
                         
@@ -361,7 +361,7 @@ export default function SettingsPage() {
                             type="number"
                             value={settings.passwordMinLength}
                             onChange={(e) => handleInputChange('passwordMinLength', parseInt(e.target.value))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                           />
                         </div>
                       </div>
@@ -416,7 +416,7 @@ export default function SettingsPage() {
                             type="number"
                             value={settings.apiRateLimit}
                             onChange={(e) => handleInputChange('apiRateLimit', parseInt(e.target.value))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                           />
                         </div>
                       </div>
@@ -442,7 +442,7 @@ export default function SettingsPage() {
                             value={settings.smtpHost}
                             onChange={(e) => handleInputChange('smtpHost', e.target.value)}
                             placeholder="smtp.gmail.com"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                           />
                         </div>
                         
@@ -455,7 +455,7 @@ export default function SettingsPage() {
                             value={settings.fromEmail}
                             onChange={(e) => handleInputChange('fromEmail', e.target.value)}
                             placeholder="noreply@jmkfacilities.com"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                           />
                         </div>
                       </div>

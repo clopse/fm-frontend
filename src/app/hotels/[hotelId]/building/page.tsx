@@ -213,7 +213,7 @@ export default function BuildingPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               disabled={loading}
-              className="w-full bg-white border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm disabled:opacity-50 disabled:bg-gray-50"
+              className="w-full bg-white border border-gray-300 rounded-lg pl-10 pr-4 py-2.5 text-gray-900 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-accent/20 transition-all text-sm disabled:opacity-50 disabled:bg-gray-50"
             />
             {searchQuery && (
               <button

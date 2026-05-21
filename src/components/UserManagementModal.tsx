@@ -117,7 +117,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
@@ -128,7 +128,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 
@@ -139,7 +139,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
               required
               value={formData.role}
               onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
               placeholder="Enter role (e.g., Hotel Manager, System Admin, etc.)"
             />
           </div>
@@ -167,7 +167,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
                     type="checkbox"
                     checked={selectedHotels.includes(hotel.name)}
                     onChange={() => handleHotelToggle(hotel.name)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-accent"
                   />
                   <span className="text-sm text-gray-900">{hotel.name}</span>
                 </label>
@@ -193,7 +193,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
               minLength={6}
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>
 

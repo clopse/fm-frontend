@@ -51,7 +51,7 @@ export default function WizardStep1HotelConfig({ config, onUpdate, onNext }: Wiz
             value={config.hotelName}
             onChange={(e) => handleChange("hotelName", e.target.value)}
             placeholder="e.g., Holiday Inn Express Dublin Airport"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
           />
         </div>
 
@@ -65,7 +65,7 @@ export default function WizardStep1HotelConfig({ config, onUpdate, onNext }: Wiz
             value={config.hotelCode}
             onChange={(e) => handleChange("hotelCode", e.target.value.toUpperCase())}
             placeholder="e.g., HIE-DUB"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent uppercase"
             maxLength={10}
           />
           <p className="text-xs text-gray-500 mt-1">Used for asset coding (e.g., HIE-DUB-RM101-TV)</p>
@@ -79,7 +79,7 @@ export default function WizardStep1HotelConfig({ config, onUpdate, onNext }: Wiz
           <select
             value={config.propertyType}
             onChange={(e) => handleChange("propertyType", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
           >
             <option value="hotel">Standard Hotel</option>
             <option value="aparthotel">Aparthotel (with kitchens)</option>
@@ -96,7 +96,7 @@ export default function WizardStep1HotelConfig({ config, onUpdate, onNext }: Wiz
             type="date"
             value={config.openingDate}
             onChange={(e) => handleChange("openingDate", e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
           />
           <p className="text-xs text-gray-500 mt-1">Default installation date for new assets</p>
         </div>
@@ -120,7 +120,7 @@ export default function WizardStep1HotelConfig({ config, onUpdate, onNext }: Wiz
               max="50"
               value={config.totalFloors}
               onChange={(e) => handleChange("totalFloors", parseInt(e.target.value) || 1)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
             />
             <p className="text-xs text-gray-500 mt-1">Number of numbered floors (1, 2, 3...)</p>
           </div>
@@ -131,7 +131,7 @@ export default function WizardStep1HotelConfig({ config, onUpdate, onNext }: Wiz
                 type="checkbox"
                 checked={config.hasGroundFloor}
                 onChange={(e) => handleChange("hasGroundFloor", e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-accent"
               />
               <span className="ml-2 text-sm text-gray-700">Ground Floor (0)</span>
             </label>
@@ -143,7 +143,7 @@ export default function WizardStep1HotelConfig({ config, onUpdate, onNext }: Wiz
                 type="checkbox"
                 checked={config.hasBasement}
                 onChange={(e) => handleChange("hasBasement", e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-accent"
               />
               <span className="ml-2 text-sm text-gray-700">Basement (B)</span>
             </label>

@@ -96,7 +96,7 @@ export default function FireQuiz({ hotelId, onComplete, onBack }: FireQuizProps)
                   placeholder="Enter your full name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                 />
               </div>
               <div>
@@ -106,7 +106,7 @@ export default function FireQuiz({ hotelId, onComplete, onBack }: FireQuizProps)
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                 />
               </div>
             </div>
@@ -234,7 +234,7 @@ export default function FireQuiz({ hotelId, onComplete, onBack }: FireQuizProps)
                     }
                     setAnswers(newAnswers);
                   }}
-                  className="mt-1 mr-3 text-blue-600 focus:ring-blue-500"
+                  className="mt-1 mr-3 text-blue-600 focus:ring-accent"
                 />
                 <span className="text-gray-700 flex-1">{opt}</span>
               </label>

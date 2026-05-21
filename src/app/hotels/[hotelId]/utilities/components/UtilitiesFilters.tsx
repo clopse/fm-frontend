@@ -86,7 +86,7 @@ export default function UtilitiesFilters({
                 <select 
                   value={year} 
                   onChange={(e) => onYearChange(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-blue-500"
                 >
                   <option value="2023">2023</option>
                   <option value="2024">2024</option>
@@ -100,7 +100,7 @@ export default function UtilitiesFilters({
                 <select 
                   value={filters.month} 
                   onChange={(e) => onFilterChange('month', e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-blue-500"
                 >
                   <option value="all">All Months</option>
                   {availableMonths.map(month => (
@@ -166,7 +166,7 @@ export default function UtilitiesFilters({
             <select 
               value={filters.metric} 
               onChange={(e) => onFilterChange('metric', e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-blue-500"
             >
               <option value="overview">📊 Overview</option>
               <option value="mic_charges">⚡ MIC Charges</option>

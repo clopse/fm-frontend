@@ -223,7 +223,7 @@ export default function WizardStep2FloorConfig({
                           updateFloor(idx, "roomCount", 0);
                         }
                       }}
-                      className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-gray-600 border-gray-300 rounded focus:ring-accent"
                     />
                     <span className="ml-2 text-sm text-gray-700 font-medium">
                       No guest rooms on this floor
@@ -245,7 +245,7 @@ export default function WizardStep2FloorConfig({
                       value={floor.floorName}
                       onChange={(e) => updateFloor(idx, "floorName", e.target.value)}
                       placeholder={`Floor ${floor.floorNumber}`}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent"
                     />
                   </div>
 
@@ -257,7 +257,7 @@ export default function WizardStep2FloorConfig({
                       value={floor.roomType}
                       onChange={(e) => updateFloor(idx, "roomType", e.target.value)}
                       disabled={floor.noRooms}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
                     >
                       <option value="standard">Standard Room</option>
                       <option value="suite">Suite</option>
@@ -277,7 +277,7 @@ export default function WizardStep2FloorConfig({
                       value={floor.roomCount}
                       onChange={(e) => updateFloor(idx, "roomCount", parseInt(e.target.value) || 0)}
                       disabled={floor.noRooms}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                   </div>
 
@@ -290,7 +290,7 @@ export default function WizardStep2FloorConfig({
                       value={floor.firstRoomNumber}
                       onChange={(e) => updateFloor(idx, "firstRoomNumber", parseInt(e.target.value) || 0)}
                       disabled={floor.noRooms}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                     {!floor.noRooms && floor.roomCount > 0 && (
                       <p className="text-xs text-gray-500 mt-1">
@@ -365,7 +365,7 @@ export default function WizardStep2FloorConfig({
                       }}
                       disabled={floor.noRooms}
                       placeholder="e.g., 310, 311, 313 (comma-separated)"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Skip specific room numbers (e.g., odd/even layout, unlucky numbers, or layout gaps)
@@ -381,7 +381,7 @@ export default function WizardStep2FloorConfig({
                       value={floor.notes || ""}
                       onChange={(e) => updateFloor(idx, "notes", e.target.value)}
                       placeholder={floor.noRooms ? "e.g., Lobby, Restaurant, Spa, Back of house" : "e.g., Executive floor, Family rooms, Connecting doors"}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent"
                     />
                   </div>
                 </div>

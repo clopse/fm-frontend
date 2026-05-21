@@ -652,7 +652,7 @@ export default function UtilitiesGraphs() {
             <select
               value={selectedMetric}
               onChange={(e) => setSelectedMetric(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
             >
               {EFFICIENCY_METRICS[selectedUtilityTypes[0] || 'electricity'].map(metric => (
                 <option key={metric.key} value={metric.key}>{metric.label}</option>
@@ -751,7 +751,7 @@ export default function UtilitiesGraphs() {
             <select
               value={selectedSingleHotel}
               onChange={(e) => setSelectedSingleHotel(e.target.value)}
-              className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
             >
               {hotels.map(hotel => (
                 <option key={hotel.id} value={hotel.id}>{hotel.name}</option>

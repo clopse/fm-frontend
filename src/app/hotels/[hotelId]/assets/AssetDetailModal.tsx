@@ -163,7 +163,7 @@ export default function AssetDetailModal({
           type={type}
           value={editedAsset[field] as string || ""}
           onChange={(e) => updateField(field, e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent"
         />
       ) : (
         <p className="text-gray-900 py-2">{(asset[field] as string) || "-"}</p>
@@ -188,7 +188,7 @@ export default function AssetDetailModal({
         <select
           value={editedAsset[field] as string || ""}
           onChange={(e) => updateField(field, e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent"
         >
           <option value="">Select...</option>
           {options.map((opt) => (

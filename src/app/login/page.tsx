@@ -118,7 +118,7 @@ export default function LoginPage() {
               placeholder="Email"
               ref={emailRef}
               disabled={loading}
-              className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:opacity-50"
               autoFocus
               autoComplete="username email"
               inputMode="email"
@@ -139,7 +139,7 @@ export default function LoginPage() {
               placeholder="Password"
               ref={passwordRef}
               disabled={loading}
-              className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:opacity-50"
               autoComplete="current-password"
               aria-label="Password"
               onInput={() => error && setError('')}
@@ -177,7 +177,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-700 text-white border-none rounded-md font-medium text-base cursor-pointer hover:bg-blue-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 bg-blue-700 text-white border-none rounded-md font-medium text-base cursor-pointer hover:bg-blue-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <div className="flex items-center justify-center">
@@ -196,7 +196,7 @@ export default function LoginPage() {
         <div className="mt-4 text-center">
           <Link
             href="/forgot-password"
-            className="text-sm text-blue-600 hover:text-blue-800 underline focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
+            className="text-sm text-blue-600 hover:text-blue-800 underline focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 rounded"
           >
             Forgot your password?
           </Link>

@@ -224,7 +224,7 @@ function FileViewer({ file, hotelId, onDelete }: {
                 target="_blank"
                 rel="noopener noreferrer"
                 download={file.filename}
-                className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+                className="inline-flex items-center space-x-2 bg-accent hover:bg-accent-hover text-white px-6 py-3 rounded-lg transition-colors font-medium"
               >
                 <Download className="w-4 h-4" />
                 <span>Download {file.filename}</span>

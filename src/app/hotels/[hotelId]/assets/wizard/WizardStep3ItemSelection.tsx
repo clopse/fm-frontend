@@ -145,7 +145,7 @@ export default function WizardStep3ItemSelection({
             placeholder="Search items..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent"
           />
         </div>
         <div className="flex gap-2">
@@ -184,7 +184,7 @@ export default function WizardStep3ItemSelection({
                   type="checkbox"
                   checked={isSelected}
                   onChange={() => toggleItem(item.key)}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-accent"
                 />
 
                 <div className="flex-1">
@@ -229,7 +229,7 @@ export default function WizardStep3ItemSelection({
                               type="number"
                               value={cost}
                               onChange={(e) => onUpdateCost(item.key, parseFloat(e.target.value) || 0)}
-                              className="w-24 pl-7 pr-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                              className="w-24 pl-7 pr-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent"
                             />
                           </div>
                         </div>

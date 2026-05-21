@@ -594,7 +594,7 @@ JMK Facilities Management Team`);
                         value={emailListText}
                         onChange={(e) => handleEmailTextChange(e.target.value)}
                         placeholder="Paste emails here (one per line, comma-separated, or from Excel)&#10;&#10;Example:&#10;john@example.com&#10;sarah@example.com&#10;mike@example.com"
-                        className="w-full h-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        className="w-full h-40 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent resize-none"
                       />
                       <p className="text-sm text-gray-500 mt-2">
                         Supports various formats: line-separated, comma-separated, or copy-paste from Excel
@@ -642,7 +642,7 @@ JMK Facilities Management Team`);
                           const course = courses.find(c => c.id === e.target.value);
                           if (course) setSelectedCourse(course);
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                       >
                         {courses.map((course) => (
                           <option key={course.id} value={course.id}>
@@ -660,7 +660,7 @@ JMK Facilities Management Team`);
                         type="text"
                         value={invitationSubject}
                         onChange={(e) => setInvitationSubject(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                       />
                     </div>
                     
@@ -671,7 +671,7 @@ JMK Facilities Management Team`);
                       <textarea
                         value={invitationMessage}
                         onChange={(e) => setInvitationMessage(e.target.value)}
-                        className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        className="w-full h-48 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent resize-none"
                       />
                       <p className="text-sm text-gray-500 mt-2">
                         Use [TRAINING_LINK] placeholder for the course URL
@@ -739,7 +739,7 @@ JMK Facilities Management Team`);
                         placeholder="Search by name or email..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                       />
                     </div>
                   </div>
@@ -749,7 +749,7 @@ JMK Facilities Management Team`);
                     <select
                       value={selectedHotel}
                       onChange={(e) => setSelectedHotel(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                     >
                       <option value="all">All Hotels</option>
                       {Object.entries(hotelNames).map(([id, name]) => (
@@ -763,7 +763,7 @@ JMK Facilities Management Team`);
                     <select
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                     >
                       <option value="all">All Results</option>
                       <option value="passed">Passed Only</option>
@@ -776,7 +776,7 @@ JMK Facilities Management Team`);
                     <select
                       value={dateFilter}
                       onChange={(e) => setDateFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                     >
                       <option value="all">All Time</option>
                       <option value="today">Today</option>

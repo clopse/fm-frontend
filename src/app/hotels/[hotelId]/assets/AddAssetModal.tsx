@@ -174,7 +174,7 @@ export default function AddAssetModal({ hotelId, existingAssets, onClose, onAdd 
                     required 
                     value={formData.asset_code} 
                     onChange={(e) => handleAssetCodeChange(e.target.value)} 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent" 
                     placeholder={`e.g., TV-001 (becomes ${hotelId.toUpperCase()}-TV-001)`}
                   />
                   <p className="text-xs text-gray-500 mt-1">Auto-prefixed with {hotelId.toUpperCase()}-</p>

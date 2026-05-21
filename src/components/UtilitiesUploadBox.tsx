@@ -397,7 +397,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         value={verificationFormData.supplier || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, supplier: e.target.value})}
                         placeholder="Enter supplier name"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent bg-white"
                       />
                     </div>
 
@@ -410,7 +410,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         value={verificationFormData.invoice_number || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, invoice_number: e.target.value})}
                         placeholder="Enter invoice number"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent bg-white"
                       />
                     </div>
                   </div>
@@ -425,7 +425,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         value={verificationFormData.consumption || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, consumption: e.target.value})}
                         placeholder="Enter consumption"
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-accent ${
                           verificationData.missing_fields.includes('consumption') 
                             ? 'border-red-300 bg-red-50' 
                             : 'border-slate-300 bg-white'
@@ -443,7 +443,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         value={verificationFormData.total_cost || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, total_cost: e.target.value})}
                         placeholder="Enter total cost"
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-accent ${
                           verificationData.missing_fields.includes('total_cost') 
                             ? 'border-red-300 bg-red-50' 
                             : 'border-slate-300 bg-white'
@@ -462,7 +462,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         value={verificationFormData.meter_number || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, meter_number: e.target.value})}
                         placeholder="Enter meter number"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent bg-white"
                       />
                     </div>
 
@@ -475,7 +475,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         value={verificationFormData.gprn || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, gprn: e.target.value})}
                         placeholder="Enter GPRN/MPRN"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent bg-white"
                       />
                     </div>
                   </div>
@@ -489,7 +489,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         type="date"
                         value={verificationFormData.billing_start || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, billing_start: e.target.value})}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent bg-white"
                       />
                     </div>
 
@@ -501,7 +501,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         type="date"
                         value={verificationFormData.billing_end || ''}
                         onChange={(e) => setVerificationFormData({...verificationFormData, billing_end: e.target.value})}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent bg-white"
                       />
                     </div>
                   </div>
@@ -613,7 +613,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                   value={billDate}
                   onChange={(e) => setBillDate(e.target.value)}
                   disabled={uploading}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100"
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-slate-100"
                   required
                 />
               </div>
@@ -690,7 +690,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                     value={manualType}
                     onChange={(e) => setManualType(e.target.value)}
                     disabled={uploading}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100"
+                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-slate-100"
                     required
                   >
                     <option value="">-- Select Utility Type --</option>
@@ -733,7 +733,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         value={manualData.consumption}
                         onChange={(e) => setManualData({...manualData, consumption: e.target.value})}
                         placeholder="e.g. 15000"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent"
                       />
                     </div>
                     
@@ -747,7 +747,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         value={manualData.cost}
                         onChange={(e) => setManualData({...manualData, cost: e.target.value})}
                         placeholder="e.g. 3500.50"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent"
                       />
                     </div>
                   </div>
@@ -761,7 +761,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                       value={manualData.meterNumber}
                       onChange={(e) => setManualData({...manualData, meterNumber: e.target.value})}
                       placeholder="e.g. 12345678"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent"
                     />
                   </div>
 
@@ -774,7 +774,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         type="date"
                         value={manualData.billingStart}
                         onChange={(e) => setManualData({...manualData, billingStart: e.target.value})}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent"
                       />
                     </div>
                     
@@ -786,7 +786,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
                         type="date"
                         value={manualData.billingEnd}
                         onChange={(e) => setManualData({...manualData, billingEnd: e.target.value})}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent"
                       />
                     </div>
                   </div>

@@ -407,7 +407,7 @@ export default function AuditPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <input type="text"
-                    className="pl-10 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="pl-10 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                     placeholder="Search hotel, task, filename, or user..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -416,7 +416,7 @@ export default function AuditPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                <select className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                   value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
                   <option value="all">All Status</option>
                   <option value="pending">Pending</option>
@@ -426,7 +426,7 @@ export default function AuditPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Hotel</label>
-                <select className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                <select className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
                   value={hotelFilter} onChange={(e) => setHotelFilter(e.target.value)}>
                   <option value="all">All Hotels</option>
                   {uniqueHotels.map(hotelId => (
@@ -438,10 +438,10 @@ export default function AuditPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Date Range</label>
                 <div className="space-y-2">
                   <input type="date"
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
                     value={dateRange.start} onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))} />
                   <input type="date"
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent text-sm"
                     value={dateRange.end} onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))} />
                 </div>
               </div>
