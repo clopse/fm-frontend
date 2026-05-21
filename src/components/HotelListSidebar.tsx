@@ -98,7 +98,7 @@ export default function HotelListSidebar({
                   {/* Selection indicator */}
                   {isSelected && (
                     <div className="ml-2 flex-shrink-0">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <div className="w-2 h-2 bg-accent rounded-full"></div>
                     </div>
                   )}
                 </div>

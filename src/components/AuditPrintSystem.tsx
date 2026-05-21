@@ -446,7 +446,7 @@ const ProfessionalAuditPDF: React.FC = () => {
         <div className="no-print fixed top-4 right-4 z-50 flex gap-2">
           <button 
             onClick={() => window.print()}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors"
+            className="bg-accent text-white px-4 py-2 rounded-lg hover:bg-accent-hover flex items-center gap-2 transition-colors"
           >
             <Printer className="w-4 h-4" />
             Print PDF
@@ -737,7 +737,7 @@ const ProfessionalAuditPDF: React.FC = () => {
             <select
               value={selectedHotel}
               onChange={(e) => setSelectedHotel(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-accent focus:border-blue-500 transition-colors"
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-accent focus:border-accent transition-colors"
             >
               <option value="">Choose a hotel...</option>
               {hotels.map(hotel => (
@@ -755,7 +755,7 @@ const ProfessionalAuditPDF: React.FC = () => {
             <select
               value={selectedAudit}
               onChange={(e) => setSelectedAudit(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-accent focus:border-blue-500 transition-colors"
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-accent focus:border-accent transition-colors"
             >
               <option value="">Choose audit type...</option>
               {auditTypes.map(audit => (
@@ -777,7 +777,7 @@ const ProfessionalAuditPDF: React.FC = () => {
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               max={today}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-accent focus:border-blue-500 transition-colors"
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-accent focus:border-accent transition-colors"
             />
           </div>
 
@@ -790,7 +790,7 @@ const ProfessionalAuditPDF: React.FC = () => {
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               max={today}
-              className="w-full p-3 border border-gray-300 rounded-md focus:ring-accent focus:border-blue-500 transition-colors"
+              className="w-full p-3 border border-gray-300 rounded-md focus:ring-accent focus:border-accent transition-colors"
             />
           </div>
         </div>
@@ -848,7 +848,7 @@ const ProfessionalAuditPDF: React.FC = () => {
             className={`px-6 py-3 rounded-lg font-medium flex items-center gap-2 justify-center transition-colors ${
               !selectedHotel || !selectedAudit || isLoading
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                : 'bg-accent text-white hover:bg-accent-hover cursor-pointer'
             }`}
           >
             {isLoading ? (

@@ -91,7 +91,7 @@ export default function IdleWrapper({ children }: { children: React.ReactNode })
               <div className="flex gap-3 justify-center">
                 <button
                   onClick={handleContinueSession}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+                  className="px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover transition-colors font-medium"
                 >
                   Continue Session
                 </button>

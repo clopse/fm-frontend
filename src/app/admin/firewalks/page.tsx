@@ -377,7 +377,7 @@ export default function FirewalksPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-accent rounded-lg flex items-center justify-center">
                 <Building2 className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -385,7 +385,7 @@ export default function FirewalksPage() {
                 <p className="text-slate-300">Hotel Fire Walk Dashboard</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 bg-blue-500/20 border border-blue-400/30 text-blue-100 px-4 py-2 rounded-lg">
+            <div className="flex items-center gap-2 bg-accent/20 border border-accent/30 text-white px-4 py-2 rounded-lg">
               <Calendar className="w-4 h-4" />
               {getMonthDropdownText()}
             </div>
@@ -490,7 +490,7 @@ export default function FirewalksPage() {
                 onClick={() => setShowLineGraph(!showLineGraph)}
                 className={`inline-flex items-center px-4 py-2 text-sm font-medium border rounded-lg transition-colors ${
                   showLineGraph 
-                    ? 'text-white bg-blue-600 border-blue-600 hover:bg-blue-700' 
+                    ? 'text-white bg-accent border-accent hover:bg-accent-hover'
                     : 'text-gray-700 bg-white border-gray-300 hover:bg-gray-50'
                 }`}
               >
@@ -507,7 +507,7 @@ export default function FirewalksPage() {
               <button
                 onClick={handlePrintToPDF}
                 disabled={isExporting}
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-accent border border-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50"
               >
                 <Printer className="w-4 h-4 mr-2" />
                 {isExporting ? 'Preparing...' : 'Print to PDF'}

@@ -811,7 +811,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
               <button
                 onClick={handleSubmit}
                 disabled={!file || uploading || !billDate || (detectedType === 'unknown' && !manualType) || uploadStatus === 'success' || (showManualEntry && (!manualData.consumption || !manualData.cost))}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-medium"
+                className="px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-medium"
               >
                 {uploading ? (
                   <>

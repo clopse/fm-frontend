@@ -177,7 +177,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-blue-700 text-white border-none rounded-md font-medium text-base cursor-pointer hover:bg-blue-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 bg-accent text-white border-none rounded-md font-medium text-base cursor-pointer hover:bg-accent-hover transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
               <div className="flex items-center justify-center">
@@ -196,7 +196,7 @@ export default function LoginPage() {
         <div className="mt-4 text-center">
           <Link
             href="/forgot-password"
-            className="text-sm text-blue-600 hover:text-blue-800 underline focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 rounded"
+            className="text-sm text-accent hover:text-accent-hover underline focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 rounded"
           >
             Forgot your password?
           </Link>

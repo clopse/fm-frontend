@@ -138,7 +138,7 @@ export default function FireTrainingPage() {
 
               <button 
                 onClick={() => setStep('slides')} 
-                className="px-8 py-4 bg-blue-600 text-white rounded-lg text-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
+                className="px-8 py-4 bg-accent text-white rounded-lg text-lg font-semibold hover:bg-accent-hover transition-colors shadow-lg hover:shadow-xl"
               >
                 Start Training
               </button>
@@ -245,7 +245,7 @@ export default function FireTrainingPage() {
                 {!quizResult.passed && (
                   <button
                     onClick={handleRestart}
-                    className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                    className="px-8 py-3 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors font-semibold"
                   >
                     Review & Try Again
                   </button>

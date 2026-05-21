@@ -148,13 +148,13 @@ export default function AddAssetModal({ hotelId, existingAssets, onClose, onAdd 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="px-6 py-4 border-b border-gray-200 bg-blue-600">
+        <div className="px-6 py-4 border-b border-gray-200 bg-accent">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-white">Add New Asset</h2>
               <p className="text-blue-100 text-sm mt-1">Create a single asset entry</p>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-blue-700 rounded-lg text-white">
+            <button onClick={onClose} className="p-2 hover:bg-accent-hover rounded-lg text-white">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -251,7 +251,7 @@ export default function AddAssetModal({ hotelId, existingAssets, onClose, onAdd 
           <p className="text-sm text-gray-600"><span className="text-red-600">*</span> Required fields</p>
           <div className="flex gap-3">
             <button type="button" onClick={onClose} className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-            <button onClick={handleSubmit} disabled={isSaving || !formData.asset_code} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center">
+            <button onClick={handleSubmit} disabled={isSaving || !formData.asset_code} className="px-6 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 flex items-center">
               <Plus className="w-4 h-4 mr-2" />
               {isSaving ? "Creating..." : "Create Asset"}
             </button>

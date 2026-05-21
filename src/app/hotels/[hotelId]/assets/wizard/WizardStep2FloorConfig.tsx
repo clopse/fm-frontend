@@ -154,7 +154,7 @@ export default function WizardStep2FloorConfig({
             <div className="flex items-end">
               <button
                 onClick={applyQuickFill}
-                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="w-full px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover"
               >
                 Apply to All Guest Floors
               </button>
@@ -428,7 +428,7 @@ export default function WizardStep2FloorConfig({
         <button
           onClick={onNext}
           disabled={!canProceed}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          className="px-6 py-3 bg-accent text-white rounded-lg font-medium hover:bg-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           Next: Select Room Items
         </button>

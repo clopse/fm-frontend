@@ -192,7 +192,7 @@ export default function DocumentSection({ assetId, isEditing }: DocumentSectionP
           <div className="flex items-center justify-between mb-3">
             <label className="text-sm font-medium text-gray-700">Photos</label>
             {isEditing && (
-              <label className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 cursor-pointer">
+              <label className="flex items-center gap-2 px-3 py-1 bg-accent text-white text-sm rounded hover:bg-accent-hover cursor-pointer">
                 <Upload className="w-4 h-4" />
                 Add Photo
                 <input
@@ -257,7 +257,7 @@ export default function DocumentSection({ assetId, isEditing }: DocumentSectionP
                 <a
                   href={viewingDoc.url}
                   download
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-accent text-white rounded-lg hover:bg-accent-hover"
                   title="Download"
                 >
                   <Download className="w-4 h-4" />

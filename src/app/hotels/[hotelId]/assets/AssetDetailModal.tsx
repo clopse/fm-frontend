@@ -232,7 +232,7 @@ export default function AssetDetailModal({
                   <button
                     onClick={handleSave}
                     disabled={isSaving}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center disabled:opacity-50"
+                    className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover flex items-center disabled:opacity-50"
                   >
                     <Save className="w-4 h-4 mr-2" />
                     {isSaving ? "Saving..." : "Save"}
@@ -248,7 +248,7 @@ export default function AssetDetailModal({
                   </button>
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover"
                   >
                     Edit
                   </button>

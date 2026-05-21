@@ -396,7 +396,7 @@ function TreeFile({
 }) {
   return (
     <div className={`group flex items-center space-x-1.5 px-2 py-1.5 rounded-lg cursor-pointer transition-all ${
-      isSelected ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 text-gray-700'
+      isSelected ? 'bg-accent text-white' : 'hover:bg-gray-100 text-gray-700'
     }`}
       onClick={() => onSelect(file)}
     >
@@ -450,7 +450,7 @@ function SearchResults({
           onClick={() => onSelect(file)}
           className={`group flex items-start space-x-2 px-3 py-2.5 rounded-lg cursor-pointer transition-all ${
             selectedFile?.fileUrl === file.fileUrl
-              ? 'bg-blue-600 text-white'
+              ? 'bg-accent text-white'
               : 'hover:bg-gray-100'
           }`}
         >

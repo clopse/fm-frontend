@@ -230,7 +230,7 @@ export default function UtilitiesFilters({
               </button>
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
               >
                 Apply Filters
               </button>

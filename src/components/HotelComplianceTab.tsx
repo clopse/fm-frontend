@@ -250,7 +250,7 @@ export default function HotelComplianceTab({ hotel, isEditing, onTaskListSave }:
           )}
           {isEditing && (
             <div className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
-              <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+              <span className="w-2 h-2 bg-accent rounded-full mr-2 animate-pulse"></span>
               Editing mode - toggle tasks on/off
             </div>
           )}

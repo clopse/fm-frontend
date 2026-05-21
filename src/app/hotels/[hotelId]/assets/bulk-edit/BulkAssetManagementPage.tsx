@@ -392,7 +392,7 @@ export default function BulkAssetManagementPage() {
               <button
                 onClick={handleBulkSave}
                 disabled={savingChanges || assetsToUpdate.length === 0 || Object.keys(bulkUpdate).length === 0}
-                className="w-full mt-6 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full mt-6 px-4 py-3 bg-accent text-white rounded-lg font-medium hover:bg-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 <Save className="w-5 h-5" />
                 {savingChanges ? 'Saving...' : `Update ${assetsToUpdate.length} Assets`}

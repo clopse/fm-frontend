@@ -44,7 +44,7 @@ function AssetListPopup({ assets, category, year, onClose }: AssetListPopupProps
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-        <div className="px-6 py-4 border-b border-gray-200 bg-blue-600">
+        <div className="px-6 py-4 border-b border-gray-200 bg-accent">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xl font-semibold text-white">
@@ -56,7 +56,7 @@ function AssetListPopup({ assets, category, year, onClose }: AssetListPopupProps
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-blue-700 rounded-lg text-white"
+              className="p-2 hover:bg-accent-hover rounded-lg text-white"
             >
               <X className="w-5 h-5" />
             </button>
@@ -394,7 +394,7 @@ export default function DepreciationTracker({ assets, onClose }: DepreciationTra
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-blue-600">
+        <div className="px-6 py-4 border-b border-gray-200 bg-accent">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-white">Depreciation Tracker</h2>
@@ -404,7 +404,7 @@ export default function DepreciationTracker({ assets, onClose }: DepreciationTra
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-blue-700 rounded-lg text-white"
+              className="p-2 hover:bg-accent-hover rounded-lg text-white"
             >
               <X className="w-5 h-5" />
             </button>

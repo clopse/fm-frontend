@@ -179,7 +179,7 @@ export default function WizardStep1HotelConfig({ config, onUpdate, onNext }: Wiz
         <button
           onClick={onNext}
           disabled={!canProceed}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          className="px-6 py-3 bg-accent text-white rounded-lg font-medium hover:bg-accent-hover disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
           Next: Configure Floors
         </button>

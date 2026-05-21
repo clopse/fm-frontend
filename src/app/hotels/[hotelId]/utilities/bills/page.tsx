@@ -103,7 +103,7 @@ export default function BillsArchivePage() {
             </div>
             
             <div className="flex items-center space-x-4">
-              <button className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center space-x-2">
+              <button className="bg-accent text-white px-6 py-2 rounded-lg font-medium hover:bg-accent-hover transition-colors flex items-center space-x-2">
                 <Upload className="w-4 h-4" />
                 <span>Upload New Bill</span>
               </button>

@@ -225,7 +225,7 @@ export default function FireSlides({ onComplete }: FireSlidesProps) {
                       <span className="text-gray-700 text-lg leading-relaxed ml-4">{bullet}</span>
                     ) : (
                       <>
-                        <div className="w-2 h-2 bg-blue-600 rounded-full mt-3 mr-3 flex-shrink-0"></div>
+                        <div className="w-2 h-2 bg-accent rounded-full mt-3 mr-3 flex-shrink-0"></div>
                         <span className="text-gray-700 text-lg leading-relaxed">{bullet}</span>
                       </>
                     )}
@@ -273,7 +273,7 @@ export default function FireSlides({ onComplete }: FireSlidesProps) {
                 <div
                   key={idx}
                   className={`w-3 h-3 rounded-full transition-colors ${
-                    idx === index ? 'bg-blue-600' : idx < index ? 'bg-blue-300' : 'bg-gray-200'
+                    idx === index ? 'bg-accent' : idx < index ? 'bg-accent/40' : 'bg-gray-200'
                   }`}
                 />
               ))}
@@ -292,7 +292,7 @@ export default function FireSlides({ onComplete }: FireSlidesProps) {
             ) : (
               <button
                 onClick={() => setIndex(index + 1)}
-                className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
               >
                 Next
                 <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

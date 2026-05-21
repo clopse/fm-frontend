@@ -29,7 +29,7 @@ export default function FileTree({
         onClick={() => onSelectFile(node.path)}
         className={`w-full flex items-center space-x-2 px-2 py-2 rounded-lg text-sm transition-all group ${
           isSelected
-            ? 'bg-blue-600 text-white shadow-sm'
+            ? 'bg-accent text-white shadow-sm'
             : 'text-gray-700 hover:bg-gray-100'
         }`}
         style={{ paddingLeft: `${level * 12 + 8}px` }}

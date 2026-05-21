@@ -143,7 +143,7 @@ export default function DashboardHeader({
                         onClick={() => onPeriodModeChange('yearly')}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                           periodMode === 'yearly'
-                            ? 'bg-blue-500 text-white shadow-md'
+                            ? 'bg-accent text-white shadow-md'
                             : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
                         }`}
                       >
@@ -173,7 +173,7 @@ export default function DashboardHeader({
                             onClick={() => toggleYear(year)}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                               selectedYears.includes(year)
-                                ? 'bg-blue-500 text-white shadow-md'
+                                ? 'bg-accent text-white shadow-md'
                                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                             }`}
                           >
@@ -244,7 +244,7 @@ export default function DashboardHeader({
             {/* Upload Button */}
             <button
               onClick={onUpload}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center space-x-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
             >
               <Upload className="w-4 h-4" />
               <span className="text-sm font-medium hidden sm:inline">Upload</span>

@@ -183,7 +183,7 @@ export default function BuildingPage() {
       <header className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <div className="bg-blue-600 p-2.5 rounded-lg">
+            <div className="bg-accent p-2.5 rounded-lg">
               <Building2 className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -247,7 +247,7 @@ export default function BuildingPage() {
                 onClick={() => setFilterCategory(filterCategory === cat ? null : cat)}
                 className={`px-3 py-1 rounded text-xs whitespace-nowrap transition-all ${
                   filterCategory === cat
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-accent text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
                 }`}
               >

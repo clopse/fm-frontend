@@ -305,7 +305,7 @@ export default function EnergyMixChart({
               <div className="flex items-center space-x-2">
                 <div className="flex-1 bg-slate-200 rounded-full h-2 overflow-hidden">
                   <div 
-                    className="h-full bg-blue-500 rounded-full transition-all duration-300"
+                    className="h-full bg-accent rounded-full transition-all duration-300"
                     style={{ width: `${energyMixData[0].percentage}%` }}
                   ></div>
                 </div>

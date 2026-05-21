@@ -124,7 +124,7 @@ export default function FireQuiz({ hotelId, onComplete, onBack }: FireQuizProps)
               <button
                 disabled={!name.trim() || !email.trim()}
                 onClick={() => setStep('quiz')}
-                className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
+                className="px-8 py-3 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-semibold"
               >
                 Start Quiz
               </button>
@@ -181,7 +181,7 @@ export default function FireQuiz({ hotelId, onComplete, onBack }: FireQuizProps)
       {/* Progress bar */}
       <div className="w-full bg-gray-200 h-2">
         <div 
-          className="bg-blue-600 h-2 transition-all duration-300 ease-out"
+          className="bg-accent h-2 transition-all duration-300 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -257,7 +257,7 @@ export default function FireQuiz({ hotelId, onComplete, onBack }: FireQuizProps)
               <button
                 onClick={() => setCurrentQ(currentQ + 1)}
                 disabled={!answers[currentQ] || answers[currentQ].length === 0}
-                className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next Question
                 <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

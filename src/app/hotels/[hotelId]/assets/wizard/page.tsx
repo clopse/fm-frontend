@@ -294,7 +294,7 @@ export default function AssetWizardPage() {
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
                       step >= s.num
-                        ? "bg-blue-600 text-white"
+                        ? "bg-accent text-white"
                         : "bg-gray-200 text-gray-500"
                     }`}
                   >
@@ -311,7 +311,7 @@ export default function AssetWizardPage() {
                 {idx < 3 && (
                   <div
                     className={`h-1 flex-1 -mt-8 transition-colors ${
-                      step > s.num ? "bg-blue-600" : "bg-gray-200"
+                      step > s.num ? "bg-accent" : "bg-gray-200"
                     }`}
                   />
                 )}

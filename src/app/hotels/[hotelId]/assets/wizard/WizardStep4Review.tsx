@@ -116,7 +116,7 @@ export default function WizardStep4Review({
           </button>
           <button
             onClick={() => window.location.href = `/hotels/${hotelCode}/assets`}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+            className="px-6 py-3 bg-accent text-white rounded-lg font-medium hover:bg-accent-hover"
           >
             View Asset Register
           </button>

@@ -312,7 +312,7 @@ export default function TendersPage() {
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div 
-                          className="bg-blue-600 h-2 rounded-full" 
+                          className="bg-accent h-2 rounded-full" 
                           style={{width: `${(tender.quotesReceived / tender.totalQuotes) * 100}%`}}
                         ></div>
                       </div>
@@ -335,7 +335,7 @@ export default function TendersPage() {
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium text-gray-900">Quote Submissions</h3>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
+                  <button className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover flex items-center space-x-2">
                     <Plus className="w-4 h-4" />
                     <span>Manual Quote Entry</span>
                   </button>
@@ -387,7 +387,7 @@ export default function TendersPage() {
                       <Send className="w-4 h-4" />
                       <span>Send Email to All</span>
                     </button>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
+                    <button className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover flex items-center space-x-2">
                       <Plus className="w-4 h-4" />
                       <span>Add Supplier</span>
                     </button>
@@ -423,7 +423,7 @@ export default function TendersPage() {
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium text-gray-900">Documents & Uploads</h3>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
+                  <button className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover flex items-center space-x-2">
                     <Upload className="w-4 h-4" />
                     <span>Upload Files</span>
                   </button>
@@ -479,7 +479,7 @@ export default function TendersPage() {
                       className="flex-1 p-3 border border-gray-300 rounded-lg resize-none"
                       rows={3}
                     />
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <button className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover">
                       Post
                     </button>
                   </div>
@@ -571,7 +571,7 @@ export default function TendersPage() {
           <h2 className="text-lg font-semibold text-gray-900">Tender Management</h2>
           <button 
             onClick={() => setShowNewTenderModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+            className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover flex items-center space-x-2"
           >
             <Plus className="w-4 h-4" />
             <span>New Tender</span>
@@ -655,7 +655,7 @@ export default function TendersPage() {
                       </button>
                       <button
                         onClick={() => setShowFilterDropdown(false)}
-                        className="flex-1 px-3 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                        className="flex-1 px-3 py-2 text-sm text-white bg-accent rounded-md hover:bg-accent-hover"
                       >
                         Apply
                       </button>
@@ -770,7 +770,7 @@ export default function TendersPage() {
                     </span>
                     <div className="w-16 bg-gray-200 rounded-full h-2">
                       <div 
-                        className="bg-blue-600 h-2 rounded-full" 
+                        className="bg-accent h-2 rounded-full" 
                         style={{width: `${(tender.quotesReceived / tender.totalQuotes) * 100}%`}}
                       ></div>
                     </div>

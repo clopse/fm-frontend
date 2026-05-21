@@ -220,7 +220,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  className="flex items-center space-x-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover disabled:opacity-50"
                 >
                   {isSaving ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />
@@ -385,7 +385,7 @@ export default function SettingsPage() {
                         <button
                           onClick={() => handleInputChange('emailNotifications', !settings.emailNotifications)}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            settings.emailNotifications ? 'bg-blue-600' : 'bg-gray-300'
+                            settings.emailNotifications ? 'bg-accent' : 'bg-gray-300'
                           }`}
                         >
                           <span

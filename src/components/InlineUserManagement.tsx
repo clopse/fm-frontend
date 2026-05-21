@@ -108,7 +108,7 @@ function ViewUserModal({ isOpen, onClose, user }: ViewUserModalProps) {
                 <button
                   onClick={handleSendWelcomeEmail}
                   disabled={sendingEmail}
-                  className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-accent border border-transparent rounded-md hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {sendingEmail ? (
                     <>
@@ -397,7 +397,7 @@ function EditUserModal({ isOpen, onClose, onUserUpdated, user }: EditUserModalPr
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent-hover disabled:opacity-50"
             >
               {loading ? 'Updating...' : 'Update User'}
             </button>
@@ -646,7 +646,7 @@ function AddUserModal({ isOpen, onClose, onUserAdded }: AddUserModalProps) {
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-4 py-2 bg-accent text-white rounded-md hover:bg-accent-hover disabled:opacity-50"
             >
               {loading ? 'Creating...' : 'Create User'}
             </button>
@@ -804,7 +804,7 @@ export default function InlineUserManagement({ className = '' }: InlineUserManag
             </div>
             <button 
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
             >
               <UserPlus className="w-4 h-4 mr-2" />
               Add New User

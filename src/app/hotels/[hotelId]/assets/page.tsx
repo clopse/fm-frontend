@@ -579,7 +579,7 @@ export default function AssetsPage() {
                               </button>
                               <button
                                 onClick={() => setShowFilterDropdown(false)}
-                                className="flex-1 px-3 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                                className="flex-1 px-3 py-2 text-sm text-white bg-accent rounded-lg hover:bg-accent-hover"
                               >
                                 Apply
                               </button>
@@ -633,7 +633,7 @@ export default function AssetsPage() {
                     <p className="text-gray-600 mb-4">No assets found</p>
                     <a
                       href={`/hotels/${hotelId}/assets/wizard`}
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                      className="inline-flex items-center px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Setup Wizard
@@ -771,7 +771,7 @@ export default function AssetsPage() {
               <div className="space-y-2">
                 <button 
                   onClick={() => setShowAddModal(true)}
-                  className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center"
+                  className="w-full px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent-hover flex items-center justify-center"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add Asset

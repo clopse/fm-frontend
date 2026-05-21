@@ -134,7 +134,7 @@ export default function ResetPassword() {
               <p className="text-gray-600 mb-6">{error}</p>
               <button
                 onClick={() => router.push('/forgot-password')}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
               >
                 Request New Reset Link
               </button>
@@ -165,7 +165,7 @@ export default function ResetPassword() {
               </div>
               <button
                 onClick={() => router.push('/login')}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors"
               >
                 Go to Login
               </button>

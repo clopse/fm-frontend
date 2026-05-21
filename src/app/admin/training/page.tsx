@@ -505,7 +505,7 @@ JMK Facilities Management Team`);
                 <div className="p-6 border-b border-gray-200">
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-gray-900">Available Courses</h2>
-                    <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <button className="flex items-center space-x-2 px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-hover">
                       <GraduationCap className="w-4 h-4" />
                       <span>Add New Course</span>
                     </button>
