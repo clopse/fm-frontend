@@ -108,7 +108,7 @@ const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreC
   }), [totalPoints]);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+    <div className="bg-card-bg rounded-2xl shadow-card border border-border-soft overflow-hidden">
       {/* Header with Score */}
       <div className={`bg-gradient-to-r ${scoreMetrics.scoreBgColor} text-white p-6`}>
         <div className="flex items-center justify-between">
@@ -150,8 +150,8 @@ const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreC
               <AreaChart data={chartData} margin={chartConfig.margin}>
                 <defs>
                   <linearGradient id={chartConfig.gradientId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#c96442" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#c96442" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -169,7 +169,7 @@ const ScoreCard = ({ scoreData, earnedPoints, totalPoints, graphPoints }: ScoreC
                 <Area
                   type="monotone"
                   dataKey="score"
-                  stroke="#3b82f6"
+                  stroke="#c96442"
                   strokeWidth={3}
                   fill={`url(#${chartConfig.gradientId})`}
                 />

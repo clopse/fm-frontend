@@ -104,11 +104,11 @@ const TaskCard = ({ task, score, onClick }: TaskCardProps) => {
   };
 
   return (
-    <div 
+    <div
       onClick={onClick}
       className={`
-        relative bg-white rounded-xl border-2 transition-all duration-200 cursor-pointer
-        hover:shadow-lg hover:scale-[1.02] hover:border-blue-300
+        relative bg-card-bg rounded-xl border-2 transition-all duration-200 cursor-pointer
+        hover:shadow-lg hover:scale-[1.02] hover:border-accent/40
         ${getStatusColor()}
       `}
     >

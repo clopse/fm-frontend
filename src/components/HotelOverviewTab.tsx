@@ -31,7 +31,7 @@ export default function HotelOverviewTab({ hotel, isEditing, onUpdate }: HotelOv
             value={hotel.address || ''}
             onChange={(e) => handleFieldUpdate('address', e.target.value)}
             disabled={!isEditing}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-gray-50"
             placeholder="123 Main Street"
           />
         </div>
@@ -44,7 +44,7 @@ export default function HotelOverviewTab({ hotel, isEditing, onUpdate }: HotelOv
               value={hotel.city || ''}
               onChange={(e) => handleFieldUpdate('city', e.target.value)}
               disabled={!isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-gray-50"
               placeholder="Dublin"
             />
           </div>
@@ -55,7 +55,7 @@ export default function HotelOverviewTab({ hotel, isEditing, onUpdate }: HotelOv
               value={hotel.postCode || ''}
               onChange={(e) => handleFieldUpdate('postCode', e.target.value)}
               disabled={!isEditing}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-gray-50"
               placeholder="D02 XY12"
             />
           </div>
@@ -68,7 +68,7 @@ export default function HotelOverviewTab({ hotel, isEditing, onUpdate }: HotelOv
             value={hotel.phone || ''}
             onChange={(e) => handleFieldUpdate('phone', e.target.value)}
             disabled={!isEditing}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-gray-50"
             placeholder="+353 1 234 5678"
           />
         </div>
@@ -80,7 +80,7 @@ export default function HotelOverviewTab({ hotel, isEditing, onUpdate }: HotelOv
             value={hotel.managerName || ''}
             onChange={(e) => handleFieldUpdate('managerName', e.target.value)}
             disabled={!isEditing}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-gray-50"
             placeholder="John Smith"
           />
         </div>
@@ -92,7 +92,7 @@ export default function HotelOverviewTab({ hotel, isEditing, onUpdate }: HotelOv
             value={hotel.managerPhone || ''}
             onChange={(e) => handleFieldUpdate('managerPhone', e.target.value)}
             disabled={!isEditing}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-gray-50"
             placeholder="+353 87 123 4567"
           />
         </div>
@@ -104,7 +104,7 @@ export default function HotelOverviewTab({ hotel, isEditing, onUpdate }: HotelOv
             value={hotel.managerEmail || ''}
             onChange={(e) => handleFieldUpdate('managerEmail', e.target.value)}
             disabled={!isEditing}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent disabled:bg-gray-50"
             placeholder="manager@hotel.ie"
           />
         </div>

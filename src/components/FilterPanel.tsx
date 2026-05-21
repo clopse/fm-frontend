@@ -56,9 +56,9 @@ const FilterPanel = ({
     filters.itemsNeeded;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="bg-card-bg rounded-xl border border-border-soft shadow-card overflow-hidden">
       {/* Filter Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+      <div className="flex items-center justify-between p-4 border-b border-border-soft bg-slate-50">
         <h3 className="font-semibold text-slate-900 flex items-center space-x-2">
           <Search className="w-5 h-5" />
           <span>Filter Tasks</span>
@@ -67,7 +67,7 @@ const FilterPanel = ({
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              className="text-sm text-accent hover:text-accent-hover font-medium"
             >
               Clear All
             </button>
@@ -95,7 +95,7 @@ const FilterPanel = ({
               placeholder="Search by task name..."
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
             />
           </div>
         </div>
@@ -130,7 +130,7 @@ const FilterPanel = ({
               <select
                 value={filters.type}
                 onChange={(e) => handleFilterChange('type', e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
               >
                 <option value="">All Types</option>
                 <option value="upload">Upload Required</option>

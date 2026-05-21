@@ -123,8 +123,8 @@ export default function HotelUtilitiesTab({ utilities, isEditing, onUpdate }: Ho
             onClick={() => isEditing && onUpdate(key, !value)}
             disabled={!isEditing}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
-              value ? 'bg-blue-600' : 'bg-gray-300'
-            } ${!isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700 cursor-pointer'}`}
+              value ? 'bg-accent' : 'bg-gray-300'
+            } ${!isEditing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-accent-hover cursor-pointer'}`}
           >
             <span
               className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
@@ -152,7 +152,7 @@ export default function HotelUtilitiesTab({ utilities, isEditing, onUpdate }: Ho
             value={value || 0}
             onChange={(e) => onUpdate(key, parseInt(e.target.value) || 0)}
             disabled={!isEditing}
-            className={`w-full px-3 py-2 border rounded-lg transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent no-arrows ${
+            className={`w-full px-3 py-2 border rounded-lg transition-colors duration-200 focus:ring-2 focus:ring-accent focus:border-transparent no-arrows ${
               isEditing 
                 ? 'border-gray-300 bg-white text-gray-900 hover:border-gray-400' 
                 : 'border-gray-200 bg-gray-50 text-gray-600 cursor-default'
@@ -180,7 +180,7 @@ export default function HotelUtilitiesTab({ utilities, isEditing, onUpdate }: Ho
           value={value || ''}
           onChange={(e) => onUpdate(key, e.target.value)}
           disabled={!isEditing}
-          className={`w-full px-3 py-2 border rounded-lg transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+          className={`w-full px-3 py-2 border rounded-lg transition-colors duration-200 focus:ring-2 focus:ring-accent focus:border-transparent ${
             isEditing 
               ? 'border-gray-300 bg-white text-gray-900 hover:border-gray-400' 
               : 'border-gray-200 bg-gray-50 text-gray-600 cursor-default'

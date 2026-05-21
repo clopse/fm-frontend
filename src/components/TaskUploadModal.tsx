@@ -170,7 +170,7 @@ function RightPanel({ fileUrl, fileName }: { fileUrl: string | null; fileName: s
         </div>
         <p className="text-gray-600 text-sm mb-4">This file type can't be previewed in the browser.</p>
         <a href={fileUrl} target="_blank" rel="noopener noreferrer" download={fileName}
-          className="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
+          className="inline-flex items-center space-x-2 bg-accent hover:bg-accent-hover text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">
           <Download className="w-4 h-4" />
           <span>Download {fileName}</span>
         </a>
@@ -418,7 +418,7 @@ const TaskUploadModal = ({
               <div>
                 <div
                   className={`border-2 border-dashed rounded-lg p-5 text-center cursor-pointer transition-colors ${
-                    dragActive ? 'border-blue-400 bg-blue-50' : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50/30'
+                    dragActive ? 'border-accent bg-accent/10' : 'border-slate-300 hover:border-accent hover:bg-accent/5'
                   }`}
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
@@ -428,7 +428,7 @@ const TaskUploadModal = ({
                 >
                   <Upload className="w-7 h-7 text-slate-400 mx-auto mb-2" />
                   {file ? (
-                    <p className="text-sm font-medium text-blue-700 truncate px-2">{file.name}</p>
+                    <p className="text-sm font-medium text-accent truncate px-2">{file.name}</p>
                   ) : (
                     <>
                       <p className="text-sm font-medium text-slate-700">Click to upload or drag & drop</p>
@@ -451,7 +451,7 @@ const TaskUploadModal = ({
                         value={reportDate}
                         onChange={e => setReportDate(e.target.value)}
                         max={today}
-                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-accent focus:border-transparent"
                       />
                     </div>
                     <p className="text-xs text-slate-400">
@@ -471,7 +471,7 @@ const TaskUploadModal = ({
                         onClick={() => setActiveTab(tab)}
                         className={`px-3 py-1.5 text-xs font-medium border-b-2 transition-colors ${
                           activeTab === tab
-                            ? 'border-blue-600 text-blue-600'
+                            ? 'border-accent text-accent'
                             : 'border-transparent text-slate-500 hover:text-slate-700'
                         }`}
                       >
@@ -490,7 +490,7 @@ const TaskUploadModal = ({
                         onClick={() => { setPreviewUrl(entry.fileUrl); setPreviewName(entry.fileName); }}
                         className={`p-3 rounded-lg border cursor-pointer transition-all ${
                           previewUrl === entry.fileUrl
-                            ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-200'
+                            ? 'border-accent bg-accent/10 ring-1 ring-accent/30'
                             : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                         }`}
                       >
@@ -533,7 +533,7 @@ const TaskUploadModal = ({
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || !reportDate}
-                  className="w-full flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors"
+                  className="w-full flex items-center justify-center space-x-2 bg-accent hover:bg-accent-hover disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-lg font-medium text-sm transition-colors"
                 >
                   <Upload className="w-4 h-4" />
                   <span>{submitting ? 'Uploading...' : !reportDate ? 'Set report date first' : 'Submit File'}</span>

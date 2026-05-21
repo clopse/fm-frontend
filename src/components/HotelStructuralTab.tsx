@@ -16,7 +16,7 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
       <div className="space-y-6">
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4"></div>
             <p className="text-gray-600">Loading structural data...</p>
           </div>
         </div>
@@ -61,7 +61,7 @@ export default function HotelStructuralTab({ structural, isEditing, onUpdate }: 
         value={value || (type === 'number' ? 0 : '')}
         onChange={(e) => onUpdate(key, type === 'number' ? (parseInt(e.target.value) || 0) : e.target.value)}
         disabled={!isEditing}
-        className={`w-full px-3 py-2 border rounded-lg transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+        className={`w-full px-3 py-2 border rounded-lg transition-colors duration-200 focus:ring-2 focus:ring-accent focus:border-transparent ${
           isEditing 
             ? 'border-gray-300 bg-white text-gray-900 hover:border-gray-400' 
             : 'border-gray-200 bg-gray-50 text-gray-600 cursor-default'

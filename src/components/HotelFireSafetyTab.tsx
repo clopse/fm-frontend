@@ -101,7 +101,7 @@ export default function HotelFireSafetyTab({ fireSafety, isEditing, onUpdate }: 
         value={fireSafety[key as keyof FireSafetyEquipment] || 0}
         onChange={(e) => handleInputChange(key, e.target.value)}
         disabled={!isEditing}
-        className={`w-full px-3 py-2 border rounded-lg transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent no-arrows ${
+        className={`w-full px-3 py-2 border rounded-lg transition-colors duration-200 focus:ring-2 focus:ring-accent focus:border-transparent no-arrows ${
           isEditing 
             ? 'border-gray-300 bg-white text-gray-900 hover:border-gray-400' 
             : 'border-gray-200 bg-gray-50 text-gray-600 cursor-default'

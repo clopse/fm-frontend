@@ -306,7 +306,7 @@ export default function HotelComplianceTab({ hotel, isEditing, onTaskListSave }:
                     isSelected
                       ? 'bg-green-50 border-green-200 shadow-sm'
                       : isEditing 
-                        ? 'bg-white border-gray-200 shadow-sm hover:border-blue-300' 
+                        ? 'bg-card-bg border-border-soft shadow-card hover:border-accent/40'
                         : 'bg-gray-50 border-gray-200'
                   }`}>
                     <div className="flex items-start justify-between">
@@ -381,7 +381,7 @@ export default function HotelComplianceTab({ hotel, isEditing, onTaskListSave }:
             className={`px-6 py-3 rounded-lg font-medium transition-colors ${
               totalSelected === 0
                 ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-accent text-white hover:bg-accent-hover'
             }`}
           >
             {totalSelected === 0 ? 'Save (No Tasks)' : 'Save Compliance Tasks'}
