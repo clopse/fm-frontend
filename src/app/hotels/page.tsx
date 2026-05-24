@@ -406,14 +406,19 @@ export default function HotelsPage() {
           </div>
 
           {/* Utilities */}
-          <div className="panel fu" style={{ animationDelay:'185ms' }}>
-            <div className="panel-hd">
+          <div className="panel fu" style={{ animationDelay:'185ms', background:'#0d1829', borderColor:'rgba(255,255,255,.07)' }}>
+            <div className="panel-hd" style={{ borderBottomColor:'rgba(255,255,255,.07)' }}>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                 <div className="ibadge" style={{ background:'rgba(139,92,246,.13)' }}><Zap size={12} style={{ color:'#a78bfa' }}/></div>
-                <div><div className="ptitle">Utilities Comparison</div><div className="psub">Electricity &amp; gas · all properties</div></div>
+                <div>
+                  <div className="ptitle" style={{ color:'rgba(255,255,255,.85)' }}>Utilities Comparison</div>
+                  <div className="psub" style={{ color:'rgba(255,255,255,.32)' }}>Electricity &amp; gas · all properties</div>
+                </div>
               </div>
             </div>
-            <UtilitiesGraphs/>
+            <div style={{ padding:'14px 18px 20px' }}>
+              <UtilitiesGraphs/>
+            </div>
           </div>
         </div>
       </div>
