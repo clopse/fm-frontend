@@ -274,7 +274,7 @@ export default function ProjectsSidebar({
         {/* ── Brand ─────────────────────────────────────── */}
         <div style={{ padding: '22px 18px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <Link
-            href="/admin"
+            href="/hotels"
             onClick={() => isMobile && onClose?.()}
             style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}
           >
