@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, BedDouble, Menu } from 'lucide-react';
 import ProjectsSidebar from '@/components/projects/ProjectsSidebar';
 import NewProjectModal from '@/components/projects/NewProjectModal';
 import { PROJECTS, type ProjectConfig } from '@/data/projects';
+import { useMyPermissions } from '@/lib/permissions';
 import styles from '@/styles/projects.module.css';
 
 // ─── Badge configs ────────────────────────────────────────────────────────────
@@ -135,6 +136,16 @@ export default function ProjectsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile,    setIsMobile]    = useState(false);
   const [modalOpen,   setModalOpen]   = useState(false);
+  const { permissions } = useMyPermissions();
+
+  const visibleProjects = useMemo(() => {
+    if (!permissions) return PROJECTS;
+    const { role, admin_hotel_id, grants } = permissions;
+    if (role === 'system_admin' || role === 'group_admin') return PROJECTS;
+    if (role === 'hotel_admin') return PROJECTS.filter(p => p.id === admin_hotel_id);
+    const grantedIds = new Set(grants.filter(g => g.module === 'projects').map(g => g.hotel_id));
+    return PROJECTS.filter(p => grantedIds.has(p.id));
+  }, [permissions]);
 
   useEffect(() => {
     const initialised = { current: false };
@@ -218,7 +229,7 @@ export default function ProjectsPage() {
             marginBottom: 32,
           }}
         >
-          {PROJECTS.map((project) => (
+          {visibleProjects.map((project) => (
             <ProjectCard
               key={project.id}
               project={project}

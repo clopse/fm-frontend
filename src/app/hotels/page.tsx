@@ -15,6 +15,7 @@ import HotelSelectorModal    from '@/components/HotelSelectorModal';
 import StaleNotice           from '@/components/StaleNotice';
 import { hotelNames }        from '@/data/hotelMetadata';
 import { useCachedFetch }    from '@/hooks/useCachedFetch';
+import { useVisibleHotelIds } from '@/lib/permissions';
 
 const ComplianceLeaderboard = dynamic(() => import('@/components/ComplianceLeaderboard'), { ssr: false });
 const UtilitiesGraphs       = dynamic(() => import('@/components/AdminUtilitiesGraph'),   { ssr: false });
@@ -77,7 +78,15 @@ export default function HotelsPage() {
   const [hoveredCluster,   setHoveredCluster]   = useState<string | null>(null);
   const [selectedHotels,   setSelectedHotels]   = useState<string[]>(ALL_HOTEL_IDS);
 
-  const totalHotels    = ALL_HOTEL_IDS.length;
+  const { visibleIds } = useVisibleHotelIds(ALL_HOTEL_IDS);
+
+  const visibleClusters = useMemo(() =>
+    CLUSTERS
+      .map(c => ({ ...c, hotels: [...c.hotels].filter(id => visibleIds.includes(id)) }))
+      .filter(c => c.hotels.length > 0),
+  [visibleIds]);
+
+  const totalHotels    = visibleIds.length;
   const totalLocations = CLUSTERS.length;
 
   // ── Cached data fetchers ──────────────────────────────────────────────────
@@ -157,7 +166,7 @@ export default function HotelsPage() {
     }
   };
 
-  const openCluster = activeCluster ? CLUSTERS.find(c => c.id === activeCluster) ?? null : null;
+  const openCluster = activeCluster ? visibleClusters.find(c => c.id === activeCluster) ?? null : null;
   const circlePos   = (i: number, total: number, r = 88) => {
     const a = (2 * Math.PI / total) * i - Math.PI / 2;
     return { left: 120 + r * Math.cos(a) - 34, top: 120 + r * Math.sin(a) - 34 };
@@ -263,7 +272,7 @@ export default function HotelsPage() {
                   <div style={{ position:'relative', width:'100%', maxWidth:560 }}>
                     <img src="/uk-logo.png" alt="UK & Ireland" style={{ width:'100%', display:'block', borderRadius:6 }} draggable={false}/>
 
-                    {CLUSTERS.map(c => {
+                    {visibleClusters.map(c => {
                       const hov      = hoveredCluster === c.id;
                       const multi    = c.hotels.length > 1;
 

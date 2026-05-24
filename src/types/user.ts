@@ -10,6 +10,9 @@ export interface User {
   last_login: string | null;
   failed_login_attempts?: number;
   locked_until?: string | null;
+  new_role?: string;
+  group_id?: string;
+  admin_hotel_id?: string;
 }
 
 export interface UserCreate {

@@ -23,7 +23,8 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { userService } from '@/services/userService';
-import { isAdmin } from '@/lib/auth';
+import { useMyPermissions } from '@/lib/permissions';
+import type { Module } from '@/lib/auth';
 
 interface MainSidebarProps {
   isMobile?: boolean;
@@ -43,19 +44,21 @@ export default function MainSidebar({
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
 
   const currentUser = userService.getCurrentUser();
+  const { permissions } = useMyPermissions();
 
   const navItems = useMemo(() => [
     {
       label: 'Dashboard',
       href: `/hotels/${hotelId}`,
       icon: Home,
-      description: 'Hotel overview'
+      description: 'Hotel overview',
     },
     {
       label: 'Drawings',
       href: `/hotels/${hotelId}/building`,
       icon: Building2,
-      description: 'Property and infrastructure'
+      description: 'Property and infrastructure',
+      module: 'drawings' as Module,
     },
     {
       id: 'compliance',
@@ -64,6 +67,7 @@ export default function MainSidebar({
       icon: ShieldCheck,
       description: 'Safety and regulatory compliance',
       alwaysShowSubItems: true,
+      module: 'compliance' as Module,
       subItems: [
         {
           label: 'Compliance Reports',
@@ -80,40 +84,36 @@ export default function MainSidebar({
       icon: PlugZap,
       description: 'Energy and utility management',
       hasSubItems: true,
+      module: 'utilities' as Module,
       subItems: [
-        {
-          label: 'Overview',
-          href: `/hotels/${hotelId}/utilities`,
-          icon: BarChart3,
-          description: 'Dashboard with KPIs and charts'
-        },
-        {
-          label: 'Electricity',
-          href: `/hotels/${hotelId}/utilities/electricity`,
-          icon: Zap,
-          description: 'Detailed electricity analysis'
-        },
-        {
-          label: 'Gas',
-          href: `/hotels/${hotelId}/utilities/gas`,
-          icon: Flame,
-          description: 'Gas consumption tracking'
-        },
-        {
-          label: 'Water',
-          href: `/hotels/${hotelId}/utilities/water`,
-          icon: Droplets,
-          description: 'Water usage monitoring'
-        },
-      ]
+        { label: 'Overview',     href: `/hotels/${hotelId}/utilities`,             icon: BarChart3, description: 'Dashboard with KPIs and charts' },
+        { label: 'Electricity',  href: `/hotels/${hotelId}/utilities/electricity`,  icon: Zap,       description: 'Detailed electricity analysis'  },
+        { label: 'Gas',          href: `/hotels/${hotelId}/utilities/gas`,          icon: Flame,     description: 'Gas consumption tracking'        },
+        { label: 'Water',        href: `/hotels/${hotelId}/utilities/water`,        icon: Droplets,  description: 'Water usage monitoring'          },
+      ],
     },
     {
       label: 'Assets',
       href: `/hotels/${hotelId}/assets`,
       icon: FileText,
-      description: 'Asset Register'
+      description: 'Asset Register',
+      module: 'assets' as Module,
     },
   ], [hotelId]);
+
+  const visibleNavItems = useMemo(() => {
+    if (!permissions) return navItems;
+    const { role, admin_hotel_id, grants } = permissions;
+    const hid = typeof hotelId === 'string' ? hotelId : (hotelId?.[0] ?? '');
+
+    const canSeeModule = (mod: Module): boolean => {
+      if (role === 'system_admin' || role === 'group_admin') return true;
+      if (role === 'hotel_admin') return admin_hotel_id === hid;
+      return grants.some(g => g.hotel_id === hid && g.module === mod);
+    };
+
+    return navItems.filter(item => !item.module || canSeeModule(item.module));
+  }, [permissions, navItems, hotelId]);
 
   const activeStates = useMemo(() => {
     const isActive = (path: string) => pathname === path;
@@ -188,7 +188,7 @@ export default function MainSidebar({
         </div>
 
         <nav className="mt-3 xl:mt-6 px-3 xl:px-4 flex-1 overflow-y-auto">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavItem
               key={item.href}
               item={item}

@@ -148,6 +148,12 @@ export async function apiFetch(input: RequestInfo, init: RequestInit = {}): Prom
 
   if (res.status === 401) { clearTokens(); redirectToLogin(); throw new Error('Unauthorized'); }
 
+  if (res.status === 403 && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('jmk:forbidden', {
+      detail: { message: "You don't have access to this resource" },
+    }));
+  }
+
   return res;
 }
 

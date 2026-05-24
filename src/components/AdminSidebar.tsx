@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -12,9 +13,11 @@ import {
   Building,
   FolderOpen,
   ScrollText,
+  ShieldCheck,
   X,
   Menu
 } from 'lucide-react';
+import { getJwtClaims } from '@/lib/auth';
 
 interface AdminSidebarProps {
   isMobile?: boolean;
@@ -39,6 +42,14 @@ export default function AdminSidebar({
   onClose,
 }: AdminSidebarProps) {
   const pathname = usePathname();
+  const [showPermissions, setShowPermissions] = useState(false);
+
+  useEffect(() => {
+    const { new_role } = getJwtClaims();
+    setShowPermissions(
+      new_role === 'system_admin' || new_role === 'group_admin' || new_role === 'hotel_admin'
+    );
+  }, []);
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path);
 
@@ -155,6 +166,23 @@ export default function AdminSidebar({
                 </div>
               </div>
             </Link>
+
+            {/* Permissions */}
+            {showPermissions && (
+              <Link
+                href="/admin/permissions"
+                className={linkClass(isActive('/admin/permissions'))}
+                onClick={() => isMobile && onClose?.()}
+              >
+                <ShieldCheck className={iconClass(isActive('/admin/permissions'))} />
+                <div className="flex-1">
+                  <div className={labelClass}>Permissions</div>
+                  <div className={descClass(isActive('/admin/permissions'))}>
+                    Manage user access &amp; modules
+                  </div>
+                </div>
+              </Link>
+            )}
           </div>
         </nav>
 

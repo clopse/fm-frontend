@@ -3,6 +3,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import RouteGuard from '@/components/RouteGuard';
 import IdleWrapper from '@/components/IdleWrapper';
+import ForbiddenToast from '@/components/ForbiddenToast';
 
 export const metadata: Metadata = {
   title: 'JMK Facilities Management',
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </IdleWrapper>
         </RouteGuard>
+        <ForbiddenToast />
       </body>
     </html>
   );

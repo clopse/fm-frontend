@@ -1,6 +1,10 @@
 import { User } from '@/types/user';
 import { hotels } from './hotels';
 
+export type Role   = 'system_admin' | 'group_admin' | 'hotel_admin' | 'member';
+export type Module = 'compliance' | 'utilities' | 'drawings' | 'assets' | 'snagging' | 'projects' | 'admin_panel';
+export const MODULES: Module[] = ['compliance', 'utilities', 'drawings', 'assets', 'snagging', 'projects', 'admin_panel'];
+
 export interface UserPermissions {
   canAccessAllHotels: boolean;
   allowedHotels: string[];
@@ -29,8 +33,49 @@ const MANAGEMENT_ROLES = new Set<string>([
   'facility_manager', 'hotel_manager',
 ]);
 
-// Simple helpers for call-sites that only need a boolean
+// ─── JWT claims ───────────────────────────────────────────────────────────────
+
+export function getJwtClaims(): { new_role?: Role; group_id?: string; admin_hotel_id?: string } {
+  if (typeof window === 'undefined') return {};
+  try {
+    const token = localStorage.getItem('access_token');
+    if (!token) return {};
+    const payload = JSON.parse(atob(token.split('.')[1])) as Record<string, unknown>;
+    return {
+      new_role:       payload.new_role       as Role   | undefined,
+      group_id:       payload.group_id       as string | undefined,
+      admin_hotel_id: payload.admin_hotel_id as string | undefined,
+    };
+  } catch { return {}; }
+}
+
+// ─── Role helpers ─────────────────────────────────────────────────────────────
+
+export function isSystemAdmin(user: User): boolean {
+  const claims = getJwtClaims();
+  const role = claims.new_role ?? (user as Record<string, unknown>).new_role as Role | undefined;
+  return role === 'system_admin';
+}
+
+export function isGroupAdmin(user: User): boolean {
+  const claims = getJwtClaims();
+  const role = claims.new_role ?? (user as Record<string, unknown>).new_role as Role | undefined;
+  return role === 'group_admin' || role === 'system_admin';
+}
+
+export function isHotelAdmin(user: User, hotelId: string): boolean {
+  const claims     = getJwtClaims();
+  const role       = claims.new_role       ?? (user as Record<string, unknown>).new_role       as Role   | undefined;
+  const adminHotel = claims.admin_hotel_id ?? (user as Record<string, unknown>).admin_hotel_id as string | undefined;
+  if (role === 'system_admin' || role === 'group_admin') return true;
+  if (role === 'hotel_admin') return adminHotel === hotelId;
+  return false;
+}
+
+// Updated isAdmin — JWT new_role takes precedence, legacy string-role fallback
 export function isAdmin(role: string): boolean {
+  const claims = getJwtClaims();
+  if (claims.new_role) return claims.new_role === 'system_admin' || claims.new_role === 'group_admin';
   return SYSTEM_ROLES.has(role);
 }
 
@@ -58,7 +103,7 @@ export function isPublicTrainingPath(pathname: string): boolean {
 // ─── Permission resolution ────────────────────────────────────────────────────
 
 export function getUserPermissions(user: User): UserPermissions {
-  const role = user.role.toLowerCase();
+  const role      = user.role.toLowerCase();
   const userHotel = user.hotel;
 
   if (SYSTEM_ROLES.has(role)) {
@@ -94,7 +139,7 @@ export function getUserPermissions(user: User): UserPermissions {
   }
 
   const userHotels = userHotel ? userHotel.split(', ') : [];
-  const hotelIds = userHotels
+  const hotelIds   = userHotels
     .map(name => hotels.find(h => h.name === name)?.id)
     .filter(Boolean) as string[];
 
@@ -200,7 +245,7 @@ export function useUserRedirect() {
     redirectToUserDefault,
     checkPageAccess,
     getUserPermissions: (user: User) => getUserPermissions(user),
-    canAccessHotel: (user: User, hotelId: string) => canAccessHotel(user, hotelId),
+    canAccessHotel:     (user: User, hotelId: string) => canAccessHotel(user, hotelId),
     canAccessAdminPages: (user: User) => canAccessAdminPages(user),
     isPublicPath,
     isPublicTrainingPath,

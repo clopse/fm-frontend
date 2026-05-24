@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { isAuthenticated } from '@/services/userService';
 import { userService } from '@/services/userService';
-import { isAdmin } from '@/lib/auth';
+import { isAdmin, getJwtClaims } from '@/lib/auth';
 
 const ACCESS_KEY   = 'access_token';
 const COOKIE_TOKEN = 'jmk_access_token';
@@ -33,6 +33,14 @@ export default function ProjectsLayout({ children }: { children: React.ReactNode
       return;
     }
 
+    // New JWT claim — any authenticated role passes through; page filters content
+    const claims = getJwtClaims();
+    if (claims.new_role) {
+      setAuthorized(true);
+      return;
+    }
+
+    // Legacy fallback for tokens without new_role
     const user = userService.getCurrentUser();
     if (!user || !isAdmin(user.role.toLowerCase())) {
       router.replace('/hotels');
