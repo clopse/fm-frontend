@@ -70,7 +70,7 @@ export default function HotelsPage() {
   const [hoveredWeather,   setHoveredWeather]    = useState<string | null>(null);
   const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
   const [isUserPanelOpen,  setIsUserPanelOpen]  = useState(false);
-  const [showAdminSidebar, setShowAdminSidebar] = useState(false);
+  const [showAdminSidebar, setShowAdminSidebar] = useState(true);
   const [isMobile,         setIsMobile]         = useState(false);
   const [activeCluster,    setActiveCluster]    = useState<ClusterId | null>(null);
   const [hoveredCluster,   setHoveredCluster]   = useState<string | null>(null);
