@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Plus, Building2, LogOut, User, MessageSquarePlus, X, FileText, Upload, MoreVertical, Pencil, Info, Trash2, Check } from 'lucide-react';
 import { userService } from '@/services/userService';
 import { apiFetch } from '@/utils/api';
+import { getJwtClaims } from '@/lib/auth';
 import { PROJECTS } from '@/data/projects';
 import styles from '@/styles/projects.module.css';
 
@@ -99,6 +100,12 @@ export default function ProjectsSidebar({
 }: ProjectsSidebarProps) {
   const pathname = usePathname();
   const user = userService.getCurrentUser();
+
+  const [homeHref, setHomeHref] = useState('/hotels');
+  useEffect(() => {
+    const { new_role } = getJwtClaims();
+    if (new_role === 'system_admin' || new_role === 'group_admin') setHomeHref('/admin');
+  }, []);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [documents,     setDocuments]     = useState<ProjectDocument[]>([]);
@@ -273,12 +280,16 @@ export default function ProjectsSidebar({
 
         {/* ── Brand ─────────────────────────────────────── */}
         <div style={{ padding: '22px 18px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <Link
+            href={homeHref}
+            onClick={() => isMobile && onClose?.()}
+            style={{ display: 'flex', alignItems: 'center', gap: 9, textDecoration: 'none' }}
+          >
             <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#c96442', display: 'inline-block', flexShrink: 0 }} />
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--pr-text-muted)', letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>
               JMK Projects
             </span>
-          </div>
+          </Link>
           <button
             onClick={onClose}
             title="Close sidebar"

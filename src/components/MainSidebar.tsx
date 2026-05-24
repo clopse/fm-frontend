@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Building2,
   ShieldCheck,
@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { userService } from '@/services/userService';
 import { useMyPermissions } from '@/lib/permissions';
+import { getJwtClaims } from '@/lib/auth';
 import type { Module } from '@/lib/auth';
 
 interface MainSidebarProps {
@@ -45,6 +46,12 @@ export default function MainSidebar({
 
   const currentUser = userService.getCurrentUser();
   const { permissions } = useMyPermissions();
+
+  const [homeHref, setHomeHref] = useState('/hotels');
+  useEffect(() => {
+    const { new_role } = getJwtClaims();
+    if (new_role === 'system_admin' || new_role === 'group_admin') setHomeHref('/admin');
+  }, []);
 
   const navItems = useMemo(() => [
     {
@@ -170,7 +177,7 @@ export default function MainSidebar({
       <div className={sidebarClasses}>
         <div className="p-4 xl:p-6 border-b border-sidebar-border flex-shrink-0">
           <div className="flex items-center justify-between">
-            <Link href="https://jmkfacilities.ie/hotels" onClick={handleLogoClick}>
+            <Link href={homeHref} onClick={handleLogoClick}>
               <img
                 src="/jmk-logo.png"
                 alt="JMK Logo"
