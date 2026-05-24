@@ -295,12 +295,10 @@ export default function HotelsPage() {
               <div className="panel-hd">
                 <div>
                   <div className="ptitle">Portfolio Map</div>
-                  <div className="psub">
-                    {totalHotels} hotels · {totalLocations} {totalLocations === 1 ? 'city' : 'cities'} · UK &amp; Ireland — tap a city to select
-                    {visibleProjectCount > 0 && (
-                      <span style={{ color:'#d97706' }}> · +{visibleProjectCount} in development</span>
-                    )}
-                  </div>
+                  <div className="psub">{totalHotels} operational</div>
+                  {visibleProjectCount > 0 && (
+                    <div className="psub" style={{ color:'#d97706', marginTop:1 }}>{visibleProjectCount} in development</div>
+                  )}
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                   <span className="live"/>
@@ -352,7 +350,7 @@ export default function HotelsPage() {
                             display:'flex', alignItems:'center', justifyContent:'center',
                           }}>
                             {projectsOnly ? (
-                              <HardHat size={24} style={{ color:'#d97706' }}/>
+                              <img src="/icons/jmkconslogo.jpg" alt="JMK Construction" style={{ width:'100%', height:'100%', objectFit:'cover' }}/>
                             ) : (
                               <img src={`/icons/${c.hotels[0]}-icon.png`} alt={c.label} style={{ width:'100%', height:'100%', objectFit:'contain', padding:'6px' }}/>
                             )}
@@ -545,9 +543,7 @@ export default function HotelsPage() {
                   {openClusterEntries[0].type === 'hotel' ? (
                     <img src={`/icons/${openClusterEntries[0].id}-icon.png`} alt={openClusterEntries[0].name} style={{ width:56, height:56, objectFit:'contain' }}/>
                   ) : (
-                    <div style={{ width:56, height:56, display:'flex', alignItems:'center', justifyContent:'center', background:'#fffbeb', borderRadius:12 }}>
-                      <HardHat size={28} style={{ color:'#d97706' }}/>
-                    </div>
+                    <img src="/icons/jmkconslogo.jpg" alt="JMK Construction" style={{ width:56, height:56, objectFit:'cover', borderRadius:12 }}/>
                   )}
                   <div style={{ fontSize:'.78rem', fontWeight:500, color:'var(--text-primary)', textAlign:'center' }}>{openClusterEntries[0].name}</div>
                   {openClusterEntries[0].type === 'project' && (
@@ -594,7 +590,7 @@ export default function HotelsPage() {
                         t.style.transform     = 'scale(1)';
                       }}>
                         {isProj ? (
-                          <HardHat size={24} style={{ color:'#d97706' }}/>
+                          <img src="/icons/jmkconslogo.jpg" alt="JMK Construction" style={{ width:38, height:38, objectFit:'cover', borderRadius:6 }}/>
                         ) : (
                           <img src={`/icons/${entry.id}-icon.png`} alt={entry.name} style={{ width:38, height:38, objectFit:'contain' }}/>
                         )}
