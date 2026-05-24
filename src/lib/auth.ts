@@ -53,20 +53,20 @@ export function getJwtClaims(): { new_role?: Role; group_id?: string; admin_hote
 
 export function isSystemAdmin(user: User): boolean {
   const claims = getJwtClaims();
-  const role = claims.new_role ?? (user as Record<string, unknown>).new_role as Role | undefined;
+  const role = (claims.new_role ?? user.new_role) as Role | undefined;
   return role === 'system_admin';
 }
 
 export function isGroupAdmin(user: User): boolean {
   const claims = getJwtClaims();
-  const role = claims.new_role ?? (user as Record<string, unknown>).new_role as Role | undefined;
+  const role = (claims.new_role ?? user.new_role) as Role | undefined;
   return role === 'group_admin' || role === 'system_admin';
 }
 
 export function isHotelAdmin(user: User, hotelId: string): boolean {
   const claims     = getJwtClaims();
-  const role       = claims.new_role       ?? (user as Record<string, unknown>).new_role       as Role   | undefined;
-  const adminHotel = claims.admin_hotel_id ?? (user as Record<string, unknown>).admin_hotel_id as string | undefined;
+  const role       = (claims.new_role       ?? user.new_role)       as Role   | undefined;
+  const adminHotel = (claims.admin_hotel_id ?? user.admin_hotel_id) as string | undefined;
   if (role === 'system_admin' || role === 'group_admin') return true;
   if (role === 'hotel_admin') return adminHotel === hotelId;
   return false;
