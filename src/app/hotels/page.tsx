@@ -2,18 +2,20 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
   X, Award, Zap, MapPin, CheckCircle2, ClipboardList,
   Menu, User2, AlertTriangle, Wind,
 } from 'lucide-react';
 
-import ComplianceLeaderboard from '@/components/ComplianceLeaderboard';
-import UtilitiesGraphs       from '@/components/AdminUtilitiesGraph';
 import AdminSidebar          from '@/components/AdminSidebar';
 import UserPanel             from '@/components/UserPanel';
 import HotelSelectorModal    from '@/components/HotelSelectorModal';
 import { hotelNames }        from '@/data/hotelMetadata';
+
+const ComplianceLeaderboard = dynamic(() => import('@/components/ComplianceLeaderboard'), { ssr: false });
+const UtilitiesGraphs       = dynamic(() => import('@/components/AdminUtilitiesGraph'),   { ssr: false });
 
 interface LeaderboardEntry { hotel: string; score: number; }
 interface MonthlyTask      { task_id: string; frequency: string; confirmed: boolean; }

@@ -733,7 +733,6 @@ export default function InlineUserManagement({ className = '' }: InlineUserManag
     
     try {
       await userService.sendWelcomeEmail(userId);
-      console.log('Welcome email sent successfully');
     } catch (error) {
       console.error('Failed to send welcome email:', error);
       alert('Failed to send welcome email: ' + (error instanceof Error ? error.message : 'Unknown error'));

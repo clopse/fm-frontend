@@ -253,11 +253,9 @@ export default function UtilitiesPage() {
             allBills.push(...hotelBills);
           }
         } catch (error) {
-          console.warn(`Failed to fetch bills for ${hotelId}:`, error);
         }
       }
       
-      console.log('Total bills fetched from all hotels:', allBills.length);
       setBills(allBills);
     } catch (error) {
       console.error('Failed to fetch bills:', error);
@@ -788,7 +786,6 @@ export default function UtilitiesPage() {
           isOpen={isHotelModalOpen}
           setIsOpen={setIsHotelModalOpen}
           onSelectHotel={(hotelName) => {
-            console.log('Selected hotel:', hotelName);
             setIsHotelModalOpen(false);
           }}
         />

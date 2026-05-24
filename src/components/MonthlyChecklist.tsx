@@ -63,7 +63,6 @@ const hydrateFromStorage = (hotelId: string): boolean => {
       return true;
     }
   } catch (err) {
-    console.warn('Failed to load monthly checklist from storage:', err);
   }
   return false;
 };
@@ -75,7 +74,6 @@ const persistToStorage = (hotelId: string) => {
       localStorage.setItem(getStorageKey(hotelId), JSON.stringify(cached));
     }
   } catch (err) {
-    console.warn('Failed to persist monthly checklist:', err);
   }
 };
 
@@ -131,7 +129,6 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
       const age = Date.now() - cached.fetchedAt;
       if (age < CACHE_TTL_MS) {
         // Use cached data instantly
-        console.log('✅ Loading monthly checklist from cache (instant)');
         setTasks(cached.tasks);
         setInitialLoad(false);
         return;
@@ -139,7 +136,6 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
     }
     
     // Step 4: No cache or stale - fetch from API
-    console.log('⏳ Fetching fresh monthly checklist...');
     fetchMonthlyChecklist();
     
     // Step 5: Persist on unmount

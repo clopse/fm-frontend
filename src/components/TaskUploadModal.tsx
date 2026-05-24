@@ -6,7 +6,8 @@ import {
   AlertTriangle, Download, Shield, Info, XCircle,
   FileText, ChevronDown, ChevronUp, File
 } from 'lucide-react';
-import PDFViewerA4 from '@/components/PDFViewerA4';
+import dynamic from 'next/dynamic';
+const PDFViewerA4 = dynamic(() => import('@/components/PDFViewerA4'), { ssr: false });
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

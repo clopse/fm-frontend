@@ -328,7 +328,6 @@ JMK Facilities Management Team`);
           isOpen={isHotelModalOpen}
           setIsOpen={setIsHotelModalOpen}
           onSelectHotel={(hotelName) => {
-            console.log('Selected hotel:', hotelName);
             setIsHotelModalOpen(false);
           }}
         />

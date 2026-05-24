@@ -201,7 +201,6 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
       }
 
       // Success! Backend handled the upload - trust the process
-      console.log('✅ Bill uploaded successfully');
       
       setUploadStatus('success');
       setStatus(showManualEntry ? 'Manual entry saved successfully!' : 'Bill uploaded successfully!');

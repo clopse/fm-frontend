@@ -75,7 +75,6 @@ export default function HotelComplianceTab({ hotel, isEditing, onTaskListSave }:
       });
       
       setSelectedTasks(actualSelection);
-      console.log(`Loaded ${hotelTaskIds.size} existing tasks for hotel ${hotelId}`);
       
     } catch (error) {
       console.error('Error loading hotel tasks:', error);
@@ -126,7 +125,6 @@ export default function HotelComplianceTab({ hotel, isEditing, onTaskListSave }:
       tasks: section.tasks.filter((task: any) => selectedTasks[task.task_id])
     })).filter((section: any) => section.tasks.length > 0); // Remove sections with no selected tasks
     
-    console.log('Saving filtered compliance data:', filteredComplianceData);
     onTaskListSave(filteredComplianceData);
   };
 

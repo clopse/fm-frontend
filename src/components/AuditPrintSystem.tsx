@@ -112,7 +112,6 @@ const ProfessionalAuditPDF: React.FC = () => {
       );
       
       if (!response.ok) {
-        console.warn(`Preview failed: ${response.status} ${response.statusText}`);
         setPreviewTasks([]);
         return;
       }
@@ -120,7 +119,6 @@ const ProfessionalAuditPDF: React.FC = () => {
       const data = await response.json();
       setPreviewTasks(data.compliance?.tasks || []);
     } catch (error: any) {
-      console.warn('Error loading preview data:', error);
       setPreviewTasks([]);
     }
   };
@@ -143,7 +141,6 @@ const ProfessionalAuditPDF: React.FC = () => {
       );
       
       if (!response.ok) {
-        console.warn(`PDF generation failed: ${response.status} ${response.statusText}`);
         return;
       }
       
@@ -159,7 +156,6 @@ const ProfessionalAuditPDF: React.FC = () => {
       document.body.removeChild(a);
       
     } catch (error: any) {
-      console.warn('Error generating PDF:', error);
     } finally {
       setIsLoading(false);
     }
@@ -177,7 +173,6 @@ const ProfessionalAuditPDF: React.FC = () => {
       );
       
       if (!response.ok) {
-        console.warn(`Preview failed: ${response.status} ${response.statusText}`);
         setAuditData(null);
         return;
       }
@@ -230,7 +225,6 @@ const ProfessionalAuditPDF: React.FC = () => {
       setAuditData(fullAuditData);
       setShowPreview(true);
     } catch (error: any) {
-      console.warn('Error fetching audit data:', error);
       setAuditData(null);
     } finally {
       setIsLoading(false);

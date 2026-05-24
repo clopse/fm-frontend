@@ -533,9 +533,7 @@ export default function GalwayPage() {
           }),
         });
 
-        console.log('Chat response status:', res.status);
         const rawText = await res.text();
-        console.log('Chat raw response:', rawText);
 
         if (!res.ok) throw new Error(`Status ${res.status}`);
         const data = JSON.parse(rawText);

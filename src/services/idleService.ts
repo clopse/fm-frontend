@@ -40,7 +40,6 @@ class IdleService {
     // Start the timer
     this.resetTimer();
     
-    console.log('Idle tracking started - 2 hour timeout');
   }
 
   /**
@@ -61,7 +60,6 @@ class IdleService {
     // Clear timers
     this.clearTimers();
     
-    console.log('Idle tracking stopped');
   }
 
   /**
@@ -111,7 +109,6 @@ class IdleService {
    * Handle idle timeout - logout user
    */
   private handleTimeout() {
-    console.log('Session expired due to inactivity');
     
     // Stop tracking
     this.stopTracking();
@@ -147,7 +144,6 @@ class IdleService {
   extendSession() {
     if (this.isActive) {
       this.resetTimer();
-      console.log('Session extended');
     }
   }
 

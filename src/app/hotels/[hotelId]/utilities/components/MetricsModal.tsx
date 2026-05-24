@@ -216,12 +216,10 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
         
         if (response.ok) {
           const data = await response.json();
-          console.log('Bills fetched (all years):', data.bills?.length || 0);
           setBills(data.bills || []);
           return;
         }
       } catch (error) {
-        console.warn('Failed to fetch all bills, trying year-by-year:', error);
       }
 
       // Fallback: Fetch bills year by year using the other endpoint
@@ -306,11 +304,9 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
             allBills.push(...yearBills);
           }
         } catch (error) {
-          console.warn(`Failed to fetch data for ${fetchYear}:`, error);
         }
       }
       
-      console.log('Total bills fetched (converted):', allBills.length);
       setBills(allBills);
     } catch (error) {
       console.error('Failed to fetch bills:', error);
@@ -648,7 +644,6 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
         s3Key = `utilities/${hotelId}/${year}/${month}/${cleanFilename}.json`;
       }
       
-      console.log('📝 Updating bill with s3_key:', s3Key);
       
       // Build updates based on bill type
       const updates: any = {

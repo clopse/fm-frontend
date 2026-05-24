@@ -63,7 +63,6 @@ export default function BulkAssetManagementPage() {
     try {
       // Add cache-busting timestamp to ensure fresh data
       const url = `${API_BASE}/api/assets/?hotel_id=${hotelId}&t=${Date.now()}`;
-      console.log('Loading assets from:', url);
       
       const res = await fetch(url, {
         cache: 'no-store' // Prevent caching
@@ -72,7 +71,6 @@ export default function BulkAssetManagementPage() {
       if (!res.ok) throw new Error("Failed to load assets");
       const data = await res.json();
       
-      console.log(`Loaded ${data.length} assets`);
       
       setAssets(data);
       setFilteredAssets(data);
@@ -120,9 +118,6 @@ export default function BulkAssetManagementPage() {
     }
 
     // Debug: Log what we're sending
-    console.log('Bulk Update Data:', bulkUpdate);
-    console.log('API Base:', API_BASE);
-    console.log('Assets to update:', assetsToUpdate.length);
 
     setSavingChanges(true);
     setMessage(null);
@@ -136,7 +131,6 @@ export default function BulkAssetManagementPage() {
       for (const asset of assetsToUpdate) {
         try {
           const url = `${API_BASE}/api/assets/${asset.id}`;
-          console.log(`Updating ${asset.asset_code} at ${url}`);
           
           const res = await fetch(url, {
             method: 'PUT',
@@ -151,7 +145,6 @@ export default function BulkAssetManagementPage() {
             console.error(`Failed to update ${asset.asset_code}:`, res.status, errorText);
           } else {
             successCount++;
-            console.log(`✓ Successfully updated ${asset.asset_code}`);
           }
         } catch (error) {
           failCount++;

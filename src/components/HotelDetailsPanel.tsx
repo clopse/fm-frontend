@@ -73,8 +73,6 @@ export default function HotelDetailsPanel({
   // Handle hotel details save (equipment, building info, etc.)
   const handleHotelDetailsSave = async (hotelData: HotelFacilityData) => {
     try {
-      console.log('Saving hotel details to:', `${API_BASE}/hotels/details/${hotelData.hotelId}`);
-      console.log('Hotel data:', hotelData);
       
       const response = await fetch(`${API_BASE}/hotels/details/${hotelData.hotelId}`, {
         method: 'POST',
@@ -82,11 +80,9 @@ export default function HotelDetailsPanel({
         body: JSON.stringify(hotelData)
       });
 
-      console.log('Response status:', response.status);
       
       if (response.ok) {
         const result = await response.json();
-        console.log('Hotel details saved successfully:', result);
         onHotelUpdate(hotelData); // Update parent state
       } else {
         const errorText = await response.text();
@@ -104,18 +100,7 @@ export default function HotelDetailsPanel({
 
   // Handle compliance task list save to S3
   const handleComplianceTaskSave = async (taskList: any[]) => {
-    console.log('=== COMPLIANCE SAVE DEBUG ===');
-    console.log('1. Type of taskList:', typeof taskList);
-    console.log('2. Is Array:', Array.isArray(taskList));
-    console.log('3. TaskList length:', taskList?.length);
-    console.log('4. First item structure:', taskList[0]);
-    console.log('5. Full taskList:', JSON.stringify(taskList, null, 2));
-    console.log('6. Hotel ID:', hotel.hotelId);
-    console.log('7. API URL:', `${API_BASE}/hotels/facilities/${hotel.hotelId}tasks`);
-    console.log('=== END DEBUG ===');
     try {
-      console.log('Saving compliance tasks for hotel:', hotel.hotelId);
-      console.log('Task list being sent:', JSON.stringify(taskList, null, 2));
       
       const response = await fetch(`${API_BASE}/hotels/facilities/${hotel.hotelId}/tasks`, {
         method: 'POST',
@@ -126,11 +111,9 @@ export default function HotelDetailsPanel({
         body: JSON.stringify(taskList)
       });
 
-      console.log('Response status:', response.status);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Compliance tasks saved successfully:', result);
         alert('Compliance tasks saved successfully!');
       } else {
         const errorText = await response.text();

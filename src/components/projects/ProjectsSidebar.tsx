@@ -151,7 +151,6 @@ export default function ProjectsSidebar({
       const res = await apiFetch(`${BRAIN_URL}/projects/galway/documents`);
       if (!res.ok) return;
       const data = await res.json();
-      console.log('Documents API response:', data);
       const list: ProjectDocument[] = Array.isArray(data) ? data : (data.documents ?? []);
       // Backend already returns newest-first (ORDER BY created_at DESC); just cap
       setDocuments(list.slice(0, 10));

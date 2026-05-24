@@ -108,41 +108,6 @@ export default function BillsListModal({
   });
 
   // Debug logging to see what's happening - with distinctive prefix
-  console.log('🔥 BILLS MODAL DEBUG 🔥', {
-    utilityType,
-    month, 
-    year,
-    hotelId,
-    totalBills: bills.length,
-    filteredBills: filteredBills.length,
-    billsByType: bills.reduce((acc, bill) => {
-      acc[bill.utility_type] = (acc[bill.utility_type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    billPeriods: bills.map(bill => ({
-      type: bill.utility_type,
-      filename: bill.filename,
-      start: bill.summary?.billing_period_start,
-      end: bill.summary?.billing_period_end || bill.summary?.bill_date,
-      rawStart: bill.raw_data?.billingPeriod?.startDate,
-      rawEnd: bill.raw_data?.billingPeriod?.endDate || bill.raw_data?.billSummary?.billingPeriodEndDate
-    })),
-    targetPeriod: month && year ? `${month} ${year}` : year || 'all',
-    sampleBill: bills[0] ? {
-      utility_type: bills[0].utility_type,
-      filename: bills[0].filename,
-      bill_date: bills[0].summary?.bill_date,
-      billing_start: bills[0].summary?.billing_period_start,
-      billing_end: bills[0].summary?.billing_period_end,
-      raw_billing_end: bills[0].raw_data?.billSummary?.billingPeriodEndDate
-    } : null,
-    sampleFiltered: filteredBills[0] ? {
-      utility_type: filteredBills[0].utility_type,
-      filename: filteredBills[0].filename,
-      billing_start: filteredBills[0].summary?.billing_period_start,
-      billing_end: filteredBills[0].summary?.billing_period_end
-    } : null
-  });
 
   const getUtilityIcon = (type: string) => {
     switch (type) {
@@ -261,11 +226,6 @@ export default function BillsListModal({
   };
 
   const viewBillDetails = (bill: BillEntry) => {
-    console.log('🔍 Opening bill details for:', {
-      filename: bill.filename,
-      pdfUrl: getS3PdfUrl(bill, true),
-      isMobile: isMobile().any
-    });
     setViewingDetails(bill);
   };
 

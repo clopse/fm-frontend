@@ -159,11 +159,9 @@ export function useWaterMonthlyData(
         setLoading(true);
         setError(null);
         
-        console.log(`Fetching water data for year: ${selectedYear}`);
         
         // Use direct S3 access
         const s3Url = `${S3_BASE_URL}/utilities/${waterHotelId}/smartflow-usage.json`;
-        console.log(`Attempting to fetch from S3 directly: ${s3Url}`);
         
         const s3Response = await fetch(s3Url);
         
@@ -173,7 +171,6 @@ export function useWaterMonthlyData(
         
         // Process real data from S3
         const rawJson = await s3Response.json();
-        console.log("S3 data retrieval successful!");
         
         if (!rawJson.usage_data || !Array.isArray(rawJson.usage_data)) {
           console.error("Invalid data format:", rawJson);
@@ -181,7 +178,6 @@ export function useWaterMonthlyData(
         }
         
         const rawData: SmartFlowRawData[] = rawJson.usage_data;
-        console.log(`Processing ${rawData.length} raw water entries`);
         
         // Group entries by year and month
         const monthDataMap = new Map<string, {
@@ -253,14 +249,12 @@ export function useWaterMonthlyData(
         // Get available years from the data
         const years = [...new Set(processedData.map(entry => parseInt(entry.month.substring(0, 4))))].sort();
         setAvailableYears(years);
-        console.log("Years available in data:", years.join(", "));
         
         // Filter by selected year
         const filteredData = processedData.filter(entry => 
           entry.month.startsWith(selectedYear.toString())
         );
         
-        console.log(`Filtered to ${filteredData.length} entries for year ${selectedYear}`);
         
         // Sort data by month
         const sortedData = filteredData.sort((a, b) => a.month.localeCompare(b.month));
@@ -274,7 +268,6 @@ export function useWaterMonthlyData(
           // Don't set an error if the year is simply not available,
           // but data for other years exists
           if (years.length > 0) {
-            console.log(`No data for ${selectedYear}, but data exists for other years`);
           } else {
             setError("No water data available");
           }

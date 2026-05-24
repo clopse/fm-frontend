@@ -77,7 +77,6 @@ const hydrateFromStorage = (hotelId: string): boolean => {
     
     // Validate cache structure before using it
     if (!data || typeof data !== 'object') {
-      console.warn('Invalid cache structure, clearing...');
       localStorage.removeItem(getStorageKey(hotelId));
       return false;
     }
@@ -93,7 +92,6 @@ const hydrateFromStorage = (hotelId: string): boolean => {
     });
     return true;
   } catch (err) {
-    console.warn('Failed to load from localStorage:', err);
     // Clear corrupted cache
     try {
       localStorage.removeItem(getStorageKey(hotelId));
@@ -109,7 +107,6 @@ const persistToStorage = (hotelId: string) => {
       localStorage.setItem(getStorageKey(hotelId), JSON.stringify(cached));
     }
   } catch (err) {
-    console.warn('Failed to persist to localStorage:', err);
   }
 };
 
@@ -396,7 +393,6 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
     
     if (cached && cacheHasData) {
       // Cache is valid and has data - use it
-      console.log('Loading from cache for', hotelId);
       setTasks(cached.tasks);
       setHistory(cached.history || {});
       setScoreBreakdown(cached.scoreBreakdown);
@@ -407,7 +403,6 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
       setScoresLoading(false);
     } else {
       // No cache or empty cache - load fresh data
-      console.log('No valid cache found - loading fresh data for', hotelId);
       loadInitialData();
     }
     

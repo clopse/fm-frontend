@@ -523,7 +523,6 @@ export default function TendersPage() {
         break;
       case 'email':
         // Handle email action
-        console.log('Send email for tender:', tender.id);
         break;
       case 'comments':
         // Handle comments action - could open modal with comments tab

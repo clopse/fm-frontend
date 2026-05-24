@@ -294,14 +294,10 @@ export async function GET(request: Request) {
   const API_KEY = process.env.OPENWEATHER_API_KEY;
   const clientIP = getClientIP(request);
   
-  console.log('🔑 API Key exists:', !!API_KEY);
-  console.log('🌤️ Weather API called at:', new Date().toISOString());
-  console.log('🌐 Client IP:', clientIP);
   
   // Check rate limiting
   const rateLimit = checkRateLimit(clientIP);
   if (!rateLimit.allowed) {
-    console.log(`⏰ Rate limit exceeded for IP: ${clientIP}`);
     const rateLimitResponse = NextResponse.json({ 
       error: 'Too many requests. Please wait before refreshing again.',
       retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000)
@@ -319,7 +315,6 @@ export async function GET(request: Request) {
   const cacheKey = 'weather-data';
   const cachedData = getCachedData(cacheKey);
   if (cachedData) {
-    console.log('📦 Returning cached weather data');
     const response = NextResponse.json({
       ...cachedData,
       cached: true,
@@ -350,13 +345,10 @@ export async function GET(request: Request) {
     const warnings: WeatherWarning[] = [];
     const forecasts: WeatherForecast[] = [];
     
-    console.log('📍 Checking weather for locations:', Object.keys(HOTEL_LOCATIONS));
-    console.log('💰 Making fresh API calls to OpenWeather...');
     
     // Fetch alerts, current weather, and 5-day forecast for each location
     for (const [locationName, locationData] of Object.entries(HOTEL_LOCATIONS)) {
       try {
-        console.log(`🌍 Fetching weather for ${locationName}...`);
         
         const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${locationData.lat}&lon=${locationData.lon}&appid=${API_KEY}&units=metric&exclude=minutely,hourly`;
         
@@ -372,23 +364,15 @@ export async function GET(request: Request) {
         }
         
         const data = await response.json();
-        console.log(`✅ Received data for ${locationName}:`, {
-          hasAlerts: !!(data.alerts && data.alerts.length > 0),
-          alertCount: data.alerts?.length || 0,
-          hasCurrent: !!data.current,
-          hasDaily: !!(data.daily && data.daily.length > 0)
-        });
         
         // Process current weather + 5-day forecast (shows today + next 4 days)
         if (data.current && data.daily) {
           const forecast = transformForecast(data.current, data.daily, locationName, locationData.hotels);
           forecasts.push(forecast);
-          console.log(`📊 Added forecast for ${locationName} (today + next 4 days)`);
         }
         
         // Process alerts if they exist
         if (data.alerts && data.alerts.length > 0) {
-          console.log(`⚠️ Processing ${data.alerts.length} alerts for ${locationName}`);
           
           for (const alert of data.alerts) {
             // Only include alerts that are still active or start within 7 days
@@ -398,13 +382,10 @@ export async function GET(request: Request) {
             if (alert.end > now && alert.start < sevenDaysFromNow) {
               const warning = transformAlert(alert, locationName, locationData.hotels);
               warnings.push(warning);
-              console.log(`🚨 Added warning: ${warning.title} (${warning.severity})`);
             } else {
-              console.log(`⏰ Skipped expired/future alert: ${alert.event}`);
             }
           }
         } else {
-          console.log(`✅ No alerts for ${locationName}`);
         }
       } catch (locationError) {
         console.error(`💥 Error fetching weather for ${locationName}:`, locationError);
@@ -415,11 +396,6 @@ export async function GET(request: Request) {
     // Sort warnings by start time (earliest first)
     warnings.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
     
-    console.log('📋 Final summary:', {
-      totalWarnings: warnings.length,
-      totalForecasts: forecasts.length,
-      locationsChecked: Object.keys(HOTEL_LOCATIONS).length
-    });
     
     const responseData = {
       warnings,
@@ -431,7 +407,6 @@ export async function GET(request: Request) {
     
     // Cache the fresh data
     setCachedData(cacheKey, responseData);
-    console.log('💾 Cached weather data for 10 minutes');
     
     const response = NextResponse.json(responseData);
     
@@ -448,7 +423,6 @@ export async function GET(request: Request) {
     response.headers.set('X-RateLimit-Remaining', rateLimit.remaining.toString());
     response.headers.set('X-RateLimit-Reset', rateLimit.resetTime.toString());
     
-    console.log('✅ Returning fresh weather data with rate limiting');
     return response;
     
   } catch (error) {

@@ -188,7 +188,6 @@ export default function HotelManagementPage() {
           }
         }
       } catch (apiError) {
-        console.log(`No existing data for ${hotelId}, using defaults`);
       }
 
       // Cache the result

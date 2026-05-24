@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import ConfirmationReport from '@/components/ConfirmationReport';
 import { hotelNames } from '@/data/hotelMetadata';
-import PDFViewer from '@/components/PDFViewerA4';
+import dynamic from 'next/dynamic';
+const PDFViewer = dynamic(() => import('@/components/PDFViewerA4'), { ssr: false });
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 

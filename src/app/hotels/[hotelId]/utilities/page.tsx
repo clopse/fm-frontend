@@ -342,7 +342,6 @@ export default function UtilitiesDashboard() {
               breakEvenData={breakEvenData}
               loading={chpLoading}
               onMonthClick={(month) => {
-                console.log('CHP month clicked:', month);
               }}
             />
           </div>

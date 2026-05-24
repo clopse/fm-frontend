@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { hotelNames } from '@/data/hotelMetadata';
 import FileTree from '@/components/FileTree';
-import PDFViewer from '@/components/PDFViewer';
+import dynamic from 'next/dynamic';
+const PDFViewer = dynamic(() => import('@/components/PDFViewer'), { ssr: false });
 import { FileNode, searchInTree, countFiles } from '@/lib/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
