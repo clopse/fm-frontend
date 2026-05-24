@@ -6,17 +6,10 @@ import { usePathname } from 'next/navigation';
 import { Plus, Building2, LogOut, User, MessageSquarePlus, X, FileText, Upload, MoreVertical, Pencil, Info, Trash2, Check } from 'lucide-react';
 import { userService } from '@/services/userService';
 import { apiFetch } from '@/utils/api';
+import { PROJECTS } from '@/data/projects';
 import styles from '@/styles/projects.module.css';
 
 const BRAIN_URL = process.env.NEXT_PUBLIC_BRAIN_URL || 'https://api.jmkfacilities.ie/api/brain';
-
-const PROJECTS = [
-  {
-    label: 'Galway – Aloft Bohermore',
-    href: '/projects/galway',
-    icon: Building2,
-  },
-] as const;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,9 +24,9 @@ interface Conversation {
 }
 
 interface ProjectDocument {
-  document_id: number;   // API field name — NOT "id"
-  filename: string;      // also used as the path param in the download URL
-  extracted: boolean;    // true = ready; no separate "status" field in list response
+  document_id: number;
+  filename: string;
+  extracted: boolean;
   doc_type?: string;
   chunks_created?: number;
   created_at?: string;
@@ -41,16 +34,13 @@ interface ProjectDocument {
 }
 
 interface ProjectsSidebarProps {
-  // Conversation props (galway page only)
   activeConversationId?: string | null;
   onSelectConversation?: (id: string) => void;
   onNewConversation?: () => void;
   conversationRefreshKey?: number;
   onConversationDeleted?: (id: string) => void;
-  // Document props (galway page only)
   documentRefreshKey?: number;
   onUploadClick?: () => void;
-  // Sidebar open/close
   isOpen?: boolean;
   isMobile?: boolean;
   onClose?: () => void;
@@ -77,9 +67,6 @@ function convTitle(c: Conversation): string {
   return raw.length > 60 ? raw.slice(0, 57) + '…' : raw;
 }
 
-// Strip drawing-reference prefixes (starts-with-digit tokens) and show the
-// last 3 meaningful underscore-separated parts — same logic as parseSource
-// in galway/page.tsx but without the "chunk N" suffix stripping.
 function cleanFilename(raw: string): string {
   const extMatch = raw.match(/(\.\w+)$/);
   const ext  = extMatch ? extMatch[1] : '';
@@ -116,7 +103,6 @@ export default function ProjectsSidebar({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [documents,     setDocuments]     = useState<ProjectDocument[]>([]);
 
-  // Per-row transient UI state. Only one of menu/rename/info/delete is active per row.
   const [openMenuId,       setOpenMenuId]       = useState<string | null>(null);
   const [renamingId,       setRenamingId]       = useState<string | null>(null);
   const [renameValue,      setRenameValue]      = useState('');
@@ -125,44 +111,47 @@ export default function ProjectsSidebar({
   const [confirmDeleteId,  setConfirmDeleteId]  = useState<string | null>(null);
   const [deletePending,    setDeletePending]    = useState(false);
 
-  const onGalwayPage = pathname.startsWith('/projects/galway');
+  // Derive active project from pathname: /projects/[projectId]/...
+  const activeProjectId = pathname.split('/')[2] || null;
+  const onProjectPage   = !!activeProjectId;
 
   // ── Conversation fetch ────────────────────────────────────────────────────
 
   const fetchConversations = useCallback(async () => {
+    if (!activeProjectId) return;
     try {
-      const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations`);
+      const res = await apiFetch(`${BRAIN_URL}/projects/${activeProjectId}/conversations`);
       if (!res.ok) return;
       const data = await res.json();
       const list: Conversation[] = Array.isArray(data) ? data : (data.conversations ?? []);
       setConversations(list.slice(0, 20));
     } catch { /* silent */ }
-  }, []);
+  }, [activeProjectId]);
 
   useEffect(() => {
-    if (!onGalwayPage) { setConversations([]); return; }
+    if (!onProjectPage) { setConversations([]); return; }
     fetchConversations();
-  }, [onGalwayPage, conversationRefreshKey, fetchConversations]);
+  }, [onProjectPage, conversationRefreshKey, fetchConversations]);
 
   // ── Document fetch (with 30-second auto-refresh) ──────────────────────────
 
   const fetchDocuments = useCallback(async () => {
+    if (!activeProjectId) return;
     try {
-      const res = await apiFetch(`${BRAIN_URL}/projects/galway/documents`);
+      const res = await apiFetch(`${BRAIN_URL}/projects/${activeProjectId}/documents`);
       if (!res.ok) return;
       const data = await res.json();
       const list: ProjectDocument[] = Array.isArray(data) ? data : (data.documents ?? []);
-      // Backend already returns newest-first (ORDER BY created_at DESC); just cap
       setDocuments(list.slice(0, 10));
     } catch { /* silent */ }
-  }, []);
+  }, [activeProjectId]);
 
   useEffect(() => {
-    if (!onGalwayPage) { setDocuments([]); return; }
+    if (!onProjectPage) { setDocuments([]); return; }
     fetchDocuments();
     const interval = setInterval(fetchDocuments, 30_000);
     return () => clearInterval(interval);
-  }, [onGalwayPage, documentRefreshKey, fetchDocuments]);
+  }, [onProjectPage, documentRefreshKey, fetchDocuments]);
 
   // ── Mobile close-on-nav helpers ───────────────────────────────────────────
 
@@ -191,21 +180,20 @@ export default function ProjectsSidebar({
   };
 
   const saveRename = async (convId: string) => {
+    if (!activeProjectId) return;
     const trimmed = renameValue.trim();
     if (!trimmed) { cancelRename(); return; }
     setRenameSaving(true);
     try {
-      const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations/${convId}`, {
+      const res = await apiFetch(`${BRAIN_URL}/projects/${activeProjectId}/conversations/${convId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: trimmed }),
       });
       if (res.ok) {
-        // Refresh the list so we pick up whatever the backend returned for
-        // updated_at, etc., not just the title we typed.
         fetchConversations();
       }
-    } catch { /* silent — user can retry */ }
+    } catch { /* silent */ }
     finally {
       setRenameSaving(false);
       setRenamingId(null);
@@ -213,16 +201,16 @@ export default function ProjectsSidebar({
     }
   };
 
-  // Info has no async work — message_count and documents are on the list row.
   const openInfo = (convId: string) => {
     setInfoId(convId);
     setOpenMenuId(null);
   };
 
   const handleDelete = async (convId: string) => {
+    if (!activeProjectId) return;
     setDeletePending(true);
     try {
-      const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations/${convId}`, {
+      const res = await apiFetch(`${BRAIN_URL}/projects/${activeProjectId}/conversations/${convId}`, {
         method: 'DELETE',
       });
       if (res.ok || res.status === 204) {
@@ -236,8 +224,6 @@ export default function ProjectsSidebar({
     }
   };
 
-  // Click-outside: closes menu + info popover. Rename and delete-confirm have
-  // their own explicit cancel buttons so they stay open until the user dismisses.
   useEffect(() => {
     if (openMenuId === null && infoId === null) return;
     const handler = (e: MouseEvent) => {
@@ -330,7 +316,8 @@ export default function ProjectsSidebar({
         <nav style={{ flex: 1, overflowY: 'auto', padding: '0 8px' }}>
 
           {/* Project links */}
-          {PROJECTS.map(({ label, href, icon: Icon }) => {
+          {PROJECTS.map(({ id, name, location, href }) => {
+            const label = `${location.split(',')[0]} – ${name}`;
             const active = pathname.startsWith(href);
             return (
               <Link
@@ -347,7 +334,7 @@ export default function ProjectsSidebar({
                   marginBottom: 2, whiteSpace: 'nowrap',
                 }}
               >
-                <Icon size={15} style={{ color: active ? '#c96442' : 'var(--pr-nav-icon)', flexShrink: 0 }} />
+                <Building2 size={15} style={{ color: active ? '#c96442' : 'var(--pr-nav-icon)', flexShrink: 0 }} />
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
                   {label}
                 </span>
@@ -356,7 +343,7 @@ export default function ProjectsSidebar({
           })}
 
           {/* ── Conversation history ───────────────────── */}
-          {onGalwayPage && (
+          {onProjectPage && (
             <div style={{ marginTop: 10 }}>
               <div style={{ padding: '6px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--pr-section-label)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
@@ -401,7 +388,6 @@ export default function ProjectsSidebar({
                       }}
                     >
                       {isConfirmDelete ? (
-                        // ── Delete confirm takes over the row ────────────
                         <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 6 }}>
                           <span style={{ fontSize: 11, color: 'var(--pr-text-secondary)', lineHeight: 1.3 }}>
                             Delete this conversation?
@@ -436,7 +422,6 @@ export default function ProjectsSidebar({
                           </div>
                         </div>
                       ) : isRenaming ? (
-                        // ── Inline rename input ──────────────────────────
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, width: '100%' }}>
                           <input
                             type="text"
@@ -484,7 +469,6 @@ export default function ProjectsSidebar({
                           </button>
                         </div>
                       ) : (
-                        // ── Default row: title + time + 3-dot menu ───────
                         <>
                           <div
                             role="button"
@@ -639,7 +623,7 @@ export default function ProjectsSidebar({
           )}
 
           {/* ── Documents ─────────────────────────────── */}
-          {onGalwayPage && (
+          {onProjectPage && (
             <div style={{ marginTop: 12 }}>
               <div style={{ padding: '6px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--pr-section-label)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
@@ -664,9 +648,7 @@ export default function ProjectsSidebar({
                 </div>
               ) : (
                 documents.map((doc) => {
-                  // Download endpoint takes filename in the path, not document_id
-                  const downloadHref = `${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(doc.filename)}/download`;
-                  // List response has extracted:bool; observations array signals error state
+                  const downloadHref = `${BRAIN_URL}/projects/${activeProjectId}/documents/${encodeURIComponent(doc.filename)}/download`;
                   const hasError = Array.isArray(doc.observations) &&
                     doc.observations.some((o) => o.type === 'error');
                   const status: 'ready' | 'processing' | 'error' =

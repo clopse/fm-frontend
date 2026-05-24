@@ -5,41 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Plus, BedDouble, Menu } from 'lucide-react';
 import ProjectsSidebar from '@/components/projects/ProjectsSidebar';
 import NewProjectModal from '@/components/projects/NewProjectModal';
+import { PROJECTS, type ProjectConfig } from '@/data/projects';
 import styles from '@/styles/projects.module.css';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Badge configs ────────────────────────────────────────────────────────────
 
-interface Project {
-  id:              string;
-  name:            string;
-  brand:           string;
-  country:         string;
-  rooms:           number;
-  sustainability:  string[];
-  status:          string;
-}
-
-// ─── Hardcoded data (replace with GET /api/brain/projects when ready) ─────────
-
-const PROJECTS: Project[] = [
-  {
-    id:             'galway',
-    name:           'Aloft Bohermore',
-    brand:          'Marriott Aloft',
-    country:        'Ireland',
-    rooms:          163,
-    sustainability: ['LEED Gold', 'BREEAM Excellent'],
-    status:         'Pre-Opening',
-  },
-];
-
-// ─── Badge configs — light palette ───────────────────────────────────────────
-
-const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
-  'Pre-Opening': { bg: '#fef3c7', text: '#d97706' },
-  'Open':        { bg: '#dcfce7', text: '#16a34a' },
-  'Planning':    { bg: '#f1f5f9', text: '#64748b' },
-  'On Hold':     { bg: '#fee2e2', text: '#dc2626' },
+const STATUS_BADGE: Record<string, { bg: string; text: string; label: string }> = {
+  'pre-opening': { bg: '#fef3c7', text: '#d97706', label: 'Pre-Opening' },
+  'operational': { bg: '#dcfce7', text: '#16a34a', label: 'Open' },
 };
 
 const SUSTAINABILITY_BADGE: Record<string, { bg: string; text: string }> = {
@@ -57,8 +30,9 @@ function defaultBadge(label: string): { bg: string; text: string } {
 
 // ─── Project card ─────────────────────────────────────────────────────────────
 
-function ProjectCard({ project, onClick }: { project: Project; onClick: () => void }) {
-  const statusStyle = STATUS_BADGE[project.status] ?? { bg: '#f1f5f9', text: '#64748b' };
+function ProjectCard({ project, onClick }: { project: ProjectConfig; onClick: () => void }) {
+  const statusStyle = STATUS_BADGE[project.status] ?? { bg: '#f1f5f9', text: '#64748b', label: project.status };
+  const sustainability = project.sustainability ?? [];
 
   return (
     <div
@@ -93,7 +67,7 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
           borderRadius: 5,
         }}
       >
-        {project.status}
+        {statusStyle.label}
       </span>
 
       {/* Name */}
@@ -111,11 +85,11 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
         {project.name}
       </p>
 
-      {/* Brand · Country */}
+      {/* Brand · Location */}
       <p style={{ margin: '0 0 18px', fontSize: 13, color: '#64748b', lineHeight: 1.4 }}>
         {project.brand}
         <span style={{ margin: '0 6px', color: '#cbd5e1' }}>·</span>
-        {project.country}
+        {project.location}
       </p>
 
       {/* Divider */}
@@ -123,12 +97,14 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
 
       {/* Bottom row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#64748b', marginRight: 4 }}>
-          <BedDouble size={14} style={{ color: '#94a3b8' }} />
-          {project.rooms} rooms
-        </div>
+        {project.rooms && project.rooms > 0 ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#64748b', marginRight: 4 }}>
+            <BedDouble size={14} style={{ color: '#94a3b8' }} />
+            {project.rooms} rooms
+          </div>
+        ) : null}
 
-        {project.sustainability.map((label) => {
+        {sustainability.map((label) => {
           const badge = defaultBadge(label);
           return (
             <span
@@ -175,8 +151,6 @@ export default function ProjectsPage() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Open the modal when navigated to with ?new=1 (e.g. from sidebar on another /projects/* page).
-  // Read directly from window.location to avoid the Suspense-boundary requirement on useSearchParams.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
@@ -248,7 +222,7 @@ export default function ProjectsPage() {
             <ProjectCard
               key={project.id}
               project={project}
-              onClick={() => router.push(`/projects/${project.id}`)}
+              onClick={() => router.push(project.href)}
             />
           ))}
         </div>

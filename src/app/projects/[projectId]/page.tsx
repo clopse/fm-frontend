@@ -8,10 +8,12 @@ import {
   type KeyboardEvent,
   type ChangeEvent,
 } from 'react';
+import { useParams } from 'next/navigation';
 import { ArrowUp, Paperclip, FileText, Sun, Moon, Menu } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import ProjectsSidebar from '@/components/projects/ProjectsSidebar';
 import { apiFetch } from '@/utils/api';
+import { PROJECTS, type ProjectConfig } from '@/data/projects';
 import styles from '@/styles/projects.module.css';
 
 const BRAIN_URL = process.env.NEXT_PUBLIC_BRAIN_URL || 'https://api.jmkfacilities.ie/api/brain';
@@ -19,11 +21,11 @@ const BRAIN_URL = process.env.NEXT_PUBLIC_BRAIN_URL || 'https://api.jmkfacilitie
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface UploadResult {
-  filename: string;       // backend safe_name — used for download URL
-  displayName: string;    // original file.name — what we show in chat
-  textPreview?: string;   // first slice of extracted text from the new sync contract
-  errorDetail?: string;   // backend `detail` from a 400 — shown in red
-  loading?: boolean;      // true while the synchronous upload is in flight
+  filename: string;
+  displayName: string;
+  textPreview?: string;
+  errorDetail?: string;
+  loading?: boolean;
 }
 
 interface Message {
@@ -78,11 +80,11 @@ function deduplicateSources(sources: string[]): Array<{ filename: string; displa
 
 // ─── Source pill ──────────────────────────────────────────────────────────────
 
-function SourcePill({ filename, display }: { filename: string; display: string }) {
+function SourcePill({ filename, display, projectId }: { filename: string; display: string; projectId: string }) {
   const [hovered, setHovered] = useState(false);
   return (
     <a
-      href={`${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(filename)}/download`}
+      href={`${BRAIN_URL}/projects/${projectId}/documents/${encodeURIComponent(filename)}/download`}
       target="_blank"
       rel="noopener noreferrer"
       onMouseEnter={() => setHovered(true)}
@@ -104,8 +106,7 @@ function SourcePill({ filename, display }: { filename: string; display: string }
 
 // ─── Upload result component ──────────────────────────────────────────────────
 
-function UploadResultBubble({ result }: { result: UploadResult }) {
-  // Loading — synchronous extraction in progress
+function UploadResultBubble({ result, projectId }: { result: UploadResult; projectId: string }) {
   if (result.loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
@@ -127,7 +128,6 @@ function UploadResultBubble({ result }: { result: UploadResult }) {
     );
   }
 
-  // Error — show the backend `detail` verbatim in red
   if (result.errorDetail) {
     return (
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '4px 0' }}>
@@ -141,7 +141,6 @@ function UploadResultBubble({ result }: { result: UploadResult }) {
     );
   }
 
-  // Success — "📄 [filename] ready to discuss. \n Preview: ..."
   const preview = result.textPreview ?? '';
   const previewSnippet = preview.length > 150 ? preview.slice(0, 150) + '…' : preview;
 
@@ -152,7 +151,7 @@ function UploadResultBubble({ result }: { result: UploadResult }) {
         <div style={{ fontSize: 15, color: 'var(--pr-text-secondary)', lineHeight: 1.5 }}>
           📄{' '}
           <a
-            href={`${BRAIN_URL}/projects/galway/documents/${encodeURIComponent(result.filename)}/download`}
+            href={`${BRAIN_URL}/projects/${projectId}/documents/${encodeURIComponent(result.filename)}/download`}
             target="_blank"
             rel="noopener noreferrer"
             style={{ color: 'var(--pr-text-secondary)', textDecoration: 'underline', textDecorationColor: 'var(--pr-border)', cursor: 'pointer' }}
@@ -204,9 +203,9 @@ function TypingIndicator() {
   );
 }
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({ message, projectId }: { message: Message; projectId: string }) {
   if (message.uploadResult) {
-    return <UploadResultBubble result={message.uploadResult} />;
+    return <UploadResultBubble result={message.uploadResult} projectId={projectId} />;
   }
 
   if (message.role === 'user') {
@@ -241,7 +240,7 @@ function MessageBubble({ message }: { message: Message }) {
         {uniqueSources.length > 0 && (
           <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {uniqueSources.map(({ filename, display }) => (
-              <SourcePill key={filename} filename={filename} display={display} />
+              <SourcePill key={filename} filename={filename} display={display} projectId={projectId} />
             ))}
           </div>
         )}
@@ -250,7 +249,8 @@ function MessageBubble({ message }: { message: Message }) {
   );
 }
 
-function EmptyState({ onSuggest }: { onSuggest: (text: string) => void }) {
+function EmptyState({ onSuggest, project }: { onSuggest: (text: string) => void; project: ProjectConfig }) {
+  const city = project.location.split(',')[0];
   return (
     <div
       style={{
@@ -261,10 +261,10 @@ function EmptyState({ onSuggest }: { onSuggest: (text: string) => void }) {
     >
       <div>
         <p style={{ fontSize: 23, fontWeight: 600, color: 'var(--pr-text-primary)', margin: '0 0 8px', letterSpacing: '-0.02em' }}>
-          Ask anything about Galway
+          Ask anything about {city}
         </p>
         <p style={{ fontSize: 14, color: 'var(--pr-text-muted)', margin: 0 }}>
-          Powered by document analysis · Aloft Bohermore
+          Powered by document analysis · {project.name}
         </p>
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 560 }}>
@@ -289,9 +289,29 @@ function EmptyState({ onSuggest }: { onSuggest: (text: string) => void }) {
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
+// ─── Route wrapper (no hooks — safe for early return) ─────────────────────────
 
-export default function GalwayPage() {
+export default function ProjectPage() {
+  const { projectId } = useParams<{ projectId: string }>();
+  const project = PROJECTS.find((p) => p.id === projectId);
+
+  if (!project) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--pr-text-muted)', fontSize: 15 }}>
+        Project not found.
+      </div>
+    );
+  }
+
+  return <ProjectChat project={project} />;
+}
+
+// ─── Main chat component ──────────────────────────────────────────────────────
+
+function ProjectChat({ project }: { project: ProjectConfig }) {
+  const projectId = project.id;
+  const city = project.location.split(',')[0];
+
   const [messages,       setMessages]       = useState<Message[]>([]);
   const [input,          setInput]          = useState('');
   const [isTyping,       setIsTyping]       = useState(false);
@@ -359,7 +379,7 @@ export default function GalwayPage() {
 
   const loadConversation = useCallback(async (id: string) => {
     try {
-      const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations/${id}`);
+      const res = await apiFetch(`${BRAIN_URL}/projects/${projectId}/conversations/${id}`);
       if (!res.ok) return;
       const data = await res.json();
       const rawMsgs: any[] = Array.isArray(data.messages) ? data.messages : []; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -376,13 +396,13 @@ export default function GalwayPage() {
     } catch {
       // silent
     }
-  }, []);
+  }, [projectId]);
 
   useEffect(() => {
     let active = true;
     async function init() {
       try {
-        const res = await apiFetch(`${BRAIN_URL}/projects/galway/conversations`);
+        const res = await apiFetch(`${BRAIN_URL}/projects/${projectId}/conversations`);
         if (!res.ok || !active) return;
         const data = await res.json();
         const list: any[] = Array.isArray(data) ? data : (data.conversations ?? []); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -392,7 +412,7 @@ export default function GalwayPage() {
     }
     init();
     return () => { active = false; };
-  }, [loadConversation]);
+  }, [projectId, loadConversation]);
 
   const handleNewConversation = useCallback(() => {
     setMessages([]);
@@ -410,18 +430,13 @@ export default function GalwayPage() {
 
   // ── Upload ─────────────────────────────────────────────────────────────────
 
-  // Synchronous contract — POST returns {filename, text_preview, refreshed?} on 200
-  // or {detail} on 400. No polling. The "Reading document…" bubble stays in the
-  // chat until the response lands.
   const handleFileSelect = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Keep the user's original filename — backend safe_name is technical noise
     const displayName = file.name;
     const msgId = `upload-${Date.now()}`;
 
-    // Show loading bubble immediately
     setMessages((prev) => [...prev, {
       id: msgId, role: 'assistant', content: '',
       uploadResult: { filename: file.name, displayName, loading: true },
@@ -433,9 +448,8 @@ export default function GalwayPage() {
     formData.append('doc_type', 'auto');
 
     try {
-      // Raw fetch — apiFetch injects Content-Type:application/json which breaks multipart
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      const res = await fetch(`${BRAIN_URL}/projects/galway/documents/upload`, {
+      const res = await fetch(`${BRAIN_URL}/projects/${projectId}/documents/upload`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: formData,
@@ -463,8 +477,7 @@ export default function GalwayPage() {
         return;
       }
 
-      // 200 — synchronous success
-      const filename = data.filename ?? file.name; // backend safe_name → download URL
+      const filename = data.filename ?? file.name;
       setMessages((prev) => prev.map((m) =>
         m.id === msgId
           ? { ...m, uploadResult: { filename, displayName, textPreview: data.text_preview } }
@@ -486,7 +499,7 @@ export default function GalwayPage() {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  }, [showToastMsg]);
+  }, [projectId, showToastMsg]);
 
   // ── Send message ───────────────────────────────────────────────────────────
 
@@ -504,7 +517,7 @@ export default function GalwayPage() {
       let currentConvId = conversationId;
       if (!currentConvId) {
         try {
-          const convRes = await apiFetch(`${BRAIN_URL}/projects/galway/conversations`, {
+          const convRes = await apiFetch(`${BRAIN_URL}/projects/${projectId}/conversations`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({}),
@@ -521,7 +534,7 @@ export default function GalwayPage() {
       }
 
       try {
-        const res = await apiFetch(`${BRAIN_URL}/projects/galway/chat`, {
+        const res = await apiFetch(`${BRAIN_URL}/projects/${projectId}/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -540,8 +553,6 @@ export default function GalwayPage() {
         const rawReply: string = data.response ?? 'No response received.';
         const sources: string[] = Array.isArray(data.sources) ? data.sources : [];
 
-        // If the backend flags a mismatch on /save, strip the marker from the
-        // displayed text and switch the action buttons to confirm/cancel.
         const awaitingConfirm = rawReply.startsWith(AWAITING_PREFIX);
         const reply = awaitingConfirm
           ? rawReply.slice(AWAITING_PREFIX.length).replace(/^[:\s]+/, '')
@@ -566,7 +577,7 @@ export default function GalwayPage() {
         setIsTyping(false);
       }
     },
-    [isTyping, messages, conversationId],
+    [isTyping, messages, conversationId, projectId],
   );
 
   const handleInputChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -606,7 +617,6 @@ export default function GalwayPage() {
         {/* Title bar */}
         <div style={{ padding: '14px 20px 14px 16px', borderBottom: '1px solid var(--pr-border)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Sidebar toggle */}
             <button
               onClick={() => setSidebarOpen((v) => !v)}
               title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
@@ -616,7 +626,7 @@ export default function GalwayPage() {
             </button>
             <div>
               <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--pr-text-primary)', letterSpacing: '-0.01em' }}>
-                Galway – Aloft Bohermore
+                {city} – {project.name}
               </p>
               <p style={{ margin: 0, fontSize: 12, color: 'var(--pr-text-muted)' }}>
                 New construction · AI assistant
@@ -641,11 +651,11 @@ export default function GalwayPage() {
           style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--pr-chat-bg)' }}
         >
           {messages.length === 0 && !isTyping ? (
-            <EmptyState onSuggest={sendMessage} />
+            <EmptyState onSuggest={sendMessage} project={project} />
           ) : (
             <div style={{ maxWidth: 720, width: '100%', margin: '0 auto', padding: '28px 28px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
               {messages.filter(Boolean).map((msg) => (
-                <MessageBubble key={msg.id} message={msg} />
+                <MessageBubble key={msg.id} message={msg} projectId={projectId} />
               ))}
               {isTyping && <TypingIndicator />}
               <div ref={messagesEndRef} />
@@ -694,7 +704,7 @@ export default function GalwayPage() {
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about Galway..."
+              placeholder={`Ask about ${city}…`}
               rows={1}
               className={styles.chatInput}
               style={{
