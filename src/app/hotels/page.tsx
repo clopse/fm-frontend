@@ -276,7 +276,7 @@ export default function HotelsPage() {
                         <div key={c.id}
                           style={{
                             position:'absolute', left:`${c.pctX}%`, top:`${c.pctY}%`,
-                            transform:'translate(-50%,-50%)', cursor:'pointer',
+                            transform:'translate(-50%,calc(-50% + 5px))', cursor:'pointer',
                             zIndex:10, transition:'opacity .35s',
                           }}
                           onClick={() => setActiveCluster(c.id as ClusterId)}
