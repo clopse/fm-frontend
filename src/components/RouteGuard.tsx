@@ -13,7 +13,7 @@ export default function RouteGuard({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     // Training paths and other public routes bypass auth entirely
-    if (PUBLIC_PATHS.has(pathname) || pathname.startsWith('/training/')) {
+    if (PUBLIC_PATHS.has(pathname) || pathname.startsWith('/training/') || pathname.startsWith('/reset-password')) {
       setReady(true);
       return;
     }

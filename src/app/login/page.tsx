@@ -42,7 +42,8 @@ export default function LoginPage() {
       if (!email || !password) throw new Error('Please fill in all fields');
 
       await userService.login({ email, password });
-      router.push('/hotels');
+      const redirect = searchParams.get('redirect');
+      router.push(redirect && redirect.startsWith('/') ? redirect : '/hotels');
     } catch (err) {
       let errorMessage = 'Login failed';
       if (err instanceof Error) errorMessage = err.message;
@@ -114,14 +115,13 @@ export default function LoginPage() {
             <input
               id="email"
               name="email"
-              type="text"
+              type="email"
               placeholder="Email"
               ref={emailRef}
               disabled={loading}
               className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:opacity-50"
               autoFocus
-              autoComplete="username email"
-              inputMode="email"
+              autoComplete="email"
               autoCapitalize="off"
               spellCheck={false}
               aria-label="Email"
@@ -143,11 +143,6 @@ export default function LoginPage() {
               autoComplete="current-password"
               aria-label="Password"
               onInput={() => error && setError('')}
-              onFocus={(e) => {
-                if (!showPassword && e.target.type !== 'password') {
-                  e.target.type = 'password';
-                }
-              }}
               required
             />
 
