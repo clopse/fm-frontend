@@ -1,7 +1,7 @@
 // FILE: src/app/hotels/page.tsx
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
@@ -12,7 +12,9 @@ import {
 import AdminSidebar          from '@/components/AdminSidebar';
 import UserPanel             from '@/components/UserPanel';
 import HotelSelectorModal    from '@/components/HotelSelectorModal';
+import StaleNotice           from '@/components/StaleNotice';
 import { hotelNames }        from '@/data/hotelMetadata';
+import { useCachedFetch }    from '@/hooks/useCachedFetch';
 
 const ComplianceLeaderboard = dynamic(() => import('@/components/ComplianceLeaderboard'), { ssr: false });
 const UtilitiesGraphs       = dynamic(() => import('@/components/AdminUtilitiesGraph'),   { ssr: false });
@@ -65,9 +67,6 @@ const ALL_HOTEL_IDS = Object.keys(hotelNames);
 const MARKER = 54;
 
 export default function HotelsPage() {
-  const [leaderboardData,  setLeaderboardData]  = useState<LeaderboardEntry[]>([]);
-  const [tasksPending,     setTasksPending]      = useState<number | null>(null);
-  const [tasksConfirmed,   setTasksConfirmed]    = useState<number | null>(null);
   const [cityWeather,      setCityWeather]       = useState<Record<string, CityWeather>>({});
   const [hoveredWeather,   setHoveredWeather]    = useState<string | null>(null);
   const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
@@ -81,6 +80,31 @@ export default function HotelsPage() {
   const totalHotels    = ALL_HOTEL_IDS.length;
   const totalLocations = CLUSTERS.length;
 
+  // ── Cached data fetchers ──────────────────────────────────────────────────
+  const leaderboardFetcher = useCallback(async () => {
+    const data: LeaderboardEntry[] = await (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`)).json();
+    return [...data].sort((a, b) => b.score - a.score);
+  }, []);
+
+  const tasksFetcher = useCallback(async () => {
+    const data: MonthlyTask[] = await (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`)).json();
+    const m = data.filter(t => t.frequency?.toLowerCase() === 'monthly');
+    return { pending: m.filter(t => !t.confirmed).length, confirmed: m.filter(t => t.confirmed).length };
+  }, []);
+
+  const {
+    data: leaderboardData,
+    isStale: leaderboardStale, fetchedAt: leaderboardFetchedAt,
+    loading: leaderboardLoading, refresh: leaderboardRefresh, dismiss: leaderboardDismiss,
+  } = useCachedFetch('compliance-leaderboard', leaderboardFetcher, 60 * 60 * 1000); // 1h TTL
+
+  const {
+    data: tasksData,
+  } = useCachedFetch('compliance-tasks', tasksFetcher, 15 * 60 * 1000); // 15m TTL
+
+  const tasksPending   = tasksData?.pending   ?? null;
+  const tasksConfirmed = tasksData?.confirmed ?? null;
+
   const handleSelectedHotelsChange = (next: string[]) => {
     setSelectedHotels(next);
     try { localStorage.setItem('selectedHotels', JSON.stringify(next)); } catch {}
@@ -91,43 +115,12 @@ export default function HotelsPage() {
       const saved = localStorage.getItem('selectedHotels');
       if (saved) setSelectedHotels(JSON.parse(saved));
     } catch {}
-    fetchLeaderboard();
-    fetchMonthlyTasks();
     fetchWeather();
     const onResize = () => setIsMobile(window.innerWidth < 1024);
     onResize();
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
-
-  const fetchLeaderboard = async () => {
-    const CACHE_KEY = 'jmk_leaderboard_cache';
-    const TTL_MS    = 24 * 60 * 60 * 1000;
-    try {
-      const raw = localStorage.getItem(CACHE_KEY);
-      if (raw) {
-        const { data, ts } = JSON.parse(raw);
-        if (Date.now() - ts < TTL_MS) {
-          setLeaderboardData([...data].sort((a: LeaderboardEntry, b: LeaderboardEntry) => b.score - a.score));
-          return;
-        }
-      }
-    } catch {}
-    try {
-      const data: LeaderboardEntry[] = await (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`)).json();
-      setLeaderboardData([...data].sort((a, b) => b.score - a.score));
-      try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })); } catch {}
-    } catch { setLeaderboardData([]); }
-  };
-
-  const fetchMonthlyTasks = async () => {
-    try {
-      const data: MonthlyTask[] = await (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`)).json();
-      const m = data.filter(t => t.frequency?.toLowerCase() === 'monthly');
-      setTasksPending(m.filter(t => !t.confirmed).length);
-      setTasksConfirmed(m.filter(t =>  t.confirmed).length);
-    } catch {}
-  };
 
   const fetchWeather = async () => {
     const init: Record<string, CityWeather> = {};
@@ -399,8 +392,17 @@ export default function HotelsPage() {
                   <div><div className="ptitle">Compliance Score</div><div className="psub">Updated daily</div></div>
                 </div>
               </div>
+              {leaderboardStale && leaderboardFetchedAt && (
+                <StaleNotice
+                  fetchedAt={leaderboardFetchedAt}
+                  loading={leaderboardLoading}
+                  onRefresh={leaderboardRefresh}
+                  onDismiss={leaderboardDismiss}
+                  variant="light"
+                />
+              )}
               <ComplianceLeaderboard
-                data={leaderboardData}
+                data={leaderboardData ?? []}
                 selectedHotels={selectedHotels}
                 onSelectedHotelsChange={handleSelectedHotelsChange}
               />

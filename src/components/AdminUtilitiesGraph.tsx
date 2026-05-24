@@ -1,13 +1,15 @@
 // FILE: src/components/AdminUtilitiesGraph.tsx
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid, Legend,
 } from 'recharts';
-import { Zap, Flame, TrendingUp, TrendingDown, Minus, RefreshCw } from 'lucide-react';
+import { Zap, Flame, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { hotelNames } from '@/data/hotelMetadata';
+import { useCachedFetch } from '@/hooks/useCachedFetch';
+import StaleNotice from '@/components/StaleNotice';
 
 // ── Hotel room counts for kWh/room normalisation ────────────────────────────
 const HOTEL_ROOMS: Record<string, number> = {
@@ -82,15 +84,12 @@ function DarkTooltip({ active, payload, label, metric }: any) {
 
 // ── Component ────────────────────────────────────────────────────────────────
 export default function AdminUtilitiesGraphs() {
-  const [data,        setData]        = useState<Record<string, Record<number, YearData | null>>>({});
-  const [loading,     setLoading]     = useState(true);
-  const [year,        setYear]        = useState(CUR_YEAR);
-  const [utility,     setUtility]     = useState<UtilityType>('electricity');
-  const [metric,      setMetric]      = useState<MetricType>('kwh_per_room');
-  const [focusHotel,  setFocusHotel]  = useState<string | null>(null);
+  const [year,       setYear]       = useState(CUR_YEAR);
+  const [utility,    setUtility]    = useState<UtilityType>('electricity');
+  const [metric,     setMetric]     = useState<MetricType>('kwh_per_room');
+  const [focusHotel, setFocusHotel] = useState<string | null>(null);
 
-  const load = async () => {
-    setLoading(true);
+  const fetcher = useCallback(async () => {
     const result: Record<string, Record<number, YearData | null>> = {};
     await Promise.allSettled(
       HOTEL_IDS.flatMap(id =>
@@ -101,11 +100,13 @@ export default function AdminUtilitiesGraphs() {
         })
       )
     );
-    setData(result);
-    setLoading(false);
-  };
+    return result;
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  const { data: rawData, loading, isStale, fetchedAt, refresh, dismiss } =
+    useCachedFetch('utilities-portfolio', fetcher, 30 * 60 * 1000);
+
+  const data = rawData ?? {};
 
   // ── Comparison bar chart data ─────────────────────────────────────────────
   const barData = useMemo(() => {
@@ -214,8 +215,19 @@ export default function AdminUtilitiesGraphs() {
         .au-bar-row:hover { opacity:.8; }
       `}</style>
 
+      {/* ── Stale notice ──────────────────────────────────────────────── */}
+      {isStale && fetchedAt && (
+        <StaleNotice
+          fetchedAt={fetchedAt}
+          loading={loading}
+          onRefresh={refresh}
+          onDismiss={dismiss}
+          variant="dark"
+        />
+      )}
+
       {/* ── Controls ──────────────────────────────────────────────────── */}
-      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16, flexWrap:'wrap' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16, flexWrap:'wrap', paddingTop: isStale ? 14 : 0 }}>
 
         {/* Utility toggle */}
         <div style={{ display:'flex', gap:6 }}>
@@ -241,18 +253,6 @@ export default function AdminUtilitiesGraphs() {
         {/* Year */}
         <div style={{ display:'flex', gap:6 }}>
           {YEARS.map(y => <Pill key={y} active={year === y} onClick={() => setYear(y)}>{y}</Pill>)}
-        </div>
-
-        <div style={{ marginLeft:'auto' }}>
-          <button onClick={load} disabled={loading} style={{
-            background:'none', border:'1px solid rgba(255,255,255,.1)', borderRadius:8,
-            color:'rgba(255,255,255,.4)', cursor:'pointer', padding:'4px 10px',
-            display:'flex', alignItems:'center', gap:5, fontSize:'.7rem',
-            transition:'all .15s',
-          }}>
-            <RefreshCw size={11} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }}/>
-            {loading ? 'Loading…' : 'Refresh'}
-          </button>
         </div>
       </div>
 
