@@ -247,7 +247,7 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
                     </div>
                   </div>
                   {city && (
-                    <span style={{ fontSize:'.59rem', color:'rgba(255,255,255,.3)', fontFamily:'DM Mono,monospace', letterSpacing:'.02em', textAlign:'center' }}>
+                    <span style={{ fontSize:'.59rem', color:'rgba(0,0,0,.42)', fontFamily:'DM Mono,monospace', letterSpacing:'.02em', textAlign:'center' }}>
                       {city}
                     </span>
                   )}
@@ -271,8 +271,7 @@ export default function ComplianceLeaderboard({ data, selectedHotels, onSelected
                     <div style={{
                       position:'absolute', right:9, top:'50%', transform:'translateY(-50%)',
                       fontSize:'.72rem', fontWeight:700, fontFamily:'DM Mono,monospace',
-                      color: '#fff',
-                      textShadow: '0 1px 4px rgba(0,0,0,.7)',
+                      color: 'rgba(0,0,0,.6)',
                     }}>
                       {score}%
                     </div>
