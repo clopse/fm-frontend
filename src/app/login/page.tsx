@@ -119,7 +119,7 @@ export default function LoginPage() {
               placeholder="Email"
               ref={emailRef}
               disabled={loading}
-              className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:opacity-50"
+              className="w-full px-4 py-3 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               autoFocus
               autoComplete="email"
               autoCapitalize="off"
@@ -139,7 +139,7 @@ export default function LoginPage() {
               placeholder="Password"
               ref={passwordRef}
               disabled={loading}
-              className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:opacity-50"
+              className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-sm text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               autoComplete="current-password"
               aria-label="Password"
               onInput={() => error && setError('')}
