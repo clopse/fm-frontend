@@ -20,33 +20,86 @@ export function invalidatePermissionsCache(): void {
   inFlight = null;
 }
 
+// Build a safe fallback entirely from JWT claims — no backend required.
+function jwtFallback(): PermissionsData {
+  const c = getJwtClaims();
+  return {
+    role:            (c.new_role ?? 'member') as Role,
+    group_id:        c.group_id,
+    admin_hotel_id:  c.admin_hotel_id,
+    grants:          [],
+  };
+}
+
+// Normalise whatever the backend sends into our internal PermissionsData shape.
+// Backend may return:
+//   { user_id, grants: [{hotel_id, module}, ...] }          ← no role field
+//   { role, grants, admin_hotel_id, ... }                   ← full shape
+//   [{hotel_id, module}, ...]                               ← array directly
+function normalise(raw: unknown): PermissionsData {
+  const claims = getJwtClaims();
+
+  // Array returned directly → treat as grants list
+  if (Array.isArray(raw)) {
+    return {
+      role:            (claims.new_role ?? 'member') as Role,
+      group_id:        claims.group_id,
+      admin_hotel_id:  claims.admin_hotel_id,
+      grants:          raw as Grant[],
+    };
+  }
+
+  const obj = raw as Record<string, unknown>;
+
+  // Always prefer JWT claims for role — they're signed and authoritative.
+  // Fall back to whatever the backend echoed if JWT has nothing.
+  const role = (claims.new_role ?? obj.role ?? 'member') as Role;
+
+  const rawGrants = obj.grants;
+  const grants: Grant[] = Array.isArray(rawGrants) ? (rawGrants as Grant[]) : [];
+
+  return {
+    role,
+    group_id:        (claims.group_id        ?? obj.group_id        ?? undefined) as string | undefined,
+    admin_hotel_id:  (claims.admin_hotel_id  ?? obj.admin_hotel_id  ?? undefined) as string | undefined,
+    grants,
+  };
+}
+
 export async function fetchMyPermissions(): Promise<PermissionsData> {
-  if (cache) return cache;
+  if (cache)    return cache;
   if (inFlight) return inFlight;
 
-  inFlight = (async () => {
+  inFlight = (async (): Promise<PermissionsData> => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      const res   = await fetch(`${API_BASE}/api/users/me/permissions`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      if (!token) throw new Error('no token');
+
+      // Try /me/permissions first; if the backend only has /{id}/permissions,
+      // fall through to the JWT fallback below.
+      const res = await fetch(`${API_BASE}/api/users/me/permissions`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
+
       if (res.ok) {
-        const data: PermissionsData = await res.json();
-        cache = data;
+        let raw: unknown;
+        try { raw = await res.json(); } catch { raw = null; }
+        const data = normalise(raw);
+        cache    = data;
         inFlight = null;
         return data;
       }
-    } catch {}
-    // Fallback: derive from JWT claims
-    const claims: PermissionsData = {
-      role:            (getJwtClaims().new_role ?? 'member') as Role,
-      group_id:        getJwtClaims().group_id,
-      admin_hotel_id:  getJwtClaims().admin_hotel_id,
-      grants:          [],
-    };
-    cache    = claims;
+
+      // Non-200 response (404 if endpoint doesn't exist yet, 403, etc.)
+      // — fall through to JWT fallback
+    } catch {
+      // Network error, no token, JSON parse failure, etc.
+    }
+
+    const data = jwtFallback();
+    cache    = data;
     inFlight = null;
-    return claims;
+    return data;
   })();
 
   return inFlight;
@@ -73,17 +126,28 @@ export function useCanAccess(hotelId: string, module: Module): boolean {
   const { role, admin_hotel_id, grants } = permissions;
   if (role === 'system_admin' || role === 'group_admin') return true;
   if (role === 'hotel_admin' && admin_hotel_id === hotelId) return true;
-  return grants.some(g => g.hotel_id === hotelId && g.module === module);
+  const safeGrants = Array.isArray(grants) ? grants : [];
+  return safeGrants.some(g => g.hotel_id === hotelId && g.module === module);
 }
 
 export function useVisibleHotelIds(allHotelIds: string[]): { visibleIds: string[]; loading: boolean } {
   const { permissions, loading } = useMyPermissions();
   if (!permissions) return { visibleIds: allHotelIds, loading };
+
   const { role, admin_hotel_id, grants } = permissions;
-  if (role === 'system_admin' || role === 'group_admin') return { visibleIds: allHotelIds, loading: false };
+  const safeGrants = Array.isArray(grants) ? grants : [];
+
+  // Admins who cover all hotels — no grant enumeration needed.
+  if (role === 'system_admin' || role === 'group_admin') {
+    return { visibleIds: allHotelIds, loading: false };
+  }
+
+  // Hotel admin — scoped to their one property.
   if (role === 'hotel_admin' && admin_hotel_id) {
     return { visibleIds: allHotelIds.filter(id => id === admin_hotel_id), loading: false };
   }
-  const granted = new Set(grants.map(g => g.hotel_id));
+
+  // Members — only hotels where they have at least one grant.
+  const granted = new Set(safeGrants.map(g => g.hotel_id));
   return { visibleIds: allHotelIds.filter(id => granted.has(id)), loading: false };
 }

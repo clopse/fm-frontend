@@ -143,7 +143,8 @@ export default function ProjectsPage() {
     const { role, admin_hotel_id, grants } = permissions;
     if (role === 'system_admin' || role === 'group_admin') return PROJECTS;
     if (role === 'hotel_admin') return PROJECTS.filter(p => p.id === admin_hotel_id);
-    const grantedIds = new Set(grants.filter(g => g.module === 'projects').map(g => g.hotel_id));
+    const safeGrants = Array.isArray(grants) ? grants : [];
+    const grantedIds = new Set(safeGrants.filter(g => g.module === 'projects').map(g => g.hotel_id));
     return PROJECTS.filter(p => grantedIds.has(p.id));
   }, [permissions]);
 
