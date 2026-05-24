@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Users } from 'lucide-react';
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
@@ -69,7 +70,7 @@ export default function UsersPage() {
         <div className="px-4 sm:px-6 lg:px-8 py-8">
           
           {/* Page Header */}
-          <div className="mb-8">
+          <div className="mb-6">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Users className="w-6 h-6 text-blue-600" />
@@ -79,6 +80,19 @@ export default function UsersPage() {
                 <p className="text-gray-600 mt-1">Manage system users, roles, and permissions</p>
               </div>
             </div>
+          </div>
+
+          {/* Tabs */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: 24 }}>
+            <span style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, color: 'var(--accent, #c96442)', borderBottom: '2px solid var(--accent, #c96442)', marginBottom: -1 }}>
+              Users
+            </span>
+            <Link
+              href="/admin/permissions"
+              style={{ padding: '8px 16px', fontSize: 14, fontWeight: 500, color: '#6b7280', textDecoration: 'none', borderBottom: '2px solid transparent', marginBottom: -1, transition: 'color .15s' }}
+            >
+              Site Permissions
+            </Link>
           </div>
 
           {/* Inline User Management Content */}

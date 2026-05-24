@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
   X, Award, Zap, MapPin, CheckCircle2, ClipboardList,
-  Menu, User2, AlertTriangle, Wind, HardHat,
+  Menu, User2, AlertTriangle, Wind,
 } from 'lucide-react';
 
 import AdminSidebar          from '@/components/AdminSidebar';
@@ -62,12 +62,12 @@ interface ClusterConfig { id: string; label: string; pctX: number; pctY: number;
 const CLUSTERS: ClusterConfig[] = [
   { id: 'dublin',    label: 'Dublin',    pctX: 40.0, pctY: 57.5, hotels: ['hiex','hbhdcc','hiltonth','hida'], projects: [] },
   { id: 'belfast',   label: 'Belfast',   pctX: 43.5, pctY: 44.5, hotels: ['belfast'],                         projects: [] },
-  { id: 'waterford', label: 'Waterford', pctX: 33.0, pctY: 70.5, hotels: ['marina'],                          projects: [] },
-  { id: 'cork',      label: 'Cork',      pctX: 23.0, pctY: 74.5, hotels: ['moxy'],
+  { id: 'waterford', label: 'Waterford', pctX: 33.9, pctY: 70.5, hotels: ['marina'],                          projects: [] },
+  { id: 'cork',      label: 'Cork',      pctX: 23.9, pctY: 74.5, hotels: ['moxy'],
     projects: [{ id: 'cork',      name: 'South Terrace'    }] },
   { id: 'london',    label: 'London',    pctX: 78.0, pctY: 76.0, hotels: ['hbhe','kensh'],
     projects: [{ id: 'penlondon', name: 'Peninsular House' }, { id: 'clemence', name: 'Clemence Lane' }] },
-  { id: 'galway',    label: 'Galway',    pctX: 22.0, pctY: 63.0, hotels: [],
+  { id: 'galway',    label: 'Galway',    pctX: 22.0, pctY: 62.0, hotels: [],
     projects: [{ id: 'galway',    name: 'Aloft Bohermore'  }] },
 ];
 
@@ -369,17 +369,6 @@ export default function HotelsPage() {
                             </div>
                           )}
 
-                          {/* Crane sub-badge on operational clusters that also have projects */}
-                          {!projectsOnly && hasProjects && (
-                            <div style={{
-                              position:'absolute', bottom:-2, right:-2, width:17, height:17, borderRadius:'50%',
-                              background:'#fffbeb', border:'1.5px solid #d97706',
-                              display:'flex', alignItems:'center', justifyContent:'center',
-                              zIndex:4,
-                            }}>
-                              <HardHat size={9} style={{ color:'#d97706' }}/>
-                            </div>
-                          )}
 
                           {/* City label */}
                           <div style={{

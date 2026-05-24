@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -13,11 +12,9 @@ import {
   Building,
   FolderOpen,
   ScrollText,
-  ShieldCheck,
   X,
   Menu
 } from 'lucide-react';
-import { getJwtClaims } from '@/lib/auth';
 
 interface AdminSidebarProps {
   isMobile?: boolean;
@@ -42,14 +39,6 @@ export default function AdminSidebar({
   onClose,
 }: AdminSidebarProps) {
   const pathname = usePathname();
-  const [showPermissions, setShowPermissions] = useState(false);
-
-  useEffect(() => {
-    const { new_role } = getJwtClaims();
-    setShowPermissions(
-      new_role === 'system_admin' || new_role === 'group_admin' || new_role === 'hotel_admin'
-    );
-  }, []);
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path);
 
@@ -129,9 +118,8 @@ export default function AdminSidebar({
             );
           })}
 
-          {/* Projects + Rules — separated section */}
+          {/* Projects — separated section */}
           <div className="mt-2 pt-2 border-t border-sidebar-border">
-            {/* Projects */}
             <Link
               href="/projects"
               className={linkClass(isActive('/projects'))}
@@ -149,40 +137,21 @@ export default function AdminSidebar({
               </div>
             </Link>
 
-            {/* Rules & Standards */}
-            <Link
-              href="/rules"
-              className={linkClass(isActive('/rules'))}
-              onClick={() => isMobile && onClose?.()}
-            >
-              <ScrollText className={iconClass(isActive('/rules'))} />
-              <div className="flex-1">
-                <div className={`${labelClass} flex items-center gap-2`}>
-                  Rules &amp; Standards
-                  <span style={BADGE}>NEW</span>
-                </div>
-                <div className={descClass(isActive('/rules'))}>
-                  Group rules and brand standards
-                </div>
-              </div>
-            </Link>
-
-            {/* Permissions */}
-            {showPermissions && (
+            {/* Rules & Standards — nested under Projects */}
+            <div className="ml-4 mt-0.5">
               <Link
-                href="/admin/permissions"
-                className={linkClass(isActive('/admin/permissions'))}
+                href="/rules"
+                className={`flex items-center px-2 py-1.5 rounded-md mb-1 transition-all duration-200 group text-xs ${
+                  isActive('/rules')
+                    ? 'bg-sidebar-active text-sidebar-text'
+                    : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-text'
+                }`}
                 onClick={() => isMobile && onClose?.()}
               >
-                <ShieldCheck className={iconClass(isActive('/admin/permissions'))} />
-                <div className="flex-1">
-                  <div className={labelClass}>Permissions</div>
-                  <div className={descClass(isActive('/admin/permissions'))}>
-                    Manage user access &amp; modules
-                  </div>
-                </div>
+                <ScrollText className={`w-3.5 h-3.5 mr-2 ${isActive('/rules') ? 'text-accent' : 'text-sidebar-icon group-hover:text-sidebar-text'}`} />
+                <span className="font-medium">Rules &amp; Standards</span>
               </Link>
-            )}
+            </div>
           </div>
         </nav>
 

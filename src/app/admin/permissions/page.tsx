@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import AdminSidebar from '@/components/AdminSidebar';
 import { userService } from '@/services/userService';
 import { getJwtClaims } from '@/lib/auth';
@@ -44,15 +45,28 @@ export default function PermissionsPage() {
       <div style={{ flex: 1, marginLeft: sidebarOpen && !isMobile ? 288 : 0, transition: 'margin-left .3s' }}>
         <div style={{ padding: '36px 40px', maxWidth: 900 }}>
 
-          <div style={{ marginBottom: 32, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
               onClick={() => setSidebarOpen(v => !v)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 6, fontSize: 18 }}
             >☰</button>
             <div>
-              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: 'var(--text-primary)' }}>Permissions</h1>
+              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: 'var(--text-primary)' }}>User Management</h1>
               <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>Manage hotel and module access per user</p>
             </div>
+          </div>
+
+          {/* Tabs */}
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border, #e5e7eb)', marginBottom: 28 }}>
+            <Link
+              href="/admin/users"
+              style={{ padding: '8px 16px', fontSize: 14, fontWeight: 500, color: '#6b7280', textDecoration: 'none', borderBottom: '2px solid transparent', marginBottom: -1 }}
+            >
+              Users
+            </Link>
+            <span style={{ padding: '8px 16px', fontSize: 14, fontWeight: 600, color: 'var(--accent, #c96442)', borderBottom: '2px solid var(--accent, #c96442)', marginBottom: -1 }}>
+              Site Permissions
+            </span>
           </div>
 
           {loading ? (
