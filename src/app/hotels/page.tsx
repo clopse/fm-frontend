@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
   X, Award, Zap, MapPin, CheckCircle2, ClipboardList,
-  Menu, User2, AlertTriangle, Wind,
+  Menu, User2, AlertTriangle, Wind, HardHat,
 } from 'lucide-react';
 
 import AdminSidebar          from '@/components/AdminSidebar';
@@ -15,7 +15,7 @@ import HotelSelectorModal    from '@/components/HotelSelectorModal';
 import StaleNotice           from '@/components/StaleNotice';
 import { hotelNames }        from '@/data/hotelMetadata';
 import { useCachedFetch }    from '@/hooks/useCachedFetch';
-import { useVisibleHotelIds } from '@/lib/permissions';
+import { useVisibleHotelIds, useMyPermissions } from '@/lib/permissions';
 
 const ComplianceLeaderboard = dynamic(() => import('@/components/ComplianceLeaderboard'), { ssr: false });
 const UtilitiesGraphs       = dynamic(() => import('@/components/AdminUtilitiesGraph'),   { ssr: false });
@@ -53,23 +53,36 @@ const WX_CITIES = [
   { id: 'london',    name: 'London',    lat: 51.51, lng: -0.13 },
 ];
 
+// ─── Map cluster definitions ──────────────────────────────────────────────────
+
+interface ProjectEntry  { id: string; name: string; }
+interface ClusterConfig { id: string; label: string; pctX: number; pctY: number; hotels: string[]; projects: ProjectEntry[]; }
+
 // pctX shifted +4.5 from calibrated values (≈25px on a ~550px displayed map)
-const CLUSTERS = [
-  { id: 'dublin',    label: 'Dublin',    pctX: 40.0, pctY: 57.5, hotels: ['hiex','hbhdcc','hiltonth','hida'] },
-  { id: 'belfast',   label: 'Belfast',   pctX: 43.5, pctY: 44.5, hotels: ['belfast']                        },
-  { id: 'waterford', label: 'Waterford', pctX: 33.0, pctY: 70.5, hotels: ['marina']                         },
-  { id: 'cork',      label: 'Cork',      pctX: 23.0, pctY: 74.5, hotels: ['moxy']                           },
-  { id: 'london',    label: 'London',    pctX: 78.0, pctY: 76.0, hotels: ['hbhe','kensh']                   },
-] as const;
+const CLUSTERS: ClusterConfig[] = [
+  { id: 'dublin',    label: 'Dublin',    pctX: 40.0, pctY: 57.5, hotels: ['hiex','hbhdcc','hiltonth','hida'], projects: [] },
+  { id: 'belfast',   label: 'Belfast',   pctX: 43.5, pctY: 44.5, hotels: ['belfast'],                         projects: [] },
+  { id: 'waterford', label: 'Waterford', pctX: 33.0, pctY: 70.5, hotels: ['marina'],                          projects: [] },
+  { id: 'cork',      label: 'Cork',      pctX: 23.0, pctY: 74.5, hotels: ['moxy'],
+    projects: [{ id: 'cork',      name: 'South Terrace'    }] },
+  { id: 'london',    label: 'London',    pctX: 78.0, pctY: 76.0, hotels: ['hbhe','kensh'],
+    projects: [{ id: 'penlondon', name: 'Peninsular House' }, { id: 'clemence', name: 'Clemence Lane' }] },
+  { id: 'galway',    label: 'Galway',    pctX: 22.0, pctY: 63.0, hotels: [],
+    projects: [{ id: 'galway',    name: 'Aloft Bohermore'  }] },
+];
 
-type ClusterId = typeof CLUSTERS[number]['id'];
-
+type ClusterId    = string;
 const ALL_HOTEL_IDS = Object.keys(hotelNames);
 const MARKER = 54;
 
+// Picker entry — unified hotel + project
+type PickerEntry =
+  | { type: 'hotel';   id: string; name: string; href: string; }
+  | { type: 'project'; id: string; name: string; href: string; };
+
 export default function HotelsPage() {
-  const [cityWeather,      setCityWeather]       = useState<Record<string, CityWeather>>({});
-  const [hoveredWeather,   setHoveredWeather]    = useState<string | null>(null);
+  const [cityWeather,      setCityWeather]      = useState<Record<string, CityWeather>>({});
+  const [hoveredWeather,   setHoveredWeather]   = useState<string | null>(null);
   const [isHotelModalOpen, setIsHotelModalOpen] = useState(false);
   const [isUserPanelOpen,  setIsUserPanelOpen]  = useState(false);
   const [showAdminSidebar, setShowAdminSidebar] = useState(true);
@@ -78,16 +91,38 @@ export default function HotelsPage() {
   const [hoveredCluster,   setHoveredCluster]   = useState<string | null>(null);
   const [selectedHotels,   setSelectedHotels]   = useState<string[]>(ALL_HOTEL_IDS);
 
-  const { visibleIds } = useVisibleHotelIds(ALL_HOTEL_IDS);
+  const { visibleIds }  = useVisibleHotelIds(ALL_HOTEL_IDS);
+  const { permissions } = useMyPermissions();
 
-  const visibleClusters = useMemo(() =>
-    CLUSTERS
-      .map(c => ({ ...c, hotels: [...c.hotels].filter(id => visibleIds.includes(id)) }))
-      .filter(c => c.hotels.length > 0),
-  [visibleIds]);
+  const visibleClusters = useMemo(() => {
+    const role         = permissions?.role;
+    const adminHotelId = permissions?.admin_hotel_id;
+    const safeGrants   = Array.isArray(permissions?.grants) ? permissions!.grants : [];
+
+    const canSeeProject = (projectId: string): boolean => {
+      if (!role || role === 'system_admin' || role === 'group_admin') return true;
+      if (role === 'hotel_admin') return adminHotelId === projectId;
+      return safeGrants.some(g => g.hotel_id === projectId && g.module === 'projects');
+    };
+
+    return CLUSTERS
+      .map(c => ({
+        ...c,
+        hotels:   c.hotels.filter(id => visibleIds.includes(id)),
+        projects: c.projects.filter(p => canSeeProject(p.id)),
+      }))
+      .filter(c => c.hotels.length > 0 || c.projects.length > 0);
+  }, [visibleIds, permissions]);
 
   const totalHotels    = visibleIds.length;
-  const totalLocations = CLUSTERS.length;
+
+  const totalLocations = useMemo(() =>
+    visibleClusters.filter(c => c.hotels.length > 0).length,
+  [visibleClusters]);
+
+  const visibleProjectCount = useMemo(() =>
+    visibleClusters.reduce((sum, c) => sum + c.projects.length, 0),
+  [visibleClusters]);
 
   // ── Cached data fetchers ──────────────────────────────────────────────────
   const leaderboardFetcher = useCallback(async () => {
@@ -105,11 +140,9 @@ export default function HotelsPage() {
     data: leaderboardData,
     isStale: leaderboardStale, fetchedAt: leaderboardFetchedAt,
     loading: leaderboardLoading, refresh: leaderboardRefresh, dismiss: leaderboardDismiss,
-  } = useCachedFetch('compliance-leaderboard', leaderboardFetcher, 60 * 60 * 1000); // 1h TTL
+  } = useCachedFetch('compliance-leaderboard', leaderboardFetcher, 60 * 60 * 1000);
 
-  const {
-    data: tasksData,
-  } = useCachedFetch('compliance-tasks', tasksFetcher, 15 * 60 * 1000); // 15m TTL
+  const { data: tasksData } = useCachedFetch('compliance-tasks', tasksFetcher, 15 * 60 * 1000);
 
   const tasksPending   = tasksData?.pending   ?? null;
   const tasksConfirmed = tasksData?.confirmed ?? null;
@@ -143,7 +176,7 @@ export default function HotelsPage() {
           + `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m`
           + `&daily=weather_code,temperature_2m_max,temperature_2m_min`
           + `&wind_speed_unit=kmh&timezone=auto&forecast_days=6`;
-        const d   = await (await fetch(url)).json();
+        const d = await (await fetch(url)).json();
         if (!d.current) {
           console.error(`[weather] bad response for ${city.id}:`, d);
           setCityWeather(prev => ({ ...prev, [city.id]: { ...prev[city.id], loading:false } }));
@@ -167,7 +200,13 @@ export default function HotelsPage() {
   };
 
   const openCluster = activeCluster ? visibleClusters.find(c => c.id === activeCluster) ?? null : null;
-  const circlePos   = (i: number, total: number, r = 88) => {
+
+  const openClusterEntries: PickerEntry[] = openCluster ? [
+    ...openCluster.hotels.map(id => ({ type: 'hotel'   as const, id, name: hotelNames[id] ?? id, href: `/hotels/${id}` })),
+    ...openCluster.projects.map(p  => ({ type: 'project' as const, id: p.id, name: p.name,        href: `/projects/${p.id}` })),
+  ] : [];
+
+  const circlePos = (i: number, total: number, r = 88) => {
     const a = (2 * Math.PI / total) * i - Math.PI / 2;
     return { left: 120 + r * Math.cos(a) - 34, top: 120 + r * Math.sin(a) - 34 };
   };
@@ -192,6 +231,7 @@ export default function HotelsPage() {
         .live  { width:6px; height:6px; border-radius:50%; background:#34d399; box-shadow:0 0 7px #10b981; flex-shrink:0; }
         @keyframes pulseRing { 0%{transform:translate(-50%,-50%) scale(1);opacity:.5;} 100%{transform:translate(-50%,-50%) scale(2.4);opacity:0;} }
         .pr  { position:absolute; top:50%; left:50%; border-radius:50%; border:1.5px solid rgba(201,100,66,.45); pointer-events:none; animation:pulseRing 2.8s ease-out infinite; }
+        .pr-amber { border-color:rgba(217,119,6,.45); }
         .pr2 { animation-delay:1s; }
         @keyframes fadeUp { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
         .fu { animation:fadeUp .5s cubic-bezier(.16,1,.3,1) both; }
@@ -200,10 +240,8 @@ export default function HotelsPage() {
         .wx-row { display:flex; align-items:center; gap:6px; padding:6px 9px; border-radius:8px; cursor:default; transition:background .15s; position:relative; }
         .wx-row:hover { background:rgba(0,0,0,.04); }
         .wx-tip { position:absolute; right:calc(100% + 10px); top:50%; transform:translateY(-50%); background:#ffffff; border:1px solid var(--border); border-radius:13px; padding:15px; z-index:100; width:220px; box-shadow:0 12px 40px rgba(0,0,0,.18); pointer-events:none; color:var(--text-primary); }
-        /* Map panel — flex column so it can grow to match leaderboard */
         .map-panel { display:flex; flex-direction:column; }
         .map-body  { flex:1; display:flex; align-items:center; gap:10; padding:10px 14px 14px; }
-        /* Below 640px — weather drops under the map as a horizontal row */
         @media (max-width:640px) {
           .map-body { flex-direction:column; align-items:stretch; }
           .wx-strip { width:100% !important; flex-direction:row !important; flex-wrap:wrap; gap:4px !important; padding-top:8px; border-top:1px solid var(--border); }
@@ -249,15 +287,20 @@ export default function HotelsPage() {
             ))}
           </div>
 
-          {/* Map + Leaderboard — default stretch so both panels are equal height */}
+          {/* Map + Leaderboard */}
           <div className="grid-main fu" style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:'14px', animationDelay:'90ms' }}>
 
-            {/* MAP PANEL — flex column, grows to match leaderboard */}
+            {/* MAP PANEL */}
             <div className="panel map-panel">
               <div className="panel-hd">
                 <div>
                   <div className="ptitle">Portfolio Map</div>
-                  <div className="psub">9 hotels · 5 cities · UK &amp; Ireland — tap a city to select</div>
+                  <div className="psub">
+                    {totalHotels} hotels · {totalLocations} {totalLocations === 1 ? 'city' : 'cities'} · UK &amp; Ireland — tap a city to select
+                    {visibleProjectCount > 0 && (
+                      <span style={{ color:'#d97706' }}> · +{visibleProjectCount} in development</span>
+                    )}
+                  </div>
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                   <span className="live"/>
@@ -265,16 +308,22 @@ export default function HotelsPage() {
                 </div>
               </div>
 
-              {/* map-body fills remaining height, centres image vertically */}
               <div className="map-body">
-
                 <div style={{ flex:'1 1 0', minWidth:0, display:'flex', justifyContent:'center', alignItems:'center' }}>
                   <div style={{ position:'relative', width:'100%', maxWidth:560 }}>
                     <img src="/uk-logo.png" alt="UK & Ireland" style={{ width:'100%', display:'block', borderRadius:6 }} draggable={false}/>
 
                     {visibleClusters.map(c => {
-                      const hov      = hoveredCluster === c.id;
-                      const multi    = c.hotels.length > 1;
+                      const hov          = hoveredCluster === c.id;
+                      const projectsOnly = c.hotels.length === 0;
+                      const hasProjects  = c.projects.length > 0;
+                      const totalEntries = c.hotels.length + c.projects.length;
+                      const multi        = totalEntries > 1;
+
+                      // Amber for project-only pins, orange for operational
+                      const accentColor  = projectsOnly ? '#d97706' : '#c96442';
+                      const borderNorm   = projectsOnly ? '#d97706' : '#d97757';
+                      const shadowRgb    = projectsOnly ? '217,119,6' : '201,100,66';
 
                       return (
                         <div key={c.id}
@@ -283,42 +332,65 @@ export default function HotelsPage() {
                             transform:'translate(-50%,calc(-50% + 5px))', cursor:'pointer',
                             zIndex:10, transition:'opacity .35s',
                           }}
-                          onClick={() => setActiveCluster(c.id as ClusterId)}
+                          onClick={() => setActiveCluster(c.id)}
                           onMouseEnter={() => setHoveredCluster(c.id)}
                           onMouseLeave={() => setHoveredCluster(null)}
                         >
-                          <div className="pr" style={{ width:MARKER, height:MARKER }}/>
-                          <div className="pr pr2" style={{ width:MARKER, height:MARKER }}/>
+                          {/* Pulse rings */}
+                          <div className={`pr${projectsOnly ? ' pr-amber' : ''}`} style={{ width:MARKER, height:MARKER }}/>
+                          <div className={`pr pr2${projectsOnly ? ' pr-amber' : ''}`} style={{ width:MARKER, height:MARKER }}/>
 
+                          {/* Main pin circle */}
                           <div style={{
                             position:'relative', width:MARKER, height:MARKER, borderRadius:'50%', overflow:'hidden',
-                            border: hov ? '2.5px solid #c96442' : '2px solid #d97757',
+                            border: hov ? `2.5px solid ${accentColor}` : `2px solid ${borderNorm}`,
                             boxShadow: hov
-                              ? `0 0 0 3px rgba(201,100,66,.2),0 0 18px rgba(201,100,66,.6)`
-                              : `0 0 0 2px rgba(201,100,66,.1),0 0 10px rgba(201,100,66,.35)`,
-                            background:'#ffffff', transition:'border .15s,box-shadow .15s', zIndex:2,
+                              ? `0 0 0 3px rgba(${shadowRgb},.2),0 0 18px rgba(${shadowRgb},.6)`
+                              : `0 0 0 2px rgba(${shadowRgb},.1),0 0 10px rgba(${shadowRgb},.35)`,
+                            background: projectsOnly ? '#fffbeb' : '#ffffff',
+                            transition:'border .15s,box-shadow .15s', zIndex:2,
+                            display:'flex', alignItems:'center', justifyContent:'center',
                           }}>
-                            <img src={`/icons/${c.hotels[0]}-icon.png`} alt={c.label} style={{ width:'100%', height:'100%', objectFit:'contain', padding:'6px' }}/>
+                            {projectsOnly ? (
+                              <HardHat size={24} style={{ color:'#d97706' }}/>
+                            ) : (
+                              <img src={`/icons/${c.hotels[0]}-icon.png`} alt={c.label} style={{ width:'100%', height:'100%', objectFit:'contain', padding:'6px' }}/>
+                            )}
                           </div>
 
+                          {/* Count badge — total entries */}
                           {multi && (
                             <div style={{
                               position:'absolute', top:-3, right:-3, width:17, height:17, borderRadius:'50%',
-                              background:'#c96442', border:'1.5px solid #f5f5f0',
+                              background: accentColor, border:'1.5px solid #f5f5f0',
                               display:'flex', alignItems:'center', justifyContent:'center',
                               fontSize:'8px', fontWeight:700, color:'#ffffff', fontFamily:'DM Mono,monospace',
                               zIndex:3, boxShadow:'0 2px 6px rgba(0,0,0,.18)',
                             }}>
-                              {c.hotels.length}
+                              {totalEntries}
                             </div>
                           )}
 
+                          {/* Crane sub-badge on operational clusters that also have projects */}
+                          {!projectsOnly && hasProjects && (
+                            <div style={{
+                              position:'absolute', bottom:-2, right:-2, width:17, height:17, borderRadius:'50%',
+                              background:'#fffbeb', border:'1.5px solid #d97706',
+                              display:'flex', alignItems:'center', justifyContent:'center',
+                              zIndex:4,
+                            }}>
+                              <HardHat size={9} style={{ color:'#d97706' }}/>
+                            </div>
+                          )}
+
+                          {/* City label */}
                           <div style={{
                             position:'absolute', top:`calc(100% + 6px)`, left:'50%', transform:'translateX(-50%)',
                             fontSize:'8.5px', fontWeight:600, color:'var(--text-primary)',
                             whiteSpace:'nowrap', letterSpacing:'.02em', pointerEvents:'none',
                           }}>{c.label}</div>
 
+                          {/* Hover tooltip */}
                           {hov && (
                             <div style={{
                               position:'absolute', bottom:`calc(100% + 9px)`, left:'50%', transform:'translateX(-50%)',
@@ -326,7 +398,9 @@ export default function HotelsPage() {
                               padding:'5px 11px', fontSize:'8.5px', fontWeight:500, color:'var(--text-primary)',
                               whiteSpace:'nowrap', boxShadow:'0 4px 16px rgba(0,0,0,.15)', zIndex:20,
                             }}>
-                              {c.hotels.length} {c.hotels.length === 1 ? 'hotel' : 'hotels'}
+                              {c.hotels.length > 0 && `${c.hotels.length} ${c.hotels.length === 1 ? 'hotel' : 'hotels'}`}
+                              {c.hotels.length > 0 && c.projects.length > 0 && ' · '}
+                              {c.projects.length > 0 && <span style={{ color:'#d97706' }}>{c.projects.length} in dev</span>}
                               <div style={{ fontSize:'7px', color:'var(--accent)', marginTop:2, fontFamily:'DM Mono,monospace', letterSpacing:'.05em' }}>TAP TO SELECT</div>
                             </div>
                           )}
@@ -443,41 +517,88 @@ export default function HotelsPage() {
           <div className="picker"
             style={{ background:'#ffffff', border:'1px solid var(--border)', borderRadius:20, padding:'26px 22px 22px', width:290, boxShadow:'0 24px 80px rgba(0,0,0,.18)', position:'relative' }}
             onClick={e => e.stopPropagation()}>
+
             <button onClick={() => setActiveCluster(null)} style={{ position:'absolute', top:12, right:12, background:'rgba(0,0,0,.04)', border:'none', color:'var(--text-muted)', borderRadius:7, width:25, height:25, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
               <X size={13}/>
             </button>
+
             <div style={{ textAlign:'center', marginBottom:18 }}>
-              <div style={{ fontSize:'.63rem', color:'var(--accent)', fontFamily:'DM Mono,monospace', letterSpacing:'.08em', marginBottom:3 }}>SELECT HOTEL</div>
+              <div style={{ fontSize:'.63rem', color:'var(--accent)', fontFamily:'DM Mono,monospace', letterSpacing:'.08em', marginBottom:3 }}>SELECT</div>
               <div style={{ fontSize:'1rem', fontWeight:600, color:'var(--text-primary)' }}>{openCluster.label}</div>
               <div style={{ fontSize:'.67rem', color:'var(--text-muted)', marginTop:2 }}>
-                {openCluster.hotels.length} {openCluster.hotels.length === 1 ? 'property' : 'properties'}
+                {openClusterEntries.length} {openClusterEntries.length === 1 ? 'property' : 'properties'}
+                {openCluster.projects.length > 0 && openCluster.hotels.length > 0 && (
+                  <span style={{ color:'#d97706' }}> · {openCluster.projects.length} in development</span>
+                )}
               </div>
             </div>
 
-            {openCluster.hotels.length === 1 ? (
-              <Link href={`/hotels/${openCluster.hotels[0]}`} onClick={() => setActiveCluster(null)} style={{ display:'block', textDecoration:'none' }}>
-                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8, background:'rgba(201,100,66,.08)', border:'1px solid rgba(201,100,66,.25)', borderRadius:12, padding:'16px 12px', cursor:'pointer' }}>
-                  <img src={`/icons/${openCluster.hotels[0]}-icon.png`} alt={hotelNames[openCluster.hotels[0]]} style={{ width:56, height:56, objectFit:'contain' }}/>
-                  <div style={{ fontSize:'.78rem', fontWeight:500, color:'var(--text-primary)', textAlign:'center' }}>{hotelNames[openCluster.hotels[0]]}</div>
+            {openClusterEntries.length === 1 ? (
+              // Single entry — big card
+              <Link href={openClusterEntries[0].href} onClick={() => setActiveCluster(null)} style={{ display:'block', textDecoration:'none' }}>
+                <div style={{
+                  display:'flex', flexDirection:'column', alignItems:'center', gap:8,
+                  background: openClusterEntries[0].type === 'hotel' ? 'rgba(201,100,66,.08)' : 'rgba(217,119,6,.08)',
+                  border:     openClusterEntries[0].type === 'hotel' ? '1px solid rgba(201,100,66,.25)' : '1px solid rgba(217,119,6,.35)',
+                  borderRadius:12, padding:'16px 12px', cursor:'pointer',
+                }}>
+                  {openClusterEntries[0].type === 'hotel' ? (
+                    <img src={`/icons/${openClusterEntries[0].id}-icon.png`} alt={openClusterEntries[0].name} style={{ width:56, height:56, objectFit:'contain' }}/>
+                  ) : (
+                    <div style={{ width:56, height:56, display:'flex', alignItems:'center', justifyContent:'center', background:'#fffbeb', borderRadius:12 }}>
+                      <HardHat size={28} style={{ color:'#d97706' }}/>
+                    </div>
+                  )}
+                  <div style={{ fontSize:'.78rem', fontWeight:500, color:'var(--text-primary)', textAlign:'center' }}>{openClusterEntries[0].name}</div>
+                  {openClusterEntries[0].type === 'project' && (
+                    <span style={{ fontSize:'9px', fontWeight:700, letterSpacing:'.06em', color:'#d97706', background:'#fef3c7', padding:'2px 8px', borderRadius:4 }}>PRE-OPENING</span>
+                  )}
                 </div>
               </Link>
             ) : (
+              // Multiple entries — radial layout
               <div style={{ position:'relative', width:230, height:230, margin:'0 auto' }}>
                 <div style={{ position:'absolute', left:'50%', top:'50%', transform:'translate(-50%,-50%)', width:36, height:36, borderRadius:'50%', border:'1px dashed rgba(201,100,66,.25)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                   <MapPin size={11} style={{ color:'var(--text-muted)' }}/>
                 </div>
                 <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none' }}>
-                  {openCluster.hotels.map((_, i) => { const p=circlePos(i,openCluster.hotels.length); return <line key={i} x1="115" y1="115" x2={p.left+34} y2={p.top+34} stroke="rgba(201,100,66,.18)" strokeWidth="1" strokeDasharray="3,3"/>; })}
+                  {openClusterEntries.map((_, i) => {
+                    const p = circlePos(i, openClusterEntries.length);
+                    return <line key={i} x1="115" y1="115" x2={p.left+34} y2={p.top+34} stroke="rgba(201,100,66,.18)" strokeWidth="1" strokeDasharray="3,3"/>;
+                  })}
                 </svg>
-                {openCluster.hotels.map((id, i) => {
-                  const p = circlePos(i, openCluster.hotels.length);
+                {openClusterEntries.map((entry, i) => {
+                  const p      = circlePos(i, openClusterEntries.length);
+                  const isProj = entry.type === 'project';
                   return (
-                    <Link key={id} href={`/hotels/${id}`} onClick={() => setActiveCluster(null)} style={{ position:'absolute', left:p.left, top:p.top, textDecoration:'none' }}>
-                      <div style={{ width:66, height:66, borderRadius:12, background:'#f9f8f4', border:'1px solid var(--border)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3, padding:'6px 4px', cursor:'pointer', transition:'background .15s,border-color .15s,transform .15s', boxShadow:'0 4px 14px rgba(0,0,0,.06)' }}
-                        onMouseEnter={e=>{const t=e.currentTarget as HTMLDivElement;t.style.background='rgba(201,100,66,.1)';t.style.borderColor='rgba(201,100,66,.5)';t.style.transform='scale(1.1)';}}
-                        onMouseLeave={e=>{const t=e.currentTarget as HTMLDivElement;t.style.background='#f9f8f4';t.style.borderColor='var(--border)';t.style.transform='scale(1)';}}>
-                        <img src={`/icons/${id}-icon.png`} alt={hotelNames[id]} style={{ width:38, height:38, objectFit:'contain' }}/>
-                        <div style={{ fontSize:'.5rem', fontWeight:500, color:'var(--text-muted)', textAlign:'center', lineHeight:1.2, maxWidth:58, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{hotelNames[id]}</div>
+                    <Link key={entry.id} href={entry.href} onClick={() => setActiveCluster(null)} style={{ position:'absolute', left:p.left, top:p.top, textDecoration:'none' }}>
+                      <div style={{
+                        width:66, height:66, borderRadius:12,
+                        background:   isProj ? '#fffbeb' : '#f9f8f4',
+                        border:       isProj ? '1px solid rgba(217,119,6,.35)' : '1px solid var(--border)',
+                        display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3,
+                        padding:'6px 4px', cursor:'pointer',
+                        transition:'background .15s,border-color .15s,transform .15s',
+                        boxShadow:'0 4px 14px rgba(0,0,0,.06)',
+                      }}
+                      onMouseEnter={e => {
+                        const t = e.currentTarget as HTMLDivElement;
+                        t.style.background    = isProj ? 'rgba(217,119,6,.15)' : 'rgba(201,100,66,.1)';
+                        t.style.borderColor   = isProj ? 'rgba(217,119,6,.6)'  : 'rgba(201,100,66,.5)';
+                        t.style.transform     = 'scale(1.1)';
+                      }}
+                      onMouseLeave={e => {
+                        const t = e.currentTarget as HTMLDivElement;
+                        t.style.background    = isProj ? '#fffbeb'                 : '#f9f8f4';
+                        t.style.borderColor   = isProj ? 'rgba(217,119,6,.35)'    : 'var(--border)';
+                        t.style.transform     = 'scale(1)';
+                      }}>
+                        {isProj ? (
+                          <HardHat size={24} style={{ color:'#d97706' }}/>
+                        ) : (
+                          <img src={`/icons/${entry.id}-icon.png`} alt={entry.name} style={{ width:38, height:38, objectFit:'contain' }}/>
+                        )}
+                        <div style={{ fontSize:'.5rem', fontWeight:500, color:'var(--text-muted)', textAlign:'center', lineHeight:1.2, maxWidth:58, overflow:'hidden', display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical' }}>{entry.name}</div>
                       </div>
                     </Link>
                   );
