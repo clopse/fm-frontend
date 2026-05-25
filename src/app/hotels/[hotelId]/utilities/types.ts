@@ -480,3 +480,21 @@ export interface RateStatusInfo {
   canUpdate: boolean;
   affectedReports: string[];
 }
+
+// ============================================================================
+// WEATHER AND OCCUPANCY OVERLAY TYPES
+// ============================================================================
+
+export interface WeatherEntry {
+  month: number;
+  temp_max: number;
+  temp_min: number;
+  temp_avg: number;
+  precipitation: number;
+}
+
+export interface OccupancyEntry {
+  month: number;
+  occupancy_rate: number;
+  source: 'real' | 'default';
+}

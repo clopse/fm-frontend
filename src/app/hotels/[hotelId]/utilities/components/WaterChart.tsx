@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell
+  ComposedChart, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell
 } from "recharts";
 import { Droplets, Loader2, MousePointer2, TrendingUp, TrendingDown, Activity } from "lucide-react";
+import { WeatherEntry, OccupancyEntry } from "../types";
 
-// Enhanced interface for the new data structure
 interface WaterMonthEntry {
   month: string;
   cubic_meters: number;
@@ -18,7 +18,6 @@ interface DeviceBreakdown {
   device_id: string;
   usage_liters: number;
   usage_m3: number;
-  avg_usage_liters?: number;
   avg_usage_m3?: number;
 }
 
@@ -29,10 +28,7 @@ interface WaterSummary {
   months_of_data: number;
   trend: "increasing" | "decreasing" | "stable";
   latest_month: WaterMonthEntry | null;
-  date_range: {
-    start: string | null;
-    end: string | null;
-  };
+  date_range: { start: string | null; end: string | null };
 }
 
 interface WaterChartProps {
@@ -40,9 +36,20 @@ interface WaterChartProps {
   loading: boolean;
   summary?: WaterSummary;
   onMonthClick?: (month: string) => void;
+  weatherData?: WeatherEntry[];
+  occupancyData?: OccupancyEntry[];
 }
 
-export default function WaterChart({ data, loading, summary, onMonthClick }: WaterChartProps) {
+const COLORS = ['#3B82F6', '#93C5FD', '#DBEAFE', '#1E40AF'];
+
+export default function WaterChart({
+  data,
+  loading,
+  summary,
+  onMonthClick,
+  weatherData = [],
+  occupancyData = [],
+}: WaterChartProps) {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [deviceBreakdown, setDeviceBreakdown] = useState<{
     month: string;
@@ -50,8 +57,8 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
     total_m3: number;
   } | null>(null);
   const [chartType, setChartType] = useState<"bar" | "line">("bar");
+  const [showOverlays, setShowOverlays] = useState(true);
 
-  // Loading state
   if (loading) {
     return (
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
@@ -69,7 +76,6 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
     );
   }
 
-  // No data state
   if (!data || data.length === 0) {
     return (
       <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
@@ -87,72 +93,41 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
     );
   }
 
-  // Sort data chronologically by date (oldest to newest)
-  const getSortedData = () => {
-    return [...data].sort((a, b) => {
-      // Convert month strings "YYYY-MM" to Date objects
-      const dateA = new Date(a.month + "-01");
-      const dateB = new Date(b.month + "-01");
-      return dateA.getTime() - dateB.getTime();
-    });
-  };
+  const getSortedData = () =>
+    [...data].sort((a, b) => new Date(a.month + "-01").getTime() - new Date(b.month + "-01").getTime());
 
-  // Handle bar/month click
-  const handleBarClick = async (clickData: any) => {
+  const handleBarClick = async (clickData: { month?: string }) => {
     const month = clickData?.month;
     if (!month) return;
-
-    // Get the year from the currently selected data
-    const currentYear = new Date().getFullYear(); // Default to current year
-    
-    // Find the actual month data from original data
-    const monthDataKey = `${currentYear}-${month}`; // More dynamic approach
+    const currentYear = new Date().getFullYear();
+    const monthDataKey = `${currentYear}-${month}`;
     const monthData = data.find(d => d.month === monthDataKey);
-    
     setSelectedMonth(monthDataKey);
-    
-    if (onMonthClick) {
-      onMonthClick(monthDataKey);
-    }
-
-    // Process device breakdown
-    try {
-      // For demo, use the device_breakdown from the data if available
-      if (monthData?.device_breakdown) {
-        const devices = Object.entries(monthData.device_breakdown).map(([deviceId, usage]) => ({
-          device_id: deviceId,
-          usage_liters: usage * 1000, // Convert back to liters for display
-          usage_m3: usage
-        }));
-        
-        setDeviceBreakdown({
-          month: monthDataKey,
-          devices,
-          total_m3: monthData.cubic_meters
-        });
-      }
-    } catch (error) {
-      console.error("Failed to fetch device breakdown:", error);
+    if (onMonthClick) onMonthClick(monthDataKey);
+    if (monthData?.device_breakdown) {
+      const devices = Object.entries(monthData.device_breakdown).map(([deviceId, usage]) => ({
+        device_id: deviceId,
+        usage_liters: usage * 1000,
+        usage_m3: usage,
+      }));
+      setDeviceBreakdown({ month: monthDataKey, devices, total_m3: monthData.cubic_meters });
     }
   };
 
-  // Custom tooltip for year-over-year
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ color: string; dataKey: string; value: number }>; label?: string }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
           <p className="font-medium text-gray-900 mb-2">{label}</p>
-          {payload.map((entry: any, idx: number) => (
-            <p key={idx} style={{ color: entry.color }} className="text-sm">
-              {entry.dataKey}: {entry.value} m³
-            </p>
-          ))}
+          {payload.map((entry, idx) => {
+            if (entry.dataKey === 'occupancy') return <p key={idx} style={{ color: entry.color }} className="text-sm">Occupancy: {entry.value?.toFixed(1)}%</p>;
+            if (entry.dataKey === 'temp_avg') return <p key={idx} style={{ color: entry.color }} className="text-sm">Avg Temp: {entry.value?.toFixed(1)}°C</p>;
+            return <p key={idx} style={{ color: entry.color }} className="text-sm">{entry.dataKey}: {entry.value} m³</p>;
+          })}
           {onMonthClick && (
-            <div className="mt-2 pt-2 border-t border-gray-100">
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <MousePointer2 className="w-3 h-3" />
-                <span>Click for details</span>
-              </div>
+            <div className="mt-2 pt-2 border-t border-gray-100 flex items-center gap-1 text-xs text-gray-500">
+              <MousePointer2 className="w-3 h-3" />
+              <span>Click for details</span>
             </div>
           )}
         </div>
@@ -161,79 +136,71 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
     return null;
   };
 
-  // Format month for display
   const formatMonth = (monthStr: string) => {
     try {
       const [year, month] = monthStr.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-    } catch {
-      return monthStr;
-    }
+      return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    } catch { return monthStr; }
   };
 
-  // Get trend icon and color
   const getTrendDisplay = () => {
     if (!summary) return null;
-    
-    const trendConfig = {
+    const cfg = {
       increasing: { icon: TrendingUp, color: "text-red-500", text: "Increasing" },
       decreasing: { icon: TrendingDown, color: "text-green-500", text: "Decreasing" },
-      stable: { icon: Activity, color: "text-gray-500", text: "Stable" }
-    };
-    
-    const config = trendConfig[summary.trend];
-    const Icon = config.icon;
-    
-    return (
-      <div className={`flex items-center gap-1 ${config.color}`}>
-        <Icon className="w-4 h-4" />
-        <span className="text-sm">{config.text}</span>
-      </div>
-    );
+      stable: { icon: Activity, color: "text-gray-500", text: "Stable" },
+    }[summary.trend];
+    const Icon = cfg.icon;
+    return <div className={`flex items-center gap-1 ${cfg.color}`}><Icon className="w-4 h-4" /><span className="text-sm">{cfg.text}</span></div>;
   };
 
-  // Prepare data for charts with year-over-year comparison
   const prepareYearOverYearData = () => {
     const sortedData = getSortedData();
-    const monthsMap = new Map();
-    
+    const monthsMap = new Map<string, Record<string, unknown>>();
     sortedData.forEach(d => {
       const [year, month] = d.month.split('-');
-      const monthKey = month; // Just the month (01, 02, etc.)
       const monthNum = parseInt(month);
-      
-      if (!monthsMap.has(monthKey)) {
-        monthsMap.set(monthKey, {
-          month: monthKey,
-          monthName: new Date(2024, monthNum - 1).toLocaleDateString("en-US", { month: "short" })
+      if (!monthsMap.has(month)) {
+        monthsMap.set(month, {
+          month,
+          monthName: new Date(2024, monthNum - 1).toLocaleDateString("en-US", { month: "short" }),
+          monthNum,
         });
       }
-      
-      const monthData = monthsMap.get(monthKey);
-      monthData[year] = d.cubic_meters;
-      monthData[`${year}_per_room`] = d.per_room_m3;
+      const md = monthsMap.get(month)!;
+      md[year] = d.cubic_meters;
+      md[`${year}_per_room`] = d.per_room_m3;
     });
-    
-    // Sort by numeric month value (January to December)
-    return Array.from(monthsMap.values())
-      .sort((a, b) => parseInt(a.month) - parseInt(b.month));
+    return Array.from(monthsMap.values()).sort((a, b) => (a.monthNum as number) - (b.monthNum as number));
   };
 
-  const chartData = prepareYearOverYearData();
-  
-  // Get unique years for dynamic bar rendering
+  const rawChartData = prepareYearOverYearData();
   const years = [...new Set(data.map(d => d.month.split('-')[0]))].sort();
-  
-  // Colors for different years and pie chart
   const yearColors: Record<string, string> = {
-    '2023': '#F59E0B', // Yellow/Orange
-    '2024': '#3B82F6', // Blue  
-    '2025': '#10B981', // Green
-    '2026': '#8B5CF6', // Purple
+    '2023': '#F59E0B', '2024': '#3B82F6', '2025': '#10B981', '2026': '#8B5CF6',
   };
-  
-  const COLORS = ['#3B82F6', '#93C5FD', '#DBEAFE', '#1E40AF'];
+
+  // Merge weather/occupancy into chart data by month number
+  const hasOverlayData = weatherData.length > 0 || occupancyData.length > 0;
+  const chartData = rawChartData.map(row => {
+    const monthNum = row.monthNum as number;
+    const wEntry = weatherData.find(w => w.month === monthNum);
+    const oEntry = occupancyData.find(o => o.month === monthNum);
+    return {
+      ...row,
+      occupancy: oEntry ? oEntry.occupancy_rate : null,
+      temp_avg: wEntry ? wEntry.temp_avg : null,
+    };
+  });
+
+  const avgOccupancy = occupancyData.length > 0
+    ? occupancyData.reduce((s, o) => s + o.occupancy_rate, 0) / occupancyData.length
+    : null;
+  const avgTemp = weatherData.length > 0
+    ? weatherData.reduce((s, w) => s + w.temp_avg, 0) / weatherData.length
+    : null;
+  const allDefault = occupancyData.length > 0 && occupancyData.every(o => o.source === 'default');
+  const monthsOfData = Math.max(weatherData.length, occupancyData.length);
 
   return (
     <div className="space-y-6">
@@ -266,51 +233,70 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
             <Droplets className="w-5 h-5 text-blue-600" />
             <h3 className="text-lg font-semibold text-gray-900">Water Usage</h3>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {hasOverlayData && (
+              <button
+                onClick={() => setShowOverlays(v => !v)}
+                className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                  showOverlays
+                    ? 'bg-slate-700 text-white border-slate-700'
+                    : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400'
+                }`}
+              >
+                Show overlays
+              </button>
+            )}
             <button
               onClick={() => setChartType("bar")}
-              className={`px-3 py-1 text-sm rounded ${
-                chartType === "bar" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"
-              }`}
+              className={`px-3 py-1 text-sm rounded ${chartType === "bar" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"}`}
             >
               Bar Chart
             </button>
             <button
               onClick={() => setChartType("line")}
-              className={`px-3 py-1 text-sm rounded ${
-                chartType === "line" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"
-              }`}
+              className={`px-3 py-1 text-sm rounded ${chartType === "line" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"}`}
             >
               Line Chart
             </button>
           </div>
         </div>
-        
+
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
-            {chartType === "bar" ? (
-              <BarChart
-                data={chartData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis
-                  dataKey="monthName"
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
+            <ComposedChart
+              data={chartData}
+              margin={{ top: 20, right: hasOverlayData ? 72 : 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+              <XAxis dataKey="monthName" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+              <YAxis
+                yAxisId="left"
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                label={{ value: 'Water (m³)', angle: -90, position: 'insideLeft', style: { fontSize: 11 } }}
+              />
+              {hasOverlayData && (
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  domain={[0, 100]}
+                  tick={{ fontSize: 11 }}
+                  stroke="#94A3B8"
+                  tickFormatter={v => `${v}%`}
+                  label={{ value: 'Occupancy %', angle: 90, position: 'insideRight', style: { fontSize: 11, fill: '#94A3B8' } }}
+                  width={52}
+                  hide={!showOverlays}
                 />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
-                  label={{ value: 'Water Consumption', angle: -90, position: 'insideLeft' }}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                {years.map((year) => (
+              )}
+              {hasOverlayData && <YAxis yAxisId="temp" orientation="right" hide={true} />}
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              {years.map(year =>
+                chartType === 'bar' ? (
                   <Bar
                     key={year}
+                    yAxisId="left"
                     dataKey={year}
                     fill={yearColors[year] || '#6B7280'}
                     name={year}
@@ -318,31 +304,10 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
                     style={{ cursor: onMonthClick ? "pointer" : "default" }}
                     radius={[2, 2, 0, 0]}
                   />
-                ))}
-              </BarChart>
-            ) : (
-              <LineChart
-                data={chartData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis
-                  dataKey="monthName"
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
-                  tickLine={false}
-                  axisLine={false}
-                  label={{ value: 'Water Consumption', angle: -90, position: 'insideLeft' }}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                {years.map((year) => (
+                ) : (
                   <Line
                     key={year}
+                    yAxisId="left"
                     type="monotone"
                     dataKey={year}
                     stroke={yearColors[year] || '#6B7280'}
@@ -351,61 +316,89 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
                     dot={{ r: 4 }}
                     activeDot={{ r: 6 }}
                   />
-                ))}
-              </LineChart>
-            )}
+                )
+              )}
+              {hasOverlayData && showOverlays && occupancyData.length > 0 && (
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="occupancy"
+                  stroke="#94A3B8"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={{ r: 3, fill: '#94A3B8', strokeWidth: 0 }}
+                  activeDot={{ r: 5 }}
+                  connectNulls
+                  name="occupancy"
+                />
+              )}
+              {hasOverlayData && showOverlays && weatherData.length > 0 && (
+                <Line
+                  yAxisId="temp"
+                  type="monotone"
+                  dataKey="temp_avg"
+                  stroke="#F59E0B"
+                  strokeWidth={1.5}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                  connectNulls
+                  name="temp_avg"
+                />
+              )}
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
+
+        {/* Stats row */}
+        {hasOverlayData && (
+          <div className="mt-3 flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 border-t border-slate-100 pt-3">
+            {avgOccupancy !== null && (
+              <span>Avg occupancy: <strong className="text-slate-700">{avgOccupancy.toFixed(0)}%</strong></span>
+            )}
+            {avgOccupancy !== null && avgTemp !== null && <span className="text-slate-300">·</span>}
+            {avgTemp !== null && (
+              <span>Avg temp: <strong className="text-slate-700">{avgTemp.toFixed(1)}°C</strong></span>
+            )}
+            {(avgOccupancy !== null || avgTemp !== null) && <span className="text-slate-300">·</span>}
+            {monthsOfData > 0 && <span>{monthsOfData} months of data</span>}
+            {allDefault && avgOccupancy !== null && (
+              <span className="text-amber-600 ml-1">source: default ({avgOccupancy.toFixed(0)}%)</span>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Device Breakdown & Top Consumers Side by Side */}
+      {/* Device Breakdown */}
       {deviceBreakdown && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Device Breakdown */}
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
                 Device Breakdown - {formatMonth(deviceBreakdown.month)}
               </h3>
-              <button
-                onClick={() => setDeviceBreakdown(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ×
-              </button>
+              <button onClick={() => setDeviceBreakdown(null)} className="text-gray-400 hover:text-gray-600">×</button>
             </div>
-            
             <div className="space-y-2">
-              {deviceBreakdown.devices.map((device, idx) => (
+              {deviceBreakdown.devices.map(device => (
                 <div key={device.device_id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
                   <div>
                     <div className="font-medium">Device {device.device_id}</div>
-                    {device.avg_usage_m3 && (
-                      <div className="text-sm text-gray-500">
-                        Avg: {device.avg_usage_m3} m³
-                      </div>
-                    )}
+                    {device.avg_usage_m3 && <div className="text-sm text-gray-500">Avg: {device.avg_usage_m3} m³</div>}
                   </div>
                   <div className="text-right">
                     <div className="font-bold">{device.usage_m3} m³</div>
-                    <div className="text-sm text-gray-500">
-                      {device.usage_liters.toLocaleString()} L
-                    </div>
+                    <div className="text-sm text-gray-500">{device.usage_liters.toLocaleString()} L</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Top Consumers Pie Chart */}
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">Device Distribution</h3>
-              <div className="flex gap-2">
-                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">Top Consumers</span>
-              </div>
+              <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">Top Consumers</span>
             </div>
-            
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -413,7 +406,7 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
                     data={deviceBreakdown.devices.map((device, idx) => ({
                       name: `Device ${device.device_id}`,
                       value: device.usage_m3,
-                      fill: COLORS[idx % COLORS.length]
+                      fill: COLORS[idx % COLORS.length],
                     }))}
                     cx="50%"
                     cy="50%"
@@ -421,25 +414,18 @@ export default function WaterChart({ data, loading, summary, onMonthClick }: Wat
                     dataKey="value"
                     label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
                   >
-                    {deviceBreakdown.devices.map((device, idx) => (
+                    {deviceBreakdown.devices.map((_, idx) => (
                       <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    formatter={(value: any) => [`${value} m³`, "Usage"]}
-                  />
+                  <Tooltip formatter={(value: number) => [`${value} m³`, "Usage"]} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            
-            {/* Legend */}
             <div className="grid grid-cols-1 gap-2 mt-4">
               {deviceBreakdown.devices.map((device, idx) => (
                 <div key={device.device_id} className="flex items-center gap-2 text-sm">
-                  <div 
-                    className="w-3 h-3 rounded" 
-                    style={{ backgroundColor: COLORS[idx % COLORS.length] }}
-                  ></div>
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
                   <span className="text-blue-600 font-medium">Device {device.device_id}</span>
                   <span className="text-gray-600">{device.usage_m3} m³</span>
                 </div>
