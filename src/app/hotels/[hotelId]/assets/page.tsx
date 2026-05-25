@@ -18,6 +18,7 @@ import {
 import DepreciationTracker from "./DepreciationTracker";
 import AssetDetailModal from "./AssetDetailModal";
 import AddAssetModal from "./AddAssetModal";
+import { apiFetch } from '@/utils/api';
 
 type Asset = {
   id: number;
@@ -157,7 +158,7 @@ export default function AssetsPage() {
     setError(null);
 
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${API_BASE}/api/assets/?hotel_id=${encodeURIComponent(hotelId)}`,
         { cache: "no-store" }
       );

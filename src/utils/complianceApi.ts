@@ -1,3 +1,5 @@
+import { apiFetch } from '@/utils/api';
+
 export interface UploadResponse {
   fileName: string;
   fileUrl: string;
@@ -7,13 +9,13 @@ export interface UploadResponse {
 }
 
 export async function getDueTasks(hotelId: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/due-tasks/${hotelId}`);
+  const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/due-tasks/${hotelId}`);
   if (!res.ok) throw new Error('Failed to fetch due tasks');
   return res.json();
 }
 
 export async function acknowledgeTask(hotelId: string, task_id: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/acknowledge-task`, {
+  const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/acknowledge-task`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ hotel_id: hotelId, task_id }),
@@ -22,7 +24,7 @@ export async function acknowledgeTask(hotelId: string, task_id: string) {
 }
 
 export async function fetchComplianceScore(hotelId: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
+  const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
   if (!res.ok) throw new Error('Failed to fetch compliance score');
   return res.json();
 }
@@ -39,7 +41,7 @@ export async function uploadComplianceFile(
   formData.append('report_date', reportDate.toISOString().split('T')[0]);
   formData.append('file', file);
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/uploads/compliance`, {
+  const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/uploads/compliance`, {
     method: 'POST',
     body: formData,
   });
@@ -57,7 +59,7 @@ export async function deleteHistoryEntry(
   taskId: string,
   timestamp: string
 ) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/delete`, {
+  const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/delete`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ hotel_id: hotelId, task_id: taskId, timestamp }),

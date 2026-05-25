@@ -3,6 +3,7 @@
 import { X, Plus } from "lucide-react";
 import { useState } from "react";
 import { useUserRedirect } from "@/lib/auth";
+import { apiFetch } from '@/utils/api';
 
 interface Asset {
   id: number;
@@ -119,7 +120,7 @@ export default function AddAssetModal({ hotelId, existingAssets, onClose, onAdd 
         created_by: currentUser?.email ?? '',
       };
 
-      const res = await fetch(`${API_BASE}/assets/`, {
+      const res = await apiFetch(`${API_BASE}/assets/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

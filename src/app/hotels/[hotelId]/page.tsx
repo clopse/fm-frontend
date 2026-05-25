@@ -17,6 +17,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import MonthlyChecklist from '@/components/MonthlyChecklist';
+import { apiFetch } from '@/utils/api';
 import TaskUploadModal from '@/components/TaskUploadModal';
 
 interface TaskItem {
@@ -579,7 +580,7 @@ export default function HotelDashboard() {
 
   const fetchScore = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
       const data = await res.json();
       setScore(data.percent || 0);
       setPoints(`${data.score}/${data.max_score}`);
@@ -593,7 +594,7 @@ export default function HotelDashboard() {
 
   const fetchIncompleteTasks = async (breakdown?: Record<string, number>) => {
     try {
-      const tasksRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
+      const tasksRes = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
       const tasksData = await tasksRes.json();
       
       const scoreBreakdown = breakdown || taskBreakdown;
@@ -615,7 +616,7 @@ export default function HotelDashboard() {
 
   const fetchAllHistory = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/${hotelId}`);
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/${hotelId}`);
       const data = await res.json();
       const history = data.history || {};
       setHistoryByTask(history);

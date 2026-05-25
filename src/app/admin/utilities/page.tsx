@@ -11,6 +11,7 @@ import AdminHeader from '@/components/AdminHeader';
 import UserPanel from '@/components/UserPanel';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
 import { hotelNames } from '@/lib/hotels';
+import { apiFetch } from '@/utils/api';
 
 interface BillRow {
   id: string;
@@ -239,7 +240,7 @@ export default function UtilitiesPage() {
       // Fetch bills for each hotel
       for (const hotelId of hotelIds) {
         try {
-          const response = await fetch(
+          const response = await apiFetch(
             `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills`
           );
           

@@ -3,6 +3,7 @@
 import { X, Save, Trash2 } from "lucide-react";
 import { useState } from "react";
 import DocumentSection from "./DocumentSection";
+import { apiFetch } from '@/utils/api';
 
 interface Asset {
   id: number;
@@ -76,7 +77,7 @@ export default function AssetDetailModal({
       // Exclude document fields - they're managed separately via DocumentSection
       const { om_manual_path, commissioning_cert_path, warranty_doc_path, photos_path, ...assetDataToSave } = editedAsset;
       
-      const res = await fetch(`${API_BASE}/api/assets/${asset.id}`, {
+      const res = await apiFetch(`${API_BASE}/api/assets/${asset.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(assetDataToSave),
@@ -98,7 +99,7 @@ export default function AssetDetailModal({
 
   const handleDelete = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/assets/${asset.id}`, {
+      const res = await apiFetch(`${API_BASE}/api/assets/${asset.id}`, {
         method: "DELETE",
       });
 

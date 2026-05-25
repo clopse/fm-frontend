@@ -16,6 +16,7 @@ import StaleNotice           from '@/components/StaleNotice';
 import { hotelNames }        from '@/data/hotelMetadata';
 import { useCachedFetch }    from '@/hooks/useCachedFetch';
 import { useVisibleHotelIds, useMyPermissions } from '@/lib/permissions';
+import { apiFetch } from '@/utils/api';
 
 const ComplianceLeaderboard = dynamic(() => import('@/components/ComplianceLeaderboard'), { ssr: false });
 const UtilitiesGraphs       = dynamic(() => import('@/components/AdminUtilitiesGraph'),   { ssr: false });
@@ -121,7 +122,7 @@ export default function HotelsPage() {
 
   // ── Cached data fetchers ──────────────────────────────────────────────────
   const leaderboardFetcher = useCallback(async () => {
-    const data: LeaderboardEntry[] = await (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`)).json();
+    const data: LeaderboardEntry[] = await (await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/leaderboard`)).json();
     return [...data].sort((a, b) => b.score - a.score);
   }, []);
 

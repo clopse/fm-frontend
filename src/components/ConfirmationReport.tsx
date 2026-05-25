@@ -8,6 +8,7 @@ import {
   Clock, ChevronDown, Building2
 } from 'lucide-react';
 import { hotelNames } from '@/data/hotelMetadata';
+import { apiFetch } from '@/utils/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -108,7 +109,7 @@ export default function ConfirmationReport({ hotelId: propHotelId }: Props) {
   useEffect(() => {
     const fetchStructure = async () => {
       try {
-        const res = await fetch(`${API_URL}/compliance/compliance/structure`);
+        const res = await apiFetch(`${API_URL}/compliance/compliance/structure`);
         if (res.ok) {
           const sections = await res.json();
           const labels: Record<string, string> = {};
@@ -123,7 +124,7 @@ export default function ConfirmationReport({ hotelId: propHotelId }: Props) {
           setTaskSectionMap(sections_map);
         } else {
           // Fallback to task-labels endpoint
-          const labelsRes = await fetch(`${API_URL}/compliance/compliance/task-labels`);
+          const labelsRes = await apiFetch(`${API_URL}/compliance/compliance/task-labels`);
           const data = await labelsRes.json();
           setTaskLabelMap(data);
         }
@@ -141,7 +142,7 @@ export default function ConfirmationReport({ hotelId: propHotelId }: Props) {
     setError(null);
 
     try {
-      const res = await fetch(`${API_URL}/api/compliance/history/${hotelId}`);
+      const res = await apiFetch(`${API_URL}/api/compliance/history/${hotelId}`);
       if (!res.ok) throw new Error('Failed to fetch history');
       const data = await res.json();
       const history: Record<string, any[]> = data.history || {};

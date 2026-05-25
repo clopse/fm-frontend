@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { HotelFacilityData } from '@/types/hotelTypes';
 import { CheckSquare, Square, RotateCcw, RefreshCw } from 'lucide-react';
 import complianceData from '@/data/compliance.json';
+import { apiFetch } from '@/utils/api';
 
 interface HotelComplianceTabProps {
   hotel: HotelFacilityData;
@@ -59,7 +60,7 @@ export default function HotelComplianceTab({ hotel, isEditing, onTaskListSave }:
   const loadHotelTasks = async (hotelId: string, allTasks: any[]) => {
     try {
       // Fetch hotel's current compliance tasks from API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
+      const response = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`);
       
       if (!response.ok) {
         throw new Error(`Failed to fetch tasks: ${response.status}`);

@@ -10,6 +10,7 @@ import { Zap, Flame, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { hotelNames } from '@/data/hotelMetadata';
 import { useCachedFetch } from '@/hooks/useCachedFetch';
 import StaleNotice from '@/components/StaleNotice';
+import { apiFetch } from '@/utils/api';
 
 // ── Hotel room counts for kWh/room normalisation ────────────────────────────
 const HOTEL_ROOMS: Record<string, number> = {
@@ -44,7 +45,7 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? '';
 
 async function fetchHotelYear(hotelId: string, year: number): Promise<YearData | null> {
   try {
-    const r = await fetch(`${API}/utilities/${hotelId}/${year}`);
+    const r = await apiFetch(`${API}/utilities/${hotelId}/${year}`);
     if (!r.ok) return null;
     return await r.json();
   } catch { return null; }

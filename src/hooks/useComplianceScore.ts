@@ -1,5 +1,6 @@
 // src/hooks/useComplianceScore.ts
 import { useEffect, useState } from 'react';
+import { apiFetch } from '@/utils/api';
 
 export function useComplianceScore(hotelId: string) {
   const [score, setScore] = useState(0);
@@ -8,7 +9,7 @@ export function useComplianceScore(hotelId: string) {
 
   const refreshScore = async () => {
     if (!hotelId) return;
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
+    const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`);
     const data = await res.json();
     setScore(data.percent || 0);
     setPoints(`${data.score}/${data.max_score}`);

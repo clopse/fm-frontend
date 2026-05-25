@@ -13,6 +13,7 @@ import SaveIndicator from '@/components/SaveIndicator';
 
 import { hotelNames } from '@/data/hotelMetadata';
 import { HotelFacilityData, createDefaultHotelData } from '@/types/hotelTypes';
+import { apiFetch } from '@/utils/api';
 
 // API Base URL - FIXED to use correct subdomain
 const API_BASE = process.env.NODE_ENV === 'production' ? 'https://api.jmkfacilities.ie/api' : 'http://localhost:8000/api';
@@ -91,7 +92,7 @@ export default function HotelManagementPage() {
             return hotelDataCache.current.get(hotelId)!;
           }
 
-          const response = await fetch(`${API_BASE}/hotels/facilities/${hotelId}`, {
+          const response = await apiFetch(`${API_BASE}/hotels/facilities/${hotelId}`, {
             signal: abortController.current?.signal
           });
           
@@ -163,8 +164,8 @@ export default function HotelManagementPage() {
       try {
         // Load both endpoints in parallel
         const [facilitiesResponse, detailsResponse] = await Promise.all([
-          fetch(`${API_BASE}/hotels/facilities/${hotelId}`),
-          fetch(`${API_BASE}/hotels/details/${hotelId}`)
+          apiFetch(`${API_BASE}/hotels/facilities/${hotelId}`),
+          apiFetch(`${API_BASE}/hotels/details/${hotelId}`)
         ]);
 
         if (facilitiesResponse.ok) {
@@ -237,7 +238,7 @@ export default function HotelManagementPage() {
         setupComplete: true
       };
 
-      const response = await fetch(`${API_BASE}/hotels/facilities/${finalHotel.hotelId}`, {
+      const response = await apiFetch(`${API_BASE}/hotels/facilities/${finalHotel.hotelId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Target
 } from 'lucide-react';
+import { apiFetch } from '@/utils/api';
 
 interface Props {
   hotelId: string;
@@ -146,7 +147,7 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
 
   const fetchMonthlyChecklist = async () => {
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly-checklist/${hotelId}`
       );
       const data = await res.json();
@@ -190,7 +191,7 @@ export default function MonthlyChecklist({ hotelId, userEmail, onConfirm }: Prop
     persistToStorage(hotelId);
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`, {
+      const response = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hotel_id: hotelId, task_id: taskId, user_email: userEmail }),

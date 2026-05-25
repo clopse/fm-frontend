@@ -2,17 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { 
-  Search, 
-  Filter, 
-  Edit, 
-  Save, 
-  Upload, 
-  FileText, 
+import {
+  Search,
+  Filter,
+  Edit,
+  Save,
+  Upload,
+  FileText,
   AlertCircle,
   CheckCircle,
   X
 } from "lucide-react";
+import { apiFetch } from '@/utils/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -64,7 +65,7 @@ export default function BulkAssetManagementPage() {
 
   const loadAssets = async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/assets/?hotel_id=${hotelId}`);
+      const res = await apiFetch(`${API_BASE}/api/assets/?hotel_id=${hotelId}`);
       if (!res.ok) throw new Error("Failed to load assets");
       const data = await res.json();
       setAssets(data);
@@ -118,7 +119,7 @@ export default function BulkAssetManagementPage() {
     try {
       // Update each asset
       for (const asset of assetsToUpdate) {
-        await fetch(`${API_BASE}/api/assets/${asset.id}`, {
+        await apiFetch(`${API_BASE}/api/assets/${asset.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -161,7 +162,7 @@ export default function BulkAssetManagementPage() {
         const formData = new FormData();
         formData.append('file', file);
 
-        await fetch(`${API_BASE}/api/assets/${asset.id}/upload/manual`, {
+        await apiFetch(`${API_BASE}/api/assets/${asset.id}/upload/manual`, {
           method: 'POST',
           body: formData
         });

@@ -10,6 +10,7 @@ import type {
   RoomFilters,
   SnaggingStats
 } from '@/types/snagging';
+import { apiFetch } from '@/utils/api';
 
 class BelfastSnaggingService {
   private API_URL: string;
@@ -26,41 +27,36 @@ class BelfastSnaggingService {
     if (filters?.floor) params.append('floor', filters.floor);
 
     const url = `${this.API_URL}/api/belfastsnagging/rooms${params.toString() ? '?' + params.toString() : ''}`;
-    const res = await fetch(url, { credentials: 'include' });
-    
+    const res = await apiFetch(url);
+
     if (!res.ok) throw new Error('Failed to fetch rooms');
     return res.json();
   }
 
   // Get detailed room data with checklist responses
   async getRoomDetails(roomId: number): Promise<RoomDetailedStatus> {
-    const res = await fetch(`${this.API_URL}/api/belfastsnagging/rooms/${roomId}`, {
-      credentials: 'include'
-    });
-    
+    const res = await apiFetch(`${this.API_URL}/api/belfastsnagging/rooms/${roomId}`);
+
     if (!res.ok) throw new Error('Failed to fetch room details');
     return res.json();
   }
 
   // Get checklist items filtered by room type
   async getChecklistItems(roomType: string): Promise<ChecklistItem[]> {
-    const res = await fetch(`${this.API_URL}/api/belfastsnagging/checklist-items?room_type=${roomType}`, {
-      credentials: 'include'
-    });
-    
+    const res = await apiFetch(`${this.API_URL}/api/belfastsnagging/checklist-items?room_type=${roomType}`);
+
     if (!res.ok) throw new Error('Failed to fetch checklist items');
     return res.json();
   }
 
   // Save checklist responses
   async saveChecklistResponses(roomId: number, responses: ChecklistResponse[]): Promise<any> {
-    const res = await fetch(`${this.API_URL}/api/belfastsnagging/rooms/${roomId}/checklist-responses`, {
+    const res = await apiFetch(`${this.API_URL}/api/belfastsnagging/rooms/${roomId}/checklist-responses`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(responses),
-      credentials: 'include'
     });
-    
+
     if (!res.ok) throw new Error('Failed to save checklist responses');
     return res.json();
   }
@@ -75,23 +71,20 @@ class BelfastSnaggingService {
       notes?: string;
     }
   ): Promise<any> {
-    const res = await fetch(`${this.API_URL}/api/belfastsnagging/rooms/${roomId}/status`, {
+    const res = await apiFetch(`${this.API_URL}/api/belfastsnagging/rooms/${roomId}/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-      credentials: 'include'
     });
-    
+
     if (!res.ok) throw new Error('Failed to update room status');
     return res.json();
   }
 
   // Get summary statistics
   async getStats(): Promise<SnaggingStats> {
-    const res = await fetch(`${this.API_URL}/api/belfastsnagging/stats/summary`, {
-      credentials: 'include'
-    });
-    
+    const res = await apiFetch(`${this.API_URL}/api/belfastsnagging/stats/summary`);
+
     if (!res.ok) throw new Error('Failed to fetch stats');
     return res.json();
   }
@@ -101,11 +94,10 @@ class BelfastSnaggingService {
     roomId: number,
     payload: { item_id: number; reason: string; created_by: string }
   ): Promise<any> {
-    const res = await fetch(`${this.API_URL}/api/belfastsnagging/rooms/${roomId}/check-later`, {
+    const res = await apiFetch(`${this.API_URL}/api/belfastsnagging/rooms/${roomId}/check-later`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-      credentials: 'include'
     });
 
     if (!res.ok) throw new Error('Failed to create check-later item');
@@ -114,20 +106,17 @@ class BelfastSnaggingService {
 
   // Resolve check-later item
   async resolveCheckLaterItem(checkLaterId: number): Promise<any> {
-    const res = await fetch(`${this.API_URL}/api/belfastsnagging/check-later/${checkLaterId}/resolve`, {
+    const res = await apiFetch(`${this.API_URL}/api/belfastsnagging/check-later/${checkLaterId}/resolve`, {
       method: 'PUT',
-      credentials: 'include'
     });
-    
+
     if (!res.ok) throw new Error('Failed to resolve check-later item');
     return res.json();
   }
 
   // Export to Excel
   async exportToExcel(): Promise<void> {
-    const res = await fetch(`${this.API_URL}/api/belfastsnagging/export/excel`, {
-      credentials: 'include'
-    });
+    const res = await apiFetch(`${this.API_URL}/api/belfastsnagging/export/excel`);
 
     if (!res.ok) throw new Error('Failed to export Excel report');
 

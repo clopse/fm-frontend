@@ -17,6 +17,7 @@ import FileTree from '@/components/FileTree';
 import dynamic from 'next/dynamic';
 const PDFViewer = dynamic(() => import('@/components/PDFViewer'), { ssr: false });
 import { FileNode, searchInTree, countFiles } from '@/lib/types';
+import { apiFetch } from '@/utils/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 const S3_BASE_URL = 'https://jmk-project-uploads.s3.amazonaws.com';
@@ -54,7 +55,7 @@ export default function BuildingPage() {
       setError(null);
 
       try {
-        const response = await fetch(`${API_URL}/drawings/${hotelId}`);
+        const response = await apiFetch(`${API_URL}/drawings/${hotelId}`);
         if (!response.ok) throw new Error('Failed to fetch drawings');
         const data = await response.json();
         const processed = skipDrawingsFolder(data);
@@ -144,7 +145,7 @@ export default function BuildingPage() {
   // FIX 1: Memoize getFileUrl so PDFViewer doesn't re-fetch on every parent render
   const getFileUrl = useCallback(async (path: string): Promise<string> => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/drawings/${hotelId}/file?key=${encodeURIComponent(path)}`
       );
       if (!response.ok) {

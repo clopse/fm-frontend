@@ -12,29 +12,10 @@ import HotelFireSafetyTab from './HotelFireSafetyTab';
 import HotelMechanicalTab from './HotelMechanicalTab';
 import HotelUtilitiesTab from './HotelUtilitiesTab';
 import HotelComplianceTab from './HotelComplianceTab';
+import { apiFetch } from '@/utils/api';
 
 // API Base URL - FIXED to use correct subdomain
 const API_BASE = process.env.NODE_ENV === 'production' ? 'https://api.jmkfacilities.ie/api' : 'http://localhost:8000/api';
-
-// Helper function to get auth token.
-// MUST use the same localStorage key that storeTokens()/apiFetch use in
-// userService.ts ('access_token'). Reading 'token' here returned null, so no
-// Authorization header was sent and the API responded "Not authenticated".
-const getAuthToken = () => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('access_token');
-  }
-  return null;
-};
-
-// Helper function to get auth headers
-const getAuthHeaders = () => {
-  const token = getAuthToken();
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
-};
 
 interface HotelDetailsPanelProps {
   hotel: HotelFacilityData;
@@ -77,9 +58,9 @@ export default function HotelDetailsPanel({
   const handleHotelDetailsSave = async (hotelData: HotelFacilityData) => {
     try {
       
-      const response = await fetch(`${API_BASE}/hotels/details/${hotelData.hotelId}`, {
+      const response = await apiFetch(`${API_BASE}/hotels/details/${hotelData.hotelId}`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(hotelData)
       });
 
@@ -105,12 +86,9 @@ export default function HotelDetailsPanel({
   const handleComplianceTaskSave = async (taskList: any[]) => {
     try {
       
-      const response = await fetch(`${API_BASE}/hotels/facilities/${hotel.hotelId}/tasks`, {
+      const response = await apiFetch(`${API_BASE}/hotels/facilities/${hotel.hotelId}/tasks`, {
         method: 'POST',
-        headers: {
-          ...getAuthHeaders(),
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(taskList)
       });
 

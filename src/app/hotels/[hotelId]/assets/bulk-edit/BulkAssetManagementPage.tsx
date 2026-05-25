@@ -2,15 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { 
-  Search, 
-  Filter, 
-  Edit, 
-  Save, 
+import {
+  Search,
+  Filter,
+  Edit,
+  Save,
   AlertCircle,
   CheckCircle,
   X
 } from "lucide-react";
+import { apiFetch } from '@/utils/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -64,7 +65,7 @@ export default function BulkAssetManagementPage() {
       // Add cache-busting timestamp to ensure fresh data
       const url = `${API_BASE}/api/assets/?hotel_id=${hotelId}&t=${Date.now()}`;
       
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         cache: 'no-store' // Prevent caching
       });
       
@@ -132,7 +133,7 @@ export default function BulkAssetManagementPage() {
         try {
           const url = `${API_BASE}/api/assets/${asset.id}`;
           
-          const res = await fetch(url, {
+          const res = await apiFetch(url, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(bulkUpdate)

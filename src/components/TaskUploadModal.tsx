@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 const PDFViewerA4 = dynamic(() => import('@/components/PDFViewerA4'), { ssr: false });
+import { apiFetch } from '@/utils/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -299,7 +300,7 @@ const TaskUploadModal = ({
     formData.append('task_id', taskId);
 
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/compliance/uploads/compliance`,
         { method: 'POST', body: formData }
       );
@@ -324,7 +325,7 @@ const TaskUploadModal = ({
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/compliance/confirm-task`,
         {
           method: 'POST',

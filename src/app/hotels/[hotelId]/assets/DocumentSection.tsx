@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Upload, FileText, X, Trash2, Download, Eye } from "lucide-react";
+import { apiFetch } from '@/utils/api';
 
 interface DocumentSectionProps {
   assetId: number;
@@ -36,7 +37,7 @@ export default function DocumentSection({ assetId, isEditing }: DocumentSectionP
   const loadDocuments = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/api/assets/${assetId}/documents`);
+      const res = await apiFetch(`${API_BASE}/api/assets/${assetId}/documents`);
       if (!res.ok) throw new Error("Failed to load documents");
       const data = await res.json();
       setDocuments(data);
@@ -54,7 +55,7 @@ export default function DocumentSection({ assetId, isEditing }: DocumentSectionP
       const formData = new FormData();
       formData.append("file", file);
       
-      const res = await fetch(`${API_BASE}/api/assets/${assetId}/upload/${docType}`, {
+      const res = await apiFetch(`${API_BASE}/api/assets/${assetId}/upload/${docType}`, {
         method: "POST",
         body: formData,
       });
@@ -80,7 +81,7 @@ export default function DocumentSection({ assetId, isEditing }: DocumentSectionP
         ? `${API_BASE}/api/assets/${assetId}/document/${docType}?photo_index=${photoIndex}`
         : `${API_BASE}/api/assets/${assetId}/document/${docType}`;
       
-      const res = await fetch(url, { method: "DELETE" });
+      const res = await apiFetch(url, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
       
       await loadDocuments();

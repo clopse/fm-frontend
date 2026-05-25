@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Module, Role } from './auth';
 import { getJwtClaims } from './auth';
+import { apiFetch } from '@/utils/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? '';
 
@@ -72,14 +73,9 @@ export async function fetchMyPermissions(): Promise<PermissionsData> {
 
   inFlight = (async (): Promise<PermissionsData> => {
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      if (!token) throw new Error('no token');
-
       // Try /me/permissions first; if the backend only has /{id}/permissions,
       // fall through to the JWT fallback below.
-      const res = await fetch(`${API_BASE}/api/users/me/permissions`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch(`${API_BASE}/api/users/me/permissions`);
 
       if (res.ok) {
         let raw: unknown;

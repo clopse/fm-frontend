@@ -6,6 +6,7 @@ import WizardStep1HotelConfig from "./WizardStep1HotelConfig";
 import WizardStep2FloorConfig, { FloorConfig } from "./WizardStep2FloorConfig";
 import WizardStep3ItemSelection, { STANDARD_ITEMS } from "./WizardStep3ItemSelection";
 import WizardStep4Review from "./WizardStep4Review";
+import { apiFetch } from '@/utils/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 
@@ -241,7 +242,7 @@ export default function AssetWizardPage() {
     for (const chunk of chunks) {
       await Promise.all(
         chunk.map(asset =>
-          fetch(`${API_BASE}/assets/`, {
+          apiFetch(`${API_BASE}/assets/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(asset),

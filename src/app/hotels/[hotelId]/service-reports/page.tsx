@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import ConfirmationReport from '@/components/ConfirmationReport';
 import { hotelNames } from '@/data/hotelMetadata';
+import { apiFetch } from '@/utils/api';
 import dynamic from 'next/dynamic';
 const PDFViewer = dynamic(() => import('@/components/PDFViewerA4'), { ssr: false });
 
@@ -507,7 +508,7 @@ export default function ComplianceReportsPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/compliance/compliance/reports/${hotelId}`);
+      const res = await apiFetch(`${API_URL}/compliance/compliance/reports/${hotelId}`);
       if (!res.ok) throw new Error('Failed to fetch reports');
       const data = await res.json();
       setSections(data.sections || []);
@@ -561,7 +562,7 @@ export default function ComplianceReportsPage() {
     if (!fileToDelete) return;
     setDeleting(true);
     try {
-      const res = await fetch(`${API_URL}/api/compliance/history/delete`, {
+      const res = await apiFetch(`${API_URL}/api/compliance/history/delete`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

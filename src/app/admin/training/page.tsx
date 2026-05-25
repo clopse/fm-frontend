@@ -32,6 +32,7 @@ import AdminHeader from '@/components/AdminHeader';
 import UserPanel from '@/components/UserPanel';
 import HotelSelectorModal from '@/components/HotelSelectorModal';
 import { hotelNames } from '@/data/hotelMetadata';
+import { apiFetch } from '@/utils/api';
 
 interface TrainingResult {
   hotel_id: string;
@@ -153,7 +154,7 @@ JMK Facilities Management Team`);
     setIsLoading(true);
     try {
       // Fetch training results from your API endpoint
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/training/results`);
+      const response = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/training/results`);
       if (response.ok) {
         const results = await response.json();
         setTrainingResults(results);

@@ -16,6 +16,7 @@ import {
   startOfMonth, endOfMonth, eachDayOfInterval,
   format, isValid, parseISO, subYears
 } from 'date-fns';
+import { apiFetch } from '@/utils/api';
 
 interface UtilityBill {
   hotelId: string;
@@ -124,7 +125,7 @@ export default function UtilitiesGraphs() {
       const results = await Promise.all(
         hotels.map(async (hotel) => {
           try {
-            const response = await fetch(
+            const response = await apiFetch(
               `${process.env.NEXT_PUBLIC_API_URL}/api/hotels/facilities/${hotel.id}`
             );
             if (response.ok) {
@@ -161,7 +162,7 @@ export default function UtilitiesGraphs() {
               YEARS.map(async (year) => {
                 try {
                   const url = `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills?year=${year}`;
-                  const response = await fetch(url);
+                  const response = await apiFetch(url);
                   if (!response.ok) return [];
                   const data = await response.json();
                   const bills: UtilityBill[] = [];

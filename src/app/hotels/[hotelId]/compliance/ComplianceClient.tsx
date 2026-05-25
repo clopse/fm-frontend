@@ -9,6 +9,7 @@ import TaskCard from "@/components/TaskCard";
 import FilterPanel from "@/components/FilterPanel";
 import ScoreCard from "@/components/ScoreCard";
 import { ComplianceDashboardSkeleton, ScoreCardSkeleton } from "@/components/ComplianceSkeletons";
+import { apiFetch } from '@/utils/api';
 
 interface Upload {
   url: string;
@@ -477,7 +478,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
 
   const loadTasks = async () => {
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/compliance/tasks/${hotelId}`,
       );
       const data = await res.json();
@@ -493,7 +494,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
 
   const loadHistory = async () => {
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/compliance/history/${hotelId}`,
       );
       const data = await res.json();
@@ -509,7 +510,7 @@ const ComplianceClient = ({ hotelId }: ComplianceClientProps) => {
   const loadScores = async () => {
     try {
       setScoresLoading(true);
-      const res = await fetch(
+      const res = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/compliance/score/${hotelId}`,
       );
       const data = await res.json();

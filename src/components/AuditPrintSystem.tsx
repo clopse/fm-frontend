@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { Printer, FileText, CheckCircle, AlertTriangle, Calendar, Download, Eye } from 'lucide-react';
 import { hotels } from '@/lib/hotels';
+import { apiFetch } from '@/utils/api';
 
 interface ComplianceTask {
   task_id: string;
@@ -107,10 +108,10 @@ const ProfessionalAuditPDF: React.FC = () => {
     setError('');
     try {
       const hotelTasksId = `${selectedHotel}tasks`;
-      const response = await fetch(
+      const response = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/audit-report/${hotelTasksId}/preview-data?audit_type=${selectedAudit}&start_date=${startDate}&end_date=${endDate}`
       );
-      
+
       if (!response.ok) {
         setPreviewTasks([]);
         return;
@@ -130,7 +131,7 @@ const ProfessionalAuditPDF: React.FC = () => {
     setError('');
     try {
       const hotelTasksId = `${selectedHotel}tasks`;
-      const response = await fetch(
+      const response = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/audit-report/${hotelTasksId}/generate-pdf?audit_type=${selectedAudit}&start_date=${startDate}&end_date=${endDate}`,
         {
           method: 'POST',
@@ -168,10 +169,10 @@ const ProfessionalAuditPDF: React.FC = () => {
     setError('');
     try {
       const hotelTasksId = `${selectedHotel}tasks`;
-      const response = await fetch(
+      const response = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/api/audit-report/${hotelTasksId}/preview-data?audit_type=${selectedAudit}&start_date=${startDate}&end_date=${endDate}`
       );
-      
+
       if (!response.ok) {
         setAuditData(null);
         return;

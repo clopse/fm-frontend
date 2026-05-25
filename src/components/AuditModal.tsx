@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import styles from '@/styles/AuditModal.module.css';
+import { apiFetch } from '@/utils/api';
 
 interface AuditModalProps {
   entry: {
@@ -31,7 +32,7 @@ export default function AuditModal({
   useEffect(() => {
     const fetchLabels = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/task-labels`);
+        const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/task-labels`);
         const data = await res.json();
         setTaskLabelMap(data);
       } catch (err) {
