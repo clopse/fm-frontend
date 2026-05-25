@@ -1,44 +1,44 @@
 'use client';
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Zap, TrendingUp, TrendingDown, Clock, Euro, BarChart3 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
+import {
+  ComposedChart, Area, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, LineChart, BarChart
+} from 'recharts';
 import { useUtilitiesData } from "../hooks/useUtilitiesData";
+import { useWeatherOccupancy } from "../hooks/useWeatherOccupancy";
 import { ViewMode, ElectricityEntry } from "../types";
 
 export default function ElectricityPage() {
   const rawParams = useParams();
   const hotelId = rawParams?.hotelId as string | undefined;
-  
-  const { 
-    data, 
-    loading, 
-    selectedYears, 
-    setSelectedYears, 
-    periodMode, 
-    setPeriodMode, 
-    availableYears, 
-    viewMode, 
-    setViewMode 
+  const [showOverlays, setShowOverlays] = useState(true);
+
+  const {
+    data,
+    loading,
+    selectedYears,
+    setSelectedYears,
+    periodMode,
+    setPeriodMode,
+    availableYears,
+    viewMode,
+    setViewMode,
   } = useUtilitiesData(hotelId);
 
-  // Extract single year for this detail page
   const year = selectedYears[0] || new Date().getFullYear();
+  const { weather, occupancy } = useWeatherOccupancy(hotelId, year);
 
-  // Ensure we're in yearly mode for detail pages
   useEffect(() => {
-    if (periodMode !== 'yearly') {
-      setPeriodMode('yearly');
-    }
+    if (periodMode !== 'yearly') setPeriodMode('yearly');
   }, [periodMode, setPeriodMode]);
 
-  // Auto-select current year if no year selected
   useEffect(() => {
     if (selectedYears.length === 0 && availableYears.length > 0) {
       const currentYear = new Date().getFullYear();
-      const defaultYear = availableYears.includes(currentYear) ? currentYear : availableYears[0];
-      setSelectedYears([defaultYear]);
+      setSelectedYears([availableYears.includes(currentYear) ? currentYear : availableYears[0]]);
     }
   }, [selectedYears.length, availableYears, setSelectedYears]);
 
@@ -54,33 +54,25 @@ export default function ElectricityPage() {
   }
 
   const electricityData = data.electricity || [];
-  
-  // Calculate detailed stats
+
   const totalConsumption = electricityData.reduce((sum: number, e: ElectricityEntry) => sum + e.total_kwh, 0);
   const totalCost = electricityData.reduce((sum: number, e: ElectricityEntry) => sum + e.total_eur, 0);
   const avgMonthlyConsumption = electricityData.length > 0 ? totalConsumption / electricityData.length : 0;
   const avgMonthlyCost = electricityData.length > 0 ? totalCost / electricityData.length : 0;
-  
-  // Day/Night split analysis
   const totalDayUsage = electricityData.reduce((sum: number, e: ElectricityEntry) => sum + e.day_kwh, 0);
   const totalNightUsage = electricityData.reduce((sum: number, e: ElectricityEntry) => sum + e.night_kwh, 0);
   const dayPercentage = totalConsumption > 0 ? (totalDayUsage / totalConsumption) * 100 : 0;
-  
-  // Peak demand analysis
-  const peakMonth = electricityData.reduce((peak: ElectricityEntry, current: ElectricityEntry) => 
-    current.total_kwh > peak.total_kwh ? current : peak, 
+  const peakMonth = electricityData.reduce(
+    (peak: ElectricityEntry, current: ElectricityEntry) => current.total_kwh > peak.total_kwh ? current : peak,
     electricityData[0] || { total_kwh: 0, month: '', day_kwh: 0, night_kwh: 0, total_eur: 0, per_room_kwh: 0 }
   );
-
-  // Rate analysis
   const avgRate = totalConsumption > 0 ? totalCost / totalConsumption : 0;
   const rateData = electricityData.map((e: ElectricityEntry) => ({
     month: e.month,
     rate: e.total_kwh > 0 ? e.total_eur / e.total_kwh : 0,
-    consumption: e.total_kwh
+    consumption: e.total_kwh,
   }));
 
-  // Trend analysis
   const calculateTrend = (): number => {
     if (electricityData.length < 2) return 0;
     const sorted = [...electricityData].sort((a, b) => a.month.localeCompare(b.month));
@@ -88,17 +80,33 @@ export default function ElectricityPage() {
     const previous = sorted[sorted.length - 2]?.total_kwh || 0;
     return previous > 0 ? ((recent - previous) / previous) * 100 : 0;
   };
-
   const trend = calculateTrend();
 
   const formatMonth = (month: string): string => {
     try {
-      const date = new Date(`${month}-01`);
-      return date.toLocaleDateString('en-IE', { month: 'short', year: '2-digit' });
-    } catch {
-      return month;
-    }
+      return new Date(`${month}-01`).toLocaleDateString('en-IE', { month: 'short', year: '2-digit' });
+    } catch { return month; }
   };
+
+  // Merge weather + occupancy into electricity data
+  const hasOverlayData = weather.length > 0 || occupancy.length > 0;
+  const mergedData = electricityData.map((e: ElectricityEntry) => {
+    const monthNum = parseInt(e.month.split('-')[1]);
+    return {
+      ...e,
+      occupancy: occupancy.find(o => o.month === monthNum)?.occupancy_rate ?? null,
+      temp_avg: weather.find(w => w.month === monthNum)?.temp_avg ?? null,
+    };
+  });
+
+  const avgOccupancy = occupancy.length > 0
+    ? occupancy.reduce((s, o) => s + o.occupancy_rate, 0) / occupancy.length
+    : null;
+  const avgTemp = weather.length > 0
+    ? weather.reduce((s, w) => s + w.temp_avg, 0) / weather.length
+    : null;
+  const allDefault = occupancy.length > 0 && occupancy.every(o => o.source === 'default');
+  const monthsOfData = Math.max(weather.length, occupancy.length);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -115,11 +123,10 @@ export default function ElectricityPage() {
                 <p className="text-blue-100">Detailed consumption and cost breakdown</p>
               </div>
             </div>
-            
             <div className="flex items-center space-x-4">
               <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg px-4 py-2">
-                <select 
-                  value={year} 
+                <select
+                  value={year}
                   onChange={(e) => setSelectedYears([parseInt(e.target.value)])}
                   className="bg-transparent text-white font-medium focus:outline-none"
                 >
@@ -128,10 +135,9 @@ export default function ElectricityPage() {
                   ))}
                 </select>
               </div>
-              
               <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg px-4 py-2">
-                <select 
-                  value={viewMode} 
+                <select
+                  value={viewMode}
                   onChange={(e) => setViewMode(e.target.value as ViewMode)}
                   className="bg-transparent text-white font-medium focus:outline-none"
                 >
@@ -151,9 +157,7 @@ export default function ElectricityPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <Zap className="w-8 h-8 text-blue-600" />
-              <div className={`flex items-center space-x-1 text-sm ${
-                trend > 0 ? 'text-red-600' : 'text-green-600'
-              }`}>
+              <div className={`flex items-center space-x-1 text-sm ${trend > 0 ? 'text-red-600' : 'text-green-600'}`}>
                 {trend > 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                 <span>{Math.abs(trend).toFixed(1)}%</span>
               </div>
@@ -162,7 +166,6 @@ export default function ElectricityPage() {
             <p className="text-2xl font-bold text-slate-900">{totalConsumption.toLocaleString()}</p>
             <p className="text-sm text-slate-500">kWh</p>
           </div>
-
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <Euro className="w-8 h-8 text-green-600" />
@@ -171,7 +174,6 @@ export default function ElectricityPage() {
             <p className="text-2xl font-bold text-slate-900">€{totalCost.toLocaleString()}</p>
             <p className="text-sm text-slate-500">€{avgRate.toFixed(3)}/kWh avg</p>
           </div>
-
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <Clock className="w-8 h-8 text-amber-600" />
@@ -180,7 +182,6 @@ export default function ElectricityPage() {
             <p className="text-2xl font-bold text-slate-900">{dayPercentage.toFixed(1)}%</p>
             <p className="text-sm text-slate-500">{totalDayUsage.toLocaleString()} kWh</p>
           </div>
-
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-4">
               <BarChart3 className="w-8 h-8 text-purple-600" />
@@ -193,57 +194,141 @@ export default function ElectricityPage() {
 
         {/* Main Chart Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Main consumption chart - larger */}
+          {/* Main consumption chart */}
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-slate-200">
-              <h3 className="text-lg font-semibold text-slate-900">Consumption Pattern</h3>
-              <p className="text-sm text-slate-600 mt-1">Day vs Night usage breakdown</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Consumption Pattern</h3>
+                  <p className="text-sm text-slate-600 mt-1">Day vs Night usage breakdown</p>
+                </div>
+                {hasOverlayData && (
+                  <button
+                    onClick={() => setShowOverlays(v => !v)}
+                    className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                      showOverlays
+                        ? 'bg-slate-700 text-white border-slate-700'
+                        : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400'
+                    }`}
+                  >
+                    Show overlays
+                  </button>
+                )}
+              </div>
             </div>
             <div className="p-6">
               <ResponsiveContainer width="100%" height={400}>
-                <AreaChart data={electricityData}>
+                <ComposedChart
+                  data={mergedData}
+                  margin={{ top: 10, right: hasOverlayData ? 72 : 20, bottom: 10, left: 10 }}
+                >
                   <defs>
                     <linearGradient id="dayGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.6}/>
-                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1}/>
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.6} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.1} />
                     </linearGradient>
                     <linearGradient id="nightGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.6}/>
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1}/>
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.6} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="month" tickFormatter={formatMonth} />
-                  <YAxis />
-                  <Tooltip 
-                    formatter={(value: any, name: string) => [
-                      `${value.toLocaleString()} kWh`, 
-                      name === 'day_kwh' ? 'Day Usage' : name === 'night_kwh' ? 'Night Usage' : 'Total'
-                    ]}
+                  <YAxis yAxisId="left" />
+                  {hasOverlayData && (
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      domain={[0, 100]}
+                      tick={{ fontSize: 11 }}
+                      stroke="#94A3B8"
+                      tickFormatter={v => `${v}%`}
+                      label={{ value: 'Occupancy %', angle: 90, position: 'insideRight', style: { fontSize: 11, fill: '#94A3B8' } }}
+                      width={52}
+                      hide={!showOverlays}
+                    />
+                  )}
+                  {hasOverlayData && <YAxis yAxisId="temp" orientation="right" hide={true} />}
+                  <Tooltip
+                    formatter={(value: number, name: string) => {
+                      if (name === 'occupancy') return [`${value != null ? value.toFixed(1) : '—'}%`, 'Occupancy'];
+                      if (name === 'temp_avg') return [`${value != null ? value.toFixed(1) : '—'}°C`, 'Avg Temp'];
+                      if (name === 'day_kwh') return [`${value.toLocaleString()} kWh`, 'Day Usage'];
+                      if (name === 'night_kwh') return [`${value.toLocaleString()} kWh`, 'Night Usage'];
+                      return [`${value.toLocaleString()} kWh`, name];
+                    }}
                     labelFormatter={(label) => formatMonth(String(label))}
                   />
                   <Area
+                    yAxisId="left"
                     type="monotone"
                     dataKey="day_kwh"
                     stackId="1"
                     stroke="#f59e0b"
                     fill="url(#dayGradient)"
+                    name="day_kwh"
                   />
                   <Area
+                    yAxisId="left"
                     type="monotone"
                     dataKey="night_kwh"
                     stackId="1"
                     stroke="#6366f1"
                     fill="url(#nightGradient)"
+                    name="night_kwh"
                   />
-                </AreaChart>
+                  {hasOverlayData && showOverlays && occupancy.length > 0 && (
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="occupancy"
+                      stroke="#94A3B8"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={{ r: 3, fill: '#94A3B8', strokeWidth: 0 }}
+                      activeDot={{ r: 5 }}
+                      connectNulls
+                      name="occupancy"
+                    />
+                  )}
+                  {hasOverlayData && showOverlays && weather.length > 0 && (
+                    <Line
+                      yAxisId="temp"
+                      type="monotone"
+                      dataKey="temp_avg"
+                      stroke="#F59E0B"
+                      strokeWidth={1.5}
+                      dot={false}
+                      activeDot={{ r: 4 }}
+                      connectNulls
+                      name="temp_avg"
+                    />
+                  )}
+                </ComposedChart>
               </ResponsiveContainer>
+
+              {/* Stats row */}
+              {hasOverlayData && (
+                <div className="mt-3 flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 border-t border-slate-100 pt-3">
+                  {avgOccupancy !== null && (
+                    <span>Avg occupancy: <strong className="text-slate-700">{avgOccupancy.toFixed(0)}%</strong></span>
+                  )}
+                  {avgOccupancy !== null && avgTemp !== null && <span className="text-slate-300">·</span>}
+                  {avgTemp !== null && (
+                    <span>Avg temp: <strong className="text-slate-700">{avgTemp.toFixed(1)}°C</strong></span>
+                  )}
+                  {(avgOccupancy !== null || avgTemp !== null) && <span className="text-slate-300">·</span>}
+                  {monthsOfData > 0 && <span>{monthsOfData} months of data</span>}
+                  {allDefault && avgOccupancy !== null && (
+                    <span className="text-amber-600 ml-1">source: default ({avgOccupancy.toFixed(0)}%)</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-          
+
           {/* Side stats panel */}
           <div className="space-y-6">
-            {/* Usage breakdown */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               <h4 className="font-semibold text-slate-900 mb-4">Usage Breakdown</h4>
               <div className="space-y-3">
@@ -252,25 +337,18 @@ export default function ElectricityPage() {
                   <span className="font-medium">{totalDayUsage.toLocaleString()} kWh</span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2">
-                  <div 
-                    className="bg-amber-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${dayPercentage}%` }}
-                  ></div>
+                  <div className="bg-amber-500 h-2 rounded-full transition-all duration-300" style={{ width: `${dayPercentage}%` }}></div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-600">Night Usage</span>
                   <span className="font-medium">{totalNightUsage.toLocaleString()} kWh</span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2">
-                  <div 
-                    className="bg-indigo-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${100 - dayPercentage}%` }}
-                  ></div>
+                  <div className="bg-indigo-500 h-2 rounded-full transition-all duration-300" style={{ width: `${100 - dayPercentage}%` }}></div>
                 </div>
               </div>
             </div>
 
-            {/* Monthly averages */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
               <h4 className="font-semibold text-slate-900 mb-4">Monthly Averages</h4>
               <div className="space-y-3">
@@ -289,33 +367,25 @@ export default function ElectricityPage() {
                 <div className="flex justify-between">
                   <span className="text-sm text-slate-600">Per Room</span>
                   <span className="font-medium">
-                    {electricityData.length > 0 ? 
-                      (electricityData.reduce((sum: number, e: ElectricityEntry) => sum + e.per_room_kwh, 0) / electricityData.length).toFixed(1) : 
-                      '0'
-                    } kWh
+                    {electricityData.length > 0
+                      ? (electricityData.reduce((sum: number, e: ElectricityEntry) => sum + e.per_room_kwh, 0) / electricityData.length).toFixed(1)
+                      : '0'} kWh
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Optimization tips */}
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl border border-green-200 p-6">
-              <h4 className="font-semibold text-green-900 mb-3">💡 Optimization Tips</h4>
+              <h4 className="font-semibold text-green-900 mb-3">Optimization Tips</h4>
               <div className="space-y-2 text-sm">
                 {dayPercentage > 60 && (
-                  <p className="text-green-800">
-                    Consider shifting some daytime usage to night hours for lower rates.
-                  </p>
+                  <p className="text-green-800">Consider shifting some daytime usage to night hours for lower rates.</p>
                 )}
                 {trend > 10 && (
-                  <p className="text-green-800">
-                    Usage increased {trend.toFixed(1)}% - investigate potential causes.
-                  </p>
+                  <p className="text-green-800">Usage increased {trend.toFixed(1)}% — investigate potential causes.</p>
                 )}
                 {avgRate > 0.15 && (
-                  <p className="text-green-800">
-                    High average rate - consider reviewing your tariff structure.
-                  </p>
+                  <p className="text-green-800">High average rate — consider reviewing your tariff structure.</p>
                 )}
               </div>
             </div>
@@ -324,7 +394,6 @@ export default function ElectricityPage() {
 
         {/* Additional Analysis Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Rate analysis */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 px-6 py-4 border-b border-slate-200">
               <h3 className="text-lg font-semibold text-slate-900">Rate Analysis</h3>
@@ -336,23 +405,16 @@ export default function ElectricityPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="month" tickFormatter={formatMonth} />
                   <YAxis tickFormatter={(value) => `€${value.toFixed(3)}`} />
-                  <Tooltip 
-                    formatter={(value: any) => [`€${value.toFixed(3)}/kWh`, 'Rate']}
+                  <Tooltip
+                    formatter={(value: number) => [`€${value.toFixed(3)}/kWh`, 'Rate']}
                     labelFormatter={(label) => formatMonth(String(label))}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="rate" 
-                    stroke="#10b981" 
-                    strokeWidth={3}
-                    dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-                  />
+                  <Line type="monotone" dataKey="rate" stroke="#10b981" strokeWidth={3} dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Consumption vs Cost */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4 border-b border-slate-200">
               <h3 className="text-lg font-semibold text-slate-900">Consumption vs Cost</h3>
@@ -365,10 +427,10 @@ export default function ElectricityPage() {
                   <XAxis dataKey="month" tickFormatter={formatMonth} />
                   <YAxis yAxisId="left" />
                   <YAxis yAxisId="right" orientation="right" />
-                  <Tooltip 
-                    formatter={(value: any, name: string) => [
+                  <Tooltip
+                    formatter={(value: number, name: string) => [
                       name === 'total_kwh' ? `${value.toLocaleString()} kWh` : `€${value.toLocaleString()}`,
-                      name === 'total_kwh' ? 'Consumption' : 'Cost'
+                      name === 'total_kwh' ? 'Consumption' : 'Cost',
                     ]}
                     labelFormatter={(label) => formatMonth(String(label))}
                   />

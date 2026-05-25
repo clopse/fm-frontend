@@ -34,6 +34,7 @@ import {
 import { useUtilitiesData } from "./hooks/useUtilitiesData";
 import { useUtilitiesFilters } from "./hooks/useUtilitiesFilters";
 import { useCHPData } from "./hooks/useCHPData";
+import { useWeatherOccupancy } from "./hooks/useWeatherOccupancy";
 
 export default function UtilitiesDashboard() {
   const rawParams = useParams();
@@ -71,6 +72,10 @@ export default function UtilitiesDashboard() {
     filteredData,
     availableMonths
   } = useUtilitiesFilters(data);
+
+  // Weather + occupancy overlays (only in single-year yearly mode)
+  const overlayYear = periodMode === 'yearly' && selectedYears.length === 1 ? selectedYears[0] : 0;
+  const { weather: overlayWeather, occupancy: overlayOccupancy } = useWeatherOccupancy(hotelId, overlayYear);
 
   // CHP data hook
   const hasCHP = hotelId === 'hida';
@@ -304,6 +309,8 @@ export default function UtilitiesDashboard() {
             comparisonYears={data.comparison_years}
             periodMode={periodMode}
             onMonthClick={(month) => handleShowBills(month, 'electricity')}
+            weatherData={overlayWeather}
+            occupancyData={overlayOccupancy}
           />
           <GasChart
             data={filteredData.gas}
@@ -313,6 +320,8 @@ export default function UtilitiesDashboard() {
             comparisonYears={data.comparison_years}
             periodMode={periodMode}
             onMonthClick={(month) => handleShowBills(month, 'gas')}
+            weatherData={overlayWeather}
+            occupancyData={overlayOccupancy}
           />
         </div>
 
