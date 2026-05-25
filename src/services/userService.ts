@@ -24,10 +24,6 @@ function isExpiredOrNear(token: string, bufferSeconds = 300): boolean {
   return exp - bufferSeconds < Math.floor(Date.now() / 1000);
 }
 
-function isTrainingPath(): boolean {
-  return typeof window !== 'undefined' && window.location.pathname.includes('/training/');
-}
-
 // Leading-dot domain so the cookie is shared across all *.jmkfacilities.ie
 // subdomains. Returns undefined on localhost so the cookie still sets
 // (scoped to localhost) without throwing.
@@ -113,8 +109,11 @@ export async function silentRefresh(): Promise<boolean> {
   }
 }
 
+// Authentication is determined ONLY by a present, non-expired access token.
+// Public areas (login, password reset, /training/) are handled by RouteGuard's
+// public-path allowlist — they must never be treated as "authenticated", or an
+// unauthenticated visitor would inherit a logged-in session everywhere.
 export function isAuthenticated(): boolean {
-  if (isTrainingPath()) return true;
   if (typeof window === 'undefined') return false;
   const { access } = getStoredTokens();
   if (!access) return false;

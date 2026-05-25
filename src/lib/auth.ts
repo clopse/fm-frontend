@@ -133,7 +133,9 @@ export function getUserPermissions(user: User): UserPermissions {
       canAccessAllHotels: true,
       allowedHotels: hotels.map(h => h.id),
       defaultRedirect: '/hotels',
-      canAccessAdmin: true,
+      // Admin is a function of ROLE, never of the hotel-scope string. A broad
+      // hotel assignment must not by itself confer admin access.
+      canAccessAdmin: isManagement,
       managementLevel: isManagement ? 'regional' : 'group',
     };
   }
@@ -148,7 +150,7 @@ export function getUserPermissions(user: User): UserPermissions {
       canAccessAllHotels: false,
       allowedHotels: hotelIds,
       defaultRedirect: '/hotels',
-      canAccessAdmin: true,
+      canAccessAdmin: isManagement,
       managementLevel: isManagement ? 'regional' : 'cluster',
     };
   }

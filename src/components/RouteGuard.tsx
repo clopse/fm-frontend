@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { isAuthenticated, silentRefresh } from '@/services/userService';
-
-const PUBLIC_PATHS = new Set(['/login', '/forgot-password', '/reset-password']);
+import { isPublicPath } from '@/lib/auth';
 
 export default function RouteGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -12,8 +11,10 @@ export default function RouteGuard({ children }: { children: React.ReactNode }) 
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Training paths and other public routes bypass auth entirely
-    if (PUBLIC_PATHS.has(pathname) || pathname.startsWith('/training/') || pathname.startsWith('/reset-password')) {
+    // Login, password reset, and /training/* are public — single source of
+    // truth in isPublicPath() (prefix match, not substring) so the rule can't
+    // drift from the auth layer.
+    if (isPublicPath(pathname)) {
       setReady(true);
       return;
     }
