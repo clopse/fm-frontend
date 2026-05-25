@@ -329,11 +329,11 @@ export default function WaterChart({
                   yAxisId="right"
                   type="monotone"
                   dataKey="occupancy"
-                  stroke="#f59e0b"
-                  strokeWidth={2.5}
-                  strokeDasharray="5 5"
-                  dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }}
-                  activeDot={{ r: 5 }}
+                  stroke="#6D28D9"
+                  strokeWidth={1.5}
+                  strokeDasharray="5 3"
+                  dot={{ r: 2.5, fill: '#6D28D9', strokeWidth: 0 }}
+                  activeDot={{ r: 4 }}
                   connectNulls
                   name="occupancy"
                 />
@@ -343,11 +343,11 @@ export default function WaterChart({
                   yAxisId="temp"
                   type="monotone"
                   dataKey="temp_avg"
-                  stroke="#10b981"
-                  strokeWidth={2.5}
+                  stroke="#0369A1"
+                  strokeWidth={1.5}
                   strokeDasharray="2 4"
                   dot={false}
-                  activeDot={{ r: 4 }}
+                  activeDot={{ r: 3 }}
                   connectNulls
                   name="temp_avg"
                 />
