@@ -50,7 +50,7 @@ export default function MainSidebar({
   const [homeHref, setHomeHref] = useState('/hotels');
   useEffect(() => {
     const { new_role } = getJwtClaims();
-    if (new_role === 'system_admin' || new_role === 'group_admin') setHomeHref('/admin');
+    if (new_role === 'system_admin' || new_role === 'group_admin') setHomeHref('/hotels');
   }, []);
 
   const navItems = useMemo(() => [
