@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { apiFetch } from '@/utils/api';
 import { ElectricityEntry, GasEntry, BillEntry, UtilitiesData as UtilitiesDataType, ViewMode, PeriodMode } from '../types';
 
 interface DailyUtilityData {
@@ -79,7 +80,7 @@ export function useUtilitiesData(hotelId: string | undefined): {
         setError(null);
 
         const billsUrl = `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills`;
-        const response = await fetch(billsUrl);
+        const response = await apiFetch(billsUrl);
         
         if (!response.ok) {
           throw new Error(`API error: ${response.status} ${response.statusText}`);
@@ -476,7 +477,7 @@ export function useUtilitiesData(hotelId: string | undefined): {
       setError(null);
       
       const billsUrl = `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills`;
-      fetch(billsUrl)
+      apiFetch(billsUrl)
         .then(response => {
           if (!response.ok) {
             throw new Error(`API error: ${response.status} ${response.statusText}`);

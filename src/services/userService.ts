@@ -130,8 +130,12 @@ export async function apiFetch(input: RequestInfo, init: RequestInit = {}): Prom
     access = getStoredTokens().access;
   }
 
+  // For FormData bodies, omit Content-Type so the browser sets the multipart
+  // boundary itself — forcing application/json would corrupt file uploads.
+  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData;
+
   const buildHeaders = (token: string | null): Record<string, string> => ({
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(init.headers as Record<string, string> || {}),
   });

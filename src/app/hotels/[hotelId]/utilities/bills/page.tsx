@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from "next/navigation";
 import { FileText, Search, Calendar, Euro, Zap, Flame, Droplets, Eye, Download, Upload, Trash2 } from 'lucide-react';
 import { BillEntry } from "../types";
+import { apiFetch } from '@/utils/api';
 
 export default function BillsArchivePage() {
   const rawParams = useParams();
@@ -26,7 +27,7 @@ export default function BillsArchivePage() {
       
       setLoading(true);
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills`);
+        const response = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         setBills(data.bills || []);

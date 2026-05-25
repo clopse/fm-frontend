@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { apiFetch } from '@/utils/api';
 import { CHPChartDataPoint, CHPBreakEvenData } from '../types';
 
 const CHP_INSTALLATION_COST = 254542.50;
@@ -117,7 +118,7 @@ export function useCHPData(
       setError(null);
 
       const fetchPromises = fetchParams.years.map(year =>
-        fetch(
+        apiFetch(
           `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/chp?year=${year}&months=${fetchParams.months}`
         ).then(res => {
           if (!res.ok) {

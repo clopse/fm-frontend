@@ -17,6 +17,7 @@ import {
   Eye,
   AlertCircle
 } from 'lucide-react';
+import { apiFetch } from '@/utils/api';
 
 interface Props {
   hotelId: string;
@@ -112,7 +113,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
     setStatus('Analyzing bill...');
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/precheck`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/precheck`, {
         method: 'POST',
         body: formData,
       });
@@ -184,7 +185,7 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
         }));
       }
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/parse-and-save`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/parse-and-save`, {
         method: 'POST',
         body: formData,
       });
@@ -228,11 +229,8 @@ export default function UtilitiesUploadBox({ hotelId, onClose, onSave }: Props) 
       setStatus('Saving verified data...');
 
       // Update the bill with verified data
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/update-bill`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/update-bill`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           s3_key: verificationData.s3_key,
           hotel_id: hotelId,

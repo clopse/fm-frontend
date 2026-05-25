@@ -16,10 +16,13 @@ import HotelComplianceTab from './HotelComplianceTab';
 // API Base URL - FIXED to use correct subdomain
 const API_BASE = process.env.NODE_ENV === 'production' ? 'https://api.jmkfacilities.ie/api' : 'http://localhost:8000/api';
 
-// Helper function to get auth token
+// Helper function to get auth token.
+// MUST use the same localStorage key that storeTokens()/apiFetch use in
+// userService.ts ('access_token'). Reading 'token' here returned null, so no
+// Authorization header was sent and the API responded "Not authenticated".
 const getAuthToken = () => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('token') || sessionStorage.getItem('token');
+    return localStorage.getItem('access_token');
   }
   return null;
 };

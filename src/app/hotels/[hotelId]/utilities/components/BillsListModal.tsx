@@ -3,6 +3,7 @@
 import { X, Zap, Flame, Droplets, Eye, Download, Loader, Edit3, FileText, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import isMobile from 'ismobilejs';
+import { apiFetch } from '@/utils/api';
 
 interface BillEntry {
   id?: string;
@@ -167,7 +168,7 @@ export default function BillsListModal({
     
     try {
       const pdfUrl = getS3PdfUrl(bill, false); // false = download disposition
-      const response = await fetch(pdfUrl);
+      const response = await apiFetch(pdfUrl);
       
       if (!response.ok) {
         throw new Error(`No PDF available for this bill`);

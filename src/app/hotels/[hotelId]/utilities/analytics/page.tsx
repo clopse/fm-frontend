@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { BarChart3, Calculator, Flame, Zap, Euro, TrendingUp, Loader2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { AnalyticsData } from "../types";
+import { apiFetch } from '@/utils/api';
 
 export default function AnalyticsPage() {
   const rawParams = useParams();
@@ -26,7 +27,7 @@ export default function AnalyticsPage() {
         year: year.toString()
       });
       
-      const response = await fetch(
+      const response = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/analytics?${params}`
       );
       

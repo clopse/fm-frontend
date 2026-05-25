@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { RefreshCw, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { apiFetch } from '@/utils/api';
 
 interface RateStatusBannerProps {
   hasDefaultRates: boolean;
@@ -21,7 +22,7 @@ function RateStatusBanner({
     setUpdating(true);
     
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/chp/reprocess`,
         { method: 'POST' }
       );

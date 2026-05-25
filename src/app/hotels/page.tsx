@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {
-  X, Award, Zap, MapPin, CheckCircle2, ClipboardList,
+  X, Award, Zap, MapPin,
   Menu, User2, AlertTriangle, Wind,
 } from 'lucide-react';
 
@@ -21,7 +21,6 @@ const ComplianceLeaderboard = dynamic(() => import('@/components/ComplianceLeade
 const UtilitiesGraphs       = dynamic(() => import('@/components/AdminUtilitiesGraph'),   { ssr: false });
 
 interface LeaderboardEntry { hotel: string; score: number; }
-interface MonthlyTask      { task_id: string; frequency: string; confirmed: boolean; }
 interface DayForecast      { date: string; code: number; high: number; low: number; }
 interface CityWeather      { temp: number; apparent: number; wind: number; code: number; forecast: DayForecast[]; loading: boolean; }
 
@@ -116,10 +115,6 @@ export default function HotelsPage() {
 
   const totalHotels    = visibleIds.length;
 
-  const totalLocations = useMemo(() =>
-    visibleClusters.filter(c => c.hotels.length > 0).length,
-  [visibleClusters]);
-
   const visibleProjectCount = useMemo(() =>
     visibleClusters.reduce((sum, c) => sum + c.projects.length, 0),
   [visibleClusters]);
@@ -130,22 +125,11 @@ export default function HotelsPage() {
     return [...data].sort((a, b) => b.score - a.score);
   }, []);
 
-  const tasksFetcher = useCallback(async () => {
-    const data: MonthlyTask[] = await (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/compliance/monthly/all`)).json();
-    const m = data.filter(t => t.frequency?.toLowerCase() === 'monthly');
-    return { pending: m.filter(t => !t.confirmed).length, confirmed: m.filter(t => t.confirmed).length };
-  }, []);
-
   const {
     data: leaderboardData,
     isStale: leaderboardStale, fetchedAt: leaderboardFetchedAt,
     loading: leaderboardLoading, refresh: leaderboardRefresh, dismiss: leaderboardDismiss,
   } = useCachedFetch('compliance-leaderboard', leaderboardFetcher, 60 * 60 * 1000);
-
-  const { data: tasksData } = useCachedFetch('compliance-tasks', tasksFetcher, 15 * 60 * 1000);
-
-  const tasksPending   = tasksData?.pending   ?? null;
-  const tasksConfirmed = tasksData?.confirmed ?? null;
 
   const handleSelectedHotelsChange = (next: string[]) => {
     setSelectedHotels(next);
@@ -221,14 +205,11 @@ export default function HotelsPage() {
         .panel-hd { padding:13px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
         .ptitle   { font-size:.83rem; font-weight:600; color:var(--text-primary); letter-spacing:-.01em; }
         .psub     { font-size:.67rem; color:var(--text-muted); margin-top:1px; }
-        .stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:13px; padding:15px; transition:background .2s,border-color .2s,transform .15s; box-shadow:var(--card-shadow); }
-        .stat-card:hover { background:#fbfaf7; border-color:rgba(201,100,66,.35); transform:translateY(-2px); }
         .top-bar { position:sticky; top:0; z-index:30; background:rgba(245,245,240,.94); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); height:52px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; }
         .top-btn { background:none; border:none; cursor:pointer; color:var(--text-muted); width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; transition:background .15s,color .15s; }
         .top-btn:hover { background:rgba(0,0,0,.05); color:var(--text-primary); }
         .mono  { font-family:'DM Mono','Courier New',monospace; }
         .ibadge{ width:25px; height:25px; border-radius:7px; display:flex; align-items:center; justify-content:center; }
-        .live  { width:6px; height:6px; border-radius:50%; background:#34d399; box-shadow:0 0 7px #10b981; flex-shrink:0; }
         @keyframes pulseRing { 0%{transform:translate(-50%,-50%) scale(1);opacity:.5;} 100%{transform:translate(-50%,-50%) scale(2.4);opacity:0;} }
         .pr  { position:absolute; top:50%; left:50%; border-radius:50%; border:1.5px solid rgba(201,100,66,.45); pointer-events:none; animation:pulseRing 2.8s ease-out infinite; }
         .pr-amber { border-color:rgba(217,119,6,.45); }
@@ -248,7 +229,6 @@ export default function HotelsPage() {
           .wx-row   { flex:1 1 40%; min-width:90px; }
         }
         @media (max-width:1100px) { .grid-main{grid-template-columns:1fr !important;} }
-        @media (max-width:640px)  { .grid-stat{grid-template-columns:repeat(2,1fr) !important;} }
       `}</style>
 
       <AdminSidebar isMobile={isMobile} isOpen={showAdminSidebar} onClose={() => setShowAdminSidebar(false)}/>
@@ -267,26 +247,6 @@ export default function HotelsPage() {
 
         <div className="content-wrap">
 
-          {/* Stat strip */}
-          <div className="grid-stat" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'11px' }}>
-            {[
-              { label:'Hotels',      value:String(totalHotels),                                   detail:'Across 5 cities',   color:'#c96442', Icon:MapPin        },
-              { label:'Locations',   value:String(totalLocations),                                detail:'IE & UK portfolio', color:'#c96442', Icon:MapPin        },
-              { label:'Tasks Done',  value:tasksConfirmed != null ? String(tasksConfirmed) : '—', detail:'Monthly confirmed', color:'#10b981', Icon:CheckCircle2  },
-              { label:'Outstanding', value:tasksPending   != null ? String(tasksPending)   : '—', detail:'Monthly remaining', color:'#f59e0b', Icon:ClipboardList },
-            ].map(({ label, value, detail, color, Icon }, i) => (
-              <div key={label} className="stat-card fu" style={{ animationDelay:`${i*55}ms` }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:9 }}>
-                  <Icon size={13} style={{ color }}/>
-                  <span className="mono" style={{ fontSize:'.57rem', color:'rgba(0,0,0,.18)', letterSpacing:'.06em' }}>JMK</span>
-                </div>
-                <div className="mono" style={{ fontSize:'1.75rem', fontWeight:500, color:'var(--text-primary)', lineHeight:1, marginBottom:4 }}>{value}</div>
-                <div style={{ fontSize:'.74rem', fontWeight:500, color:'var(--text-muted)' }}>{label}</div>
-                <div style={{ fontSize:'.64rem', color:'rgba(0,0,0,.35)', marginTop:2 }}>{detail}</div>
-              </div>
-            ))}
-          </div>
-
           {/* Map + Leaderboard */}
           <div className="grid-main fu" style={{ display:'grid', gridTemplateColumns:'3fr 2fr', gap:'14px', animationDelay:'90ms' }}>
 
@@ -295,14 +255,15 @@ export default function HotelsPage() {
               <div className="panel-hd">
                 <div>
                   <div className="ptitle">Portfolio Map</div>
-                  <div className="psub">{totalHotels} operational</div>
-                  {visibleProjectCount > 0 && (
-                    <div className="psub" style={{ color:'#d97706', marginTop:1 }}>{visibleProjectCount} in development</div>
-                  )}
+                  <div className="psub">
+                    {totalHotels} operational
+                    {visibleProjectCount > 0 && (
+                      <> · <span style={{ color:'#d97706' }}>{visibleProjectCount} in development</span></>
+                    )}
+                  </div>
                 </div>
-                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                  <span className="live"/>
-                  <span style={{ fontSize:'.65rem', color:'var(--text-muted)' }}>All operational</span>
+                <div style={{ fontSize:'.65rem', color:'var(--text-muted)' }}>
+                  {totalHotels + visibleProjectCount} sites total
                 </div>
               </div>
 

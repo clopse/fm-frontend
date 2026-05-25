@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, Upload, FileText, Zap, CheckCircle, AlertCircle } from 'lucide-react';
+import { apiFetch } from '@/utils/api';
 
 interface CHPUploadBoxProps {
   hotelId: string;
@@ -43,7 +44,7 @@ export default function CHPUploadBox({ hotelId, onClose, onSuccess }: CHPUploadB
       formData.append('file', file);
       formData.append('hotel_id', hotelId);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${process.env.NEXT_PUBLIC_API_URL}/utilities/upload-chp`,
         {
           method: 'POST',

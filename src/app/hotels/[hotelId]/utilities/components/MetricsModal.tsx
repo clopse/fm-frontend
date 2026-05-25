@@ -5,6 +5,7 @@ import { X, FileText, Download, Search, Calendar, Settings, ChevronDown,
          ChevronsUpDown, ArrowLeft, ArrowRight, ChevronUp, Pencil, Eye, 
          Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { DashboardFilters } from '../types';
+import { apiFetch } from '@/utils/api';
 
 interface MetricsModalProps {
   hotelId: string;
@@ -210,10 +211,10 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
     try {
       // First try the /bills endpoint without year (gets all years)
       try {
-        const response = await fetch(
+        const response = await apiFetch(
           `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/bills`
         );
-        
+
         if (response.ok) {
           const data = await response.json();
           setBills(data.bills || []);
@@ -231,7 +232,7 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
       for (const fetchYear of yearsToFetch) {
         try {
           // Try the yearly data endpoint
-          const response = await fetch(
+          const response = await apiFetch(
             `${process.env.NEXT_PUBLIC_API_URL}/utilities/${hotelId}/${fetchYear}`
           );
           
@@ -682,11 +683,8 @@ export default function MetricsModal({ hotelId, year, filters, onClose }: Metric
         updates['summary.billing_period_end'] = editFormData.billing_end;
       }
       
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/update-bill`, {
+      const res = await apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/utilities/update-bill`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           s3_key: s3Key,
           hotel_id: hotelId,
