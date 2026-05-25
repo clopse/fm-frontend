@@ -15,7 +15,7 @@ import { useWeatherOccupancy } from "../hooks/useWeatherOccupancy";
 export default function WaterPage() {
   const { hotelId } = useParams<{ hotelId: string }>();
   const { data: waterData, loading, year, setYear, availableYears } = useWaterMonthlyData(hotelId);
-  const { weather, occupancy } = useWeatherOccupancy(hotelId, year);
+  const { weather, occupancy } = useWeatherOccupancy(hotelId, [year]);
   const [showOverlays, setShowOverlays] = useState(true);
 
   if (!hotelId) {

@@ -48,7 +48,7 @@ export default function GasPage() {
   } = useUtilitiesData(hotelId);
 
   const year = selectedYears[0] || new Date().getFullYear();
-  const { weather, occupancy } = useWeatherOccupancy(hotelId, year);
+  const { weather, occupancy } = useWeatherOccupancy(hotelId, [year]);
 
   useEffect(() => {
     if (periodMode !== 'yearly') setPeriodMode('yearly');

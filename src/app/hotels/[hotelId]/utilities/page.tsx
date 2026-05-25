@@ -73,9 +73,13 @@ export default function UtilitiesDashboard() {
     availableMonths
   } = useUtilitiesFilters(data);
 
-  // Weather + occupancy overlays (only in single-year yearly mode)
-  const overlayYear = periodMode === 'yearly' && selectedYears.length === 1 ? selectedYears[0] : 0;
-  const { weather: overlayWeather, occupancy: overlayOccupancy } = useWeatherOccupancy(hotelId, overlayYear);
+  // Weather + occupancy overlays — all period modes
+  const overlayYears = useMemo(() => {
+    if (periodMode === 'rolling') return [new Date().getFullYear()];
+    if (selectedYears.length > 0) return selectedYears;
+    return [];
+  }, [periodMode, selectedYears]);
+  const { weather: overlayWeather, occupancy: overlayOccupancy } = useWeatherOccupancy(hotelId, overlayYears);
 
   // Correlation insights (single-year mode only, needs both overlays + electricity)
   const correlationInsights = useMemo(() => {

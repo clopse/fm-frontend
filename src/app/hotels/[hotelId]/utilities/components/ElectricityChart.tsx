@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  ComposedChart, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, Line
 } from 'recharts';
 import { ElectricityEntry, ViewMode, PeriodMode, WeatherEntry, OccupancyEntry } from '../types';
@@ -49,7 +49,7 @@ export default function ElectricityChart({
     );
   }
 
-  // MULTI-YEAR COMPARISON MODE — no overlays (ambiguous year)
+  // MULTI-YEAR COMPARISON MODE
   if (comparisonMode && comparisonYears && comparisonYears.length > 1) {
     const grouped = data.reduce((acc, entry) => {
       const monthNum = parseInt(entry.month.split('-')[1]);
@@ -59,11 +59,14 @@ export default function ElectricityChart({
       return acc;
     }, {} as Record<number, Record<number, ElectricityEntry>>);
 
+    const hasOverlayDataComp = weatherData.length > 0 || occupancyData.length > 0;
+
     const chartData = Object.entries(grouped)
       .sort(([a], [b]) => parseInt(a) - parseInt(b))
       .map(([monthNum, yearData]) => {
-        const monthName = new Date(2000, parseInt(monthNum) - 1).toLocaleString('default', { month: 'short' });
-        const dataPoint: Record<string, unknown> = { month: monthName, monthNum: parseInt(monthNum) };
+        const mn = parseInt(monthNum);
+        const monthName = new Date(2000, mn - 1).toLocaleString('default', { month: 'short' });
+        const dataPoint: Record<string, unknown> = { month: monthName, monthNum: mn };
         comparisonYears.forEach(year => {
           if (yearData[year]) {
             const entry = yearData[year];
@@ -74,6 +77,10 @@ export default function ElectricityChart({
                 : Math.round(entry.per_room_kwh * 10) / 10;
           }
         });
+        const weatherEntry = weatherData.find(w => w.month === mn);
+        const occEntry = occupancyData.find(o => o.month === mn);
+        dataPoint.occupancy = occEntry ? occEntry.occupancy_rate : null;
+        dataPoint.temp_avg = weatherEntry ? weatherEntry.temp_avg : null;
         return dataPoint;
       });
 
@@ -86,30 +93,66 @@ export default function ElectricityChart({
             <h3 className="text-lg font-semibold text-slate-900">Electricity Consumption</h3>
             <p className="text-sm text-slate-500 mt-1">Comparing {comparisonYears.join(' vs ')}</p>
           </div>
-          <div className="flex items-center space-x-2 px-3 py-1 bg-purple-50 border border-purple-200 rounded-lg">
-            <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            <span className="text-xs font-medium text-purple-700">Comparison Mode</span>
+          <div className="flex items-center gap-3">
+            {hasOverlayDataComp && (
+              <button
+                onClick={() => setShowOverlays(v => !v)}
+                className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                  showOverlays
+                    ? 'bg-slate-700 text-white border-slate-700'
+                    : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400'
+                }`}
+              >
+                Show overlays
+              </button>
+            )}
+            <div className="flex items-center space-x-2 px-3 py-1 bg-purple-50 border border-purple-200 rounded-lg">
+              <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <span className="text-xs font-medium text-purple-700">Comparison Mode</span>
+            </div>
           </div>
         </div>
         <ResponsiveContainer width="100%" height={400}>
-          <BarChart data={chartData}>
+          <ComposedChart data={chartData} margin={{ top: 5, right: hasOverlayDataComp ? 72 : 30, bottom: 5, left: 10 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#64748B" />
             <YAxis
+              yAxisId="left"
               tick={{ fontSize: 12 }}
               stroke="#64748B"
               label={{ value: yLabel, angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#64748B' } }}
             />
+            {hasOverlayDataComp && (
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                domain={[0, 100]}
+                tick={{ fontSize: 11 }}
+                stroke="#94A3B8"
+                tickFormatter={v => `${v}%`}
+                label={{ value: 'Occupancy %', angle: 90, position: 'insideRight', style: { fontSize: 11, fill: '#94A3B8' } }}
+                width={52}
+                hide={!showOverlays}
+              />
+            )}
+            {hasOverlayDataComp && (
+              <YAxis yAxisId="temp" orientation="right" hide={true} />
+            )}
             <Tooltip
               contentStyle={{ backgroundColor: 'white', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '12px' }}
-              formatter={(value: number, name: string) => [`${value.toLocaleString()} ${yLabel}`, name.replace('year_', '')]}
+              formatter={(value: number, name: string) => {
+                if (name === 'occupancy') return [`${value != null ? value.toFixed(1) : '—'}%`, 'Avg Occupancy'];
+                if (name === 'temp_avg') return [`${value != null ? value.toFixed(1) : '—'}°C`, 'Avg Temp'];
+                return [`${value.toLocaleString()} ${yLabel}`, name.replace('year_', '')];
+              }}
             />
             <Legend formatter={(value) => value.replace('year_', '')} wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
             {comparisonYears.map((year, index) => (
               <Bar
                 key={year}
+                yAxisId="left"
                 dataKey={`year_${year}`}
                 name={`year_${year}`}
                 fill={YEAR_COLORS[index % YEAR_COLORS.length]}
@@ -118,7 +161,35 @@ export default function ElectricityChart({
                 cursor="pointer"
               />
             ))}
-          </BarChart>
+            {hasOverlayDataComp && showOverlays && occupancyData.length > 0 && (
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="occupancy"
+                stroke="#f59e0b"
+                strokeWidth={2.5}
+                strokeDasharray="5 5"
+                dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }}
+                activeDot={{ r: 5 }}
+                connectNulls
+                name="occupancy"
+              />
+            )}
+            {hasOverlayDataComp && showOverlays && weatherData.length > 0 && (
+              <Line
+                yAxisId="temp"
+                type="monotone"
+                dataKey="temp_avg"
+                stroke="#10b981"
+                strokeWidth={2.5}
+                strokeDasharray="2 4"
+                dot={false}
+                activeDot={{ r: 4 }}
+                connectNulls
+                name="temp_avg"
+              />
+            )}
+          </ComposedChart>
         </ResponsiveContainer>
         <div className="mt-4 text-xs text-slate-500 text-center">Click on any bar to see bills for that month</div>
       </div>
