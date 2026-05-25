@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { Euro, Upload, Zap } from 'lucide-react';
 import { hotelNames } from "@/data/hotelMetadata";
@@ -76,6 +76,52 @@ export default function UtilitiesDashboard() {
   // Weather + occupancy overlays (only in single-year yearly mode)
   const overlayYear = periodMode === 'yearly' && selectedYears.length === 1 ? selectedYears[0] : 0;
   const { weather: overlayWeather, occupancy: overlayOccupancy } = useWeatherOccupancy(hotelId, overlayYear);
+
+  // Correlation insights (single-year mode only, needs both overlays + electricity)
+  const correlationInsights = useMemo(() => {
+    const elec = filteredData.electricity;
+    if (!elec?.length || !overlayWeather.length || !overlayOccupancy.length) return null;
+
+    const merged = elec.map(e => {
+      const mn = parseInt(e.month.split('-')[1]);
+      const occ = overlayOccupancy.find(o => o.month === mn);
+      const wx  = overlayWeather.find(w => w.month === mn);
+      return {
+        monthLabel:    new Date(e.month + '-01').toLocaleString('default', { month: 'short' }),
+        total_kwh:     e.total_kwh,
+        per_room_kwh:  e.per_room_kwh,
+        occupancy_rate: occ?.occupancy_rate ?? null,
+        temp_avg:      wx?.temp_avg ?? null,
+      };
+    }).filter(d => d.occupancy_rate !== null && d.temp_avg !== null && d.occupancy_rate > 0);
+
+    if (merged.length < 3) return null;
+
+    // Peak electricity per occupied room
+    const byOccRoom = merged.map(d => ({
+      ...d,
+      energy_per_occ_room: d.per_room_kwh / (d.occupancy_rate! / 100),
+    }));
+    const peak = byOccRoom.reduce((a, b) => a.energy_per_occ_room > b.energy_per_occ_room ? a : b);
+
+    // kWh per °C (OLS slope)
+    const n      = merged.length;
+    const avgT   = merged.reduce((s, d) => s + d.temp_avg!, 0) / n;
+    const avgKwh = merged.reduce((s, d) => s + d.total_kwh, 0) / n;
+    const num    = merged.reduce((s, d) => s + (d.temp_avg! - avgT) * (d.total_kwh - avgKwh), 0);
+    const den    = merged.reduce((s, d) => s + Math.pow(d.temp_avg! - avgT, 2), 0);
+    const kwhPerDeg = den !== 0 ? Math.round(num / den) : null;
+
+    // High vs low occupancy months
+    const sortedByOcc = [...merged].sort((a, b) => (b.occupancy_rate ?? 0) - (a.occupancy_rate ?? 0));
+    const hi = sortedByOcc[0];
+    const lo = sortedByOcc[sortedByOcc.length - 1];
+    const diffPct = lo.total_kwh > 0
+      ? Math.round(((hi.total_kwh - lo.total_kwh) / lo.total_kwh) * 100)
+      : null;
+
+    return { peak, kwhPerDeg, hi, lo, diffPct, months: merged.length };
+  }, [filteredData.electricity, overlayWeather, overlayOccupancy]);
 
   // CHP data hook
   const hasCHP = hotelId === 'hida';
@@ -324,6 +370,40 @@ export default function UtilitiesDashboard() {
             occupancyData={overlayOccupancy}
           />
         </div>
+
+        {/* Correlation insight box — single year with overlay data only */}
+        {correlationInsights && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-8">
+            <h3 className="text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wide">Energy Correlation Insights</h3>
+            <ul className="space-y-2 text-sm text-slate-700">
+              <li className="flex items-start gap-2">
+                <span className="text-amber-500 font-bold mt-0.5">•</span>
+                <span>
+                  Highest electricity per occupied room: <strong>{correlationInsights.peak.monthLabel}</strong> — {Math.round(correlationInsights.peak.energy_per_occ_room).toLocaleString()} kWh/room at {correlationInsights.peak.occupancy_rate?.toFixed(0)}% occupancy
+                </span>
+              </li>
+              {correlationInsights.kwhPerDeg !== null && (
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-500 font-bold mt-0.5">•</span>
+                  <span>
+                    Temperature correlation: each +1°C {correlationInsights.kwhPerDeg < 0 ? 'reduces' : 'adds'} approximately <strong>{Math.abs(correlationInsights.kwhPerDeg).toLocaleString()} kWh</strong>
+                  </span>
+                </li>
+              )}
+              {correlationInsights.diffPct !== null && (
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-500 font-bold mt-0.5">•</span>
+                  <span>
+                    <strong>{correlationInsights.hi.monthLabel}</strong> ({correlationInsights.hi.occupancy_rate?.toFixed(0)}% occupancy) used {Math.abs(correlationInsights.diffPct)}%{' '}
+                    {correlationInsights.diffPct >= 0 ? 'more' : 'less'} electricity than{' '}
+                    <strong>{correlationInsights.lo.monthLabel}</strong> ({correlationInsights.lo.occupancy_rate?.toFixed(0)}% occupancy)
+                  </span>
+                </li>
+              )}
+            </ul>
+            <p className="text-xs text-slate-400 mt-3">Based on {correlationInsights.months} months of combined electricity, occupancy and weather data</p>
+          </div>
+        )}
 
         {/* CHP Section - Only show for hotels with CHP */}
         {hasCHP && (

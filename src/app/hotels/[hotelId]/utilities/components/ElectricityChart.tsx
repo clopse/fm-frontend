@@ -237,10 +237,10 @@ export default function ElectricityChart({
               yAxisId="right"
               type="monotone"
               dataKey="occupancy"
-              stroke="#94A3B8"
-              strokeWidth={2}
+              stroke="#f59e0b"
+              strokeWidth={2.5}
               strokeDasharray="5 5"
-              dot={{ r: 3, fill: '#94A3B8', strokeWidth: 0 }}
+              dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }}
               activeDot={{ r: 5 }}
               connectNulls
               name="occupancy"
@@ -251,8 +251,9 @@ export default function ElectricityChart({
               yAxisId="temp"
               type="monotone"
               dataKey="temp_avg"
-              stroke="#F59E0B"
-              strokeWidth={1.5}
+              stroke="#10b981"
+              strokeWidth={2.5}
+              strokeDasharray="2 4"
               dot={false}
               activeDot={{ r: 4 }}
               connectNulls
