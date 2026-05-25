@@ -128,14 +128,11 @@ export default function GasPage() {
 
   // Merge weather + occupancy into gas data
   const hasOverlayData = weather.length > 0 || occupancy.length > 0;
-  const mergedGasData = gasData.map((g: GasEntry) => {
-    const monthNum = parseInt(g.period.split('-')[1]);
-    return {
-      ...g,
-      occupancy: occupancy.find(o => o.month === monthNum)?.occupancy_rate ?? null,
-      temp_avg: weather.find(w => w.month === monthNum)?.temp_avg ?? null,
-    };
-  });
+  const mergedGasData = gasData.map((g: GasEntry) => ({
+    ...g,
+    occupancy: occupancy.find(o => o.period === g.period)?.occupancy_rate ?? null,
+    temp_avg: weather.find(w => w.period === g.period)?.temp_avg ?? null,
+  }));
 
   const avgOccupancy = occupancy.length > 0
     ? occupancy.reduce((s, o) => s + o.occupancy_rate, 0) / occupancy.length

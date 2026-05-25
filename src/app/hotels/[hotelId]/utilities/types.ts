@@ -199,6 +199,9 @@ export interface CHPChartDataPoint {
   electricityRate: number;
   gasRate: number;
   heatRate: number;
+  electricityKwh: number;
+  heatKwh: number;
+  gasM3: number;
 }
 
 export interface CHPBreakEvenData {
@@ -486,7 +489,7 @@ export interface RateStatusInfo {
 // ============================================================================
 
 export interface WeatherEntry {
-  month: number;
+  period: string; // YYYY-MM
   temp_max: number;
   temp_min: number;
   temp_avg: number;
@@ -494,7 +497,7 @@ export interface WeatherEntry {
 }
 
 export interface OccupancyEntry {
-  month: number;
+  period: string; // YYYY-MM
   occupancy_rate: number;
   source: 'real' | 'default';
 }

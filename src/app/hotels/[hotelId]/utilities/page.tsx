@@ -75,7 +75,10 @@ export default function UtilitiesDashboard() {
 
   // Weather + occupancy overlays — all period modes
   const overlayYears = useMemo(() => {
-    if (periodMode === 'rolling') return [new Date().getFullYear()];
+    if (periodMode === 'rolling') {
+      const y = new Date().getFullYear();
+      return [y - 1, y]; // rolling window can span two calendar years
+    }
     if (selectedYears.length > 0) return selectedYears;
     return [];
   }, [periodMode, selectedYears]);
@@ -87,9 +90,8 @@ export default function UtilitiesDashboard() {
     if (!elec?.length || !overlayWeather.length || !overlayOccupancy.length) return null;
 
     const merged = elec.map(e => {
-      const mn = parseInt(e.month.split('-')[1]);
-      const occ = overlayOccupancy.find(o => o.month === mn);
-      const wx  = overlayWeather.find(w => w.month === mn);
+      const occ = overlayOccupancy.find(o => o.period === e.month);
+      const wx  = overlayWeather.find(w => w.period === e.month);
       return {
         monthLabel:    new Date(e.month + '-01').toLocaleString('default', { month: 'short' }),
         total_kwh:     e.total_kwh,
@@ -127,25 +129,18 @@ export default function UtilitiesDashboard() {
     return { peak, kwhPerDeg, hi, lo, diffPct, months: merged.length };
   }, [filteredData.electricity, overlayWeather, overlayOccupancy]);
 
-  // CHP data hook
-  const hasCHP = hotelId === 'hida';
-  
   const {
     data: chpData,
     breakEvenData,
     loading: chpLoading,
-    error: chpError,
     hasDefaultRates,
     hasMixedRates,
     reportCount,
     refetch: refetchCHP
-  } = useCHPData(
-    hotelId,
-    {
-      periodMode,
-      selectedYears
-    }
-  );
+  } = useCHPData(hotelId, { periodMode, selectedYears });
+
+  // Hotel has CHP if data loaded and has entries
+  const hasCHP = chpData.length > 0;
 
   // Auto-select first year when available years load and in yearly mode
   useEffect(() => {
@@ -279,25 +274,7 @@ export default function UtilitiesDashboard() {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {isComparisonMode && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-lg">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-blue-900">Multi-Year Comparison Mode</h3>
-                <p className="text-sm text-blue-700">
-                  Comparing {selectedYears.join(', ')} • Charts show data side-by-side by month
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {hasActiveFilters && !isComparisonMode && (
+        {hasActiveFilters && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4 text-sm">
@@ -355,8 +332,6 @@ export default function UtilitiesDashboard() {
             data={filteredData.electricity}
             viewMode={viewMode}
             loading={loading}
-            comparisonMode={isComparisonMode}
-            comparisonYears={data.comparison_years}
             periodMode={periodMode}
             onMonthClick={(month) => handleShowBills(month, 'electricity')}
             weatherData={overlayWeather}
@@ -366,12 +341,11 @@ export default function UtilitiesDashboard() {
             data={filteredData.gas}
             viewMode={viewMode}
             loading={loading}
-            comparisonMode={isComparisonMode}
-            comparisonYears={data.comparison_years}
             periodMode={periodMode}
             onMonthClick={(month) => handleShowBills(month, 'gas')}
             weatherData={overlayWeather}
             occupancyData={overlayOccupancy}
+            chpData={hasCHP ? chpData : undefined}
           />
         </div>
 

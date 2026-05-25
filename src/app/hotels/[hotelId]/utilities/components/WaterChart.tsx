@@ -180,16 +180,22 @@ export default function WaterChart({
     '2023': '#F59E0B', '2024': '#3B82F6', '2025': '#10B981', '2026': '#8B5CF6',
   };
 
-  // Merge weather/occupancy into chart data by month number
+  // Merge weather/occupancy into chart data by month number (average across years)
   const hasOverlayData = weatherData.length > 0 || occupancyData.length > 0;
   const chartData = rawChartData.map(row => {
     const monthNum = row.monthNum as number;
-    const wEntry = weatherData.find(w => w.month === monthNum);
-    const oEntry = occupancyData.find(o => o.month === monthNum);
+    const wEntries = weatherData.filter(w => parseInt(w.period.split('-')[1]) === monthNum);
+    const oEntries = occupancyData.filter(o => parseInt(o.period.split('-')[1]) === monthNum);
+    const avgTemp = wEntries.length > 0
+      ? wEntries.reduce((s, w) => s + w.temp_avg, 0) / wEntries.length
+      : null;
+    const avgOcc = oEntries.length > 0
+      ? oEntries.reduce((s, o) => s + o.occupancy_rate, 0) / oEntries.length
+      : null;
     return {
       ...row,
-      occupancy: oEntry ? oEntry.occupancy_rate : null,
-      temp_avg: wEntry ? wEntry.temp_avg : null,
+      occupancy: avgOcc,
+      temp_avg: avgTemp,
     };
   });
 

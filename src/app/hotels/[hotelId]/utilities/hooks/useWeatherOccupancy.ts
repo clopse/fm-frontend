@@ -38,54 +38,38 @@ export function useWeatherOccupancy(
         ])
       )
     ).then(results => {
-      const weatherByMonth: Record<number, { sumAvg: number; sumMax: number; sumMin: number; sumPrecip: number; count: number }> = {};
-      const occupancyByMonth: Record<number, { sum: number; count: number; anyReal: boolean }> = {};
+      const allWeather: WeatherEntry[] = [];
+      const allOccupancy: OccupancyEntry[] = [];
 
-      for (const [weatherData, occupancyData] of results) {
+      results.forEach(([weatherData, occupancyData], idx) => {
+        const year = activeYears[idx];
         if (Array.isArray(weatherData)) {
-          for (const w of weatherData as WeatherEntry[]) {
-            if (!weatherByMonth[w.month]) {
-              weatherByMonth[w.month] = { sumAvg: 0, sumMax: 0, sumMin: 0, sumPrecip: 0, count: 0 };
-            }
-            weatherByMonth[w.month].sumAvg += w.temp_avg;
-            weatherByMonth[w.month].sumMax += w.temp_max;
-            weatherByMonth[w.month].sumMin += w.temp_min;
-            weatherByMonth[w.month].sumPrecip += w.precipitation;
-            weatherByMonth[w.month].count++;
+          for (const w of weatherData as { month: number; temp_avg: number; temp_max: number; temp_min: number; precipitation: number }[]) {
+            allWeather.push({
+              period: `${year}-${String(w.month).padStart(2, '0')}`,
+              temp_avg: w.temp_avg,
+              temp_max: w.temp_max,
+              temp_min: w.temp_min,
+              precipitation: w.precipitation,
+            });
           }
         }
         if (Array.isArray(occupancyData)) {
-          for (const o of occupancyData as OccupancyEntry[]) {
-            if (!occupancyByMonth[o.month]) {
-              occupancyByMonth[o.month] = { sum: 0, count: 0, anyReal: false };
-            }
-            occupancyByMonth[o.month].sum += o.occupancy_rate;
-            occupancyByMonth[o.month].count++;
-            if (o.source === 'real') occupancyByMonth[o.month].anyReal = true;
+          for (const o of occupancyData as { month: number; occupancy_rate: number; source: 'real' | 'default' }[]) {
+            allOccupancy.push({
+              period: `${year}-${String(o.month).padStart(2, '0')}`,
+              occupancy_rate: o.occupancy_rate,
+              source: o.source,
+            });
           }
         }
-      }
+      });
 
-      const mergedWeather: WeatherEntry[] = Object.entries(weatherByMonth)
-        .map(([month, v]) => ({
-          month: parseInt(month),
-          temp_avg: Math.round((v.sumAvg / v.count) * 10) / 10,
-          temp_max: Math.round((v.sumMax / v.count) * 10) / 10,
-          temp_min: Math.round((v.sumMin / v.count) * 10) / 10,
-          precipitation: Math.round((v.sumPrecip / v.count) * 10) / 10,
-        }))
-        .sort((a, b) => a.month - b.month);
+      allWeather.sort((a, b) => a.period.localeCompare(b.period));
+      allOccupancy.sort((a, b) => a.period.localeCompare(b.period));
 
-      const mergedOccupancy: OccupancyEntry[] = Object.entries(occupancyByMonth)
-        .map(([month, v]) => ({
-          month: parseInt(month),
-          occupancy_rate: Math.round((v.sum / v.count) * 10) / 10,
-          source: (v.anyReal ? 'real' : 'default') as 'real' | 'default',
-        }))
-        .sort((a, b) => a.month - b.month);
-
-      setWeather(mergedWeather);
-      setOccupancy(mergedOccupancy);
+      setWeather(allWeather);
+      setOccupancy(allOccupancy);
     });
   }, [hotelId, yearsKey]);
 

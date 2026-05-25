@@ -1,40 +1,29 @@
 import { useState } from 'react';
 import {
   ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, Line
+  ResponsiveContainer, Line, Cell
 } from 'recharts';
-import { GasEntry, ViewMode, PeriodMode, WeatherEntry, OccupancyEntry } from '../types';
+import { GasEntry, ViewMode, PeriodMode, WeatherEntry, OccupancyEntry, CHPChartDataPoint } from '../types';
 
 interface GasChartProps {
   data: GasEntry[];
   viewMode: ViewMode;
   loading: boolean;
-  comparisonMode?: boolean;
-  comparisonYears?: number[];
   periodMode?: PeriodMode;
   onMonthClick?: (month: string) => void;
   weatherData?: WeatherEntry[];
   occupancyData?: OccupancyEntry[];
+  chpData?: CHPChartDataPoint[];
 }
-
-const YEAR_COLORS = [
-  '#10B981',
-  '#8B5CF6',
-  '#3B82F6',
-  '#F59E0B',
-  '#EF4444',
-];
 
 export default function GasChart({
   data,
   viewMode,
   loading,
-  comparisonMode,
-  comparisonYears,
-  periodMode,
   onMonthClick,
   weatherData = [],
   occupancyData = [],
+  chpData,
 }: GasChartProps) {
   const [showOverlays, setShowOverlays] = useState(true);
 
@@ -49,177 +38,69 @@ export default function GasChart({
     );
   }
 
-  // MULTI-YEAR COMPARISON MODE
-  if (comparisonMode && comparisonYears && comparisonYears.length > 1) {
-    const grouped = data.reduce((acc, entry) => {
-      const monthNum = parseInt(entry.period.split('-')[1]);
-      const year = entry.year || parseInt(entry.period.split('-')[0]);
-      if (!acc[monthNum]) acc[monthNum] = {};
-      acc[monthNum][year] = entry;
-      return acc;
-    }, {} as Record<number, Record<number, GasEntry>>);
-
-    const hasOverlayDataComp = weatherData.length > 0 || occupancyData.length > 0;
-
-    const chartData = Object.entries(grouped)
-      .sort(([a], [b]) => parseInt(a) - parseInt(b))
-      .map(([monthNum, yearData]) => {
-        const mn = parseInt(monthNum);
-        const monthName = new Date(2000, mn - 1).toLocaleString('default', { month: 'short' });
-        const dataPoint: Record<string, unknown> = { month: monthName, monthNum: mn };
-        comparisonYears.forEach(year => {
-          if (yearData[year]) {
-            const entry = yearData[year];
-            dataPoint[`year_${year}`] = viewMode === 'kwh'
-              ? Math.round(entry.total_kwh)
-              : viewMode === 'eur'
-                ? Math.round(entry.total_eur)
-                : Math.round(entry.per_room_kwh * 10) / 10;
-          }
-        });
-        const weatherEntry = weatherData.find(w => w.month === mn);
-        const occEntry = occupancyData.find(o => o.month === mn);
-        dataPoint.occupancy = occEntry ? occEntry.occupancy_rate : null;
-        dataPoint.temp_avg = weatherEntry ? weatherEntry.temp_avg : null;
-        return dataPoint;
-      });
-
-    const yLabel = viewMode === 'kwh' ? 'kWh' : viewMode === 'eur' ? '€' : 'kWh per room';
-
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900">Gas Consumption</h3>
-            <p className="text-sm text-slate-500 mt-1">Comparing {comparisonYears.join(' vs ')}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {hasOverlayDataComp && (
-              <button
-                onClick={() => setShowOverlays(v => !v)}
-                className={`px-3 py-1 text-xs rounded-full border transition-colors ${
-                  showOverlays
-                    ? 'bg-slate-700 text-white border-slate-700'
-                    : 'bg-white text-slate-500 border-slate-300 hover:border-slate-400'
-                }`}
-              >
-                Show overlays
-              </button>
-            )}
-            <div className="flex items-center space-x-2 px-3 py-1 bg-purple-50 border border-purple-200 rounded-lg">
-              <svg className="w-4 h-4 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-              <span className="text-xs font-medium text-purple-700">Comparison Mode</span>
-            </div>
-          </div>
-        </div>
-        <ResponsiveContainer width="100%" height={400}>
-          <ComposedChart data={chartData} margin={{ top: 5, right: hasOverlayDataComp ? 72 : 30, bottom: 5, left: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-            <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#64748B" />
-            <YAxis
-              yAxisId="left"
-              tick={{ fontSize: 12 }}
-              stroke="#64748B"
-              label={{ value: yLabel, angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#64748B' } }}
-            />
-            {hasOverlayDataComp && (
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                domain={[0, 100]}
-                tick={{ fontSize: 11 }}
-                stroke="#94A3B8"
-                tickFormatter={v => `${v}%`}
-                label={{ value: 'Occupancy %', angle: 90, position: 'insideRight', style: { fontSize: 11, fill: '#94A3B8' } }}
-                width={52}
-                hide={!showOverlays}
-              />
-            )}
-            {hasOverlayDataComp && (
-              <YAxis yAxisId="temp" orientation="right" hide={true} />
-            )}
-            <Tooltip
-              contentStyle={{ backgroundColor: 'white', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '12px' }}
-              formatter={(value: number, name: string) => {
-                if (name === 'occupancy') return [`${value != null ? value.toFixed(1) : '—'}%`, 'Avg Occupancy'];
-                if (name === 'temp_avg') return [`${value != null ? value.toFixed(1) : '—'}°C`, 'Avg Temp'];
-                return [`${value.toLocaleString()} ${yLabel}`, name.replace('year_', '')];
-              }}
-            />
-            <Legend formatter={(value) => value.replace('year_', '')} wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
-            {comparisonYears.map((year, index) => (
-              <Bar
-                key={year}
-                yAxisId="left"
-                dataKey={`year_${year}`}
-                name={`year_${year}`}
-                fill={YEAR_COLORS[index % YEAR_COLORS.length]}
-                radius={[4, 4, 0, 0]}
-                onClick={(d) => { if (onMonthClick && d.monthNum) onMonthClick(d.monthNum.toString()); }}
-                cursor="pointer"
-              />
-            ))}
-            {hasOverlayDataComp && showOverlays && occupancyData.length > 0 && (
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="occupancy"
-                stroke="#f59e0b"
-                strokeWidth={2.5}
-                strokeDasharray="5 5"
-                dot={{ r: 3, fill: '#f59e0b', strokeWidth: 0 }}
-                activeDot={{ r: 5 }}
-                connectNulls
-                name="occupancy"
-              />
-            )}
-            {hasOverlayDataComp && showOverlays && weatherData.length > 0 && (
-              <Line
-                yAxisId="temp"
-                type="monotone"
-                dataKey="temp_avg"
-                stroke="#10b981"
-                strokeWidth={2.5}
-                strokeDasharray="2 4"
-                dot={false}
-                activeDot={{ r: 4 }}
-                connectNulls
-                name="temp_avg"
-              />
-            )}
-          </ComposedChart>
-        </ResponsiveContainer>
-        <div className="mt-4 text-xs text-slate-500 text-center">Click on any bar to see bills for that month</div>
-      </div>
-    );
-  }
-
-  // SINGLE YEAR MODE
-  const isRollingMode = periodMode === 'rolling';
+  const multiYear = data.length > 0 && new Set(data.map(e => e.period.split('-')[0])).size > 1;
   const yLabel = viewMode === 'kwh' ? 'kWh' : viewMode === 'eur' ? '€' : 'kWh per room';
   const hasOverlayData = weatherData.length > 0 || occupancyData.length > 0;
+  const hasCHP = viewMode === 'kwh' && chpData != null && chpData.length > 0;
 
   const chartData = data.map(entry => {
-    const monthName = new Date(entry.period + '-01').toLocaleString('default', { month: 'short' });
-    const monthNum = parseInt(entry.period.split('-')[1]);
-    const weatherEntry = weatherData.find(w => w.month === monthNum);
-    const occEntry = occupancyData.find(o => o.month === monthNum);
+    const weatherEntry = weatherData.find(w => w.period === entry.period);
+    const occEntry = occupancyData.find(o => o.period === entry.period);
+    const chpEntry = chpData?.find(c => c.monthKey === entry.period);
 
     let value = 0;
     if (viewMode === 'kwh') value = entry.total_kwh;
     else if (viewMode === 'eur') value = entry.total_eur;
     else value = entry.per_room_kwh;
 
+    const chpOutputKwh = chpEntry
+      ? Math.round((chpEntry.electricityKwh || 0) + (chpEntry.heatKwh || 0))
+      : null;
+    const coverage = chpOutputKwh !== null && value > 0
+      ? (chpOutputKwh / value) * 100
+      : null;
+
     return {
-      month: monthName,
       period: entry.period,
       value: Math.round(value),
       occupancy: occEntry ? occEntry.occupancy_rate : null,
       temp_avg: weatherEntry ? weatherEntry.temp_avg : null,
+      chp_output: chpOutputKwh,
+      coverage,
     };
   });
+
+  // CHP insight (kWh mode only)
+  let chpInsight: {
+    avgCoverage: number;
+    lowest: { period: string; coverage: number; temp_avg: number | null; occupancy: number | null };
+  } | null = null;
+  if (hasCHP) {
+    const withCoverage = chartData.filter(
+      (d): d is typeof d & { coverage: number; chp_output: number } =>
+        d.coverage !== null && d.value > 0 && d.chp_output !== null
+    );
+    if (withCoverage.length > 0) {
+      const avgCoverage = withCoverage.reduce((s, d) => s + d.coverage, 0) / withCoverage.length;
+      const lowest = withCoverage.reduce((a, b) => a.coverage < b.coverage ? a : b);
+      chpInsight = { avgCoverage, lowest };
+    }
+  }
+
+  const getBarFill = (coverage: number | null): string => {
+    if (!hasCHP || coverage === null) return '#10B981';
+    if (coverage < 25) return '#EF4444';
+    if (coverage < 50) return '#F59E0B';
+    return '#10B981';
+  };
+
+  const formatXLabel = (period: string) => {
+    try {
+      const [year, month] = period.split('-');
+      const name = new Date(parseInt(year), parseInt(month) - 1).toLocaleString('default', { month: 'short' });
+      return multiYear ? `${name} '${year.slice(-2)}` : name;
+    } catch { return period; }
+  };
 
   const avgOccupancy = occupancyData.length > 0
     ? occupancyData.reduce((s, o) => s + o.occupancy_rate, 0) / occupancyData.length
@@ -254,7 +135,13 @@ export default function GasChart({
           margin={{ top: 5, right: hasOverlayData ? 72 : 30, bottom: 5, left: 10 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-          <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="#64748B" />
+          <XAxis
+            dataKey="period"
+            tick={{ fontSize: 12 }}
+            stroke="#64748B"
+            tickFormatter={formatXLabel}
+            minTickGap={35}
+          />
           <YAxis
             yAxisId="left"
             tick={{ fontSize: 12 }}
@@ -279,28 +166,45 @@ export default function GasChart({
           )}
           <Tooltip
             contentStyle={{ backgroundColor: 'white', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '12px' }}
+            labelFormatter={formatXLabel}
             formatter={(value: number, name: string) => {
               if (name === 'occupancy') return [`${value != null ? value.toFixed(1) : '—'}%`, 'Occupancy'];
               if (name === 'temp_avg') return [`${value != null ? value.toFixed(1) : '—'}°C`, 'Avg Temp'];
-              return [`${value.toLocaleString()} ${yLabel}`, 'Usage'];
+              if (name === 'chp_output') return [`${value.toLocaleString()} kWh`, 'CHP Output'];
+              return [`${value.toLocaleString()} ${yLabel}`, 'Gas'];
             }}
           />
+          {hasCHP && (
+            <Legend
+              formatter={v => v === 'chp_output' ? 'CHP Output (kWh)' : v === 'value' ? 'Gas (kWh)' : v}
+              wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
+            />
+          )}
           <Bar
             yAxisId="left"
             dataKey="value"
-            fill="#10B981"
             radius={[4, 4, 0, 0]}
-            onClick={(d) => {
-              if (onMonthClick && d.period) {
-                if (isRollingMode) {
-                  onMonthClick(d.period);
-                } else {
-                  onMonthClick(d.period.split('-')[1]);
-                }
-              }
-            }}
+            onClick={(d) => { if (onMonthClick && d.period) onMonthClick(d.period); }}
             cursor="pointer"
-          />
+            name="value"
+          >
+            {chartData.map((entry, idx) => (
+              <Cell key={idx} fill={getBarFill(entry.coverage)} />
+            ))}
+          </Bar>
+          {hasCHP && (
+            <Line
+              yAxisId="left"
+              type="monotone"
+              dataKey="chp_output"
+              stroke="#F97316"
+              strokeWidth={2.5}
+              dot={{ r: 3, fill: '#F97316', strokeWidth: 0 }}
+              activeDot={{ r: 5 }}
+              connectNulls
+              name="chp_output"
+            />
+          )}
           {hasOverlayData && showOverlays && occupancyData.length > 0 && (
             <Line
               yAxisId="right"
@@ -332,7 +236,23 @@ export default function GasChart({
         </ComposedChart>
       </ResponsiveContainer>
 
-      {/* Stats row */}
+      {hasCHP && (
+        <div className="mt-2 flex items-center gap-4 text-xs text-slate-500">
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" />
+            ≥50% CHP coverage
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-sm bg-amber-400 inline-block" />
+            25–50%
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-3 h-3 rounded-sm bg-red-500 inline-block" />
+            &lt;25%
+          </span>
+        </div>
+      )}
+
       {hasOverlayData && (
         <div className="mt-3 flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 border-t border-slate-100 pt-3">
           {avgOccupancy !== null && (
@@ -347,6 +267,18 @@ export default function GasChart({
           {allDefault && avgOccupancy !== null && (
             <span className="text-amber-600 ml-1">source: default ({avgOccupancy.toFixed(0)}%)</span>
           )}
+        </div>
+      )}
+
+      {chpInsight && (
+        <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg text-xs text-orange-900">
+          <p>
+            CHP covered <strong>{chpInsight.avgCoverage.toFixed(0)}%</strong> of gas on average.{' '}
+            Lowest month: <strong>{formatXLabel(chpInsight.lowest.period)}</strong> at{' '}
+            <strong>{chpInsight.lowest.coverage.toFixed(0)}%</strong>
+            {chpInsight.lowest.temp_avg !== null && ` — avg temp ${chpInsight.lowest.temp_avg.toFixed(1)}°C`}
+            {chpInsight.lowest.occupancy !== null && `, occupancy ${chpInsight.lowest.occupancy.toFixed(0)}%`}
+          </p>
         </div>
       )}
 

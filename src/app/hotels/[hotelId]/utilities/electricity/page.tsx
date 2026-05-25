@@ -90,14 +90,11 @@ export default function ElectricityPage() {
 
   // Merge weather + occupancy into electricity data
   const hasOverlayData = weather.length > 0 || occupancy.length > 0;
-  const mergedData = electricityData.map((e: ElectricityEntry) => {
-    const monthNum = parseInt(e.month.split('-')[1]);
-    return {
-      ...e,
-      occupancy: occupancy.find(o => o.month === monthNum)?.occupancy_rate ?? null,
-      temp_avg: weather.find(w => w.month === monthNum)?.temp_avg ?? null,
-    };
-  });
+  const mergedData = electricityData.map((e: ElectricityEntry) => ({
+    ...e,
+    occupancy: occupancy.find(o => o.period === e.month)?.occupancy_rate ?? null,
+    temp_avg: weather.find(w => w.period === e.month)?.temp_avg ?? null,
+  }));
 
   const avgOccupancy = occupancy.length > 0
     ? occupancy.reduce((s, o) => s + o.occupancy_rate, 0) / occupancy.length

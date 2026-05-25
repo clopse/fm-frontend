@@ -215,7 +215,10 @@ export function useCHPData(
         rateSource: rates?.rates_source || report.rate_info?.source || 'default',
         electricityRate: rates?.electricity_rate || 0,
         gasRate: rates?.gas_rate || 0,
-        heatRate: rates?.heat_rate || 0
+        heatRate: rates?.heat_rate || 0,
+        electricityKwh: monthly?.electricityGenerated || 0,
+        heatKwh: monthly?.heatGenerated || 0,
+        gasM3: monthly?.gasConsumed || 0,
       };
     });
   }, [rawData, periodMode]);

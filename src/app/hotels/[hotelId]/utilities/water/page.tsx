@@ -81,14 +81,11 @@ export default function WaterPage() {
 
   // Merge weather + occupancy into waterData
   const hasOverlayData = weather.length > 0 || occupancy.length > 0;
-  const mergedWaterData = waterData.map(w => {
-    const monthNum = parseInt(w.month.split('-')[1]);
-    return {
-      ...w,
-      occupancy: occupancy.find(o => o.month === monthNum)?.occupancy_rate ?? null,
-      temp_avg: weather.find(ww => ww.month === monthNum)?.temp_avg ?? null,
-    };
-  });
+  const mergedWaterData = waterData.map(w => ({
+    ...w,
+    occupancy: occupancy.find(o => o.period === w.month)?.occupancy_rate ?? null,
+    temp_avg: weather.find(ww => ww.period === w.month)?.temp_avg ?? null,
+  }));
 
   const avgOccupancy = occupancy.length > 0
     ? occupancy.reduce((s, o) => s + o.occupancy_rate, 0) / occupancy.length
