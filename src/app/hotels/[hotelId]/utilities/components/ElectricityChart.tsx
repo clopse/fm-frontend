@@ -92,7 +92,7 @@ export default function ElectricityChart({
         )}
       </div>
 
-      <ResponsiveContainer width="100%" height={400}>
+      <ResponsiveContainer width="100%" height={350}>
         <ComposedChart
           data={chartData}
           margin={{ top: 5, right: hasOverlayData ? 72 : 30, bottom: 5, left: 10 }}

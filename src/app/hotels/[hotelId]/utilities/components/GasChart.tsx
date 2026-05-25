@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Line, Cell
 } from 'recharts';
 import { GasEntry, ViewMode, PeriodMode, WeatherEntry, OccupancyEntry, CHPChartDataPoint } from '../types';
@@ -129,7 +129,51 @@ export default function GasChart({
         )}
       </div>
 
-      <ResponsiveContainer width="100%" height={400}>
+      {(hasCHP || hasOverlayData) && (
+        <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 mb-3">
+          {hasCHP && (
+            <>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" />
+                ≥50% CHP coverage
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded-sm bg-amber-400 inline-block" />
+                25–50%
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-3 h-3 rounded-sm bg-red-500 inline-block" />
+                &lt;25%
+              </span>
+              <span className="flex items-center gap-1">
+                <svg width="20" height="10" className="inline-block">
+                  <line x1="0" y1="5" x2="20" y2="5" stroke="#F97316" strokeWidth="2.5" />
+                  <circle cx="10" cy="5" r="3" fill="#F97316" />
+                </svg>
+                CHP output
+              </span>
+            </>
+          )}
+          {hasOverlayData && occupancyData.length > 0 && (
+            <span className="flex items-center gap-1">
+              <svg width="20" height="10" className="inline-block">
+                <line x1="0" y1="5" x2="20" y2="5" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="5 5" />
+              </svg>
+              Occupancy %
+            </span>
+          )}
+          {hasOverlayData && weatherData.length > 0 && (
+            <span className="flex items-center gap-1">
+              <svg width="20" height="10" className="inline-block">
+                <line x1="0" y1="5" x2="20" y2="5" stroke="#10b981" strokeWidth="2.5" strokeDasharray="2 4" />
+              </svg>
+              Avg temp °C
+            </span>
+          )}
+        </div>
+      )}
+
+      <ResponsiveContainer width="100%" height={350}>
         <ComposedChart
           data={chartData}
           margin={{ top: 5, right: hasOverlayData ? 72 : 30, bottom: 5, left: 10 }}
@@ -174,12 +218,6 @@ export default function GasChart({
               return [`${value.toLocaleString()} ${yLabel}`, 'Gas'];
             }}
           />
-          {hasCHP && (
-            <Legend
-              formatter={v => v === 'chp_output' ? 'CHP Output (kWh)' : v === 'value' ? 'Gas (kWh)' : v}
-              wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
-            />
-          )}
           <Bar
             yAxisId="left"
             dataKey="value"
@@ -235,23 +273,6 @@ export default function GasChart({
           )}
         </ComposedChart>
       </ResponsiveContainer>
-
-      {hasCHP && (
-        <div className="mt-2 flex items-center gap-4 text-xs text-slate-500">
-          <span className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" />
-            ≥50% CHP coverage
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-sm bg-amber-400 inline-block" />
-            25–50%
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-3 h-3 rounded-sm bg-red-500 inline-block" />
-            &lt;25%
-          </span>
-        </div>
-      )}
 
       {hasOverlayData && (
         <div className="mt-3 flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500 border-t border-slate-100 pt-3">
