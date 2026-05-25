@@ -124,6 +124,8 @@ export function isAuthenticated(): boolean {
 export async function apiFetch(input: RequestInfo, init: RequestInit = {}): Promise<Response> {
   let { access } = getStoredTokens();
 
+  console.log('[apiFetch] token present:', !!access, '| url:', input.toString().split('?')[0]);
+
   if (access && isExpiredOrNear(access)) {
     const ok = await silentRefresh();
     if (!ok) { clearTokens(); redirectToLogin(); throw new Error('Session expired'); }
